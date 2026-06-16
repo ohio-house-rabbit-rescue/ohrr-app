@@ -1,100 +1,79 @@
-// SAMPLE education-session schedule.
-//
-// Session TOPICS reflect OHRR's real focus areas (diet, bonding, litter
-// training, spay/neuter, behavior, first aid). Times and speakers are
-// placeholders — replace with the confirmed Midwest BunFest agenda.
-
-export type Track = 'Main Stage' | 'Education Room' | 'Hands-On'
+// Real Midwest BunFest 2025 Special Interest Sessions (midwestbunfest.org).
+// A single education timeline (the real event isn't split into tracks).
+// `start` is 24-hour "HH:MM" for sorting.
 
 export interface Session {
   id: string
-  start: string // "HH:MM" 24h, for sorting
-  time: string // display label
+  start: string
+  time: string
   title: string
-  track: Track
-  speaker: string
+  presenter: string
   description: string
+  isBreak?: boolean
 }
 
 export const sessions: Session[] = [
   {
     id: 's1',
-    start: '10:30',
-    time: '10:30 – 11:15 AM',
-    title: 'Rabbit Diet 101: Hay, Pellets & the Daily Salad',
-    track: 'Education Room',
-    speaker: 'Speaker TBA',
+    start: '10:45',
+    time: '10:45 – 11:10 AM',
+    title: 'Administering Meds at Home',
+    presenter: 'Emily Fagundo, DVM · MedVet Hilliard',
     description:
-      'What to feed, how much, and the common diet mistakes that land rabbits at the vet. Covers unlimited hay, quality pellets, and safe greens.',
+      'Techniques and tips for giving your bunny oral meds, fluids, and shots after a vet visit.',
   },
   {
     id: 's2',
-    start: '11:00',
-    time: '11:00 – 11:45 AM',
-    title: 'Bonding Bunnies: Introducing Rabbits Safely',
-    track: 'Main Stage',
-    speaker: 'Speaker TBA',
+    start: '11:15',
+    time: '11:15 – 11:40 AM',
+    title: 'Bunny Heimlich Maneuver',
+    presenter: 'Shanleigh Knittel · Operation Obi & HRS Educator',
     description:
-      'A step-by-step look at the bonding process — reading body language, dating sessions, and setting up for a successful pair.',
+      'Something you never want to need — but should be ready for. Walks through the steps and techniques for a choking rabbit.',
   },
   {
     id: 's3',
-    start: '11:30',
-    time: '11:30 AM – 12:15 PM',
-    title: 'Litter-Box Training Made Simple',
-    track: 'Hands-On',
-    speaker: 'Speaker TBA',
+    start: '11:45',
+    time: '11:45 AM – 12:10 PM',
+    title: 'To Bond or Not to Bond? An Overwhelming Question!',
+    presenter: 'Kim Banks · OHRR Adoption & Bonding Specialist',
     description:
-      'Why rabbits are natural candidates for litter training and how to set up a box your bun will actually use.',
+      'Not about the bonding process itself, but the factors to weigh in deciding if and when adding a second bunny is right for your family.',
   },
   {
     id: 's4',
-    start: '12:30',
-    time: '12:30 – 1:15 PM',
-    title: 'Spay, Neuter & Why It Matters',
-    track: 'Education Room',
-    speaker: 'Veterinarian TBA',
+    start: '12:15',
+    time: '12:15 – 12:40 PM',
+    title: 'Navigating the Human-Animal Bond: Grief, Stress & Support',
+    presenter: 'Lauren Keller · Snickerdoodles’ Rabbit Rescue & Pet Loss Support',
     description:
-      'The health and behavior benefits of altering your rabbit, plus an overview of low-cost options like OHRR’s Fix-a-Bun program.',
+      'Emotional support and resources for caregivers — compassion fatigue, caregiving stress, and the grief that accompanies loss.',
+  },
+  {
+    id: 'break',
+    start: '12:40',
+    time: '12:40 – 1:30 PM',
+    title: 'Break',
+    presenter: '',
+    description: 'Grab a bite, shop the vendors, and visit the rescue partners.',
+    isBreak: true,
   },
   {
     id: 's5',
-    start: '1:00',
-    time: '1:00 – 1:45 PM',
-    title: 'Reading Rabbit Behavior',
-    track: 'Main Stage',
-    speaker: 'Speaker TBA',
+    start: '13:30',
+    time: '1:30 – 1:55 PM',
+    title: 'What is Hay?',
+    presenter: 'Daniel C. Brenner · Hay Farmer & Educator',
     description:
-      'Binkies, flops, thumps, and nips — decode what your rabbit is telling you and build trust.',
+      'Varieties of hay and how it’s grown and harvested — 1st, 2nd, and 3rd cuttings — plus how to identify good hay for bunnies.',
   },
   {
     id: 's6',
-    start: '1:30',
-    time: '1:30 – 2:15 PM',
-    title: 'Bunny-Proofing & Indoor Housing',
-    track: 'Hands-On',
-    speaker: 'Speaker TBA',
+    start: '14:00',
+    time: '2:00 – 2:30 PM',
+    title: 'Caring for Special Needs Rabbits',
+    presenter: 'Lisa Edwards (Bunny Mom) & Dr. Susan Borders, DVM · Animal Hospital of Pataskala',
     description:
-      'Creating a safe free-range or x-pen setup, protecting cords and baseboards, and meeting the indoor 4×4 minimum.',
-  },
-  {
-    id: 's7',
-    start: '2:30',
-    time: '2:30 – 3:15 PM',
-    title: 'Rabbit First Aid: Knowing an Emergency',
-    track: 'Education Room',
-    speaker: 'Veterinarian TBA',
-    description:
-      'GI stasis, heat stress, and the warning signs that mean "call the vet now." Building a basic rabbit first-aid kit.',
-  },
-  {
-    id: 's8',
-    start: '3:00',
-    time: '3:00 – 3:45 PM',
-    title: 'Adopting from a Rescue: What to Expect',
-    track: 'Main Stage',
-    speaker: 'OHRR Adoption Team',
-    description:
-      'How rescue adoption works, what makes a great rabbit home, and meeting adoptable buns from OHRR and partner rescues.',
+      'The challenges and many rewards of caring for bunnies with physical and/or emotional disabilities.',
   },
 ]

@@ -1,43 +1,43 @@
 import { partners } from '../data/partners'
-import { PageHeader, Container, Card, Badge, SampleBanner } from '../components/ui'
+import { PageHeader, Screen, Card, Badge, SampleNote } from '../components/ui'
+import { Icon } from '../components/icons'
 
 export default function Partners() {
   return (
     <>
       <PageHeader
+        icon="users"
         title="Rescue Partners"
-        subtitle="Midwest BunFest brings together 15–20 rabbit rescues from across the region — all working to help rabbits find homes."
+        subtitle={`${partners.length} rabbit rescues and humane organizations, together for the buns.`}
       />
-      <Container className="py-8">
-        <SampleBanner>
-          Ohio House Rabbit Rescue is the host. The other rescues below are
-          placeholders — the confirmed partner list is published closer to the event.
-        </SampleBanner>
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <Screen className="space-y-4">
+        <SampleNote>
+          Showing the 2025 rescue partners. The 2026 lineup is announced closer to the event.
+        </SampleNote>
+        <div className="grid grid-cols-1 gap-3">
           {partners.map((p) => (
-            <Card key={p.id} className={p.host ? 'ring-2 ring-emerald-500' : ''}>
+            <Card key={p.id} className={p.host ? 'border-brand-blue/40 ring-1 ring-brand-blue/30' : ''}>
               <div className="flex items-start justify-between gap-2">
-                <h3 className="font-semibold text-stone-900">{p.name}</h3>
-                {p.host && <Badge>Host</Badge>}
+                <h3 className="font-display text-base font-extrabold text-ink">{p.name}</h3>
+                {p.host && <Badge tone="blue">Host</Badge>}
               </div>
-              <p className="mt-1 text-sm text-stone-500">{p.location}</p>
-              {p.url ? (
+              <p className="mt-0.5 flex items-center gap-1 text-sm text-slate-500">
+                <Icon name="mappin" size={14} className="shrink-0 text-slate-400" /> {p.location}
+              </p>
+              {p.url && (
                 <a
                   href={p.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-3 inline-block text-sm font-medium text-emerald-700 hover:text-emerald-800"
+                  className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
                 >
-                  Visit website →
+                  Visit website <Icon name="external" size={14} />
                 </a>
-              ) : (
-                <p className="mt-3 text-xs italic text-stone-400">Details to be announced</p>
               )}
             </Card>
           ))}
         </div>
-      </Container>
+      </Screen>
     </>
   )
 }

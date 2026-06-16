@@ -1,16 +1,12 @@
-// Core event facts.
-//
-// CONFIRMED (from OHRR / Midwest BunFest research, see /docs):
-//   - Annual, every October; largest rabbit expo in the Eastern U.S.
-//   - Hosted by Ohio House Rabbit Rescue (OHRR), Columbus, OH.
-//   - Most recent confirmed edition: Sunday, Oct 27, 2024, 10:00 AM – 4:00 PM.
-//   - Current location: the Hilliard, OH area.
-//
-// PLACEHOLDER ([VERIFY] with OHRR before publishing):
-//   - The exact 2026 date and venue.
+// Midwest BunFest — REAL event data from midwestbunfest.org.
+// 2026 date/venue/admission are confirmed on the site; the schedule, vendors,
+// partners, and sponsors reflect the 2025 program (most recent published lineup)
+// and will be refreshed as the 2026 roster is announced.
+import type { IconName } from '../components/icons'
 
 export const event = {
   name: 'Midwest BunFest',
+  edition: 2026,
   host: {
     name: 'Ohio House Rabbit Rescue',
     short: 'OHRR',
@@ -18,65 +14,79 @@ export const event = {
   },
   tagline: 'The largest rabbit festival & educational expo in the Eastern U.S.',
   blurb:
-    'A national, family-friendly celebration of house rabbits — education sessions led by rabbit experts and vets, specialty vendors, a bunny spa, glamour shots, a silent auction, raffles, and rescues from across the Midwest. All in support of Ohio House Rabbit Rescue.',
-  year: 2026,
-  dateLabel: 'October 2026',
-  dateNote: 'Exact date to be announced',
+    'A family-friendly celebration of house rabbits — education from vets and rabbit experts, specialty vendors, a bunny spa, glamour shots, a silent auction & raffle, and rescues from across the country. All proceeds support Ohio House Rabbit Rescue.',
+  date: 'Sunday, October 25, 2026',
+  dateShort: 'Sun, Oct 25, 2026',
   timeLabel: '10:00 AM – 4:00 PM',
-  location: {
-    name: 'Hilliard, Ohio area',
-    note: 'Venue announced closer to the event.',
+  venue: {
+    name: 'The Makoy',
+    address: '5462 Center St., Hilliard, OH 43026',
+    city: 'Hilliard, Ohio',
+    parking: 'Ample free parking in The Makoy lot.',
   },
-  lastConfirmedEdition: 'Sunday, Oct 27, 2024 · 10:00 AM – 4:00 PM',
+  admission: [
+    { who: 'Adults', price: '$10' },
+    { who: 'Ages 5–12', price: '$5' },
+    { who: 'Under 5', price: 'Free' },
+  ],
+  admissionNote: 'Cash or card. Buy at the door or in advance.',
   links: {
     bunfest: 'https://www.midwestbunfest.org/',
-    bunfestEventInfo: 'https://www.midwestbunfest.org/event-info.html',
-    bunfestFacebook: 'https://www.facebook.com/MidwestBunFest/',
+    eventInfo: 'https://www.midwestbunfest.org/event-info.html',
+    tickets: 'https://www.midwestbunfest.org/purchase-tickets.html',
+    map: 'https://www.midwestbunfest.org/event-map.html',
+    bringingBunny: 'https://www.midwestbunfest.org/bringing-your-bunny.html',
+    attendanceAgreement: 'https://www.midwestbunfest.org/rabbit-attendance-agreement.html',
+    accommodations: 'https://www.midwestbunfest.org/accommodations.html',
+    apparel: 'https://www.midwestbunfest.org/mwbf-apparel.html',
+    facebook: 'https://www.facebook.com/MidwestBunFest/',
     ohrr: 'https://www.ohiohouserabbitrescue.org/',
-    ohrrFacebook: 'https://www.facebook.com/ohiohouserabbitrescue/',
   },
-} as const
+}
 
-// Things to do / see at BunFest (from research). Used on the home page.
-export const highlights = [
+export interface Activity {
+  title: string
+  text: string
+  icon: IconName
+  url: string
+}
+
+// What happens at the festival (real activity pages on midwestbunfest.org).
+export const activities: Activity[] = [
   {
-    icon: '🛍️',
-    title: 'Specialty Vendors',
-    text: 'Hard-to-find toys, handmade goods, and treats you won’t see in local pet stores.',
-  },
-  {
-    icon: '🎓',
     title: 'Education Sessions',
-    text: '10–15 talks led by nationally recognized vets and certified rabbit educators.',
+    text: 'Talks from vets and rabbit experts all day.',
+    icon: 'book',
+    url: 'https://www.midwestbunfest.org/special-interest-sessions.html',
   },
   {
-    icon: '💅',
     title: 'Bunny Spa',
-    text: 'Nail trims and grooming for your rabbit by experienced volunteers.',
+    text: 'Nail trims and grooming for your rabbit.',
+    icon: 'sparkles',
+    url: 'https://www.midwestbunfest.org/bunny-spa.html',
   },
   {
-    icon: '📸',
     title: 'Glamour Shots',
-    text: 'Professional pet-rabbit photography to capture your bun’s best side.',
+    text: 'Professional photos of your bun.',
+    icon: 'star',
+    url: 'https://www.midwestbunfest.org/glamour-shots.html',
   },
   {
-    icon: '🎟️',
-    title: 'Silent Auction & Raffle',
-    text: 'Bid and win great items — every dollar supports rescued rabbits.',
+    title: 'Raffle & Silent Auction',
+    text: 'Bid and win — proceeds help rabbits.',
+    icon: 'ticket',
+    url: 'https://www.midwestbunfest.org/raffle-and-silent-auction.html',
   },
   {
-    icon: '🐰',
-    title: 'Rescue Partners',
-    text: 'Meet 15–20 rabbit rescues from across the Midwest, all in one place.',
+    title: 'Toymaking Workshop',
+    text: 'Make an enrichment toy to take home.',
+    icon: 'gift',
+    url: 'https://www.midwestbunfest.org/toymaking-workshop.html',
   },
   {
-    icon: '🛋️',
-    title: 'Chilaxabun Lounge',
-    text: 'A calm space to take a break and relax between sessions.',
+    title: 'Chillaxabun Lounge',
+    text: 'A calm space to relax between sessions.',
+    icon: 'heart',
+    url: 'https://www.midwestbunfest.org/chillaxabun-lounge.html',
   },
-  {
-    icon: '🛒',
-    title: 'OHRR Hop Shop',
-    text: 'Rabbit-appropriate supplies and OHRR merch — proceeds fund the rescue.',
-  },
-] as const
+]

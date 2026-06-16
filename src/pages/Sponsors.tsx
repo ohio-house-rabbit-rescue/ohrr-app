@@ -1,55 +1,76 @@
-import { sponsorTiers } from '../data/sponsors'
+import { sponsors } from '../data/sponsors'
 import { event } from '../data/event'
-import { PageHeader, Container, Card } from '../components/ui'
+import { PageHeader, Screen, Card, Badge, SampleNote, btn } from '../components/ui'
+import { Icon } from '../components/icons'
 
 export default function Sponsors() {
+  const lead = sponsors.find((s) => s.lead)
+  const rest = sponsors.filter((s) => !s.lead)
+
   return (
     <>
       <PageHeader
+        icon="award"
         title="Sponsors"
-        subtitle="BunFest is powered by businesses and organizations that care about rabbits. Thank you to our supporters."
+        subtitle="BunFest runs on the generosity of these sponsors and donors."
       />
-      <Container className="py-8">
-        <div className="space-y-8">
-          {sponsorTiers.map((tier) => (
-            <section key={tier.id}>
-              <h2 className="text-xl font-bold text-stone-900">{tier.name}</h2>
-              <p className="mt-1 text-sm text-stone-600">{tier.blurb}</p>
+      <Screen className="space-y-4">
+        <SampleNote>
+          Showing the 2025 sponsors. The 2026 roster is announced closer to the event.
+        </SampleNote>
 
-              {tier.sponsors.length > 0 ? (
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {tier.sponsors.map((name) => (
-                    <Card key={name}>
-                      <span className="font-semibold text-stone-900">{name}</span>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-4 rounded-xl border border-dashed border-stone-300 bg-white px-5 py-6 text-center text-sm text-stone-500">
-                  This tier is open — your organization could be here.
-                </div>
+        {lead && (
+          <a
+            href={lead.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block rounded-2xl bg-gradient-to-br from-brand-blue to-brand-blue-dark px-6 py-6 text-white shadow-sm transition active:scale-[.99]"
+          >
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider">
+              <Icon name="star" size={13} /> Lead Sponsor
+            </span>
+            <h2 className="mt-2 font-display text-2xl font-extrabold">{lead.name}</h2>
+            <p className="mt-1 text-sm text-white/90">{lead.blurb}</p>
+          </a>
+        )}
+
+        <div className="grid grid-cols-1 gap-3">
+          {rest.map((s) => (
+            <Card key={s.name}>
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="font-display text-base font-extrabold text-ink">{s.name}</h3>
+                <Badge tone="slate">{s.type}</Badge>
+              </div>
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{s.blurb}</p>
+              {s.url && (
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
+                >
+                  Visit <Icon name="external" size={14} />
+                </a>
               )}
-            </section>
+            </Card>
           ))}
         </div>
 
-        {/* Become a sponsor */}
-        <div className="mt-12 rounded-2xl bg-emerald-700 px-6 py-10 text-center text-white sm:px-12">
-          <h2 className="text-2xl font-bold">Become a sponsor</h2>
-          <p className="mx-auto mt-2 max-w-2xl text-emerald-50">
-            Reach a national audience of rabbit owners and enthusiasts while supporting
-            rescue and education. Sponsorships are available at every level.
+        <div className="rounded-2xl bg-gradient-to-b from-brand-blue to-brand-blue-dark px-6 py-7 text-center text-white">
+          <h2 className="font-display text-xl font-extrabold">Become a sponsor</h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-white/85">
+            Reach a national audience of rabbit lovers while supporting rescue and education.
           </p>
           <a
             href={event.links.bunfest}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-6 inline-block rounded-full bg-white px-6 py-3 font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
+            className={`${btn.primary} mt-5`}
           >
             Sponsor inquiries
           </a>
         </div>
-      </Container>
+      </Screen>
     </>
   )
 }

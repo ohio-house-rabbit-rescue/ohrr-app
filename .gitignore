@@ -5,6 +5,9 @@ node_modules/
 dist/
 dist-ssr/
 
+# vite cache
+.vite/
+
 # local env files — NEVER commit secrets
 .env
 .env.local

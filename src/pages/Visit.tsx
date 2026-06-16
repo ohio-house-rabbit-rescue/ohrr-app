@@ -1,96 +1,118 @@
 import { event } from '../data/event'
-import { PageHeader, Container, Card, SampleBanner } from '../components/ui'
+import { ohrr } from '../data/ohrr'
+import { PageHeader, Screen, Card, btn } from '../components/ui'
+import { Icon } from '../components/icons'
 
 export default function Visit() {
   return (
     <>
       <PageHeader
+        icon="mappin"
         title="Plan Your Visit"
         subtitle="Everything you need to know before you go."
       />
-      <Container className="py-8">
-        <SampleBanner>
-          Date, venue, and on-site details are preliminary. Confirm against the
-          official BunFest site before making travel plans.
-        </SampleBanner>
+      <Screen className="space-y-4">
+        {/* When */}
+        <Card>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-blue-50 text-brand-blue">
+              <Icon name="calendar" size={20} />
+            </span>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">When</p>
+              <p className="font-bold text-ink">{event.date}</p>
+              <p className="text-sm text-slate-500">{event.timeLabel}</p>
+            </div>
+          </div>
+        </Card>
 
-        {/* Key details */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <Card>
-            <h3 className="text-sm font-semibold text-stone-500">When</h3>
-            <p className="mt-1 font-semibold text-stone-900">{event.dateLabel}</p>
-            <p className="text-sm text-stone-600">{event.dateNote}</p>
-            <p className="mt-1 text-sm text-stone-600">{event.timeLabel}</p>
-          </Card>
-          <Card>
-            <h3 className="text-sm font-semibold text-stone-500">Where</h3>
-            <p className="mt-1 font-semibold text-stone-900">{event.location.name}</p>
-            <p className="text-sm text-stone-600">{event.location.note}</p>
-          </Card>
-          <Card>
-            <h3 className="text-sm font-semibold text-stone-500">Most recent edition</h3>
-            <p className="mt-1 font-semibold text-stone-900">{event.lastConfirmedEdition}</p>
-            <p className="text-sm text-stone-600">For reference</p>
-          </Card>
-        </div>
+        {/* Where */}
+        <Card>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-blue-50 text-brand-blue">
+              <Icon name="mappin" size={20} />
+            </span>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Where</p>
+              <p className="font-bold text-ink">{event.venue.name}</p>
+              <p className="text-sm text-slate-500">{event.venue.address}</p>
+            </div>
+          </div>
+          <a
+            href={event.links.map}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
+          >
+            Event map <Icon name="external" size={14} />
+          </a>
+        </Card>
 
-        {/* Bringing your rabbit */}
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <Card>
-            <h3 className="text-lg font-bold text-stone-900">Bringing your rabbit</h3>
-            <p className="mt-2 text-sm leading-relaxed text-stone-600">
-              Well-behaved pet rabbits are welcome, subject to BunFest’s{' '}
-              <strong>Rabbit Attendance Agreement</strong>. Bring a secure carrier, keep
-              your bun comfortable, and watch for signs of stress in busy areas. Full
-              rules are posted on the official site before the event.
-            </p>
-            <a
-              href={event.links.bunfestEventInfo}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-block text-sm font-medium text-emerald-700 hover:text-emerald-800"
-            >
-              Read the event info →
+        {/* Admission */}
+        <Card>
+          <h3 className="font-display text-base font-extrabold text-ink">Admission</h3>
+          <dl className="mt-3 space-y-1.5">
+            {event.admission.map((a) => (
+              <div key={a.who} className="flex items-center justify-between text-sm">
+                <dt className="text-slate-600">{a.who}</dt>
+                <dd className="font-bold text-ink">{a.price}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-2 text-xs text-slate-500">{event.admissionNote}</p>
+          <a
+            href={event.links.tickets}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${btn.primary} mt-4 w-full`}
+          >
+            Buy tickets
+          </a>
+        </Card>
+
+        {/* Good to know */}
+        <Card>
+          <h3 className="font-display text-base font-extrabold text-ink">Good to know</h3>
+          <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-slate-600">
+            <li>🅿️ {event.venue.parking}</li>
+            <li>💳 Cash & cards accepted for vendors, the auction, and raffle.</li>
+            <li>🐰 Bringing your rabbit? Read the Rabbit Attendance Agreement first.</li>
+            <li>👟 Comfortable shoes — it’s a full day of browsing and talks.</li>
+          </ul>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-sm font-bold text-brand-blue">
+            <a href={event.links.bringingBunny} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-brand-blue-dark">
+              Bringing your bunny <Icon name="external" size={13} />
             </a>
-          </Card>
+            <a href={event.links.attendanceAgreement} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-brand-blue-dark">
+              Attendance agreement <Icon name="external" size={13} />
+            </a>
+            <a href={event.links.accommodations} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-brand-blue-dark">
+              Accommodations <Icon name="external" size={13} />
+            </a>
+          </div>
+        </Card>
 
-          <Card>
-            <h3 className="text-lg font-bold text-stone-900">Good to know</h3>
-            <ul className="mt-2 space-y-2 text-sm leading-relaxed text-stone-600">
-              <li>• Family-friendly — kids welcome.</li>
-              <li>• Bring cash and cards for vendors, the silent auction, and raffle.</li>
-              <li>• Wear comfortable shoes; it’s a full day of browsing and talks.</li>
-              <li>• Parking and accessibility details: to be announced.</li>
-            </ul>
-          </Card>
-        </div>
-
-        {/* About the host */}
-        <Card className="mt-8">
-          <h3 className="text-lg font-bold text-stone-900">About the host: Ohio House Rabbit Rescue</h3>
-          <p className="mt-2 text-sm leading-relaxed text-stone-600">
-            OHRR runs Ohio’s first rescue-and-adoption center exclusively for domestic
-            rabbits, in Columbus. The adoption center is open weekends — adoptions are by
-            appointment.
+        {/* Host */}
+        <Card className="border-brand-blue/20 bg-brand-blue-50/60">
+          <h3 className="font-display text-base font-extrabold text-ink">About the host</h3>
+          <p className="mt-1 text-sm leading-relaxed text-slate-600">
+            Midwest BunFest is presented by Ohio House Rabbit Rescue — all proceeds support the
+            rescue’s adoption center, education, and foster rabbits.
           </p>
-          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-            <div>
-              <dt className="font-semibold text-stone-500">Adoption Center</dt>
-              <dd className="text-stone-700">5485 N. High Street, Columbus, OH 43214</dd>
+          <dl className="mt-3 space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <Icon name="mappin" size={15} className="shrink-0 text-brand-blue" />
+              <span className="text-slate-600">{ohrr.address}</span>
             </div>
-            <div>
-              <dt className="font-semibold text-stone-500">Phone</dt>
-              <dd className="text-stone-700">
-                <a href="tel:+16142638557" className="hover:text-emerald-700">614-263-8557</a>
-              </dd>
-            </div>
-            <div>
-              <dt className="font-semibold text-stone-500">Hours</dt>
-              <dd className="text-stone-700">Sat &amp; Sun, 12–4 PM · by appointment</dd>
+            <div className="flex items-center gap-2">
+              <Icon name="phone" size={15} className="shrink-0 text-brand-blue" />
+              <a href={ohrr.phoneHref} className="font-semibold text-brand-blue">
+                {ohrr.phone}
+              </a>
             </div>
           </dl>
         </Card>
-      </Container>
+      </Screen>
     </>
   )
 }

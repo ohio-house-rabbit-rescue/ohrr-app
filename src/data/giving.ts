@@ -1,6 +1,5 @@
-// Ways to support OHRR. These are REAL, confirmed channels and links from the
-// org's own site (see /docs/01-OHRR-org-profile.md) — the high-leverage part of
-// the app: most supporters never discover the giving paths beyond a basic gift.
+// Ways to support OHRR — REAL, confirmed channels and links from the org's site.
+// Used by the Support page in both the OHRR app (/support) and BunFest (/bunfest/give).
 
 export interface GivingOption {
   id: string
@@ -22,6 +21,13 @@ export const givingOptions: GivingOption[] = [
     featured: true,
   },
   {
+    id: 'guardian',
+    title: 'Become a Rescue Rabbit Guardian',
+    description: 'Sponsor a rabbit’s care with an ongoing monthly gift.',
+    cta: 'Become a guardian',
+    url: 'https://www.ohiohouserabbitrescue.org/become-a-rescue-rabbit-guardian/',
+  },
+  {
     id: 'workplace',
     title: 'Workplace & Matching Gifts',
     description:
@@ -30,19 +36,18 @@ export const givingOptions: GivingOption[] = [
     url: 'https://www.ohiohouserabbitrescue.org/workplace-donations/',
   },
   {
-    id: 'kroger',
-    title: 'Kroger Community Rewards',
-    description:
-      'Link your Kroger card and a portion of your everyday grocery spending supports OHRR — at no cost to you.',
-    cta: 'Learn how',
-    url: 'https://www.ohiohouserabbitrescue.org/support-ohrr/',
-  },
-  {
     id: 'wishlist',
     title: 'Amazon Wish List',
     description: 'Ship much-needed supplies directly to the rescue.',
     cta: 'View wish list',
     url: 'https://www.ohiohouserabbitrescue.org/support-ohrr/wishlist/',
+  },
+  {
+    id: 'hopshop',
+    title: 'Shop the Hop Shop',
+    description: 'Buy rabbit supplies and OHRR merch — proceeds fund the rescue.',
+    cta: 'Visit the Hop Shop',
+    url: 'https://www.ohiohouserabbitrescue.org/i-want-to-support/hop-shop/',
   },
   {
     id: 'legacy',
@@ -57,6 +62,13 @@ export const givingOptions: GivingOption[] = [
     title: 'Host a Fundraiser',
     description: 'Rally your friends, workplace, or community on OHRR’s behalf.',
     cta: 'Get started',
-    url: 'https://www.ohiohouserabbitrescue.org/support-ohrr/',
+    url: 'https://www.ohiohouserabbitrescue.org/support-ohrr/host-a-fundraiser/',
+  },
+  {
+    id: 'mailing',
+    title: 'Join the Mailing List',
+    description: 'Stay in the loop on rabbits, events, and BunFest news.',
+    cta: 'Sign up',
+    url: 'https://www.ohiohouserabbitrescue.org/join-ohrr-mailing-list/',
   },
 ]
