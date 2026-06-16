@@ -1,0 +1,14 @@
+# Netlify build & deploy config for the OHRR / Midwest BunFest companion.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Single-page-app fallback: let React Router handle client-side routes
+# (e.g. /schedule, /give) instead of returning a 404 on direct load/refresh.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
