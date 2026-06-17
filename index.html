@@ -18,6 +18,19 @@
     <title>Midwest BunFest · Ohio House Rabbit Rescue</title>
   </head>
   <body>
+    <!-- Hidden static form so Netlify Forms detects "service-signup" at build
+         time; the live React form (src/pages/ServiceSignup.tsx) posts to it. -->
+    <form name="service-signup" netlify netlify-honeypot="bot-field" hidden>
+      <input type="text" name="service" />
+      <input type="text" name="date" />
+      <input type="text" name="time" />
+      <input type="text" name="name" />
+      <input type="email" name="email" />
+      <input type="tel" name="phone" />
+      <input type="text" name="bunny" />
+      <textarea name="notes"></textarea>
+    </form>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
