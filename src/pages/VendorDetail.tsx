@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { vendors } from '../data/vendors'
+import { boothForVendor, roomName } from '../data/floorplan'
 import { Screen, Card, Badge, SectionLabel, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 
@@ -22,6 +23,7 @@ export default function VendorDetail() {
   }
 
   const v = vendor
+  const booth = boothForVendor(v.id)
   const related = vendors.filter((x) => x.id !== v.id && x.category === v.category).slice(0, 4)
 
   return (
@@ -44,6 +46,26 @@ export default function VendorDetail() {
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-slate-700">{v.description}</p>
       </Card>
+
+      {booth && (
+        <Link
+          to={`/bunfest/map?vendor=${v.id}`}
+          className="flex items-center gap-3 rounded-2xl border border-brand-blue/25 bg-brand-blue-50/50 p-4 transition hover:bg-brand-blue-50"
+        >
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-blue text-white">
+            <Icon name="mappin" size={20} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-sm font-extrabold text-ink">
+              {roomName(booth.room)} · Booth {booth.label}
+            </span>
+            <span className="block text-xs text-slate-500">
+              {booth.tables === 2 ? 'Two 8-ft tables' : 'One 8-ft table'} · tap to see it on the map
+            </span>
+          </span>
+          <Icon name="chevron" size={18} className="shrink-0 text-brand-blue" />
+        </Link>
+      )}
 
       {v.url && (
         <a href={v.url} target="_blank" rel="noopener noreferrer" className={`${btn.outline} w-full`}>

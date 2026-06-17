@@ -27,6 +27,7 @@ import Partners from './pages/Partners'
 import PartnerDetail from './pages/PartnerDetail'
 import Sponsors from './pages/Sponsors'
 import Visit from './pages/Visit'
+import EventMap from './pages/EventMap'
 
 export default function App() {
   return (
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="partners/:id" element={<PartnerDetail />} />
         <Route path="sponsors" element={<Sponsors />} />
         <Route path="visit" element={<Visit />} />
+        <Route path="map" element={<EventMap />} />
         <Route path="give" element={<Give />} />
       </Route>
     </Routes>
