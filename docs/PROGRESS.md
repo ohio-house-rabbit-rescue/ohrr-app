@@ -157,13 +157,15 @@
 These are the sponsor-requested directions captured in project memory + the
 strategy doc; not yet scheduled:
 
-- **Donation tax-receipt flow** *(sponsor request, 2026-06-17, IN PROGRESS NEXT)* —
-  in the Support/Give areas, generate an automated downloadable PDF acknowledgment
-  after a gift (donor name, amount, date, OHRR's 501(c)(3)/EIN, "no goods or
-  services provided" language). NOTE: a legally valid receipt requires the gift to
-  actually be processed; without a payment backend this is a client-side
-  acknowledgment/template that becomes the real receipt once a processor (Stripe /
-  Donorbox) is wired. Recommend wiring a real processor for true receipts.
+- **Donation tax-receipt flow** *(sponsor request 2026-06-17 → ON HOLD by sponsor
+  decision same day)* — the plan is to **wire a real donation processor**
+  (Donorbox / Givebutter / Stripe) so gifts are paid in-app and the processor
+  auto-emails an **official, verified** tax receipt. The sponsor chose to defer this
+  until a processor is set up, and explicitly **did not** want the interim
+  self-reported PDF "acknowledgment" (to avoid OHRR issuing receipts for unverified
+  amounts). OHRR has **no processor set up yet** (or it's unknown). Resume when a
+  processor + its account/keys are available. Today the Give pages just deep-link to
+  OHRR's own donation page.
 - **Petfinder go-live** — set the real Petfinder credentials in Netlify so Adopt
   shows live inventory instead of samples. (Answered a sponsor question 2026-06-17:
   the Adopt page already uses the Petfinder feed via `netlify/functions/petfinder.js`;
