@@ -4,7 +4,7 @@ import { event } from '../data/event'
 import { PageHeader, Screen, Card, SampleNote, SegTabs, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 import { useSavedSessions, toggleSavedSession } from '../lib/savedSessions'
-import { downloadIcs } from '../lib/ics'
+import CalendarSheet from '../components/CalendarSheet'
 
 const toMin = (t: string) => {
   const [h, m] = t.split(':').map(Number)
@@ -16,6 +16,7 @@ type Filter = (typeof FILTERS)[number]
 
 export default function Schedule() {
   const [filter, setFilter] = useState<Filter>('All')
+  const [calOpen, setCalOpen] = useState(false)
   const saved = useSavedSessions()
 
   const sorted = [...sessions].sort((a, b) => toMin(a.start) - toMin(b.start))
@@ -39,7 +40,7 @@ export default function Schedule() {
           {savedTalks.length > 0 && (
             <button
               type="button"
-              onClick={() => downloadIcs(savedTalks, 'my-bunfest-schedule.ics')}
+              onClick={() => setCalOpen(true)}
               className={`${btn.outline} shrink-0 px-4 py-2`}
             >
               <Icon name="calendar" size={16} />
@@ -81,6 +82,8 @@ export default function Schedule() {
           )
         )}
       </Screen>
+
+      {calOpen && <CalendarSheet sessions={savedTalks} onClose={() => setCalOpen(false)} />}
     </>
   )
 }

@@ -23,15 +23,24 @@ export default function BunfestTopBar() {
             </span>
           </span>
         </Link>
-        <a
-          href="https://www.midwestbunfest.org/"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Midwest BunFest website"
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25"
-        >
-          <Icon name="external" size={18} />
-        </a>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            to="/settings"
+            aria-label="Settings"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25"
+          >
+            <Icon name="settings" size={18} />
+          </Link>
+          <a
+            href="https://www.midwestbunfest.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Midwest BunFest website"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25"
+          >
+            <Icon name="external" size={18} />
+          </a>
+        </div>
       </div>
     </header>
   )
