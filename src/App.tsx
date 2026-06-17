@@ -4,6 +4,7 @@ import BunfestLayout from './components/BunfestLayout'
 // OHRR host app
 import OhrrHome from './pages/OhrrHome'
 import Adopt from './pages/Adopt'
+import AdoptRabbit from './pages/AdoptRabbit'
 import Tails from './pages/Tails'
 import TailDetail from './pages/TailDetail'
 import Services from './pages/Services'
@@ -30,6 +31,7 @@ export default function App() {
       <Route element={<OhrrLayout />}>
         <Route path="/" element={<OhrrHome />} />
         <Route path="/adopt" element={<Adopt />} />
+        <Route path="/adopt/:id" element={<AdoptRabbit />} />
         <Route path="/tails" element={<Tails />} />
         <Route path="/tails/:id" element={<TailDetail />} />
         <Route path="/services" element={<Services />} />
