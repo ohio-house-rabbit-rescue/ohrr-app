@@ -11,16 +11,21 @@ export type VolunteerSlug = 'socialization' | 'vet-transport' | 'events' | 'fost
 export interface VolunteerWay {
   slug: VolunteerSlug
   title: string
+  code: string // stable role code carried into every sign-up (e.g. "FOSTER")
   icon: IconName
   tagline: string // short line for the cards
   blurb: string // longer intro on the detail page
   commitment: string // quick chip, e.g. time ask
 }
 
+// Role code used when someone signs up generally (not via a specific way).
+export const GENERAL_ROLE = { title: 'General volunteer', code: 'GENERAL' }
+
 export const volunteerWays: VolunteerWay[] = [
   {
     slug: 'socialization',
     title: 'Bunny Socialization',
+    code: 'SOCIALIZE',
     icon: 'heart',
     tagline: 'Sit with rabbits to help them get ready for adoption.',
     blurb:
@@ -30,6 +35,7 @@ export const volunteerWays: VolunteerWay[] = [
   {
     slug: 'vet-transport',
     title: 'Vet Transport',
+    code: 'VET-TRANSPORT',
     icon: 'mappin',
     tagline: 'Drive bunnies to and from their vet appointments.',
     blurb:
@@ -39,6 +45,7 @@ export const volunteerWays: VolunteerWay[] = [
   {
     slug: 'events',
     title: 'Events & Awareness',
+    code: 'EVENTS',
     icon: 'users',
     tagline: 'Help at tabling events and spread the word.',
     blurb:
@@ -48,6 +55,7 @@ export const volunteerWays: VolunteerWay[] = [
   {
     slug: 'foster',
     title: 'Foster a Rabbit',
+    code: 'FOSTER',
     icon: 'home',
     tagline: 'Open your home and expand rescue capacity.',
     blurb:

@@ -170,13 +170,22 @@ export function SegTabs<T extends string>({
   options,
   value,
   onChange,
+  wrap = false,
 }: {
   options: readonly T[]
   value: T
   onChange: (v: T) => void
+  /* wrap onto multiple rows so every option stays visible (vs. scrolling off-screen) */
+  wrap?: boolean
 }) {
   return (
-    <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 py-0.5">
+    <div
+      className={
+        wrap
+          ? 'flex flex-wrap gap-2 py-0.5'
+          : 'no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 py-0.5'
+      }
+    >
       {options.map((o) => {
         const active = o === value
         return (

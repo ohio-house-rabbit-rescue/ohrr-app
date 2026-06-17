@@ -19,7 +19,10 @@ export default function Volunteer() {
             Tell us a bit about you and how you’d like to help — OHRR will follow up to get you
             started.
           </p>
-          <Link to="/volunteer/signup?role=General%20volunteer" className={`${btn.primary} mt-4`}>
+          <Link
+            to="/volunteer/signup?role=General%20volunteer&code=GENERAL"
+            className={`${btn.primary} mt-4`}
+          >
             Become a volunteer
             <Icon name="chevron" size={16} />
           </Link>

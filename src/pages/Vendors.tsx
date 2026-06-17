@@ -28,7 +28,7 @@ export default function Vendors() {
           Showing the 2025 vendors. The 2026 roster is announced closer to the event, and the booth
           locations shown are an estimate — OHRR sets the final layout.
         </SampleNote>
-        <SegTabs options={CATEGORIES} value={category} onChange={setCategory} />
+        <SegTabs options={CATEGORIES} value={category} onChange={setCategory} wrap />
         <div className="grid grid-cols-1 gap-3">
           {list.map((v) => (
             <Link
