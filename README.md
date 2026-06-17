@@ -32,6 +32,6 @@ The research and strategy that this project is built on live in [`docs/`](docs/)
 
 ## Status
 
-- **Phase:** Discovery / research. No application code written yet — this commit imports the project's foundational documents.
+- **Phase:** v1 shipped and deployed to [ohrr-app.netlify.app](https://ohrr-app.netlify.app). The app is now a full OHRR host app (Adopt, Happy Tails, Bunny Services, Learn, Volunteer, Support) with Midwest BunFest as a themed sub-app. See [`docs/PROGRESS.md`](docs/PROGRESS.md) for the live status, what's built, and next steps.
 - **Org:** Ohio House Rabbit Rescue, Columbus, OH (EIN 27-0830606), founded 2009.
 - These are living documents. Anything marked **[VERIFY]** still needs confirmation directly from OHRR.
