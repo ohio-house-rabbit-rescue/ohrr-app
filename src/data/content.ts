@@ -24,6 +24,7 @@ export interface HubItem {
 export const OHRR_TABS: TabItem[] = [
   { to: '/', label: 'Home', icon: 'home', end: true },
   { to: '/adopt', label: 'Adopt', icon: 'heart' },
+  { to: '/tails', label: 'Tails', icon: 'sparkles' },
   { to: '/learn', label: 'Learn', icon: 'book' },
   { to: '/volunteer', label: 'Volunteer', icon: 'users' },
   { to: '/support', label: 'Support', icon: 'gift' },
@@ -31,6 +32,7 @@ export const OHRR_TABS: TabItem[] = [
 
 export const OHRR_HUB: HubItem[] = [
   { to: '/adopt', title: 'Adopt a Rabbit', subtitle: 'Meet adoptable buns & apply', icon: 'heart' },
+  { to: '/tails', title: 'Happy Tails', subtitle: 'See where adopted bunnies are now', icon: 'sparkles' },
   { to: '/learn', title: 'Rabbit Care', subtitle: 'Diet, housing, bonding & more', icon: 'book' },
   { to: '/volunteer', title: 'Volunteer', subtitle: 'Give your time to the buns', icon: 'users' },
   { to: '/support', title: 'Support OHRR', subtitle: 'Donate & ways to help', icon: 'gift', tone: 'orange' },
