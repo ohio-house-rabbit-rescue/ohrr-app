@@ -11,6 +11,9 @@
 - **Live site:** https://ohrr-app.netlify.app
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
   Google Drive "OHRR App Design" folder holds the canonical *design* docs only).
+- **New here? Read [`START-HERE.md`](START-HERE.md) first** — storage map, how to
+  resume, and why Claude sessions kept disappearing (open the project from the
+  local repo path above, **not** the Google Drive Streaming path).
 
 ---
 
