@@ -6,15 +6,17 @@ import {
   transportRuns,
   outreachEvents,
   fosterInfo,
+  type VolunteerWay as Way,
 } from '../data/volunteer'
 import { Screen, Card, SectionLabel, SampleNote, Badge, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 import { RabbitPhoto } from '../components/RabbitPhoto'
 
-// Link into the sign-up form, pre-filled with the role + the specific thing
-// the volunteer tapped (a shift, a run, an event, or fostering).
-function signupHref(role: string, item?: string) {
-  const params = new URLSearchParams({ role })
+// Link into the sign-up form, pre-filled with the role, its stable code, and the
+// specific thing the volunteer tapped (a shift, a run, an event, or fostering) —
+// so the submission OHRR receives says exactly what they signed up for.
+function signupHref(role: string, code: string, item?: string) {
+  const params = new URLSearchParams({ role, code })
   if (item) params.set('item', item)
   return `/volunteer/signup?${params.toString()}`
 }
@@ -49,15 +51,15 @@ export default function VolunteerWay() {
         <p className="mt-2 text-sm leading-relaxed text-slate-600">{way.blurb}</p>
       </div>
 
-      {slug === 'socialization' && <Socialization />}
-      {slug === 'vet-transport' && <VetTransport />}
-      {slug === 'events' && <Events />}
-      {slug === 'foster' && <Foster />}
+      {slug === 'socialization' && <Socialization way={way} />}
+      {slug === 'vet-transport' && <VetTransport way={way} />}
+      {slug === 'events' && <Events way={way} />}
+      {slug === 'foster' && <Foster way={way} />}
     </Screen>
   )
 }
 
-function Socialization() {
+function Socialization({ way }: { way: Way }) {
   return (
     <>
       <section className="space-y-2.5">
@@ -101,7 +103,7 @@ function Socialization() {
                 </p>
               </div>
               <Link
-                to={signupHref('Bunny socialization', `${s.day}, ${s.date} · ${s.time}`)}
+                to={signupHref(way.title, way.code, `${s.day}, ${s.date} · ${s.time}`)}
                 className="rounded-full bg-brand-blue px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-blue-dark"
               >
                 Sign up
@@ -114,7 +116,7 @@ function Socialization() {
   )
 }
 
-function VetTransport() {
+function VetTransport({ way }: { way: Way }) {
   return (
     <section className="space-y-2.5">
       <SectionLabel>Upcoming transport runs</SectionLabel>
@@ -140,7 +142,7 @@ function VetTransport() {
             </div>
             {r.note && <p className="mt-1 text-xs italic text-slate-400">{r.note}</p>}
             <Link
-              to={signupHref('Vet transport', `${r.date} · ${r.from} → ${r.to}`)}
+              to={signupHref(way.title, way.code, `${r.date} · ${r.from} → ${r.to}`)}
               className={`${btn.blue} mt-3 w-full`}
             >
               Claim this run
@@ -153,7 +155,7 @@ function VetTransport() {
   )
 }
 
-function Events() {
+function Events({ way }: { way: Way }) {
   return (
     <section className="space-y-2.5">
       <SectionLabel>Events needing hands</SectionLabel>
@@ -174,7 +176,7 @@ function Events() {
               {e.need}
             </p>
             <Link
-              to={signupHref('Events & awareness', `${e.name} · ${e.date}`)}
+              to={signupHref(way.title, way.code, `${e.name} · ${e.date}`)}
               className={`${btn.blue} mt-3 w-full`}
             >
               Sign up to help
@@ -187,7 +189,7 @@ function Events() {
   )
 }
 
-function Foster() {
+function Foster({ way }: { way: Way }) {
   return (
     <section className="space-y-2.5">
       <SectionLabel>How fostering works</SectionLabel>
@@ -205,7 +207,7 @@ function Foster() {
         <p className="mt-3 rounded-xl bg-brand-orange-50 px-3 py-2 text-xs leading-relaxed text-brand-orange">
           {fosterInfo.note}
         </p>
-        <Link to={signupHref('Foster a rabbit')} className={`${btn.primary} mt-4 w-full`}>
+        <Link to={signupHref(way.title, way.code)} className={`${btn.primary} mt-4 w-full`}>
           I’m interested in fostering
           <Icon name="chevron" size={16} />
         </Link>

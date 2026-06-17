@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { ohrr } from '../data/ohrr'
 import { PageHeader, Screen, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
@@ -82,14 +83,9 @@ export default function About() {
           </a>
           <p className="mt-3 text-xs leading-relaxed text-slate-400">
             If rehoming truly is the only option, OHRR’s{' '}
-            <a
-              href={ohrr.links.admissions}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-brand-blue underline"
-            >
+            <Link to="/surrender" className="font-semibold text-brand-blue underline">
               owner-surrender process
-            </a>{' '}
+            </Link>{' '}
             is here to help, with no judgment.
           </p>
         </Card>

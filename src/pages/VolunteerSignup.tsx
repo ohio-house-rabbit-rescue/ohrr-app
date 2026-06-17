@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Screen, Card, Badge, btn } from '../components/ui'
+import { Screen, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 
 const input =
@@ -15,6 +15,7 @@ function encode(data: Record<string, string>) {
 export default function VolunteerSignup() {
   const [params] = useSearchParams()
   const role = params.get('role') ?? 'Volunteer'
+  const code = params.get('code') ?? 'GENERAL'
   const item = params.get('item') ?? ''
 
   const [status, setStatus] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle')
@@ -30,7 +31,7 @@ export default function VolunteerSignup() {
       await fetch('/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: encode({ 'form-name': 'volunteer-signup', role, item, ...form }),
+        body: encode({ 'form-name': 'volunteer-signup', role, code, item, ...form }),
       })
       setStatus('done')
     } catch {
@@ -67,9 +68,15 @@ export default function VolunteerSignup() {
       </Link>
 
       <div>
-        <Badge tone="blue">{role}</Badge>
-        <h1 className="mt-2 font-display text-2xl font-black text-ink">Count me in</h1>
-        {item && <p className="mt-1 text-sm font-semibold text-slate-500">{item}</p>}
+        <p className="text-xs font-extrabold uppercase tracking-wider text-brand-blue">
+          Volunteer sign-up
+        </p>
+        <h1 className="mt-1 font-display text-2xl font-black text-ink">{role}</h1>
+        {item ? (
+          <p className="mt-1 text-sm font-semibold text-slate-500">{item}</p>
+        ) : (
+          <p className="mt-1 text-sm text-slate-500">Tell OHRR you’d like to help with this.</p>
+        )}
       </div>
 
       <Card>
@@ -85,6 +92,7 @@ export default function VolunteerSignup() {
         >
           <input type="hidden" name="form-name" value="volunteer-signup" />
           <input type="hidden" name="role" value={role} />
+          <input type="hidden" name="code" value={code} />
           <input type="hidden" name="item" value={item} />
           <p className="hidden">
             <label>
