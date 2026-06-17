@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { ohrr } from '../data/ohrr'
 import { Icon } from './icons'
 
 export default function OhrrTopBar() {
@@ -26,15 +25,6 @@ export default function OhrrTopBar() {
         >
           <Icon name="settings" size={18} />
         </Link>
-        <a
-          href={ohrr.links.site}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="OHRR website"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25"
-        >
-          <Icon name="external" size={18} />
-        </a>
       </div>
     </header>
   )

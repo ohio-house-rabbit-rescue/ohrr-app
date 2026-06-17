@@ -2,6 +2,7 @@
 // returns this exact shape (see netlify/functions/petfinder.js), and the sample
 // rabbits below match it so the Adopt page renders identically with or without a
 // live Petfinder connection.
+import { BUNNY_PHOTOS } from './photos'
 
 export type Sex = 'Male' | 'Female' | 'Unknown'
 export type AgeGroup = 'Baby' | 'Young' | 'Adult' | 'Senior'
@@ -30,7 +31,8 @@ export interface Rabbit {
 
 // Friendly placeholder rabbits shown until OHRR's live Petfinder feed is wired
 // up (and as a graceful fallback if the API is ever unreachable). Written to
-// look and read like real OHRR listings.
+// look and read like real OHRR listings. Photos are freely-licensed sample
+// rabbits (see src/data/photos.ts); the real Petfinder feed replaces them.
 export const sampleRabbits: Rabbit[] = [
   {
     id: 'sample-clover',
@@ -41,6 +43,7 @@ export const sampleRabbits: Rabbit[] = [
     size: 'Small',
     spayedNeutered: true,
     houseTrained: true,
+    photo: BUNNY_PHOTOS.caramelLop,
     tags: ['Friendly', 'Curious', 'Litter-trained'],
     description:
       'Clover is a sweet, people-loving lop who will flop at your feet the moment she trusts you. She is already litter-trained and would do wonderfully as a first rabbit for a gentle home.',
@@ -54,6 +57,7 @@ export const sampleRabbits: Rabbit[] = [
     size: 'Small',
     spayedNeutered: true,
     houseTrained: true,
+    photo: BUNNY_PHOTOS.lionheadWhite,
     tags: ['Mellow', 'Gentle'],
     description:
       'Basil is a laid-back gentleman who loves a good chin rub and an afternoon nap in the sun. He is looking for a calm home where he can be the center of attention.',
@@ -68,6 +72,7 @@ export const sampleRabbits: Rabbit[] = [
     spayedNeutered: true,
     houseTrained: true,
     bonded: true,
+    photo: BUNNY_PHOTOS.spotted,
     tags: ['Bonded pair', 'Playful'],
     description:
       'Hazel and Juniper are a deeply bonded pair of sisters who must be adopted together. They groom each other constantly and are happiest exploring side by side. Two bunnies, double the binkies.',
@@ -80,6 +85,7 @@ export const sampleRabbits: Rabbit[] = [
     breed: 'Netherland Dwarf',
     size: 'Small',
     spayedNeutered: true,
+    photo: BUNNY_PHOTOS.greyDwarf,
     tags: ['Energetic', 'Inquisitive'],
     description:
       'Pip is a pint-sized bundle of energy who zooms, binkies, and investigates everything. He would thrive with an experienced bunny family ready for a spirited little personality.',
@@ -93,6 +99,7 @@ export const sampleRabbits: Rabbit[] = [
     size: 'Medium',
     spayedNeutered: true,
     houseTrained: true,
+    photo: BUNNY_PHOTOS.silver,
     tags: ['Velvet coat', 'Cuddly', 'Senior'],
     description:
       'Willow is a velvety senior girl who has the softest coat you will ever touch. She asks for little more than a quiet corner, a pile of hay, and someone to love her in her golden years.',
@@ -106,6 +113,7 @@ export const sampleRabbits: Rabbit[] = [
     size: 'Medium',
     spayedNeutered: true,
     houseTrained: true,
+    photo: BUNNY_PHOTOS.blackLop,
     tags: ['Confident', 'Foodie'],
     description:
       'Oreo is a handsome, confident boy who will let you know exactly when salad is late. He is litter-trained, curious, and would love a home with room to explore and a willing snack provider.',
