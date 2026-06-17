@@ -17,6 +17,7 @@ export const event = {
     'A family-friendly celebration of house rabbits — education from vets and rabbit experts, specialty vendors, a bunny spa, glamour shots, a silent auction & raffle, and rescues from across the country. All proceeds support Ohio House Rabbit Rescue.',
   date: 'Sunday, October 25, 2026',
   dateShort: 'Sun, Oct 25, 2026',
+  isoDate: '2026-10-25', // machine-readable event day (used for calendar export)
   timeLabel: '10:00 AM – 4:00 PM',
   venue: {
     name: 'The Makoy',
