@@ -1,5 +1,5 @@
-import { learnLinks } from '../data/ohrr'
-import { PageHeader, Screen, ExternalCard } from '../components/ui'
+import { careTopics, CARE_DISCLAIMER } from '../data/care'
+import { PageHeader, Screen, ActionCard } from '../components/ui'
 
 export default function Learn() {
   return (
@@ -7,12 +7,19 @@ export default function Learn() {
       <PageHeader
         icon="book"
         title="Rabbit Care"
-        subtitle="Good care means happier rabbits — and fewer surrenders. Here are the essentials."
+        subtitle="Good care means happier rabbits — and fewer surrenders. Here are the essentials, right in the app."
       />
       <Screen className="space-y-2.5">
-        {learnLinks.map((l) => (
-          <ExternalCard key={l.title} href={l.url} title={l.title} description={l.description} icon={l.icon} />
+        {careTopics.map((t) => (
+          <ActionCard
+            key={t.id}
+            to={`/learn/${t.id}`}
+            title={t.title}
+            subtitle={t.summary}
+            icon={t.icon}
+          />
         ))}
+        <p className="px-1 pt-2 text-xs leading-relaxed text-slate-400">{CARE_DISCLAIMER}</p>
       </Screen>
     </>
   )

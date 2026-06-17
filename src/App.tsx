@@ -10,6 +10,7 @@ import TailDetail from './pages/TailDetail'
 import Services from './pages/Services'
 import ServiceSignup from './pages/ServiceSignup'
 import Learn from './pages/Learn'
+import LearnTopic from './pages/LearnTopic'
 import Volunteer from './pages/Volunteer'
 import About from './pages/About'
 import Give from './pages/Give'
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/services" element={<Services />} />
         <Route path="/services/signup" element={<ServiceSignup />} />
         <Route path="/learn" element={<Learn />} />
+        <Route path="/learn/:id" element={<LearnTopic />} />
         <Route path="/volunteer" element={<Volunteer />} />
         <Route path="/support" element={<Give />} />
         <Route path="/about" element={<About />} />

@@ -1,5 +1,5 @@
 import { volunteerWays, ohrr } from '../data/ohrr'
-import { PageHeader, Screen, ExternalCard, btn } from '../components/ui'
+import { PageHeader, Screen, Card, IconTile, btn } from '../components/ui'
 
 export default function Volunteer() {
   return (
@@ -10,9 +10,15 @@ export default function Volunteer() {
         subtitle="OHRR is volunteer-powered. A little time goes a long way for the buns."
       />
       <Screen className="space-y-4">
-        <div className="space-y-2.5">
-          {volunteerWays.map((l) => (
-            <ExternalCard key={l.title} href={l.url} title={l.title} description={l.description} icon={l.icon} />
+        <div className="space-y-3">
+          {volunteerWays.map((w) => (
+            <Card key={w.title} className="flex items-start gap-4">
+              <IconTile name={w.icon} />
+              <div className="min-w-0 flex-1">
+                <h3 className="font-display text-[15px] font-extrabold text-ink">{w.title}</h3>
+                <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{w.description}</p>
+              </div>
+            </Card>
           ))}
         </div>
 
