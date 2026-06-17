@@ -20,14 +20,19 @@
 ## Current state (at a glance)
 
 - **Branch:** `main` — clean, up to date with `origin/main`, auto-deployed to
-  Netlify (HEAD = merge of [PR #9](https://github.com/chasingtheunicorn/ohrr-app/pull/9)).
-- **PRs:** none open. PR #9 ("plan-your-day") merged & live; PRs #1–#8 merged/closed.
-- **Build health:** `npm run typecheck` and `npm run build` pass clean; the
-  plan-your-day feature was verified in-browser (save/persist, filter, `.ics`
-  export, empty state) before merge.
+  Netlify (HEAD = merge of [PR #10](https://github.com/chasingtheunicorn/ohrr-app/pull/10)).
+- **PRs:** none open. Live & merged: [#10](https://github.com/chasingtheunicorn/ohrr-app/pull/10)
+  (Settings + calendar chooser), [#9](https://github.com/chasingtheunicorn/ohrr-app/pull/9)
+  (plan-your-day); PRs #1–#8 merged/closed.
+- **Build health:** `npm run typecheck` and `npm run build` pass clean; features
+  verified in-browser before each merge.
 - **Phase:** v1 shipped and deployed. The app has grown well past the original
   "BunFest companion" scope into a full OHRR host app with BunFest as a themed
-  sub-app. Now layering in attendee-retention features (plan-your-day is live).
+  sub-app. Now layering in attendee-retention + identity features.
+- **Identity/backend note:** an optional email "profile" capability now exists
+  (device-local, stable anonymous UUID, `src/lib/profile.ts`). `identityPayload()`
+  is the seam for the **still-pending backend decision** — wiring a database to
+  persist/sync profiles + saved data is the next major step.
 
 ---
 
@@ -60,15 +65,19 @@
   (native pages, not external links).
 - **Volunteer** (`Volunteer`) — volunteer info/content in-app.
 - **Support / Give** (`Give`) — consolidated giving directory.
+- **Settings** (`Settings`, gear icon in both top bars) — app version/build info,
+  optional email identity (`src/lib/profile.ts`), and a saved-data summary.
 - **About** (`About`), **NotFound** (`*`).
 
 ### Midwest BunFest sub-app (routes under `/bunfest`, distinct look & feel)
 - **Home** (`BunfestHome`), **Schedule** (`Schedule`), **Vendors**
   (`Vendors`, `VendorDetail`), **Rescue Partners** (`Partners`, `PartnerDetail`),
   **Sponsors** (`Sponsors`), **Visit** (`Visit`), **Give**.
-- **Plan-your-day on Schedule** *(PR #9, live)* — save/unsave sessions
+- **Plan-your-day on Schedule** *(PR #9/#10, live)* — save/unsave sessions
   (account-free, `localStorage` via `src/lib/savedSessions.ts`), an All/Saved
-  filter, and an "Add to calendar" `.ics` export (`src/lib/ics.ts`).
+  filter, and an "Add to calendar" chooser (`CalendarSheet`) offering **Apple/iOS**
+  (one `.ics`, all saved) or **Google Calendar** (per-session links) via
+  `src/lib/ics.ts`.
 
 ### Structure
 - `src/pages/*` — route components (listed above).
@@ -78,8 +87,10 @@
 - `src/data/*` — content/data modules: `adoptables`, `care`, `content`, `event`,
   `giving`, `ohrr`, `partners`, `services`, `sessions`, `sponsors`, `tails`,
   `vendors`.
-- `src/lib/*` — `adopt.ts` (Petfinder client helpers), `follow.ts` (follow state).
-- `docs/*` — design docs (00–03) + this progress log.
+- `src/lib/*` — `adopt.ts` (Petfinder helpers), `follow.ts` (follow state),
+  `savedSessions.ts` (saved BunFest sessions), `ics.ts` (calendar export + Google
+  URLs), `profile.ts` (optional email identity + DB-sync seam).
+- `docs/*` — design docs (00–03), `START-HERE.md`, + this progress log.
 
 ### Shipped PRs (history)
 1. Import OHRR design docs + project README. (#1)
