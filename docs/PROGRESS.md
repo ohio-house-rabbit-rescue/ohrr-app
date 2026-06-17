@@ -19,16 +19,20 @@
 
 ## Current state (at a glance)
 
-- **Branch:** `main` — clean, up to date with `origin/main`, auto-deployed to
-  Netlify (HEAD = merge of [PR #10](https://github.com/chasingtheunicorn/ohrr-app/pull/10)).
-- **PRs:** none open. Live & merged: [#10](https://github.com/chasingtheunicorn/ohrr-app/pull/10)
+- **Branch in progress:** `feat/volunteer-and-imagery` — pushed, with **draft
+  [PR #11](https://github.com/chasingtheunicorn/ohrr-app/pull/11)** open (Volunteer
+  hub built out in-app + realistic bunny photos + softer surrender framing).
+  Awaiting review/merge. `main` itself is unchanged (HEAD = merge of
+  [PR #10](https://github.com/chasingtheunicorn/ohrr-app/pull/10)).
+- **Merged & live:** [#10](https://github.com/chasingtheunicorn/ohrr-app/pull/10)
   (Settings + calendar chooser), [#9](https://github.com/chasingtheunicorn/ohrr-app/pull/9)
   (plan-your-day); PRs #1–#8 merged/closed.
-- **Build health:** `npm run typecheck` and `npm run build` pass clean; features
-  verified in-browser before each merge.
+- **Build health:** `npm run typecheck` and `npm run build` pass clean; PR #11
+  verified in-browser (Volunteer flows, Adopt photos, About, sign-up form).
 - **Phase:** v1 shipped and deployed. The app has grown well past the original
   "BunFest companion" scope into a full OHRR host app with BunFest as a themed
-  sub-app. Now layering in attendee-retention + identity features.
+  sub-app. Now layering in attendee-retention + identity features, and making the
+  service sections (Volunteer first) actually usable in-app.
 - **Identity/backend note:** an optional email "profile" capability now exists
   (device-local, stable anonymous UUID, `src/lib/profile.ts`). `identityPayload()`
   is the seam for the **still-pending backend decision** — wiring a database to
@@ -56,18 +60,33 @@
 ### OHRR host app (routes under `/`)
 - **Home** (`OhrrHome`) — branded landing / hub.
 - **Adopt** (`Adopt`, `AdoptRabbit`) — live adoptable rabbits via the Petfinder
-  Netlify function, with sample fallback; per-rabbit detail pages.
+  Netlify function, with sample fallback; per-rabbit detail pages. *(PR #11)* The
+  sample rabbits now show **real, freely-licensed photos** (bundled in
+  `public/sample-bunnies/`, mapped in `src/data/photos.ts`) instead of an emoji;
+  `RabbitPhoto` falls back to the placeholder only if an image fails to load.
+  Photo credits are listed on the Settings screen.
 - **Happy Tails** (`Tails`, `TailDetail`) — adopter showcase with a bunny status
   timeline and a "follow" capability (`src/lib/follow.ts`).
 - **Bunny Services** (`Services`, `ServiceSignup`) — bonding-session requests and
   mobile vet-clinic sign-ups.
 - **Learn** (`Learn`, `LearnTopic`) — rabbit-care content brought fully in-app
   (native pages, not external links).
-- **Volunteer** (`Volunteer`) — volunteer info/content in-app.
+- **Volunteer** (`Volunteer`, `VolunteerWay`, `VolunteerSignup`) *(PR #11)* —
+  built out as a real in-app section. "Become a volunteer" now opens an in-app
+  form (Netlify `volunteer-signup`), not the OHRR website. Each way to help
+  (`/volunteer/:slug`: socialization, vet-transport, events, foster) has its own
+  detail page with **template data** clearly labelled *Sample* — bunnies who need
+  socializing (with photos), open 1-hr shifts, vet-transport runs, and outreach
+  events — each routing into the shared sign-up flow. Content in `src/data/volunteer.ts`.
 - **Support / Give** (`Give`) — consolidated giving directory.
 - **Settings** (`Settings`, gear icon in both top bars) — app version/build info,
   optional email identity (`src/lib/profile.ts`), and a saved-data summary.
-- **About** (`About`), **NotFound** (`*`).
+- **About** (`About`), **NotFound** (`*`). *(PR #11)* The blunt "Surrender a
+  rabbit" button is reframed as a compassionate **"Need help with your rabbit?"**
+  card that leads with reaching out; the owner-surrender path stays available but
+  de-emphasized as a small text link.
+- **Top bar** *(PR #11)*: the outbound website link was removed from `OhrrTopBar`
+  (Settings gear remains).
 
 ### Midwest BunFest sub-app (routes under `/bunfest`, distinct look & feel)
 - **Home** (`BunfestHome`), **Schedule** (`Schedule`), **Vendors**
@@ -85,8 +104,9 @@
   `BunfestLayout`/`BunfestTopBar` (sub-app shell), `RabbitPhoto`, `ScrollToTop`,
   `ui.tsx`, `tailbits.tsx`, `icons.tsx`.
 - `src/data/*` — content/data modules: `adoptables`, `care`, `content`, `event`,
-  `giving`, `ohrr`, `partners`, `services`, `sessions`, `sponsors`, `tails`,
-  `vendors`.
+  `giving`, `ohrr`, `partners`, `photos` (sample bunny images + credits),
+  `services`, `sessions`, `sponsors`, `tails`, `vendors`, `volunteer` (ways +
+  template shifts/runs/events/bunnies), `version`.
 - `src/lib/*` — `adopt.ts` (Petfinder helpers), `follow.ts` (follow state),
   `savedSessions.ts` (saved BunFest sessions), `ics.ts` (calendar export + Google
   URLs), `profile.ts` (optional email identity + DB-sync seam).
@@ -131,7 +151,17 @@ strategy doc; not yet scheduled:
   + notifications.
 - **Content in-app** — continue migrating OHRR/BunFest content natively.
 - **Backend decision** — choose and wire a backend (Supabase is the documented
-  candidate) to persist sign-ups, follows, and any registration.
+  candidate) to persist sign-ups, follows, and any registration. The Volunteer
+  sign-ups (`volunteer-signup`) and Service sign-ups currently post to Netlify
+  Forms; a real backend would let shifts/runs show true remaining capacity.
+- **Rabbit breed identifier / guide** *(sponsor request, 2026-06-17)* — a "what
+  kind of bunny do I have?" feature OHRR's site doesn't have: the official list of
+  rabbit breeds with a photo + short description of each. Research a good source
+  (Wikipedia / Wikimedia Commons, ARBA breed list) for accurate details + freely
+  licensed images. Scoped for later.
+- **Swap template volunteer data for OHRR's real schedule** — the shifts, runs,
+  events, and socialization bunnies in `src/data/volunteer.ts` are clearly-labelled
+  samples; replace with OHRR's actual calendar (or back them with the database).
 - **Verify [VERIFY] facts with OHRR** — current hours; BunFest first year + edition
   count (matters for any anniversary feature).
 

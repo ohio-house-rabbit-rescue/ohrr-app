@@ -1,7 +1,8 @@
-// Photo for an adoptable rabbit. When a listing has a photo (real Petfinder
-// data) it shows it; otherwise — sample rabbits, or real listings with no image
-// yet — it renders a friendly, on-brand placeholder tinted deterministically
-// from the rabbit's name (so the same bunny always gets the same color).
+// Photo for a rabbit. When a listing has a photo (real Petfinder data or a
+// bundled sample image) it shows it; otherwise — or if the image fails to load
+// — it renders a friendly, on-brand placeholder tinted deterministically from
+// the rabbit's name (so the same bunny always gets the same color).
+import { useState } from 'react'
 
 export function RabbitPhoto({
   name,
@@ -12,12 +13,15 @@ export function RabbitPhoto({
   photo?: string
   className?: string
 }) {
-  if (photo) {
+  const [failed, setFailed] = useState(false)
+
+  if (photo && !failed) {
     return (
       <img
         src={photo}
         alt={name}
         loading="lazy"
+        onError={() => setFailed(true)}
         className={`h-full w-full object-cover ${className}`}
       />
     )

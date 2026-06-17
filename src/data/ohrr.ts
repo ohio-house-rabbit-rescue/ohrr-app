@@ -70,11 +70,3 @@ export const learnLinks: LinkCard[] = [
   { title: 'Rabbit-Savvy Vets', description: 'Find a vet experienced with rabbits.', url: ohrr.links.vets, icon: 'phone' },
   { title: 'Caught a Stray Rabbit?', description: 'Tips for catching and helping strays.', url: ohrr.links.stray, icon: 'mappin' },
 ]
-
-// Ways to give time.
-export const volunteerWays: LinkCard[] = [
-  { title: 'Bunny Socialization', description: 'Sit with rabbits to prep them for adoption (up to two 1-hour shifts/month).', url: ohrr.links.volunteer, icon: 'heart' },
-  { title: 'Vet Transport', description: 'Drive rabbits to and from vet appointments.', url: ohrr.links.volunteer, icon: 'mappin' },
-  { title: 'Events & Awareness', description: 'Help at events and spread the word on social media.', url: ohrr.links.volunteer, icon: 'users' },
-  { title: 'Foster a Rabbit', description: 'Open your home to expand rescue capacity.', url: ohrr.links.volunteer, icon: 'home' },
-]

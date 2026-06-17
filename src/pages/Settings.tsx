@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { PageHeader, Screen, Card, SectionLabel, btn } from '../components/ui'
 import { build } from '../data/version'
+import { PHOTO_CREDITS } from '../data/photos'
 import { useProfile, saveProfile, clearProfile } from '../lib/profile'
 
 function fmtDate(iso: string): string {
@@ -145,6 +146,40 @@ export default function Settings() {
             <p className="pt-1 text-xs text-slate-400">
               Stored on this device — it's still here when you reopen the app.
             </p>
+          </Card>
+        </section>
+
+        {/* ---- Photo credits (honors the sample-image licenses) ---- */}
+        <section className="space-y-2">
+          <SectionLabel>Photo credits</SectionLabel>
+          <Card className="space-y-2">
+            <p className="text-xs leading-relaxed text-slate-500">
+              Sample bunny photos are freely-licensed images from Wikimedia Commons, shown until
+              OHRR’s own rabbit photos are connected. Thanks to the photographers:
+            </p>
+            <ul className="space-y-1.5 text-xs text-slate-500">
+              {PHOTO_CREDITS.map((c) => (
+                <li key={c.source} className="flex flex-wrap items-center gap-x-1.5">
+                  <a
+                    href={c.source}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-brand-blue underline"
+                  >
+                    {c.author}
+                  </a>
+                  <span className="text-slate-400">·</span>
+                  <a
+                    href={c.licenseUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-400 underline"
+                  >
+                    {c.license}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </Card>
         </section>
 

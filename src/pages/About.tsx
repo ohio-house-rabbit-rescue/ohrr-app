@@ -52,19 +52,47 @@ export default function About() {
           </dl>
         </Card>
 
-        <div className="grid grid-cols-2 gap-3">
-          <a href={ohrr.links.contact} target="_blank" rel="noopener noreferrer" className={btn.blue}>
-            Contact us
-          </a>
+        <a
+          href={ohrr.links.contact}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${btn.blue} w-full`}
+        >
+          Contact us
+        </a>
+
+        {/* Owner support — lead with "let's help you keep your bunny," not an
+            open drop-off. The surrender path stays available, gently. */}
+        <Card>
+          <h3 className="font-display text-base font-extrabold text-ink">
+            Need help with your rabbit?
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            Life happens — a behavior you can’t crack, allergies, a move, unexpected vet costs.
+            Before you make any decision, reach out. OHRR can often help you keep your bunny, point
+            you to resources, or just talk things through.
+          </p>
           <a
-            href={ohrr.links.admissions}
+            href={ohrr.links.contact}
             target="_blank"
             rel="noopener noreferrer"
-            className={`${btn.white} border border-slate-200`}
+            className={`${btn.outline} mt-3`}
           >
-            Surrender a rabbit
+            Talk to OHRR
           </a>
-        </div>
+          <p className="mt-3 text-xs leading-relaxed text-slate-400">
+            If rehoming truly is the only option, OHRR’s{' '}
+            <a
+              href={ohrr.links.admissions}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-brand-blue underline"
+            >
+              owner-surrender process
+            </a>{' '}
+            is here to help, with no judgment.
+          </p>
+        </Card>
 
         <p className="px-1 text-center text-xs text-slate-400">
           501(c)(3) nonprofit · EIN {ohrr.ein} · est. {ohrr.founded}

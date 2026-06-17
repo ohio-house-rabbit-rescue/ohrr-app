@@ -31,6 +31,18 @@
       <textarea name="notes"></textarea>
     </form>
 
+    <!-- Hidden static form so Netlify Forms detects "volunteer-signup" at build
+         time; the live React form (src/pages/VolunteerSignup.tsx) posts to it. -->
+    <form name="volunteer-signup" netlify netlify-honeypot="bot-field" hidden>
+      <input type="text" name="role" />
+      <input type="text" name="item" />
+      <input type="text" name="name" />
+      <input type="email" name="email" />
+      <input type="tel" name="phone" />
+      <input type="text" name="availability" />
+      <textarea name="notes"></textarea>
+    </form>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

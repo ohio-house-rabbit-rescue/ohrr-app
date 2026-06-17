@@ -29,3 +29,6 @@ desktop.ini
 
 # misc
 *.local
+
+# local Claude Code dev config
+.claude/
