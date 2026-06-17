@@ -15,7 +15,9 @@ import NotFound from './pages/NotFound'
 import BunfestHome from './pages/BunfestHome'
 import Schedule from './pages/Schedule'
 import Vendors from './pages/Vendors'
+import VendorDetail from './pages/VendorDetail'
 import Partners from './pages/Partners'
+import PartnerDetail from './pages/PartnerDetail'
 import Sponsors from './pages/Sponsors'
 import Visit from './pages/Visit'
 
@@ -40,7 +42,9 @@ export default function App() {
         <Route index element={<BunfestHome />} />
         <Route path="schedule" element={<Schedule />} />
         <Route path="vendors" element={<Vendors />} />
+        <Route path="vendors/:id" element={<VendorDetail />} />
         <Route path="partners" element={<Partners />} />
+        <Route path="partners/:id" element={<PartnerDetail />} />
         <Route path="sponsors" element={<Sponsors />} />
         <Route path="visit" element={<Visit />} />
         <Route path="give" element={<Give />} />

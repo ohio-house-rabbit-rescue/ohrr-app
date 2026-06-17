@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { vendors, vendorCategories } from '../data/vendors'
-import { PageHeader, Screen, Card, Badge, SampleNote, SegTabs } from '../components/ui'
+import { PageHeader, Screen, Badge, SampleNote, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
 
 const CATEGORIES = ['All', ...vendorCategories] as const
@@ -28,23 +29,22 @@ export default function Vendors() {
         <SegTabs options={CATEGORIES} value={category} onChange={setCategory} />
         <div className="grid grid-cols-1 gap-3">
           {list.map((v) => (
-            <Card key={v.id}>
+            <Link
+              key={v.id}
+              to={`/bunfest/vendors/${v.id}`}
+              className="group block rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
               <div className="flex items-start justify-between gap-2">
                 <h3 className="font-display text-base font-extrabold text-ink">{v.name}</h3>
                 <Badge tone="orange">{v.category}</Badge>
               </div>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600">{v.description}</p>
-              {v.url && (
-                <a
-                  href={v.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
-                >
-                  Visit <Icon name="external" size={14} />
-                </a>
-              )}
-            </Card>
+              <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate-600">
+                {v.description}
+              </p>
+              <span className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-brand-blue">
+                View details <Icon name="chevron" size={14} />
+              </span>
+            </Link>
           ))}
         </div>
       </Screen>
