@@ -19,15 +19,15 @@
 
 ## Current state (at a glance)
 
-- **Active branch:** `feat/bunfest-my-schedule` — **draft [PR #9](https://github.com/chasingtheunicorn/ohrr-app/pull/9) open**
-  ("Plan-your-day: save BunFest sessions + add to calendar"). `main` itself is
-  clean and deployed.
-- **PRs:** PR #9 in review (draft). PRs #1–#8 all merged/closed.
+- **Branch:** `main` — clean, up to date with `origin/main`, auto-deployed to
+  Netlify (HEAD = merge of [PR #9](https://github.com/chasingtheunicorn/ohrr-app/pull/9)).
+- **PRs:** none open. PR #9 ("plan-your-day") merged & live; PRs #1–#8 merged/closed.
 - **Build health:** `npm run typecheck` and `npm run build` pass clean; the
-  feature was verified in-browser (save/persist, filter, `.ics` export, empty state).
+  plan-your-day feature was verified in-browser (save/persist, filter, `.ics`
+  export, empty state) before merge.
 - **Phase:** v1 shipped and deployed. The app has grown well past the original
   "BunFest companion" scope into a full OHRR host app with BunFest as a themed
-  sub-app. Now layering in attendee-retention features.
+  sub-app. Now layering in attendee-retention features (plan-your-day is live).
 
 ---
 
@@ -66,7 +66,7 @@
 - **Home** (`BunfestHome`), **Schedule** (`Schedule`), **Vendors**
   (`Vendors`, `VendorDetail`), **Rescue Partners** (`Partners`, `PartnerDetail`),
   **Sponsors** (`Sponsors`), **Visit** (`Visit`), **Give**.
-- **Plan-your-day on Schedule** *(PR #9, in review)* — save/unsave sessions
+- **Plan-your-day on Schedule** *(PR #9, live)* — save/unsave sessions
   (account-free, `localStorage` via `src/lib/savedSessions.ts`), an All/Saved
   filter, and an "Add to calendar" `.ics` export (`src/lib/ics.ts`).
 
