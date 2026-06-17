@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { vendors, vendorCategories } from '../data/vendors'
+import { boothForVendor, roomName } from '../data/floorplan'
 import { PageHeader, Screen, Badge, SampleNote, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
 
@@ -24,7 +25,8 @@ export default function Vendors() {
       />
       <Screen className="space-y-4">
         <SampleNote>
-          Showing the 2025 vendors. The 2026 roster is announced closer to the event.
+          Showing the 2025 vendors. The 2026 roster is announced closer to the event, and the booth
+          locations shown are an estimate — OHRR sets the final layout.
         </SampleNote>
         <SegTabs options={CATEGORIES} value={category} onChange={setCategory} />
         <div className="grid grid-cols-1 gap-3">
@@ -41,9 +43,20 @@ export default function Vendors() {
               <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-slate-600">
                 {v.description}
               </p>
-              <span className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-brand-blue">
-                View details <Icon name="chevron" size={14} />
-              </span>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1 text-sm font-bold text-brand-blue">
+                  View details <Icon name="chevron" size={14} />
+                </span>
+                {(() => {
+                  const b = boothForVendor(v.id)
+                  return b ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400">
+                      <Icon name="mappin" size={12} className="text-slate-400" />
+                      {roomName(b.room).replace(' Room', '')} · {b.label}
+                    </span>
+                  ) : null
+                })()}
+              </div>
             </Link>
           ))}
         </div>

@@ -19,16 +19,18 @@
 
 ## Current state (at a glance)
 
-- **Branch in progress:** `feat/volunteer-and-imagery` — pushed, with **draft
-  [PR #11](https://github.com/chasingtheunicorn/ohrr-app/pull/11)** open (Volunteer
-  hub built out in-app + realistic bunny photos + softer surrender framing).
-  Awaiting review/merge. `main` itself is unchanged (HEAD = merge of
-  [PR #10](https://github.com/chasingtheunicorn/ohrr-app/pull/10)).
-- **Merged & live:** [#10](https://github.com/chasingtheunicorn/ohrr-app/pull/10)
+- **Workflow:** finished, verified work is merged straight to `main` (auto-deploys
+  to Netlify) — the sponsor is the only stakeholder, so we don't park work in draft
+  PRs. Still branch + PR per change for clean history.
+- **Latest on `main`:** [PR #11](https://github.com/chasingtheunicorn/ohrr-app/pull/11)
+  (Volunteer hub in-app + realistic bunny photos + softer surrender framing) is
+  **merged & live**. The **event map** (`feat/event-map`) is the next merge.
+- **Merged & live:** #11, [#10](https://github.com/chasingtheunicorn/ohrr-app/pull/10)
   (Settings + calendar chooser), [#9](https://github.com/chasingtheunicorn/ohrr-app/pull/9)
   (plan-your-day); PRs #1–#8 merged/closed.
-- **Build health:** `npm run typecheck` and `npm run build` pass clean; PR #11
-  verified in-browser (Volunteer flows, Adopt photos, About, sign-up form).
+- **Build health:** `npm run typecheck` and `npm run build` pass clean; features
+  verified in-browser (or, when the screenshot tool is down, via the a11y snapshot
+  + DOM geometry checks + interaction tests).
 - **Phase:** v1 shipped and deployed. The app has grown well past the original
   "BunFest companion" scope into a full OHRR host app with BunFest as a themed
   sub-app. Now layering in attendee-retention + identity features, and making the
@@ -92,6 +94,16 @@
 - **Home** (`BunfestHome`), **Schedule** (`Schedule`), **Vendors**
   (`Vendors`, `VendorDetail`), **Rescue Partners** (`Partners`, `PartnerDetail`),
   **Sponsors** (`Sponsors`), **Visit** (`Visit`), **Give**.
+- **Event Map** (`EventMap`, `/bunfest/map`) *(feat/event-map)* — a built-in
+  interactive floor plan that replaces the old external map link. Models the real
+  2025 two-room layout (Burgundy + Emerald) with stages, Hop Shop, Bunny Spa,
+  Glamour Shots, Chillaxabun Lounge, Silent Auction, Raffle, MedVet, etc., and lays
+  all 27 vendors into numbered booths (B1–B12 / E1–E15) with one or two 8-ft tables
+  each (Burgundy left→right, Emerald top→bottom). **Booth positions are estimates,
+  clearly labelled** — OHRR sets the final layout. Tap a booth → vendor detail;
+  deep-linkable `?vendor=<id>`. Vendor list/detail show booth + room. Data in
+  `src/data/floorplan.ts`. *(Source: the real 2025 map at
+  midwestbunfest.org/event-map.html.)*
 - **Plan-your-day on Schedule** *(PR #9/#10, live)* — save/unsave sessions
   (account-free, `localStorage` via `src/lib/savedSessions.ts`), an All/Saved
   filter, and an "Add to calendar" chooser (`CalendarSheet`) offering **Apple/iOS**
@@ -104,9 +116,10 @@
   `BunfestLayout`/`BunfestTopBar` (sub-app shell), `RabbitPhoto`, `ScrollToTop`,
   `ui.tsx`, `tailbits.tsx`, `icons.tsx`.
 - `src/data/*` — content/data modules: `adoptables`, `care`, `content`, `event`,
-  `giving`, `ohrr`, `partners`, `photos` (sample bunny images + credits),
-  `services`, `sessions`, `sponsors`, `tails`, `vendors`, `volunteer` (ways +
-  template shifts/runs/events/bunnies), `version`.
+  `floorplan` (BunFest rooms/zones + vendor booth assignments), `giving`, `ohrr`,
+  `partners`, `photos` (sample bunny images + credits), `services`, `sessions`,
+  `sponsors`, `tails`, `vendors`, `volunteer` (ways + template
+  shifts/runs/events/bunnies), `version`.
 - `src/lib/*` — `adopt.ts` (Petfinder helpers), `follow.ts` (follow state),
   `savedSessions.ts` (saved BunFest sessions), `ics.ts` (calendar export + Google
   URLs), `profile.ts` (optional email identity + DB-sync seam).
@@ -144,8 +157,19 @@
 These are the sponsor-requested directions captured in project memory + the
 strategy doc; not yet scheduled:
 
+- **Donation tax-receipt flow** *(sponsor request, 2026-06-17, IN PROGRESS NEXT)* —
+  in the Support/Give areas, generate an automated downloadable PDF acknowledgment
+  after a gift (donor name, amount, date, OHRR's 501(c)(3)/EIN, "no goods or
+  services provided" language). NOTE: a legally valid receipt requires the gift to
+  actually be processed; without a payment backend this is a client-side
+  acknowledgment/template that becomes the real receipt once a processor (Stripe /
+  Donorbox) is wired. Recommend wiring a real processor for true receipts.
 - **Petfinder go-live** — set the real Petfinder credentials in Netlify so Adopt
-  shows live inventory instead of samples.
+  shows live inventory instead of samples. (Answered a sponsor question 2026-06-17:
+  the Adopt page already uses the Petfinder feed via `netlify/functions/petfinder.js`;
+  it only shows samples because `PETFINDER_CLIENT_ID/SECRET/ORG_ID` aren't set in
+  Netlify yet. We use Petfinder, not the OHRR website, because the site blocks
+  automated fetching and has no API.)
 - **Engagement / follow** — turn the client-only follow into something durable.
 - **Bonding & vet scheduling** — back the Services sign-ups with real persistence
   + notifications.

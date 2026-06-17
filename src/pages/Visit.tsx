@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { event } from '../data/event'
 import { ohrr } from '../data/ohrr'
 import { PageHeader, Screen, Card, btn } from '../components/ui'
@@ -38,14 +39,12 @@ export default function Visit() {
               <p className="text-sm text-slate-500">{event.venue.address}</p>
             </div>
           </div>
-          <a
-            href={event.links.map}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to="/bunfest/map"
             className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
           >
-            Event map <Icon name="external" size={14} />
-          </a>
+            View event map <Icon name="chevron" size={14} />
+          </Link>
         </Card>
 
         {/* Admission */}

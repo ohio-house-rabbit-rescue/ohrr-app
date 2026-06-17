@@ -52,6 +52,7 @@ export const BUNFEST_TABS: TabItem[] = [
 export const BUNFEST_HUB: HubItem[] = [
   { to: '/bunfest/schedule', title: 'Education Schedule', subtitle: 'Talks from rabbit experts & vets', icon: 'calendar' },
   { to: '/bunfest/vendors', title: 'Vendor Marketplace', subtitle: 'Specialty rabbit shopping', icon: 'bag' },
+  { to: '/bunfest/map', title: 'Event Map', subtitle: 'Booths, stages, spa & Hop Shop', icon: 'mappin' },
   { to: '/bunfest/partners', title: 'Rescue Partners', subtitle: 'Rabbit rescues across the Midwest', icon: 'users' },
   { to: '/bunfest/sponsors', title: 'Sponsors', subtitle: 'The businesses behind BunFest', icon: 'award' },
   { to: '/bunfest/visit', title: 'Plan Your Visit', subtitle: 'Date, location & what to bring', icon: 'mappin' },
