@@ -108,6 +108,33 @@ export function buildIcs(sessions: Session[]): string {
   ].join('\r\n')
 }
 
+/**
+ * A Google Calendar "add event" template URL for a single session. Google's
+ * template endpoint takes one event at a time, so the UI offers these per
+ * session (vs. the .ics, which adds them all at once for Apple/iOS). `ctz`
+ * pins the time to Eastern — the event's local zone — so it's correct no matter
+ * the attendee's device timezone.
+ */
+export function googleCalendarUrl(s: Session): string | null {
+  const start = parse24(s.start)
+  if (!start) return null
+  const end = parseEndFromRange(s.time) ?? addMinutes(start, 30)
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: s.title,
+    dates: `${floating(event.isoDate, start.h, start.m)}/${floating(event.isoDate, end.h, end.m)}`,
+    details: s.presenter ? `${s.presenter}\n\n${s.description}` : s.description,
+    location: `${event.venue.name}, ${event.venue.address}`,
+    ctz: 'America/New_York',
+  })
+  return `https://calendar.google.com/calendar/render?${params.toString()}`
+}
+
+function addMinutes(t: { h: number; m: number }, mins: number): { h: number; m: number } {
+  const total = (t.h * 60 + t.m + mins) % (24 * 60)
+  return { h: Math.floor(total / 60), m: total % 60 }
+}
+
 /** Trigger a download of the sessions as a .ics file. */
 export function downloadIcs(sessions: Session[], filename = 'midwest-bunfest.ics') {
   const blob = new Blob([buildIcs(sessions)], { type: 'text/calendar;charset=utf-8' })

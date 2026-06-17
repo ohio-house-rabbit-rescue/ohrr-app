@@ -14,6 +14,7 @@ import LearnTopic from './pages/LearnTopic'
 import Volunteer from './pages/Volunteer'
 import About from './pages/About'
 import Give from './pages/Give'
+import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
 // Midwest BunFest sub-app
 import BunfestHome from './pages/BunfestHome'
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/volunteer" element={<Volunteer />} />
         <Route path="/support" element={<Give />} />
         <Route path="/about" element={<About />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />
       </Route>
 
