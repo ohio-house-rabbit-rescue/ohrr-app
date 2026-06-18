@@ -8,7 +8,6 @@ const input =
   'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
 
 const REASONS = ['Adoption visit', 'Meet a specific rabbit', 'General visit', 'Other'] as const
-const DAYS = ['Saturday', 'Sunday', 'Either'] as const
 // OHRR is open 12–4 PM; 30-minute slots, last start at 3:30 (before the 4 PM close).
 const SLOTS = [
   '12:00 PM',
@@ -33,6 +32,28 @@ function encode(data: Record<string, string>) {
   return Object.keys(data)
     .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(data[k])}`)
     .join('&')
+}
+
+// Local "today" (YYYY-MM-DD) so the date picker can't choose the past.
+function todayISO() {
+  const d = new Date()
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+}
+function parseLocalDate(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+function isWeekend(iso: string) {
+  const dow = parseLocalDate(iso).getDay()
+  return dow === 0 || dow === 6
+}
+function formatVisitDate(iso: string) {
+  return parseLocalDate(iso).toLocaleDateString(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
 }
 
 // Shown once a visit is requested — this is where the address lives.
@@ -64,8 +85,11 @@ export default function Appointment() {
   const [status, setStatus] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle')
   const [form, setForm] = useState({ name: '', email: '', phone: '', notes: '' })
   const [reason, setReason] = useState('')
-  const [day, setDay] = useState('')
+  const [date, setDate] = useState('')
   const [slots, setSlots] = useState<string[]>([])
+
+  const minDate = todayISO()
+  const dateInvalid = date !== '' && !isWeekend(date)
 
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -78,6 +102,7 @@ export default function Appointment() {
 
   const onSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault()
+    if (dateInvalid) return // must be a Saturday or Sunday
     setStatus('submitting')
     try {
       await fetch('/', {
@@ -86,7 +111,7 @@ export default function Appointment() {
         body: encode({
           'form-name': 'appointment-request',
           reason,
-          day,
+          date: date ? formatVisitDate(date) : '',
           times: orderedSlots.join(', '),
           ...form,
         }),
@@ -98,7 +123,9 @@ export default function Appointment() {
   }
 
   if (status === 'done') {
-    const summary = [day, orderedSlots.join(', ')].filter(Boolean).join(' · ')
+    const summary = [date ? formatVisitDate(date) : '', orderedSlots.join(', ')]
+      .filter(Boolean)
+      .join(' · ')
     return (
       <>
         <PageHeader icon="calendar" title="Appointment requested" />
@@ -122,7 +149,7 @@ export default function Appointment() {
       <PageHeader
         icon="calendar"
         title="Schedule a Visit"
-        subtitle="OHRR welcomes visitors by appointment, Saturdays & Sundays, 12–4 PM. Pick the times that work for you — these are requests, and the team will confirm one with you."
+        subtitle="OHRR welcomes visitors by appointment, Saturdays & Sundays, 12–4 PM. Pick a date and the times that work for you — these are requests, and the team will confirm one with you."
       />
       <Screen className="space-y-4">
         {/* Prefer to call? */}
@@ -146,7 +173,6 @@ export default function Appointment() {
           >
             <input type="hidden" name="form-name" value="appointment-request" />
             <input type="hidden" name="reason" value={reason} />
-            <input type="hidden" name="day" value={day} />
             <input type="hidden" name="times" value={orderedSlots.join(', ')} />
             <p className="hidden">
               <label>
@@ -186,14 +212,23 @@ export default function Appointment() {
             </div>
 
             <div>
-              <span className="block text-sm font-semibold text-slate-700">Which day works?</span>
-              <div className="mt-1.5 flex flex-wrap gap-2">
-                {DAYS.map((d) => (
-                  <button key={d} type="button" onClick={() => setDay(day === d ? '' : d)} className={pill(day === d)}>
-                    {d}
-                  </button>
-                ))}
-              </div>
+              <label className="block text-sm font-semibold text-slate-700">
+                Date of your visit
+                <input
+                  type="date"
+                  name="date"
+                  required
+                  min={minDate}
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className={`${input} ${dateInvalid ? 'border-amber-400 focus:border-amber-400 focus:ring-amber-200' : ''}`}
+                />
+              </label>
+              {dateInvalid && (
+                <p className="mt-1.5 text-xs font-semibold text-amber-600">
+                  OHRR welcomes visitors on Saturdays &amp; Sundays — please choose a weekend date.
+                </p>
+              )}
             </div>
 
             <div>
@@ -227,7 +262,7 @@ export default function Appointment() {
 
             <button
               type="submit"
-              disabled={status === 'submitting'}
+              disabled={status === 'submitting' || dateInvalid}
               className={`${btn.primary} w-full disabled:opacity-60`}
             >
               {status === 'submitting' ? 'Sending…' : 'Request appointment'}

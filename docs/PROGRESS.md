@@ -67,10 +67,12 @@
   appointment — schedule one" link to the new Appointment page (address is revealed
   there, after a visit is requested).
 - **Appointment** (`Appointment`, `/appointment`) *(feat/appointment-flow,
-  feat/appointment-slots)* — a by-appointment "Schedule a Visit" page: a request form
-  (Netlify `appointment-request`) plus a "prefer to call?" option. Instead of a
-  free-text time, it offers a **day picker** (Sat/Sun/Either) and **eight 30-minute
-  slots** (12:00–3:30 PM, OHRR's open hours), **multi-select** so a visitor can flag
+  feat/appointment-slots, feat/appointment-date)* — a by-appointment "Schedule a
+  Visit" page: a request form (Netlify `appointment-request`) plus a "prefer to
+  call?" option. It has a **required date picker** (native calendar/manual entry,
+  no past dates, **weekend-only** — weekday picks warn and block submit, since OHRR
+  is open Sat/Sun) and **eight 30-minute slots** (12:00–3:30 PM, OHRR's open hours),
+  **multi-select** so a visitor can flag
   several times that work (auto-sorted to clock order) — framed as **requests, not a
   booked time** (real availability/booked-slot logic awaits a backend). The
   **address/location shows only on the confirmation**, once a visit is requested.
