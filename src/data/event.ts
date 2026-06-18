@@ -7,6 +7,10 @@ import type { IconName } from '../components/icons'
 export const event = {
   name: 'Midwest BunFest',
   edition: 2026,
+  // The year's event logo/theme art. Bundled in /public; swap the file + year
+  // when the 2026 artwork is released (the 2025 logo stands in until then).
+  logo: '/bunfest-2025-logo.jpg',
+  logoYear: 2025,
   host: {
     name: 'Ohio House Rabbit Rescue',
     short: 'OHRR',

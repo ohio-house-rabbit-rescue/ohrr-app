@@ -44,10 +44,7 @@ export default function Tails() {
 
         {list.length === 0 ? (
           <Card className="text-center">
-            <div className="text-3xl" aria-hidden>
-              💛
-            </div>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="py-2 text-sm text-slate-600">
               {filter === 'Following'
                 ? 'You’re not following any bunnies yet. Tap the heart on a story to follow along.'
                 : 'No stories here yet — check back soon!'}

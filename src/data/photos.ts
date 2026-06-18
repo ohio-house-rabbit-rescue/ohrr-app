@@ -16,6 +16,12 @@ export const BUNNY_PHOTOS = {
   brown: '/sample-bunnies/bunny-brown.jpg',
   greyLop: '/sample-bunnies/bunny-grey-lop.jpg',
   greyDwarf: '/sample-bunnies/bunny-grey-dwarf.jpg',
+  // Happy Tails set (kept distinct from the adoptables above)
+  tailLopCarpet: '/sample-bunnies/tail-lop-carpet.jpg',
+  tailGreyLap: '/sample-bunnies/tail-grey-lap.jpg',
+  tailSpotted: '/sample-bunnies/tail-spotted.jpg',
+  tailGreyGrass: '/sample-bunnies/tail-grey-grass.jpg',
+  tailFluffy: '/sample-bunnies/tail-fluffy.jpg',
 } as const
 
 export interface PhotoCredit {
@@ -83,5 +89,35 @@ export const PHOTO_CREDITS: PhotoCredit[] = [
     license: 'CC BY-SA 4.0',
     licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
     source: 'https://commons.wikimedia.org/wiki/File:Netherland_Dwarf_rabbit.jpg',
+  },
+  {
+    author: 'UsanaAngelou',
+    license: 'CC BY-SA 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+    source: 'https://commons.wikimedia.org/wiki/File:Grey_lop-eared_rabbit_lying_on_the_carpet_in_a_lounge.jpg',
+  },
+  {
+    author: 'ZephyrNines',
+    license: 'CC BY 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/4.0',
+    source: 'https://commons.wikimedia.org/wiki/File:Rabbit_named_Jupiter.jpg',
+  },
+  {
+    author: 'Gluonman',
+    license: 'CC BY 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/4.0',
+    source: 'https://commons.wikimedia.org/wiki/File:Patches_the_Rabbit_2.jpg',
+  },
+  {
+    author: 'Miniaturelop',
+    license: 'CC BY-SA 3.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0',
+    source: 'https://commons.wikimedia.org/wiki/File:Miniature_Lop_-_Grey.jpg',
+  },
+  {
+    author: 'Lithonius',
+    license: 'Public domain',
+    licenseUrl: 'https://commons.wikimedia.org/wiki/Help:Public_domain',
+    source: 'https://commons.wikimedia.org/wiki/File:Rabbit_american_fuzzy_lop_buck_white.jpg',
   },
 ]
