@@ -66,11 +66,15 @@
   mini-card no longer shows the street address; it shows hours + a "Visits are by
   appointment — schedule one" link to the new Appointment page (address is revealed
   there, after a visit is requested).
-- **Appointment** (`Appointment`, `/appointment`) *(feat/appointment-flow)* — a
-  by-appointment "Schedule a Visit" page: a request form (Netlify
-  `appointment-request`) plus a "prefer to call?" option; the **address/location is
-  shown only on the confirmation**, once a visit is requested (so it's not broadcast
-  on the home page). Swappable to a real third-party scheduler later if OHRR adopts one.
+- **Appointment** (`Appointment`, `/appointment`) *(feat/appointment-flow,
+  feat/appointment-slots)* — a by-appointment "Schedule a Visit" page: a request form
+  (Netlify `appointment-request`) plus a "prefer to call?" option. Instead of a
+  free-text time, it offers a **day picker** (Sat/Sun/Either) and **eight 30-minute
+  slots** (12:00–3:30 PM, OHRR's open hours), **multi-select** so a visitor can flag
+  several times that work (auto-sorted to clock order) — framed as **requests, not a
+  booked time** (real availability/booked-slot logic awaits a backend). The
+  **address/location shows only on the confirmation**, once a visit is requested.
+  Swappable to a real third-party scheduler later if OHRR adopts one.
 - **Adopt** (`Adopt`, `AdoptRabbit`) — live adoptable rabbits via the Petfinder
   Netlify function, with sample fallback; per-rabbit detail pages. *(PR #11)* The
   sample rabbits now show **real, freely-licensed photos** (bundled in

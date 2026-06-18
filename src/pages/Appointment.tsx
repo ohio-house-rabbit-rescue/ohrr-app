@@ -8,6 +8,26 @@ const input =
   'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
 
 const REASONS = ['Adoption visit', 'Meet a specific rabbit', 'General visit', 'Other'] as const
+const DAYS = ['Saturday', 'Sunday', 'Either'] as const
+// OHRR is open 12–4 PM; 30-minute slots, last start at 3:30 (before the 4 PM close).
+const SLOTS = [
+  '12:00 PM',
+  '12:30 PM',
+  '1:00 PM',
+  '1:30 PM',
+  '2:00 PM',
+  '2:30 PM',
+  '3:00 PM',
+  '3:30 PM',
+] as const
+
+const pill = (active: boolean) =>
+  [
+    'rounded-full px-3 py-1.5 text-sm font-bold transition',
+    active
+      ? 'bg-brand-blue text-white shadow-sm'
+      : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50',
+  ].join(' ')
 
 function encode(data: Record<string, string>) {
   return Object.keys(data)
@@ -42,11 +62,19 @@ function WhereToFindUs() {
 
 export default function Appointment() {
   const [status, setStatus] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle')
-  const [form, setForm] = useState({ name: '', email: '', phone: '', preferred: '', notes: '' })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', notes: '' })
   const [reason, setReason] = useState('')
+  const [day, setDay] = useState('')
+  const [slots, setSlots] = useState<string[]>([])
 
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  const toggleSlot = (s: string) =>
+    setSlots((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]))
+
+  // keep selected slots in clock order for a tidy summary
+  const orderedSlots = SLOTS.filter((s) => slots.includes(s))
 
   const onSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault()
@@ -55,7 +83,13 @@ export default function Appointment() {
       await fetch('/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: encode({ 'form-name': 'appointment-request', reason, ...form }),
+        body: encode({
+          'form-name': 'appointment-request',
+          reason,
+          day,
+          times: orderedSlots.join(', '),
+          ...form,
+        }),
       })
       setStatus('done')
     } catch {
@@ -64,13 +98,15 @@ export default function Appointment() {
   }
 
   if (status === 'done') {
+    const summary = [day, orderedSlots.join(', ')].filter(Boolean).join(' · ')
     return (
       <>
         <PageHeader icon="calendar" title="Appointment requested" />
         <Screen className="space-y-4 text-center">
           <p className="text-sm leading-relaxed text-slate-600">
-            Thanks, {form.name || 'friend'} — OHRR will reach out to confirm your time. Here’s where
-            to find us once it’s set:
+            Thanks, {form.name || 'friend'} — OHRR will reach out to confirm a time
+            {summary ? <> from your requested {summary}</> : ''}. Here’s where to find us once it’s
+            set:
           </p>
           <WhereToFindUs />
           <Link to="/" className={`${btn.blue} mx-auto`}>
@@ -86,7 +122,7 @@ export default function Appointment() {
       <PageHeader
         icon="calendar"
         title="Schedule a Visit"
-        subtitle="OHRR welcomes visitors by appointment, Saturdays & Sundays, 12–4 PM. Request a time and the team will confirm."
+        subtitle="OHRR welcomes visitors by appointment, Saturdays & Sundays, 12–4 PM. Pick the times that work for you — these are requests, and the team will confirm one with you."
       />
       <Screen className="space-y-4">
         {/* Prefer to call? */}
@@ -106,10 +142,12 @@ export default function Appointment() {
             data-netlify="true"
             netlify-honeypot="bot-field"
             onSubmit={onSubmit}
-            className="space-y-3"
+            className="space-y-4"
           >
             <input type="hidden" name="form-name" value="appointment-request" />
             <input type="hidden" name="reason" value={reason} />
+            <input type="hidden" name="day" value={day} />
+            <input type="hidden" name="times" value={orderedSlots.join(', ')} />
             <p className="hidden">
               <label>
                 Don’t fill this out: <input name="bot-field" />
@@ -139,37 +177,43 @@ export default function Appointment() {
             <div>
               <span className="block text-sm font-semibold text-slate-700">What’s the visit for?</span>
               <div className="mt-1.5 flex flex-wrap gap-2">
-                {REASONS.map((r) => {
-                  const active = reason === r
-                  return (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setReason(active ? '' : r)}
-                      className={[
-                        'rounded-full px-3 py-1.5 text-sm font-bold transition',
-                        active
-                          ? 'bg-brand-blue text-white shadow-sm'
-                          : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50',
-                      ].join(' ')}
-                    >
-                      {r}
-                    </button>
-                  )
-                })}
+                {REASONS.map((r) => (
+                  <button key={r} type="button" onClick={() => setReason(reason === r ? '' : r)} className={pill(reason === r)}>
+                    {r}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <label className="block text-sm font-semibold text-slate-700">
-              Preferred day / time
-              <input
-                className={input}
-                name="preferred"
-                placeholder="e.g. Saturday afternoon"
-                value={form.preferred}
-                onChange={set('preferred')}
-              />
-            </label>
+            <div>
+              <span className="block text-sm font-semibold text-slate-700">Which day works?</span>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {DAYS.map((d) => (
+                  <button key={d} type="button" onClick={() => setDay(day === d ? '' : d)} className={pill(day === d)}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <span className="block text-sm font-semibold text-slate-700">
+                Requested time(s)
+                <span className="ml-1 font-normal text-slate-400">— pick any that work</span>
+              </span>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {SLOTS.map((s) => (
+                  <button key={s} type="button" onClick={() => toggleSlot(s)} className={pill(slots.includes(s))}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-400">
+                Choosing a few gives the team flexibility to confirm one — your selections are
+                requests, not a booked time.
+              </p>
+            </div>
+
             <label className="block text-sm font-semibold text-slate-700">
               Anything else?
               <textarea className={input} name="notes" rows={3} value={form.notes} onChange={set('notes')} />
