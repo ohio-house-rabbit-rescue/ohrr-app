@@ -23,7 +23,26 @@ export interface BunfestPage {
   contact?: { address?: string; phone?: string; url?: string; urlLabel?: string }
   relatedLabel?: string
   related?: { label: string; to: string }[]
+  // Interactive add-ons rendered under the content:
+  feature?: 'reserve' | 'raffle'
+  reserve?: { formName: string; services?: string[] } // for 'reserve'
 }
+
+// Festival runs 10–4; offer 30-minute reservation windows people can request.
+export const SESSION_SLOTS = [
+  '10:00 AM',
+  '10:30 AM',
+  '11:00 AM',
+  '11:30 AM',
+  '12:00 PM',
+  '12:30 PM',
+  '1:00 PM',
+  '1:30 PM',
+  '2:00 PM',
+  '2:30 PM',
+  '3:00 PM',
+  '3:30 PM',
+] as const
 
 const RHDV2_NOTE =
   'For the safety of all rabbits, any rabbit attending Midwest BunFest must be vaccinated against RHDV2 and current on the annual booster — proof is required at entry.'
@@ -42,15 +61,16 @@ export const bunfestPages: BunfestPage[] = [
         list: ['Nail trims', 'Light grooming', 'Gland cleaning'],
       },
       {
-        heading: 'How to sign up',
-        body: 'Advance package scheduling has closed — hop by the Bunny Spa as soon as you arrive at BunFest to sign up in person. Day-of slots are first-come, first-served.',
-      },
-      {
-        heading: 'Good to know',
-        body: 'After the spa, you can schedule professional photos at the Glamour Shots table. All proceeds benefit Ohio House Rabbit Rescue.',
+        heading: 'Reserve a time below',
+        body: 'Pick a window that works and the team will confirm it — or just hop by the Bunny Spa when you arrive (day-of slots are first-come). You pay at the table. After the spa, swing by Glamour Shots. All proceeds benefit OHRR.',
       },
     ],
     note: RHDV2_NOTE,
+    feature: 'reserve',
+    reserve: {
+      formName: 'spa-reservation',
+      services: ['Nail trims', 'Light grooming', 'Gland cleaning', 'Full spa package'],
+    },
     relatedLabel: 'Pairs well with',
     related: [{ label: 'Glamour Shots', to: '/bunfest/p/glamour' }],
   },
@@ -72,15 +92,13 @@ export const bunfestPages: BunfestPage[] = [
         ],
       },
       {
-        heading: 'Scheduling',
-        body: 'Advance registration has closed, but day-of appointments are first-come, first-served — arrive early, as Glamour Shots fills up quickly.',
-      },
-      {
-        heading: 'Good to know',
-        body: 'All proceeds support OHRR’s adoption center, education, and foster rabbits.',
+        heading: 'Reserve a time below',
+        body: 'Request a session window and the team will confirm it — or arrive early on the day, as Glamour Shots fills up quickly. You pay at the table. All proceeds support OHRR’s adoption center, education, and foster rabbits.',
       },
     ],
     note: RHDV2_NOTE,
+    feature: 'reserve',
+    reserve: { formName: 'glamour-reservation' },
   },
   {
     id: 'raffle',
@@ -102,6 +120,7 @@ export const bunfestPages: BunfestPage[] = [
         body: 'All proceeds go toward OHRR’s adoption center, education programs, and foster rabbits.',
       },
     ],
+    feature: 'raffle',
   },
   {
     id: 'toymaking',

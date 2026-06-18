@@ -111,6 +111,30 @@
       <input type="text" name="agreementDate" />
     </form>
 
+    <!-- Hidden static forms so Netlify detects the BunFest reserve/raffle forms at
+         build time; live React forms (ReserveSession.tsx / RaffleTickets.tsx) post to them. -->
+    <form name="spa-reservation" netlify netlify-honeypot="bot-field" hidden>
+      <input type="text" name="service" />
+      <input type="text" name="time" />
+      <input type="text" name="name" />
+      <input type="tel" name="phone" />
+      <input type="text" name="bunny" />
+    </form>
+    <form name="glamour-reservation" netlify netlify-honeypot="bot-field" hidden>
+      <input type="text" name="service" />
+      <input type="text" name="time" />
+      <input type="text" name="name" />
+      <input type="tel" name="phone" />
+      <input type="text" name="bunny" />
+    </form>
+    <form name="raffle-request" netlify netlify-honeypot="bot-field" hidden>
+      <input type="text" name="quantity" />
+      <input type="text" name="total" />
+      <input type="text" name="tickets" />
+      <input type="text" name="name" />
+      <input type="tel" name="phone" />
+    </form>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

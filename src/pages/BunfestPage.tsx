@@ -2,6 +2,8 @@ import { Link, useParams } from 'react-router-dom'
 import { bunfestPageById } from '../data/bunfestPages'
 import { PageHeader, Screen, Card, Badge, SectionLabel, btn } from '../components/ui'
 import { ContactLinks } from '../components/ContactLinks'
+import { ReserveSession } from '../components/ReserveSession'
+import { RaffleTickets } from '../components/RaffleTickets'
 import { Icon } from '../components/icons'
 
 export default function BunfestPage() {
@@ -76,6 +78,16 @@ export default function BunfestPage() {
             </Card>
           ))}
         </div>
+
+        {/* Interactive add-ons */}
+        {p.feature === 'reserve' && p.reserve && (
+          <ReserveSession
+            title={p.title}
+            formName={p.reserve.formName}
+            services={p.reserve.services}
+          />
+        )}
+        {p.feature === 'raffle' && <RaffleTickets />}
 
         {/* Email sign-up (e.g. toymaking) */}
         {p.emailSignup && (
