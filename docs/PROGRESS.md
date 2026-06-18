@@ -74,6 +74,8 @@
   Now uses **real freely-licensed photos** (distinct set from Adopt, in
   `public/sample-bunnies/tail-*`) and **words-only status badges** — the cheesy
   status emojis (💪/🎉/etc.) were removed per sponsor feedback ("no icons — they date it").
+  *(feat/tails-share-and-nav)* "Share your Happy Tail" is now an **in-app form**
+  (`ShareTail`, `/tails/share`, Netlify `happy-tail`) instead of a link to the website.
 - **Bunny Services** (`Services`, `ServiceSignup`) — bonding-session requests and
   mobile vet-clinic sign-ups.
 - **Learn** (`Learn`, `LearnTopic`) — rabbit-care content brought fully in-app
@@ -111,11 +113,12 @@
   agreement** with a required checkbox + typed signature + date, and posts to
   Netlify Forms (`surrender-intake`, registered in `index.html`). The Surrender
   page’s two form buttons open it in-app.
-- **Top bar / header** *(PR #11, then feat/header-help-search)*: outbound website
-  links removed; the right-side cluster is now a shared `HeaderActions`
-  (**Search · Help · Settings**) on **both** the OHRR and BunFest top bars. The
-  BunFest bar's "Back to Ohio House Rabbit Rescue" is now a **prominent button**
-  (circular arrow, bold), not a thin link.
+- **Top bar / header** *(PR #11, feat/header-help-search, feat/tails-share-and-nav)*:
+  outbound website links removed; the right-side cluster is a shared `HeaderActions`
+  (**Search · Help · Settings**) on **both** top bars. **Returning from BunFest to
+  the OHRR app is now an "OHRR" home tab — the first item in the BunFest bottom tab
+  bar** (with a divider), chosen by the sponsor over two rejected top-of-screen
+  treatments. The BunFest header is now clean (no back strip).
 - **Help** (`Help`, `/help`) *(feat/header-help-search)* — the `?` icon opens
   contextual help: it shows help for the screen you came from (`?from=`), a
   "Getting around" guide to the header/tabs/sub-app, and a tappable index of every
@@ -229,6 +232,14 @@ strategy doc; not yet scheduled:
   rabbit breeds with a photo + short description of each. Research a good source
   (Wikipedia / Wikimedia Commons, ARBA breed list) for accurate details + freely
   licensed images. Scoped for later.
+- **Rework Help** *(sponsor feedback 2026-06-18: current Help "does not provide too
+  much more useful information")* — the current `/help` just re-describes each
+  screen, which research confirms is the weak pattern (it duplicates the UI). Plan:
+  rebuild Help as a **FAQ + support hub** answering the real questions OHRR gets
+  (adoption requirements, hours, bringing a bunny to BunFest, donations, found a
+  stray, how to surrender) with quick links into the matching in-app pages and a
+  prominent contact, and optionally light first-run contextual tips. Awaiting
+  sponsor's go-ahead on direction.
 - **Amazon Wish List — deep links to items** *(sponsor request, later)* — instead of
   one link to the list, link directly to individual items (open in the Amazon app).
 - **Hop Shop inventory** *(sponsor request, later; needs backend)* — a tool for

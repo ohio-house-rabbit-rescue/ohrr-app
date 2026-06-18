@@ -10,6 +10,8 @@ export interface TabItem {
   label: string
   icon: IconName
   end?: boolean
+  /* draws a divider after this tab — used to set the "exit to OHRR" tab apart */
+  divider?: boolean
 }
 
 export interface HubItem {
@@ -42,6 +44,8 @@ export const OHRR_HUB: HubItem[] = [
 
 /* ---------- Midwest BunFest sub-app (all routes under /bunfest) ---------- */
 export const BUNFEST_TABS: TabItem[] = [
+  // Exit back to the OHRR app — primary, always-visible navigation.
+  { to: '/', label: 'OHRR', icon: 'home', end: true, divider: true },
   { to: '/bunfest', label: 'BunFest', icon: 'star', end: true },
   { to: '/bunfest/schedule', label: 'Schedule', icon: 'calendar' },
   { to: '/bunfest/vendors', label: 'Vendors', icon: 'bag' },

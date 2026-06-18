@@ -5,16 +5,7 @@ import HeaderActions from './HeaderActions'
 export default function BunfestTopBar() {
   return (
     <header className="sticky top-0 z-30 bg-gradient-to-r from-brand-blue to-brand-blue-dark text-white shadow-sm">
-      {/* Prominent, button-style return to the OHRR app */}
-      <Link
-        to="/"
-        className="flex items-center gap-2.5 bg-black/25 px-4 py-2.5 font-extrabold text-white transition hover:bg-black/35"
-      >
-        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/20">
-          <Icon name="arrowLeft" size={15} />
-        </span>
-        <span className="text-sm">Back to Ohio House Rabbit Rescue</span>
-      </Link>
+      {/* Returning to the OHRR app is handled by the "OHRR" tab in the bottom bar. */}
       <div className="flex items-center justify-between gap-3 px-4 py-2.5">
         <Link to="/bunfest" className="flex items-center gap-2.5">
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-orange text-white shadow-sm">

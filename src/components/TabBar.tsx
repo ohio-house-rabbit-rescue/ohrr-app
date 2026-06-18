@@ -10,7 +10,9 @@ export default function TabBar({ tabs }: { tabs: TabItem[] }) {
           key={t.to}
           to={t.to}
           end={t.end}
-          className="flex flex-1 flex-col items-center gap-0.5 py-2 pt-2.5"
+          className={`flex flex-1 flex-col items-center gap-0.5 py-2 pt-2.5 ${
+            t.divider ? 'border-r border-slate-200' : ''
+          }`}
         >
           {({ isActive }) => (
             <>

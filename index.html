@@ -44,6 +44,17 @@
       <textarea name="notes"></textarea>
     </form>
 
+    <!-- Hidden static form so Netlify Forms detects "happy-tail" at build time;
+         the live React form (src/pages/ShareTail.tsx) posts to it. -->
+    <form name="happy-tail" netlify netlify-honeypot="bot-field" hidden>
+      <input type="text" name="name" />
+      <input type="email" name="email" />
+      <input type="text" name="bunny" />
+      <input type="text" name="since" />
+      <textarea name="story"></textarea>
+      <input type="text" name="photoUrl" />
+    </form>
+
     <!-- Hidden static form so Netlify Forms detects "surrender-intake" at build
          time; the live React form (src/pages/SurrenderForm.tsx) posts to it. -->
     <form name="surrender-intake" netlify netlify-honeypot="bot-field" hidden>

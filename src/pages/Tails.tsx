@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { tails, type Tail } from '../data/tails'
-import { ohrr } from '../data/ohrr'
 import { useFollowing } from '../lib/follow'
 import { BunnyPhoto, StatusPill, FollowButton } from '../components/tailbits'
 import { PageHeader, Screen, Card, Badge, SampleNote, SegTabs } from '../components/ui'
@@ -64,14 +63,12 @@ export default function Tails() {
           <p className="mt-1 text-sm leading-relaxed text-slate-600">
             Adopted a bunny from OHRR? Send a photo and a quick update and we’ll add your story here.
           </p>
-          <a
-            href={ohrr.links.contact}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to="/tails/share"
             className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-brand-orange/60 px-5 py-2.5 text-sm font-bold text-brand-orange transition hover:bg-brand-orange-50"
           >
-            Submit your story <Icon name="external" size={14} />
-          </a>
+            Submit your story <Icon name="chevron" size={14} />
+          </Link>
         </Card>
       </Screen>
     </>
