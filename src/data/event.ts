@@ -53,45 +53,45 @@ export interface Activity {
   title: string
   text: string
   icon: IconName
-  url: string
+  to: string // in-app route — BunFest activities are native pages now
 }
 
-// What happens at the festival (real activity pages on midwestbunfest.org).
+// What happens at the festival — now native in-app pages (see data/bunfestPages).
 export const activities: Activity[] = [
   {
     title: 'Education Sessions',
     text: 'Talks from vets and rabbit experts all day.',
     icon: 'book',
-    url: 'https://www.midwestbunfest.org/special-interest-sessions.html',
+    to: '/bunfest/schedule',
   },
   {
     title: 'Bunny Spa',
     text: 'Nail trims and grooming for your rabbit.',
     icon: 'sparkles',
-    url: 'https://www.midwestbunfest.org/bunny-spa.html',
+    to: '/bunfest/p/spa',
   },
   {
     title: 'Glamour Shots',
     text: 'Professional photos of your bun.',
     icon: 'star',
-    url: 'https://www.midwestbunfest.org/glamour-shots.html',
+    to: '/bunfest/p/glamour',
   },
   {
     title: 'Raffle & Silent Auction',
     text: 'Bid and win — proceeds help rabbits.',
     icon: 'ticket',
-    url: 'https://www.midwestbunfest.org/raffle-and-silent-auction.html',
+    to: '/bunfest/p/raffle',
   },
   {
     title: 'Toymaking Workshop',
     text: 'Make an enrichment toy to take home.',
     icon: 'gift',
-    url: 'https://www.midwestbunfest.org/toymaking-workshop.html',
+    to: '/bunfest/p/toymaking',
   },
   {
     title: 'Chillaxabun Lounge',
     text: 'A calm space to relax between sessions.',
     icon: 'heart',
-    url: 'https://www.midwestbunfest.org/chillaxabun-lounge.html',
+    to: '/bunfest/p/lounge',
   },
 ]

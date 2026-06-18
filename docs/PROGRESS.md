@@ -168,6 +168,15 @@
 - **Home** (`BunfestHome`), **Schedule** (`Schedule`), **Vendors**
   (`Vendors`, `VendorDetail`), **Rescue Partners** (`Partners`, `PartnerDetail`),
   **Sponsors** (`Sponsors`), **Visit** (`Visit`), **Give**.
+- **BunFest content native** (`BunfestPage`, `/bunfest/p/:id`) *(feat/bunfest-native)*
+  — the festival is now its **own entity** in-app: the "At the festival" activities
+  (Bunny Spa, Glamour Shots, Raffle & Silent Auction, Toymaking, Chillaxabun Lounge —
+  Education Sessions points to the native Schedule) and the Visit info pages
+  (Bringing Your Bunny, the 9-term Rabbit Attendance Agreement, Accommodations/host
+  hotel) are **native screens** instead of links out to midwestbunfest.org. Content
+  transcribed from the BunFest site 2026-06-18; includes the RHDV2 vaccination rule,
+  pricing, and the host-hotel contact (via `ContactLinks`). **Ticket purchase stays
+  external** (payment). Data in `src/data/bunfestPages.ts`.
 - **Sponsor & vendor contact treatment** *(feat/sponsor-vendor-contacts)* — the
   Sponsors page now shows each sponsor's **researched contact info** via
   `ContactLinks` (address, phone → dialer, email → mail, website **as text** + a
@@ -275,13 +284,6 @@ strategy doc; not yet scheduled:
   rabbit breeds with a photo + short description of each. Research a good source
   (Wikipedia / Wikimedia Commons, ARBA breed list) for accurate details + freely
   licensed images. Scoped for later.
-- **Bring Midwest BunFest content in-app** *(sponsor request 2026-06-18, NEXT — make
-  BunFest its "own entity")* — migrate the BunFest pages that currently link out to
-  midwestbunfest.org into **native screens**: the activity pages (Bunny Spa, Glamour
-  Shots, Special Interest Sessions detail, Raffle & Auction, Toymaking, Chillaxabun
-  Lounge) and the visit pages (Bringing your bunny, Rabbit Attendance Agreement,
-  Accommodations). **Ticket checkout stays external** (payment). Pull the real
-  content from the BunFest site.
 - **Dead external-link code cleanup** — remove unused `ExternalCard` (`ui.tsx`),
   `adoptLinks`/`learnLinks` (`ohrr.ts`), and stale `surrenderForms` URLs.
 - **Amazon Wish List — deep links to items** *(sponsor request, later)* — instead of

@@ -35,6 +35,7 @@ import PartnerDetail from './pages/PartnerDetail'
 import Sponsors from './pages/Sponsors'
 import Visit from './pages/Visit'
 import EventMap from './pages/EventMap'
+import BunfestPage from './pages/BunfestPage'
 
 export default function App() {
   return (
@@ -88,6 +89,7 @@ export default function App() {
         <Route path="sponsors" element={<Sponsors />} />
         <Route path="visit" element={<Visit />} />
         <Route path="map" element={<EventMap />} />
+        <Route path="p/:id" element={<BunfestPage />} />
         <Route path="give" element={<Give />} />
       </Route>
     </Routes>

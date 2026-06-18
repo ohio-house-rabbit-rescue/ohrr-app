@@ -79,15 +79,15 @@ export default function Visit() {
             <li>👟 Comfortable shoes — it’s a full day of browsing and talks.</li>
           </ul>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-sm font-bold text-brand-blue">
-            <a href={event.links.bringingBunny} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-brand-blue-dark">
-              Bringing your bunny <Icon name="external" size={13} />
-            </a>
-            <a href={event.links.attendanceAgreement} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-brand-blue-dark">
-              Attendance agreement <Icon name="external" size={13} />
-            </a>
-            <a href={event.links.accommodations} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-brand-blue-dark">
-              Accommodations <Icon name="external" size={13} />
-            </a>
+            <Link to="/bunfest/p/bringing-bunny" className="inline-flex items-center gap-1 hover:text-brand-blue-dark">
+              Bringing your bunny <Icon name="chevron" size={13} />
+            </Link>
+            <Link to="/bunfest/p/attendance-agreement" className="inline-flex items-center gap-1 hover:text-brand-blue-dark">
+              Attendance agreement <Icon name="chevron" size={13} />
+            </Link>
+            <Link to="/bunfest/p/accommodations" className="inline-flex items-center gap-1 hover:text-brand-blue-dark">
+              Accommodations <Icon name="chevron" size={13} />
+            </Link>
           </div>
         </Card>
 
