@@ -40,6 +40,7 @@ export const OHRR_HUB: HubItem[] = [
   { to: '/learn', title: 'Rabbit Care', subtitle: 'Diet, housing, bonding & more', icon: 'book' },
   { to: '/volunteer', title: 'Volunteer', subtitle: 'Give your time to the buns', icon: 'users' },
   { to: '/support', title: 'Support OHRR', subtitle: 'Donate & ways to help', icon: 'gift', tone: 'orange' },
+  { to: '/hop-shop', title: 'Hop Shop', subtitle: 'Rabbit supplies & OHRR merch', icon: 'bag' },
   { to: '/about', title: 'About OHRR', subtitle: 'Our mission, story & contact', icon: 'info' },
 ]
 

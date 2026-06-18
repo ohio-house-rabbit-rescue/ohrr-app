@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { givingOptions } from '../data/giving'
 import { event } from '../data/event'
 import { PageHeader, Screen } from '../components/ui'
@@ -39,25 +40,32 @@ export default function Give() {
             More ways to help
           </p>
           <div className="grid grid-cols-1 gap-3">
-            {rest.map((g) => (
-              <a
-                key={g.id}
-                href={g.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <span className="block font-display text-[15px] font-extrabold text-ink">
-                  {g.title}
-                </span>
-                <span className="mt-0.5 block text-sm leading-relaxed text-slate-500">
-                  {g.description}
-                </span>
-                <span className="mt-1.5 inline-block text-sm font-bold text-brand-blue group-hover:text-brand-blue-dark">
-                  {g.cta} →
-                </span>
-              </a>
-            ))}
+            {rest.map((g) => {
+              const cls =
+                'group rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md'
+              const inner = (
+                <>
+                  <span className="block font-display text-[15px] font-extrabold text-ink">
+                    {g.title}
+                  </span>
+                  <span className="mt-0.5 block text-sm leading-relaxed text-slate-500">
+                    {g.description}
+                  </span>
+                  <span className="mt-1.5 inline-block text-sm font-bold text-brand-blue group-hover:text-brand-blue-dark">
+                    {g.cta} →
+                  </span>
+                </>
+              )
+              return g.to ? (
+                <Link key={g.id} to={g.to} className={cls}>
+                  {inner}
+                </Link>
+              ) : (
+                <a key={g.id} href={g.url} target="_blank" rel="noopener noreferrer" className={cls}>
+                  {inner}
+                </a>
+              )
+            })}
           </div>
         </div>
 
