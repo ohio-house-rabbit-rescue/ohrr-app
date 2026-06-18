@@ -1,87 +1,160 @@
-// In-app Help content. The `?` in the header opens the Help screen, which shows
-// contextual help for wherever you came from (via `?from=`) plus a full guide.
-// `to` is both the route the help is about and a tappable link to that screen.
+// In-app Help, rebuilt as a FAQ + support hub. Instead of re-describing each
+// screen (which duplicated the UI), Help now answers the real questions OHRR
+// gets, each with a one-tap jump into the matching in-app page, plus a prominent
+// way to reach a human. OHRR can edit any of this.
 
-export interface HelpTopic {
-  to: string
+export interface FaqLink {
+  label: string
+  to?: string // in-app route
+  url?: string // external (only when no in-app equivalent)
+}
+
+export interface FaqItem {
+  q: string
+  a: string
+  link?: FaqLink
+}
+
+export interface FaqCategory {
   title: string
-  what: string
-  tips?: string[]
+  items: FaqItem[]
 }
 
 export const helpIntro =
-  'This app is your one place for everything Ohio House Rabbit Rescue — adopting, learning, giving, volunteering, and the Midwest BunFest festival. Here’s how each part works.'
+  'Answers to the questions we hear most. Tap a question to expand it, or reach out anytime — OHRR is happy to help.'
 
-export const headerHelp = [
-  { label: 'Search', text: 'The magnifying glass searches the whole app — type or tap the mic to speak.' },
-  { label: 'Help', text: 'The question mark (you’re here) explains whatever screen you’re on.' },
-  { label: 'Settings', text: 'The gear holds your info, saved data, app version, and photo credits.' },
-  { label: 'Bottom tabs', text: 'Jump between Home, Adopt, Tails, Learn, Volunteer, and Support.' },
-  { label: 'Midwest BunFest', text: 'Opens the festival sub-app; the dark “Back to Ohio House Rabbit Rescue” bar at the top returns you here.' },
-]
-
-export const helpTopics: HelpTopic[] = [
-  { to: '/', title: 'Home', what: 'Your starting point — jump to adoption, giving, the festival, and more.' },
+export const faqCategories: FaqCategory[] = [
   {
-    to: '/adopt',
-    title: 'Adopt a Rabbit',
-    what: 'Browse rabbits looking for homes, filter by age, and open a bunny for full details.',
-    tips: ['Tap a rabbit to see their story, traits, and how to apply.', 'Sample rabbits show until OHRR’s live listings are connected.'],
+    title: 'Adopting',
+    items: [
+      {
+        q: 'How do I adopt a rabbit?',
+        a: 'Browse the rabbits looking for homes, find one you connect with, and start an application. Adoptions happen by appointment at OHRR’s adoption center.',
+        link: { label: 'Browse adoptable rabbits', to: '/adopt' },
+      },
+      {
+        q: 'What are the adoption requirements?',
+        a: 'Rabbits live indoors only, in at least a 4×4 ft space or free-range in the home, and are fed unlimited hay, quality pellets, and a daily salad. Every OHRR rabbit is spayed/neutered and vaccinated before adoption.',
+        link: { label: 'See the Adopt page', to: '/adopt' },
+      },
+      {
+        q: 'Why do the rabbits say “sample”?',
+        a: 'The app shows sample rabbits until OHRR’s live listing feed is connected. Once it is, the real adoptable bunnies appear here automatically — no app update needed.',
+      },
+      {
+        q: 'What are OHRR’s hours?',
+        a: 'Saturday and Sunday, 12–4 PM, by appointment. The adoption center is at 5485 N. High Street, Columbus, OH.',
+        link: { label: 'About & contact', to: '/about' },
+      },
+    ],
   },
   {
-    to: '/tails',
-    title: 'Happy Tails',
-    what: 'See where adopted bunnies are now and follow the ones you love to check back on them.',
-    tips: ['Tap the heart to follow a bunny — no account needed.'],
+    title: 'Your rabbit & care',
+    items: [
+      {
+        q: 'What should I feed my rabbit?',
+        a: 'Unlimited grass hay is about 80% of the diet, plus a daily variety of leafy greens and a small amount of plain pellets. Treats like fruit are occasional and tiny.',
+        link: { label: 'Bunny Diet guide', to: '/learn/diet' },
+      },
+      {
+        q: 'Can rabbits live outside?',
+        a: 'No — house rabbits live indoors as part of the family. Outdoors exposes them to predators, parasites, and temperature extremes.',
+        link: { label: 'Living Space guide', to: '/learn/housing' },
+      },
+      {
+        q: 'I found a rabbit outside — what do I do?',
+        a: 'A friendly or colorful rabbit found outdoors is almost always a lost or dumped pet that can’t survive on its own. Contain it safely and reach out for help.',
+        link: { label: 'Caught a stray?', to: '/learn/stray' },
+      },
+      {
+        q: 'Can OHRR help me bond two rabbits?',
+        a: 'Yes. Rabbits are happiest with a friend, but introductions must go slowly. OHRR runs guided bonding sessions you can request in the app.',
+        link: { label: 'Bunny Services', to: '/services' },
+      },
+    ],
   },
   {
-    to: '/services',
-    title: 'Bunny Services',
-    what: 'Request a bonding session or reserve a mobile vet-clinic time for your own rabbit.',
+    title: 'Giving & support',
+    items: [
+      {
+        q: 'Is my donation tax-deductible?',
+        a: 'Yes — Ohio House Rabbit Rescue is a registered 501(c)(3) nonprofit (EIN 27-0830606), so gifts are tax-deductible.',
+        link: { label: 'Ways to give', to: '/support' },
+      },
+      {
+        q: 'What are the ways to give?',
+        a: 'One-time or recurring donations, workplace/matching gifts, the Amazon wishlist, the Hop Shop, the Legacy Fund (planned giving), and Midwest BunFest. Most supporters never find them all — they’re gathered here.',
+        link: { label: 'Support OHRR', to: '/support' },
+      },
+      {
+        q: 'Will my employer match my gift?',
+        a: 'Many Columbus-area employers and United Way match employee donations, which can double your impact.',
+        link: { label: 'See matching options', to: '/support' },
+      },
+    ],
   },
   {
-    to: '/learn',
-    title: 'Rabbit Care',
-    what: 'Plain-language care guides — diet, housing, litter training, bonding, health, and more.',
+    title: 'Volunteering & surrender',
+    items: [
+      {
+        q: 'How do I volunteer?',
+        a: 'Sign up right in the app — bunny socialization, vet transport, events, or fostering. Each sign-up tells OHRR exactly which role you chose.',
+        link: { label: 'Volunteer', to: '/volunteer' },
+      },
+      {
+        q: 'What does fostering involve?',
+        a: 'You provide a safe indoor space and daily care; OHRR covers vet care and supplies and supports you the whole way. It’s the fastest way to grow rescue capacity.',
+        link: { label: 'Foster a rabbit', to: '/volunteer/foster' },
+      },
+      {
+        q: 'I’m struggling with my rabbit — can I surrender it?',
+        a: 'Reach out first — OHRR can often help you keep your bunny. If surrender is truly the right step, the full process and the intake form are in the app.',
+        link: { label: 'Surrendering a rabbit', to: '/surrender' },
+      },
+    ],
   },
   {
-    to: '/volunteer',
-    title: 'Volunteer',
-    what: 'Sign up to help — socialization, vet transport, events, or fostering — right in the app.',
-    tips: ['Each sign-up tells OHRR exactly which role you chose.'],
-  },
-  {
-    to: '/support',
-    title: 'Support OHRR',
-    what: 'Every way to give — donations, recurring gifts, workplace matching, wishlist, and more.',
-  },
-  {
-    to: '/surrender',
-    title: 'Surrendering a Rabbit',
-    what: 'If you’re struggling, OHRR can often help you keep your bunny — and if not, the full process and intake form are here.',
-  },
-  { to: '/about', title: 'About OHRR', what: 'OHRR’s mission, story, hours, and contact info.' },
-  {
-    to: '/search',
-    title: 'Search',
-    what: 'Find anything in the app. Type a word, or tap the mic to speak your search.',
-  },
-  { to: '/settings', title: 'Settings', what: 'Your optional email/profile, saved data, app version, and photo credits.' },
-  {
-    to: '/bunfest',
     title: 'Midwest BunFest',
-    what: 'The festival sub-app — schedule, vendors, the event map, and how to visit.',
-    tips: ['The “Back to Ohio House Rabbit Rescue” bar at the top returns you to the main app.'],
+    items: [
+      {
+        q: 'When and where is Midwest BunFest?',
+        a: 'Sunday, October 25, 2026, 10:00 AM–4:00 PM, at The Makoy, 5462 Center St., Hilliard, OH. Free parking in the lot.',
+        link: { label: 'Plan your visit', to: '/bunfest/visit' },
+      },
+      {
+        q: 'How much is admission?',
+        a: '$10 for adults, $5 for ages 5–12, and free for under 5. Cash or card, at the door or in advance.',
+        link: { label: 'Visit & tickets', to: '/bunfest/visit' },
+      },
+      {
+        q: 'Can I bring my own rabbit?',
+        a: 'Yes — attendees may bring their rabbit, subject to the Rabbit Attendance Agreement. Check the visit details before you go.',
+        link: { label: 'Plan your visit', to: '/bunfest/visit' },
+      },
+      {
+        q: 'How do I find a vendor’s booth?',
+        a: 'Open the interactive event map and tap a booth to see the vendor, or browse the vendor list — each shows its room and booth.',
+        link: { label: 'Event Map', to: '/bunfest/map' },
+      },
+    ],
   },
-  { to: '/bunfest/schedule', title: 'BunFest Schedule', what: 'The education sessions — save the ones you want and add them to your calendar.' },
-  { to: '/bunfest/vendors', title: 'BunFest Vendors', what: 'Browse the makers and shops, filter by category, and see each vendor’s booth.' },
-  { to: '/bunfest/map', title: 'Event Map', what: 'The floor plan — tap a booth to find a vendor, plus the stages, spa, and Hop Shop.' },
-  { to: '/bunfest/visit', title: 'Plan Your Visit', what: 'Date, location, admission, parking, and what to know before you go.' },
+  {
+    title: 'Using this app',
+    items: [
+      {
+        q: 'How do I get back to OHRR from Midwest BunFest?',
+        a: 'Tap the “OHRR” tab at the bottom-left of the BunFest screens — it returns you to the main OHRR app.',
+      },
+      {
+        q: 'What do the icons at the top do?',
+        a: 'The magnifying glass searches the whole app (type or tap the mic to speak), the question mark opens this Help, and the gear opens Settings.',
+        link: { label: 'Search the app', to: '/search' },
+      },
+      {
+        q: 'Do I need an account?',
+        a: 'No. Saving BunFest sessions and following bunnies work without one. You can optionally add your email in Settings so OHRR can reach you.',
+        link: { label: 'Settings', to: '/settings' },
+      },
+    ],
+  },
 ]
-
-export function helpFor(path: string): HelpTopic | undefined {
-  const matches = helpTopics.filter(
-    (t) => path === t.to || (t.to !== '/' && path.startsWith(t.to)),
-  )
-  return matches.sort((a, b) => b.to.length - a.to.length)[0]
-}

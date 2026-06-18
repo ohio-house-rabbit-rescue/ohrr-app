@@ -119,10 +119,13 @@
   the OHRR app is now an "OHRR" home tab — the first item in the BunFest bottom tab
   bar** (with a divider), chosen by the sponsor over two rejected top-of-screen
   treatments. The BunFest header is now clean (no back strip).
-- **Help** (`Help`, `/help`) *(feat/header-help-search)* — the `?` icon opens
-  contextual help: it shows help for the screen you came from (`?from=`), a
-  "Getting around" guide to the header/tabs/sub-app, and a tappable index of every
-  section. Content in `src/data/help.ts`.
+- **Help** (`Help`, `/help`) *(feat/header-help-search → rebuilt in feat/help-faq-hub)*
+  — the `?` icon opens a **FAQ + support hub**: a prominent "Call / Email OHRR"
+  card, a filterable FAQ (~21 Qs across Adopting · Care · Giving · Volunteering &
+  surrender · BunFest · Using the app), each answer with a one-tap jump into the
+  matching in-app page. This replaced the original screen-by-screen "describer,"
+  which the sponsor (rightly, per UX research) found low-value. Content in
+  `src/data/help.ts`.
 - **Search** (`Search`, `/search`) *(feat/header-help-search)* — the search icon
   opens a **global app search** (type **or voice** via the Web Speech API) over an
   index of screens, adoptable rabbits, care topics, vendors, Happy Tails, volunteer
@@ -161,7 +164,7 @@
   `ui.tsx`, `tailbits.tsx`, `icons.tsx`.
 - `src/data/*` — content/data modules: `adoptables`, `care`, `content`, `event`,
   `floorplan` (BunFest rooms/zones + vendor booth assignments), `giving`, `help`
-  (per-screen help content), `ohrr`, `search` (global search index),
+  (FAQ categories + support hub), `ohrr`, `search` (global search index),
   `partners`, `photos` (sample bunny images + credits), `services`, `sessions`,
   `sponsors`, `surrender` (in-app owner-surrender content + verbatim policies),
   `surrenderForm` (intake form schema + relinquishment agreement), `tails`,
@@ -232,14 +235,6 @@ strategy doc; not yet scheduled:
   rabbit breeds with a photo + short description of each. Research a good source
   (Wikipedia / Wikimedia Commons, ARBA breed list) for accurate details + freely
   licensed images. Scoped for later.
-- **Rework Help** *(sponsor feedback 2026-06-18: current Help "does not provide too
-  much more useful information")* — the current `/help` just re-describes each
-  screen, which research confirms is the weak pattern (it duplicates the UI). Plan:
-  rebuild Help as a **FAQ + support hub** answering the real questions OHRR gets
-  (adoption requirements, hours, bringing a bunny to BunFest, donations, found a
-  stray, how to surrender) with quick links into the matching in-app pages and a
-  prominent contact, and optionally light first-run contextual tips. Awaiting
-  sponsor's go-ahead on direction.
 - **Amazon Wish List — deep links to items** *(sponsor request, later)* — instead of
   one link to the list, link directly to individual items (open in the Amazon app).
 - **Hop Shop inventory** *(sponsor request, later; needs backend)* — a tool for

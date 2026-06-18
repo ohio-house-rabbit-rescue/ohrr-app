@@ -12,6 +12,7 @@ export const ohrr = {
   address: '5485 N. High Street, Columbus, OH 43214',
   phone: '614-263-8557',
   phoneHref: 'tel:+16142638557',
+  email: 'ohrrcontact@ohiohouserabbitrescue.org',
   hours: 'Sat & Sun, 12–4 PM · by appointment',
   links: {
     site: 'https://www.ohiohouserabbitrescue.org/',
