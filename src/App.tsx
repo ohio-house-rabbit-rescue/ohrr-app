@@ -17,6 +17,7 @@ import VolunteerWay from './pages/VolunteerWay'
 import VolunteerSignup from './pages/VolunteerSignup'
 import About from './pages/About'
 import Give from './pages/Give'
+import HopShop from './pages/HopShop'
 import Surrender from './pages/Surrender'
 import SurrenderForm from './pages/SurrenderForm'
 import Appointment from './pages/Appointment'
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/volunteer/signup" element={<VolunteerSignup />} />
         <Route path="/volunteer/:slug" element={<VolunteerWay />} />
         <Route path="/support" element={<Give />} />
+        <Route path="/hop-shop" element={<HopShop />} />
         <Route
           path="/rescues"
           element={

@@ -104,6 +104,13 @@
   the specific `item`, so the OHRR-side submission says exactly what someone signed
   up for; the sign-up form headlines the role instead of a generic title.
 - **Support / Give** (`Give`) — consolidated giving directory.
+- **Hop Shop** (`HopShop`, `/hop-shop`) *(feat/hop-shop)* — an in-app, **browse-only**
+  shop (the "Shop the Hop Shop" link is now native, not outbound) showing **example
+  inventory** of real rabbit products + OHRR merch (16 items across Hay & Food /
+  Toys / Comfort & Litter / Apparel, with prices + In/Low stock + a category
+  filter), the Hop Shop's hours & address, and a note that purchases happen in
+  person. Sample data clearly labelled; real stock will come from the planned
+  staff scan-a-product / set-quantity tool. Data in `src/data/hopshop.ts`.
 - **Settings** (`Settings`, gear icon in both top bars) — app version/build info,
   optional email identity (`src/lib/profile.ts`), and a saved-data summary.
 - **About** (`About`), **NotFound** (`*`). *(PR #11)* The blunt "Surrender a
@@ -275,10 +282,10 @@ strategy doc; not yet scheduled:
   `adoptLinks`/`learnLinks` (`ohrr.ts`), and stale `surrenderForms` URLs.
 - **Amazon Wish List — deep links to items** *(sponsor request, later)* — instead of
   one link to the list, link directly to individual items (open in the Amazon app).
-- **Hop Shop inventory** *(sponsor request, later; needs backend)* — a tool for
-  rescue staff to scan an item + photograph it + set a quantity, which then shows
-  up under "Shop the Hop Shop" as **browse-only availability** (no purchase). Build
-  the public "what's in stock" view + the staff catalog/scan-in-scan-out back end.
+- **Hop Shop inventory back end** *(sponsor request; needs backend)* — the public
+  **browse-only** Hop Shop view is **built** (`/hop-shop`, example data). Still to do:
+  the staff tool to **scan a product + photograph it + set a quantity**, feeding real
+  stock (with photos) into that view, plus scan-in / scan-out catalog management.
 - **In-app mailing-list signup** *(sponsor request, later; needs email backend)* —
   replace the outbound link with an in-app signup that uses the device profile email
   and **validates via an emailed code** entered back in the app.

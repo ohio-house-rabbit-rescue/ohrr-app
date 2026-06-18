@@ -6,7 +6,8 @@ export interface GivingOption {
   title: string
   description: string
   cta: string
-  url: string
+  url?: string // external link
+  to?: string // in-app route (takes precedence over url)
   featured?: boolean
 }
 
@@ -45,9 +46,9 @@ export const givingOptions: GivingOption[] = [
   {
     id: 'hopshop',
     title: 'Shop the Hop Shop',
-    description: 'Buy rabbit supplies and OHRR merch — proceeds fund the rescue.',
+    description: 'Browse rabbit supplies and OHRR merch — proceeds fund the rescue.',
     cta: 'Visit the Hop Shop',
-    url: 'https://www.ohiohouserabbitrescue.org/i-want-to-support/hop-shop/',
+    to: '/hop-shop',
   },
   {
     id: 'legacy',
