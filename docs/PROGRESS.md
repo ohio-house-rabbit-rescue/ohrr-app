@@ -70,7 +70,10 @@
   `RabbitPhoto` falls back to the placeholder only if an image fails to load.
   Photo credits are listed on the Settings screen.
 - **Happy Tails** (`Tails`, `TailDetail`) — adopter showcase with a bunny status
-  timeline and a "follow" capability (`src/lib/follow.ts`).
+  timeline and a "follow" capability (`src/lib/follow.ts`). *(feat/tails-and-bunfest-logo)*
+  Now uses **real freely-licensed photos** (distinct set from Adopt, in
+  `public/sample-bunnies/tail-*`) and **words-only status badges** — the cheesy
+  status emojis (💪/🎉/etc.) were removed per sponsor feedback ("no icons — they date it").
 - **Bunny Services** (`Services`, `ServiceSignup`) — bonding-session requests and
   mobile vet-clinic sign-ups.
 - **Learn** (`Learn`, `LearnTopic`) — rabbit-care content brought fully in-app
@@ -115,6 +118,11 @@
 - **Home** (`BunfestHome`), **Schedule** (`Schedule`), **Vendors**
   (`Vendors`, `VendorDetail`), **Rescue Partners** (`Partners`, `PartnerDetail`),
   **Sponsors** (`Sponsors`), **Visit** (`Visit`), **Give**.
+- **Year logo / theme art** *(feat/tails-and-bunfest-logo)* — the real **2025
+  Midwest BunFest logo** ("Compassion in Motion") now headlines the BunFest card on
+  the OHRR home and the BunFest home hero, replacing the cartoon-bunny emoji, to
+  flag the year's theme. Bundled at `public/bunfest-2025-logo.jpg` and referenced
+  via `event.logo` / `event.logoYear` — swap the file + year when 2026 art lands.
 - **Event Map** (`EventMap`, `/bunfest/map`) *(feat/event-map)* — a built-in
   interactive floor plan that replaces the old external map link. Models the real
   2025 two-room layout (Burgundy + Emerald) with stages, Hop Shop, Bunny Spa,
@@ -208,6 +216,18 @@ strategy doc; not yet scheduled:
   rabbit breeds with a photo + short description of each. Research a good source
   (Wikipedia / Wikimedia Commons, ARBA breed list) for accurate details + freely
   licensed images. Scoped for later.
+- **Header Help + Search** *(sponsor request 2026-06-17)* — a `?` Help system and a
+  `search` icon in the header (type + voice), on every screen. *(In progress as
+  `feat/header-help-search`.)*
+- **Amazon Wish List — deep links to items** *(sponsor request, later)* — instead of
+  one link to the list, link directly to individual items (open in the Amazon app).
+- **Hop Shop inventory** *(sponsor request, later; needs backend)* — a tool for
+  rescue staff to scan an item + photograph it + set a quantity, which then shows
+  up under "Shop the Hop Shop" as **browse-only availability** (no purchase). Build
+  the public "what's in stock" view + the staff catalog/scan-in-scan-out back end.
+- **In-app mailing-list signup** *(sponsor request, later; needs email backend)* —
+  replace the outbound link with an in-app signup that uses the device profile email
+  and **validates via an emailed code** entered back in the app.
 - **Swap template volunteer data for OHRR's real schedule** — the shifts, runs,
   events, and socialization bunnies in `src/data/volunteer.ts` are clearly-labelled
   samples; replace with OHRR's actual calendar (or back them with the database).

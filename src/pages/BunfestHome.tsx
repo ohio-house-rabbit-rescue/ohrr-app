@@ -9,6 +9,14 @@ export default function BunfestHome() {
     <div>
       {/* Hero */}
       <section className="bg-gradient-to-b from-brand-blue to-brand-blue-dark px-5 pb-7 pt-6 text-white">
+        {/* This year's event logo / theme art (swappable — see event.logo) */}
+        <div className="mb-4 rounded-2xl bg-white p-3 shadow-sm">
+          <img
+            src={event.logo}
+            alt={`Midwest BunFest ${event.logoYear} logo`}
+            className="mx-auto block h-auto w-full max-w-[300px]"
+          />
+        </div>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold">
           <Icon name="sparkles" size={13} /> Presented by Ohio House Rabbit Rescue
         </span>

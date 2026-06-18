@@ -41,9 +41,9 @@ export function StatusPill({ status, className = '' }: { status: TailStatus; cla
   const s = TAIL_STATUS[status]
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${s.cls} ${className}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${s.cls} ${className}`}
     >
-      <span aria-hidden>{s.emoji}</span> {s.label}
+      {s.label}
     </span>
   )
 }

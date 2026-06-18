@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ohrr } from '../data/ohrr'
+import { event } from '../data/event'
 import { OHRR_HUB } from '../data/content'
 import { Screen, SectionLabel, ActionCard, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
@@ -10,7 +11,7 @@ export default function OhrrHome() {
       {/* Hero */}
       <section className="bg-gradient-to-b from-brand-blue to-brand-blue-dark px-5 pb-7 pt-6 text-white">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
-          🐰 Columbus, Ohio · 501(c)(3)
+          Columbus, Ohio · 501(c)(3)
         </span>
         <h1 className="mt-3 font-display text-3xl font-black leading-tight">
           Every bunny deserves a home
@@ -32,23 +33,22 @@ export default function OhrrHome() {
           to="/bunfest"
           className="group relative block overflow-hidden rounded-3xl bg-gradient-to-br from-[#1690bf] to-[#0f7197] p-5 text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
         >
-          <div className="pointer-events-none absolute -right-5 -top-7 text-[120px] leading-none opacity-15">
-            🐰
+          {/* This year's event logo / theme art (swappable — see event.logo) */}
+          <div className="rounded-2xl bg-white p-3 shadow-sm">
+            <img
+              src={event.logo}
+              alt={`Midwest BunFest ${event.logoYear} logo`}
+              className="mx-auto block h-auto w-full max-w-[280px]"
+            />
           </div>
-          <div className="relative">
+          <div className="relative mt-3">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider">
-              <Icon name="star" size={13} /> Our flagship event
+              <Icon name="star" size={13} /> Our flagship event · {event.logoYear} theme
             </span>
-            <h2
-              className="mt-3 text-3xl font-extrabold"
-              style={{ fontFamily: '"Baloo 2", Nunito, sans-serif' }}
-            >
-              Midwest BunFest
-            </h2>
-            <p className="mt-1 max-w-[17rem] text-sm text-white/90">
+            <p className="mt-2 max-w-[17rem] text-sm text-white/90">
               The biggest rabbit festival in the Eastern U.S. — every October.
             </p>
-            <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#e0950f] px-5 py-2.5 text-sm font-extrabold text-white shadow-sm transition group-hover:bg-[#bd7c08]">
+            <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#e0950f] px-5 py-2.5 text-sm font-extrabold text-white shadow-sm transition group-hover:bg-[#bd7c08]">
               Enter BunFest <Icon name="chevron" size={16} />
             </span>
           </div>

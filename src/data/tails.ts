@@ -1,14 +1,16 @@
 // "Happy Tails" — OHRR adoption stories and the life-stage status each bunny
 // carries. Curated content for now (OHRR posts updates from photos adopters
 // submit); the shape is ready to be backed by a database later without changing
-// the UI.
+// the UI. Photos are freely-licensed sample rabbits (see src/data/photos.ts).
+import { BUNNY_PHOTOS } from './photos'
 
+// Status is shown as words only (no emoji) — a clean label that won't date.
 export const TAIL_STATUS = {
-  looking: { label: 'Looking for a home', cls: 'bg-brand-blue-50 text-brand-blue', emoji: '🔎' },
-  'just-adopted': { label: 'Just adopted', cls: 'bg-brand-orange-50 text-brand-orange', emoji: '🎉' },
-  'settling-in': { label: 'Settling in', cls: 'bg-amber-100 text-amber-800', emoji: '🏡' },
-  'going-strong': { label: 'Going strong', cls: 'bg-emerald-100 text-emerald-800', emoji: '💪' },
-  'forever-loved': { label: 'Forever loved', cls: 'bg-violet-100 text-violet-800', emoji: '💜' },
+  looking: { label: 'Looking for a home', cls: 'bg-brand-blue-50 text-brand-blue' },
+  'just-adopted': { label: 'Just adopted', cls: 'bg-brand-orange-50 text-brand-orange' },
+  'settling-in': { label: 'Settling in', cls: 'bg-amber-100 text-amber-800' },
+  'going-strong': { label: 'Going strong', cls: 'bg-emerald-100 text-emerald-800' },
+  'forever-loved': { label: 'Forever loved', cls: 'bg-violet-100 text-violet-800' },
 } as const
 
 export type TailStatus = keyof typeof TAIL_STATUS
@@ -46,6 +48,7 @@ export const tails: Tail[] = [
     bunny: 'Mochi',
     family: 'Patel',
     status: 'going-strong',
+    photo: BUNNY_PHOTOS.tailLopCarpet,
     since: 'Adopted Mar 2025',
     summary:
       'A year of zoomies, free-range living, and an unlikely friendship with the family cat.',
@@ -70,6 +73,7 @@ export const tails: Tail[] = [
     family: 'Nguyen',
     status: 'going-strong',
     bonded: true,
+    photo: BUNNY_PHOTOS.tailFluffy,
     since: 'Adopted Oct 2025',
     summary:
       'A bonded pair of brothers — six months of synchronized binkies and shared hay piles.',
@@ -96,6 +100,7 @@ export const tails: Tail[] = [
     bunny: 'Biscuit',
     family: 'Garcia',
     status: 'just-adopted',
+    photo: BUNNY_PHOTOS.tailGreyLap,
     since: 'Adopted Jun 2026',
     summary: 'Just found his forever home this month — and his forever person.',
     timeline: [
@@ -111,6 +116,7 @@ export const tails: Tail[] = [
     bunny: 'Daisy',
     family: 'Cooper',
     status: 'settling-in',
+    photo: BUNNY_PHOTOS.tailSpotted,
     since: 'Adopted May 2026',
     summary: 'Two weeks in and starting to trust — the very first flop happened this week.',
     timeline: [
@@ -126,6 +132,7 @@ export const tails: Tail[] = [
     id: 'thumper',
     bunny: 'Thumper',
     status: 'looking',
+    photo: BUNNY_PHOTOS.tailGreyGrass,
     summary: 'Still searching for his someone. Could it be you?',
     timeline: [
       {
@@ -140,6 +147,7 @@ export const tails: Tail[] = [
     bunny: 'Cinnamon',
     family: 'Reilly',
     status: 'forever-loved',
+    photo: BUNNY_PHOTOS.silver,
     since: 'Adopted 2013',
     summary: 'Twelve wonderful years as the heart of the Reilly home. Forever loved.',
     timeline: [
