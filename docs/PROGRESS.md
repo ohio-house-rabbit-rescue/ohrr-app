@@ -283,6 +283,16 @@ strategy doc; not yet scheduled:
   amounts). OHRR has **no processor set up yet** (or it's unknown). Resume when a
   processor + its account/keys are available. Today the Give pages just deep-link to
   OHRR's own donation page.
+- **Raffle / reservation ticketing — explore further** *(sponsor feedback 2026-06-18:
+  "keep it as a note to come back to")* — the sponsor likes the in-app reserve /
+  get-a-ticket flow for the **raffle, Bunny Spa, and Glamour Shots** (and that it
+  lets people buy more tickets easily); **keep the current implementation as-is** for
+  now. To work out next: the **ticket-number process** — how raffle ticket numbers
+  are generated, made unique/verifiable, and especially **how a digital ticket ties
+  into the in-person drawing** (so an app-issued ticket can be entered/win in the
+  bucket draw). Pairs with wiring **in-app payment** so "get tickets" / reservations
+  become real purchases (see the donation-processor item above). Today both reserve
+  numbered tickets to pay for in person (`RaffleTickets` / `ReserveSession`).
 - **Petfinder go-live** — set the real Petfinder credentials in Netlify so Adopt
   shows live inventory instead of samples. (Answered a sponsor question 2026-06-17:
   the Adopt page already uses the Petfinder feed via `netlify/functions/petfinder.js`;
