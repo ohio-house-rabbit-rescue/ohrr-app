@@ -53,17 +53,15 @@ export default function BunfestHome() {
           <SectionLabel>At the festival</SectionLabel>
           <div className="grid grid-cols-2 gap-2.5">
             {activities.map((a) => (
-              <a
+              <Link
                 key={a.title}
-                href={a.url}
-                target="_blank"
-                rel="noopener noreferrer"
+                to={a.to}
                 className="rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <IconTile name={a.icon} tone="orange" />
                 <span className="mt-2 block font-display text-sm font-extrabold text-ink">{a.title}</span>
                 <span className="mt-0.5 block text-xs leading-snug text-slate-500">{a.text}</span>
-              </a>
+              </Link>
             ))}
           </div>
         </div>
