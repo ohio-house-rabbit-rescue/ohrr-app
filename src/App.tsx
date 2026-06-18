@@ -17,6 +17,7 @@ import VolunteerSignup from './pages/VolunteerSignup'
 import About from './pages/About'
 import Give from './pages/Give'
 import Surrender from './pages/Surrender'
+import SurrenderForm from './pages/SurrenderForm'
 import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
 // Midwest BunFest sub-app
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/volunteer/:slug" element={<VolunteerWay />} />
         <Route path="/support" element={<Give />} />
         <Route path="/surrender" element={<Surrender />} />
+        <Route path="/surrender/form" element={<SurrenderForm />} />
         <Route path="/about" element={<About />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />

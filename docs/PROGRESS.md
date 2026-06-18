@@ -22,12 +22,12 @@
 - **Workflow:** finished, verified work is merged straight to `main` (auto-deploys
   to Netlify) — the sponsor is the only stakeholder, so we don't park work in draft
   PRs. Still branch + PR per change for clean history.
-- **Latest on `main`:** [PR #12](https://github.com/chasingtheunicorn/ohrr-app/pull/12)
-  (in-app BunFest event map) and [PR #11](https://github.com/chasingtheunicorn/ohrr-app/pull/11)
-  (Volunteer hub + realistic photos + surrender reframe) are **merged & live**. The
-  **in-app polish** (`feat/inapp-polish`: volunteer role codes, wrapping vendor
-  filter, in-app surrender content) is the next merge.
-- **Merged & live:** #12, #11, [#10](https://github.com/chasingtheunicorn/ohrr-app/pull/10)
+- **Latest on `main`:** [PR #13](https://github.com/chasingtheunicorn/ohrr-app/pull/13)
+  (in-app polish: volunteer role codes, wrapping vendor filter, in-app surrender
+  content) is **merged & live**, on top of #12 (event map) and #11 (volunteer hub +
+  photos). The **in-app surrender intake form** (`feat/surrender-intake-form`) is the
+  next merge.
+- **Merged & live:** #13, #12, #11, [#10](https://github.com/chasingtheunicorn/ohrr-app/pull/10)
   (Settings + calendar chooser), [#9](https://github.com/chasingtheunicorn/ohrr-app/pull/9)
   (plan-your-day); PRs #1–#8 merged/closed.
 - **Build health:** `npm run typecheck` and `npm run build` pass clean; features
@@ -96,10 +96,18 @@
 - **Surrender** (`Surrender`, `/surrender`) *(feat/inapp-polish)* — OHRR's owner-
   surrender process brought **fully in-app** (no more linking out for the info):
   supportive intro, the 6-step process, the $40/$60 surrender donation, what happens
-  to the rabbit after intake, the Good-Samaritan-vs-owner distinction with both
-  official relinquishment-form links, contact, and the **verbatim full policies**
-  (Surrender & Relinquishment + Admissions) in collapsible sections. Content in
-  `src/data/surrender.ts`, sourced from OHRR's official policy PDFs.
+  to the rabbit after intake, the Good-Samaritan-vs-owner distinction, contact, and
+  the **verbatim full policies** (Surrender & Relinquishment + Admissions) in
+  collapsible sections. Content in `src/data/surrender.ts`, from OHRR's policy PDFs.
+- **Intake form** (`SurrenderForm`, `/surrender/form?type=owner|good-samaritan`)
+  *(feat/surrender-intake-form)* — the relinquishment **intake form is now in the
+  app** instead of linking to OHRR's website. One data-driven form (schema in
+  `src/data/surrenderForm.ts`) handles both types: owner (contact + full rabbit
+  profile — enclosure, behaviors, litter, diet, vet, spay/neuter, etc.) and Good
+  Samaritan (find circumstances). It carries the **verbatim relinquishment
+  agreement** with a required checkbox + typed signature + date, and posts to
+  Netlify Forms (`surrender-intake`, registered in `index.html`). The Surrender
+  page’s two form buttons open it in-app.
 - **Top bar** *(PR #11)*: the outbound website link was removed from `OhrrTopBar`
   (Settings gear remains).
 
@@ -132,8 +140,9 @@
   `floorplan` (BunFest rooms/zones + vendor booth assignments), `giving`, `ohrr`,
   `partners`, `photos` (sample bunny images + credits), `services`, `sessions`,
   `sponsors`, `surrender` (in-app owner-surrender content + verbatim policies),
-  `tails`, `vendors`, `volunteer` (ways + role codes + template
-  shifts/runs/events/bunnies), `version`.
+  `surrenderForm` (intake form schema + relinquishment agreement), `tails`,
+  `vendors`, `volunteer` (ways + role codes + template shifts/runs/events/bunnies),
+  `version`.
 - `src/lib/*` — `adopt.ts` (Petfinder helpers), `follow.ts` (follow state),
   `savedSessions.ts` (saved BunFest sessions), `ics.ts` (calendar export + Google
   URLs), `profile.ts` (optional email identity + DB-sync seam).
