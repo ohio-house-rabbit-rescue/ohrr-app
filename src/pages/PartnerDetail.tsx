@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { partners } from '../data/partners'
-import { Screen, Card, Badge, SectionLabel, btn } from '../components/ui'
+import { Screen, Card, Badge, SectionLabel, SampleNote, btn } from '../components/ui'
+import { ContactLinks } from '../components/ContactLinks'
 import { Icon } from '../components/icons'
 
 function initials(name: string) {
@@ -14,18 +15,15 @@ function initials(name: string) {
     .toUpperCase()
 }
 
-export default function PartnerDetail() {
+export default function PartnerDetail({ base = '/bunfest/partners' }: { base?: string }) {
   const { id } = useParams()
   const partner = partners.find((p) => p.id === id)
 
   if (!partner) {
     return (
       <Screen className="space-y-4 text-center">
-        <div className="pt-6 text-5xl" aria-hidden>
-          🐰
-        </div>
-        <h1 className="font-display text-xl font-extrabold text-ink">Partner not found</h1>
-        <Link to="/bunfest/partners" className={`${btn.blue} mx-auto`}>
+        <h1 className="pt-6 font-display text-xl font-extrabold text-ink">Partner not found</h1>
+        <Link to={base} className={`${btn.blue} mx-auto`}>
           All rescue partners
         </Link>
       </Screen>
@@ -33,12 +31,13 @@ export default function PartnerDetail() {
   }
 
   const p = partner
+  const hasContact = p.address || p.phone || p.email || p.url
   const others = partners.filter((x) => x.id !== p.id && !x.host).slice(0, 4)
 
   return (
     <Screen className="space-y-5">
       <Link
-        to="/bunfest/partners"
+        to={base}
         className="inline-flex items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
       >
         <Icon name="arrowLeft" size={16} /> Rescue Partners
@@ -50,35 +49,28 @@ export default function PartnerDetail() {
         </span>
         <div className="min-w-0">
           <h1 className="font-display text-2xl font-black leading-tight text-ink">{p.name}</h1>
+          <p className="mt-1 flex items-center gap-1 text-sm text-slate-500">
+            <Icon name="mappin" size={14} className="shrink-0 text-slate-400" /> {p.location}
+          </p>
           {p.host && (
-            <span className="mt-1 inline-block">
+            <span className="mt-1.5 inline-block">
               <Badge tone="orange">Host of Midwest BunFest</Badge>
             </span>
           )}
         </div>
       </div>
 
-      <Card>
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <Icon name="mappin" size={15} className="shrink-0 text-brand-blue" /> {p.location}
-        </div>
-        <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
-          <Icon name="users" size={15} className="shrink-0 text-brand-blue" />
-          {p.host ? 'Founder & host of Midwest BunFest' : 'Rescue partner at Midwest BunFest'}
-        </div>
-      </Card>
-
-      <p className="text-sm leading-relaxed text-slate-600">
-        {p.host
-          ? `${p.name} founds and hosts Midwest BunFest, bringing rabbit rescues together from across the country.`
-          : `${p.name} is one of the rabbit rescues and humane organizations that partner with OHRR at Midwest BunFest, based in ${p.location}.`}
-      </p>
-
-      {p.url && (
-        <a href={p.url} target="_blank" rel="noopener noreferrer" className={`${btn.outline} w-full`}>
-          Visit website <Icon name="external" size={14} />
-        </a>
-      )}
+      {/* Contact — reach them through the app */}
+      <section className="space-y-2.5">
+        <SectionLabel>Contact</SectionLabel>
+        {hasContact ? (
+          <Card>
+            <ContactLinks address={p.address} phone={p.phone} email={p.email} url={p.url} />
+          </Card>
+        ) : (
+          <SampleNote>We don’t have published contact details for this rescue yet.</SampleNote>
+        )}
+      </section>
 
       {others.length > 0 && (
         <div className="space-y-2.5 pt-1">
@@ -87,7 +79,7 @@ export default function PartnerDetail() {
             {others.map((o) => (
               <Link
                 key={o.id}
-                to={`/bunfest/partners/${o.id}`}
+                to={`${base}/${o.id}`}
                 className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white p-3 text-sm transition hover:border-slate-300 hover:shadow-sm"
               >
                 <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-500">

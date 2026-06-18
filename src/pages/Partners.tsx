@@ -1,6 +1,7 @@
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { partners } from '../data/partners'
-import { PageHeader, Screen, Badge, SampleNote } from '../components/ui'
+import { partners, REGIONS, US_STATES } from '../data/partners'
+import { PageHeader, Screen, Badge, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
 
 function initials(name: string) {
@@ -14,49 +15,99 @@ function initials(name: string) {
     .toUpperCase()
 }
 
-export default function Partners() {
+// Regions actually present in the data, in display order.
+const presentRegions = REGIONS.filter((r) => partners.some((p) => p.region === r))
+const REGION_TABS = ['All', ...presentRegions] as const
+type RegionTab = (typeof REGION_TABS)[number]
+
+export default function Partners({
+  base = '/bunfest/partners',
+  title = 'Rescue Partners',
+  subtitle,
+}: {
+  base?: string
+  title?: string
+  subtitle?: string
+}) {
+  const [query, setQuery] = useState('')
+  const [region, setRegion] = useState<RegionTab>('All')
+
+  const list = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return partners.filter((p) => {
+      const inRegion = region === 'All' || p.region === region
+      const stateName = p.state ? (US_STATES[p.state] ?? '') : ''
+      const hay = `${p.name} ${p.location} ${p.city ?? ''} ${p.state ?? ''} ${stateName} ${p.region ?? ''}`.toLowerCase()
+      return inRegion && (!q || hay.includes(q))
+    })
+  }, [query, region])
+
   return (
     <>
       <PageHeader
         icon="users"
-        title="Rescue Partners"
-        subtitle={`${partners.length} rabbit rescues and humane organizations, together for the buns.`}
+        title={title}
+        subtitle={
+          subtitle ?? `${partners.length} rabbit rescues & humane organizations — find one near you.`
+        }
       />
       <Screen className="space-y-4">
-        <SampleNote>
-          Showing the 2025 rescue partners. The 2026 lineup is announced closer to the event.
-        </SampleNote>
-        <div className="grid grid-cols-1 gap-3">
-          {partners.map((p) => (
-            <Link
-              key={p.id}
-              to={`/bunfest/partners/${p.id}`}
-              className={`group flex items-center gap-3 rounded-2xl border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-                p.host ? 'border-brand-blue/40 ring-1 ring-brand-blue/30' : 'border-slate-200/80'
-              }`}
-            >
-              <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-blue-50 font-display text-sm font-black text-brand-blue">
-                {initials(p.name)}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2">
-                  <span className="truncate font-display text-base font-extrabold text-ink">
-                    {p.name}
-                  </span>
-                  {p.host && <Badge tone="blue">Host</Badge>}
-                </span>
-                <span className="mt-0.5 flex items-center gap-1 text-sm text-slate-500">
-                  <Icon name="mappin" size={14} className="shrink-0 text-slate-400" /> {p.location}
-                </span>
-              </span>
-              <Icon
-                name="chevron"
-                size={18}
-                className="shrink-0 text-slate-300 transition group-hover:text-brand-orange"
-              />
-            </Link>
-          ))}
+        {/* Search by name / state */}
+        <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2.5 shadow-sm focus-within:border-brand-blue focus-within:ring-2 focus-within:ring-brand-blue/20">
+          <Icon name="search" size={18} className="shrink-0 text-slate-400" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by name or state…"
+            className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none"
+            autoComplete="off"
+          />
+          {query && (
+            <button type="button" onClick={() => setQuery('')} aria-label="Clear" className="shrink-0 text-slate-400 hover:text-slate-600">
+              <Icon name="x" size={16} />
+            </button>
+          )}
         </div>
+
+        {/* Filter by region */}
+        <SegTabs options={REGION_TABS} value={region} onChange={setRegion} wrap />
+
+        {list.length === 0 ? (
+          <p className="px-1 pt-2 text-sm text-slate-500">
+            No rescues match that. Try a different name, state, or region.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3">
+            {list.map((p) => (
+              <Link
+                key={p.id}
+                to={`${base}/${p.id}`}
+                className={`group flex items-center gap-3 rounded-2xl border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                  p.host ? 'border-brand-blue/40 ring-1 ring-brand-blue/30' : 'border-slate-200/80'
+                }`}
+              >
+                <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-blue-50 font-display text-sm font-black text-brand-blue">
+                  {initials(p.name)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2">
+                    <span className="truncate font-display text-base font-extrabold text-ink">{p.name}</span>
+                    {p.host && <Badge tone="blue">Host</Badge>}
+                  </span>
+                  <span className="mt-0.5 flex items-center gap-1 text-sm text-slate-500">
+                    <Icon name="mappin" size={14} className="shrink-0 text-slate-400" /> {p.location}
+                  </span>
+                </span>
+                {p.region && <Badge tone="slate">{p.region}</Badge>}
+                <Icon
+                  name="chevron"
+                  size={18}
+                  className="shrink-0 text-slate-300 transition group-hover:text-brand-orange"
+                />
+              </Link>
+            ))}
+          </div>
+        )}
       </Screen>
     </>
   )

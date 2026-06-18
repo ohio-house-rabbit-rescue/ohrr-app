@@ -53,6 +53,17 @@ export default function App() {
         <Route path="/volunteer/signup" element={<VolunteerSignup />} />
         <Route path="/volunteer/:slug" element={<VolunteerWay />} />
         <Route path="/support" element={<Give />} />
+        <Route
+          path="/rescues"
+          element={
+            <Partners
+              base="/rescues"
+              title="Find a Rescue"
+              subtitle="Rabbit rescues across the country — search by name, state, or region."
+            />
+          }
+        />
+        <Route path="/rescues/:id" element={<PartnerDetail base="/rescues" />} />
         <Route path="/surrender" element={<Surrender />} />
         <Route path="/surrender/form" element={<SurrenderForm />} />
         <Route path="/about" element={<About />} />
