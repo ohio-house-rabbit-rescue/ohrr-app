@@ -187,6 +187,14 @@
   6-for-$5 pricing → reserves numbered MWBF-##### tickets to pay for at the table).
   Post to Netlify (`spa-reservation`, `glamour-reservation`, `raffle-request`),
   clearly labelled "pay in person until in-app payment is set up."
+- **Silent Auction gallery** (`SilentAuction`, `/bunfest/silent-auction`)
+  *(feat/silent-auction)* — a browsable gallery (linked from the Raffle page) of
+  auction items, each with **item number, photo, description, estimated value, and a
+  donor credit**, plus a category filter. Built to hold the real lineup ahead of the
+  event (bidding stays in-person, by sponsor's choice); ships with **example items**
+  using real representative photos (Wikimedia, credited in Settings) and BunFest
+  vendor/sponsor donors, and shows a "Photo coming" placeholder for items without a
+  photo yet. Data in `src/data/silentAuction.ts`.
 - **Sponsor & vendor contact treatment** *(feat/sponsor-vendor-contacts)* — the
   Sponsors page now shows each sponsor's **researched contact info** via
   `ContactLinks` (address, phone → dialer, email → mail, website **as text** + a

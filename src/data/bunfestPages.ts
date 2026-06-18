@@ -121,6 +121,8 @@ export const bunfestPages: BunfestPage[] = [
       },
     ],
     feature: 'raffle',
+    relatedLabel: 'Silent auction',
+    related: [{ label: 'Browse the silent auction items', to: '/bunfest/silent-auction' }],
   },
   {
     id: 'toymaking',

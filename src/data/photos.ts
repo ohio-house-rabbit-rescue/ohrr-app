@@ -120,4 +120,48 @@ export const PHOTO_CREDITS: PhotoCredit[] = [
     licenseUrl: 'https://commons.wikimedia.org/wiki/Help:Public_domain',
     source: 'https://commons.wikimedia.org/wiki/File:Rabbit_american_fuzzy_lop_buck_white.jpg',
   },
+  // Silent-auction sample item photos
+  {
+    author: 'Vegan Feast Catering',
+    license: 'CC BY 2.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/2.0',
+    source: 'https://commons.wikimedia.org/wiki/File:Exotic_Fruit_Gift_Basket_(4461109309).jpg',
+  },
+  {
+    author: 'DevoCutlerRubenstein',
+    license: 'CC BY-SA 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+    source: 'https://commons.wikimedia.org/wiki/File:Bunnies_in_a_Basket_(Where_toys_go_to_die).jpg',
+  },
+  {
+    author: 'Susangesare',
+    license: 'CC BY-SA 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+    source: 'https://commons.wikimedia.org/wiki/File:Handmade_beaded_necklace.jpg',
+  },
+  {
+    author: '999real',
+    license: 'CC0',
+    licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    source: 'https://commons.wikimedia.org/wiki/File:Blue,_pink,_white,_purple_crochet_blanket_2.jpg',
+  },
+  {
+    author: 'Janko Ferlič',
+    license: 'CC0',
+    licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    source: 'https://commons.wikimedia.org/wiki/File:White_Ceramic_Mug_Filled_With_Coffee_Beside_Coffee_Beans_(43087322071).jpg',
+  },
+  {
+    author: 'Tom Beatty',
+    license: 'CC BY 2.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/2.0',
+    source: 'https://commons.wikimedia.org/wiki/File:Canvas_two-tone_tote_Navy_and_Natural7_(9038437258).jpg',
+  },
+  {
+    author: 'Isoda Koryūsai (The Met)',
+    license: 'CC0',
+    licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+    source:
+      'https://commons.wikimedia.org/wiki/File:%E9%9B%AA%E5%85%8E%E5%9B%B3-Painting_the_Eyes_on_a_Snow_Rabbit_MET_DT5291.jpg',
+  },
 ]
