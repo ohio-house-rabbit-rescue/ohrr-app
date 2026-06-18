@@ -7,6 +7,7 @@ import Adopt from './pages/Adopt'
 import AdoptRabbit from './pages/AdoptRabbit'
 import Tails from './pages/Tails'
 import TailDetail from './pages/TailDetail'
+import ShareTail from './pages/ShareTail'
 import Services from './pages/Services'
 import ServiceSignup from './pages/ServiceSignup'
 import Learn from './pages/Learn'
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/adopt" element={<Adopt />} />
         <Route path="/adopt/:id" element={<AdoptRabbit />} />
         <Route path="/tails" element={<Tails />} />
+        <Route path="/tails/share" element={<ShareTail />} />
         <Route path="/tails/:id" element={<TailDetail />} />
         <Route path="/services" element={<Services />} />
         <Route path="/services/signup" element={<ServiceSignup />} />
