@@ -179,6 +179,14 @@
   transcribed from the BunFest site 2026-06-18; includes the RHDV2 vaccination rule,
   pricing, and the host-hotel contact (via `ContactLinks`). **Ticket purchase stays
   external** (payment). Data in `src/data/bunfestPages.ts`.
+- **BunFest reserve & raffle** *(feat/bunfest-reserve-raffle)* — interactive add-ons
+  on the activity pages: **Bunny Spa / Glamour Shots** have an in-app **session
+  reservation** (`ReserveSession`: service + 30-min time window + name/phone/bunny →
+  OHRR confirms; pay at the table — no payment backend needed), and the **Raffle** has
+  an in-app **ticket flow** (`RaffleTickets`: quantity with the real $1-each /
+  6-for-$5 pricing → reserves numbered MWBF-##### tickets to pay for at the table).
+  Post to Netlify (`spa-reservation`, `glamour-reservation`, `raffle-request`),
+  clearly labelled "pay in person until in-app payment is set up."
 - **Sponsor & vendor contact treatment** *(feat/sponsor-vendor-contacts)* — the
   Sponsors page now shows each sponsor's **researched contact info** via
   `ContactLinks` (address, phone → dialer, email → mail, website **as text** + a
