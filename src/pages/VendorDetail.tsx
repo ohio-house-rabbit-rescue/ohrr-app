@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { vendors } from '../data/vendors'
 import { boothForVendor, roomName } from '../data/floorplan'
 import { Screen, Card, Badge, SectionLabel, btn } from '../components/ui'
+import { ContactLinks } from '../components/ContactLinks'
 import { Icon } from '../components/icons'
 
 export default function VendorDetail() {
@@ -68,9 +69,12 @@ export default function VendorDetail() {
       )}
 
       {v.url && (
-        <a href={v.url} target="_blank" rel="noopener noreferrer" className={`${btn.outline} w-full`}>
-          Visit shop <Icon name="external" size={14} />
-        </a>
+        <section className="space-y-2.5">
+          <SectionLabel>Shop</SectionLabel>
+          <Card>
+            <ContactLinks url={v.url} urlLabel="Visit shop" />
+          </Card>
+        </section>
       )}
 
       {related.length > 0 && (
