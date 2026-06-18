@@ -46,8 +46,11 @@ export default function OhrrHome() {
               <Icon name="star" size={13} /> Our flagship event · {event.logoYear} theme
             </span>
             <p className="mt-2 max-w-[17rem] text-sm text-white/90">
-              The biggest rabbit festival in the Eastern U.S. — every October.
+              The biggest rabbit festival in the Eastern U.S.
             </p>
+            <span className="mt-2 flex items-center gap-1.5 text-sm font-bold text-white">
+              <Icon name="calendar" size={14} className="shrink-0 text-white/90" /> {event.date}
+            </span>
             <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#e0950f] px-5 py-2.5 text-sm font-extrabold text-white shadow-sm transition group-hover:bg-[#bd7c08]">
               Enter BunFest <Icon name="chevron" size={16} />
             </span>
