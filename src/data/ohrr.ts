@@ -14,6 +14,7 @@ export const ohrr = {
   phoneHref: 'tel:+16142638557',
   email: 'ohrrcontact@ohiohouserabbitrescue.org',
   hours: 'Sat & Sun, 12–4 PM · by appointment',
+  hoursShort: 'Sat & Sun, 12–4 PM',
   links: {
     site: 'https://www.ohiohouserabbitrescue.org/',
     adopt: 'https://www.ohiohouserabbitrescue.org/adopt/',

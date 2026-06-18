@@ -44,6 +44,17 @@
       <textarea name="notes"></textarea>
     </form>
 
+    <!-- Hidden static form so Netlify Forms detects "appointment-request" at
+         build time; the live React form (src/pages/Appointment.tsx) posts to it. -->
+    <form name="appointment-request" netlify netlify-honeypot="bot-field" hidden>
+      <input type="text" name="reason" />
+      <input type="text" name="name" />
+      <input type="email" name="email" />
+      <input type="tel" name="phone" />
+      <input type="text" name="preferred" />
+      <textarea name="notes"></textarea>
+    </form>
+
     <!-- Hidden static form so Netlify Forms detects "happy-tail" at build time;
          the live React form (src/pages/ShareTail.tsx) posts to it. -->
     <form name="happy-tail" netlify netlify-honeypot="bot-field" hidden>

@@ -67,14 +67,17 @@ export default function OhrrHome() {
           </div>
         </div>
 
-        {/* Visit mini-card */}
+        {/* Visit mini-card — the address lives in the appointment flow, not here */}
         <Card className="border-slate-200 bg-slate-50/80">
           <div className="flex items-center gap-2 text-sm text-slate-600">
-            <Icon name="clock" size={15} className="shrink-0 text-brand-blue" /> {ohrr.hours}
+            <Icon name="clock" size={15} className="shrink-0 text-brand-blue" /> {ohrr.hoursShort}
           </div>
-          <div className="mt-1.5 flex items-center gap-2 text-sm text-slate-600">
-            <Icon name="mappin" size={15} className="shrink-0 text-brand-blue" /> {ohrr.address}
-          </div>
+          <Link
+            to="/appointment"
+            className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
+          >
+            Visits are by appointment — schedule one <Icon name="chevron" size={14} />
+          </Link>
         </Card>
       </Screen>
     </div>

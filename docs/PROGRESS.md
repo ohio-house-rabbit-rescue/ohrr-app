@@ -62,7 +62,15 @@
 ## What's been built
 
 ### OHRR host app (routes under `/`)
-- **Home** (`OhrrHome`) — branded landing / hub.
+- **Home** (`OhrrHome`) — branded landing / hub. *(feat/appointment-flow)* The visit
+  mini-card no longer shows the street address; it shows hours + a "Visits are by
+  appointment — schedule one" link to the new Appointment page (address is revealed
+  there, after a visit is requested).
+- **Appointment** (`Appointment`, `/appointment`) *(feat/appointment-flow)* — a
+  by-appointment "Schedule a Visit" page: a request form (Netlify
+  `appointment-request`) plus a "prefer to call?" option; the **address/location is
+  shown only on the confirmation**, once a visit is requested (so it's not broadcast
+  on the home page). Swappable to a real third-party scheduler later if OHRR adopts one.
 - **Adopt** (`Adopt`, `AdoptRabbit`) — live adoptable rabbits via the Petfinder
   Netlify function, with sample fallback; per-rabbit detail pages. *(PR #11)* The
   sample rabbits now show **real, freely-licensed photos** (bundled in
