@@ -19,6 +19,7 @@ import About from './pages/About'
 import Give from './pages/Give'
 import Surrender from './pages/Surrender'
 import SurrenderForm from './pages/SurrenderForm'
+import Appointment from './pages/Appointment'
 import Settings from './pages/Settings'
 import Help from './pages/Help'
 import Search from './pages/Search'
@@ -64,6 +65,7 @@ export default function App() {
           }
         />
         <Route path="/rescues/:id" element={<PartnerDetail base="/rescues" />} />
+        <Route path="/appointment" element={<Appointment />} />
         <Route path="/surrender" element={<Surrender />} />
         <Route path="/surrender/form" element={<SurrenderForm />} />
         <Route path="/about" element={<About />} />
