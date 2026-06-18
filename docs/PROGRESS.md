@@ -168,6 +168,14 @@
 - **Home** (`BunfestHome`), **Schedule** (`Schedule`), **Vendors**
   (`Vendors`, `VendorDetail`), **Rescue Partners** (`Partners`, `PartnerDetail`),
   **Sponsors** (`Sponsors`), **Visit** (`Visit`), **Give**.
+- **Sponsor & vendor contact treatment** *(feat/sponsor-vendor-contacts)* — the
+  Sponsors page now shows each sponsor's **researched contact info** via
+  `ContactLinks` (address, phone → dialer, email → mail, website **as text** + a
+  button) instead of a bare "Visit" link — most useful for the local Central Ohio
+  vets (MedVet Hilliard, Pataskala, Animal Care Unlimited, Norton Road, Central Ohio
+  Compounding). Vendor detail uses the same treatment for the shop link (URL text +
+  "Visit shop"). Contacts researched from public listings 2026-06-18. Vendor *shops*
+  remain external by design.
 - **Year logo / theme art** *(feat/tails-and-bunfest-logo)* — the real **2025
   Midwest BunFest logo** ("Compassion in Motion") now headlines the BunFest card on
   the OHRR home and the BunFest home hero, replacing the cartoon-bunny emoji, to
@@ -274,10 +282,6 @@ strategy doc; not yet scheduled:
   Lounge) and the visit pages (Bringing your bunny, Rabbit Attendance Agreement,
   Accommodations). **Ticket checkout stays external** (payment). Pull the real
   content from the BunFest site.
-- **Sponsor & vendor contact treatment** *(sponsor request 2026-06-18)* — apply the
-  same `ContactLinks` pattern (phone → dialer, email → mail, website **as text** +
-  button) to the Sponsors page and vendor detail. Research sponsor phone/email the
-  way partners were done. (Vendor *shops* stay external — that's intended.)
 - **Dead external-link code cleanup** — remove unused `ExternalCard` (`ui.tsx`),
   `adoptLinks`/`learnLinks` (`ohrr.ts`), and stale `surrenderForms` URLs.
 - **Amazon Wish List — deep links to items** *(sponsor request, later)* — instead of
