@@ -1,10 +1,10 @@
+import { Link } from 'react-router-dom'
 import {
   surrenderIntro,
   surrenderSteps,
   surrenderDonation,
   afterSurrender,
   goodSamaritanNote,
-  surrenderForms,
   surrenderContact,
   fullPolicies,
 } from '../data/surrender'
@@ -92,10 +92,8 @@ export default function Surrender() {
           <SectionLabel>Relinquishment forms</SectionLabel>
           <p className="px-1 text-sm leading-relaxed text-slate-600">{goodSamaritanNote}</p>
           <div className="grid grid-cols-1 gap-2.5">
-            <a
-              href={surrenderForms.owner}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/surrender/form?type=owner"
               className="group flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md"
             >
               <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-blue-50 text-brand-blue">
@@ -107,12 +105,10 @@ export default function Surrender() {
                 </span>
                 <span className="block text-xs text-slate-500">If the rabbit is yours.</span>
               </span>
-              <Icon name="external" size={15} className="shrink-0 text-slate-300" />
-            </a>
-            <a
-              href={surrenderForms.goodSamaritan}
-              target="_blank"
-              rel="noopener noreferrer"
+              <Icon name="chevron" size={16} className="shrink-0 text-slate-300" />
+            </Link>
+            <Link
+              to="/surrender/form?type=good-samaritan"
               className="group flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md"
             >
               <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-blue-50 text-brand-blue">
@@ -126,12 +122,12 @@ export default function Surrender() {
                   If you rescued a rabbit that isn’t yours.
                 </span>
               </span>
-              <Icon name="external" size={15} className="shrink-0 text-slate-300" />
-            </a>
+              <Icon name="chevron" size={16} className="shrink-0 text-slate-300" />
+            </Link>
           </div>
           <p className="px-1 text-xs text-slate-400">
-            The forms open on OHRR’s site — they’re the official relinquishment paperwork to complete
-            and bring on surrender day.
+            Fill out the official relinquishment form right here in the app. Please contact OHRR
+            first to confirm there’s space.
           </p>
         </section>
 

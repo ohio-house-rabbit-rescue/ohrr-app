@@ -44,6 +44,50 @@
       <textarea name="notes"></textarea>
     </form>
 
+    <!-- Hidden static form so Netlify Forms detects "surrender-intake" at build
+         time; the live React form (src/pages/SurrenderForm.tsx) posts to it. -->
+    <form name="surrender-intake" netlify netlify-honeypot="bot-field" hidden>
+      <input type="text" name="type" />
+      <input type="text" name="name" />
+      <input type="tel" name="phone" />
+      <input type="tel" name="altPhone" />
+      <input type="email" name="email" />
+      <input type="text" name="address" />
+      <input type="text" name="cityStateZip" />
+      <input type="text" name="heardAbout" />
+      <input type="text" name="rabbitName" />
+      <input type="text" name="reason" />
+      <input type="text" name="gotFrom" />
+      <input type="text" name="ownedFor" />
+      <input type="text" name="age" />
+      <input type="text" name="enclosure" />
+      <input type="text" name="timeOut" />
+      <input type="text" name="livedWith" />
+      <input type="text" name="behaviorRabbits" />
+      <input type="text" name="behaviorCats" />
+      <input type="text" name="behaviorDogs" />
+      <input type="text" name="behaviorChildren" />
+      <input type="text" name="behaviorStrangers" />
+      <input type="text" name="litterBox" />
+      <input type="text" name="litterUse" />
+      <input type="text" name="litterType" />
+      <input type="text" name="diet" />
+      <input type="text" name="lastVet" />
+      <input type="text" name="vetName" />
+      <input type="text" name="spayNeuter" />
+      <input type="text" name="surgeryClinic" />
+      <input type="text" name="foundConditions" />
+      <input type="text" name="eating" />
+      <input type="text" name="behavior" />
+      <input type="text" name="litterHabits" />
+      <input type="text" name="vetVisit" />
+      <input type="text" name="healthConcerns" />
+      <input type="text" name="otherInfo" />
+      <input type="text" name="signature" />
+      <input type="text" name="agreement" />
+      <input type="text" name="agreementDate" />
+    </form>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
