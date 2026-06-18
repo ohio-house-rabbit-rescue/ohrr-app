@@ -35,6 +35,7 @@ export const OHRR_TABS: TabItem[] = [
 export const OHRR_HUB: HubItem[] = [
   { to: '/adopt', title: 'Adopt a Rabbit', subtitle: 'Meet adoptable buns & apply', icon: 'heart' },
   { to: '/tails', title: 'Happy Tails', subtitle: 'See where adopted bunnies are now', icon: 'sparkles' },
+  { to: '/rescues', title: 'Find a Rescue', subtitle: 'Rabbit rescues across the country', icon: 'mappin' },
   { to: '/services', title: 'Bunny Services', subtitle: 'Bonding sessions & vet clinic days', icon: 'calendar' },
   { to: '/learn', title: 'Rabbit Care', subtitle: 'Diet, housing, bonding & more', icon: 'book' },
   { to: '/volunteer', title: 'Volunteer', subtitle: 'Give your time to the buns', icon: 'users' },
