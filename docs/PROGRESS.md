@@ -111,8 +111,20 @@
   agreement** with a required checkbox + typed signature + date, and posts to
   Netlify Forms (`surrender-intake`, registered in `index.html`). The Surrender
   page’s two form buttons open it in-app.
-- **Top bar** *(PR #11)*: the outbound website link was removed from `OhrrTopBar`
-  (Settings gear remains).
+- **Top bar / header** *(PR #11, then feat/header-help-search)*: outbound website
+  links removed; the right-side cluster is now a shared `HeaderActions`
+  (**Search · Help · Settings**) on **both** the OHRR and BunFest top bars. The
+  BunFest bar's "Back to Ohio House Rabbit Rescue" is now a **prominent button**
+  (circular arrow, bold), not a thin link.
+- **Help** (`Help`, `/help`) *(feat/header-help-search)* — the `?` icon opens
+  contextual help: it shows help for the screen you came from (`?from=`), a
+  "Getting around" guide to the header/tabs/sub-app, and a tappable index of every
+  section. Content in `src/data/help.ts`.
+- **Search** (`Search`, `/search`) *(feat/header-help-search)* — the search icon
+  opens a **global app search** (type **or voice** via the Web Speech API) over an
+  index of screens, adoptable rabbits, care topics, vendors, Happy Tails, volunteer
+  roles, giving options, and BunFest sessions; results are grouped and link straight
+  to the page. Index in `src/data/search.ts`. (Page-specific search is a future add.)
 
 ### Midwest BunFest sub-app (routes under `/bunfest`, distinct look & feel)
 - **Home** (`BunfestHome`), **Schedule** (`Schedule`), **Vendors**
@@ -145,7 +157,8 @@
   `BunfestLayout`/`BunfestTopBar` (sub-app shell), `RabbitPhoto`, `ScrollToTop`,
   `ui.tsx`, `tailbits.tsx`, `icons.tsx`.
 - `src/data/*` — content/data modules: `adoptables`, `care`, `content`, `event`,
-  `floorplan` (BunFest rooms/zones + vendor booth assignments), `giving`, `ohrr`,
+  `floorplan` (BunFest rooms/zones + vendor booth assignments), `giving`, `help`
+  (per-screen help content), `ohrr`, `search` (global search index),
   `partners`, `photos` (sample bunny images + credits), `services`, `sessions`,
   `sponsors`, `surrender` (in-app owner-surrender content + verbatim policies),
   `surrenderForm` (intake form schema + relinquishment agreement), `tails`,
@@ -216,9 +229,6 @@ strategy doc; not yet scheduled:
   rabbit breeds with a photo + short description of each. Research a good source
   (Wikipedia / Wikimedia Commons, ARBA breed list) for accurate details + freely
   licensed images. Scoped for later.
-- **Header Help + Search** *(sponsor request 2026-06-17)* — a `?` Help system and a
-  `search` icon in the header (type + voice), on every screen. *(In progress as
-  `feat/header-help-search`.)*
 - **Amazon Wish List — deep links to items** *(sponsor request, later)* — instead of
   one link to the list, link directly to individual items (open in the Amazon app).
 - **Hop Shop inventory** *(sponsor request, later; needs backend)* — a tool for

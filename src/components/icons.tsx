@@ -23,6 +23,10 @@ export type IconName =
   | 'star'
   | 'settings'
   | 'apple'
+  | 'search'
+  | 'help'
+  | 'mic'
+  | 'x'
 
 const paths: Record<IconName, ReactNode> = {
   home: <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />,
@@ -145,6 +149,32 @@ const paths: Record<IconName, ReactNode> = {
       fill="currentColor"
       stroke="none"
     />
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.35-4.35" />
+    </>
+  ),
+  help: (
+    <>
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="M9.5 9.2a2.5 2.5 0 1 1 3.6 2.3c-.9.5-1.6 1-1.6 2.1v.3" />
+      <circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none" />
+    </>
+  ),
+  mic: (
+    <>
+      <rect x="9" y="2.5" width="6" height="11.5" rx="3" />
+      <path d="M5.5 11a6.5 6.5 0 0 0 13 0" />
+      <line x1="12" y1="18" x2="12" y2="21.5" />
+    </>
+  ),
+  x: (
+    <>
+      <path d="M6 6l12 12" />
+      <path d="M18 6 6 18" />
+    </>
   ),
 }
 

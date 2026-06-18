@@ -19,6 +19,8 @@ import Give from './pages/Give'
 import Surrender from './pages/Surrender'
 import SurrenderForm from './pages/SurrenderForm'
 import Settings from './pages/Settings'
+import Help from './pages/Help'
+import Search from './pages/Search'
 import NotFound from './pages/NotFound'
 // Midwest BunFest sub-app
 import BunfestHome from './pages/BunfestHome'
@@ -53,6 +55,8 @@ export default function App() {
         <Route path="/surrender/form" element={<SurrenderForm />} />
         <Route path="/about" element={<About />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/help" element={<Help />} />
+        <Route path="/search" element={<Search />} />
         <Route path="*" element={<NotFound />} />
       </Route>
 
