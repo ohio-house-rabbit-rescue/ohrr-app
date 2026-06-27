@@ -26,6 +26,14 @@ export default function StaffLayout() {
   // overflows or needs a scrolling tab strip, however many sections there are.
   const navItems = [
     { to: '/staff', label: 'Dashboard', end: true, show: true },
+    {
+      to: '/staff/adopt',
+      label: 'Adoptable rabbits',
+      show:
+        can('adoptions.listings.create') ||
+        can('adoptions.listings.edit') ||
+        can('adoptions.status.change'),
+    },
     { to: '/staff/hopshop', label: 'Hop Shop', show: Boolean(membership) },
     { to: '/staff/announcements', label: 'Announcements', show: can('announcements.post') },
     { to: '/staff/volunteer', label: 'Volunteer opportunities', show: can('volunteers.shifts.manage') },

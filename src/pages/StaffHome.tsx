@@ -26,6 +26,10 @@ export default function StaffHome() {
     (p) => p.area === 'Hop Shop' && can(p.key),
   )
   const canSeeHopShop = isAdminish || hopshopCaps.length > 0
+  const canManageAdopt =
+    can('adoptions.listings.create') ||
+    can('adoptions.listings.edit') ||
+    can('adoptions.status.change')
   const canPostAnnouncements = can('announcements.post')
   const canManageVolunteer = can('volunteers.shifts.manage')
   const canEditCare = can('content.education.edit')
@@ -33,6 +37,7 @@ export default function StaffHome() {
   const canViewActivity = can('audit.view')
   const showTiles =
     canSeeHopShop ||
+    canManageAdopt ||
     canPostAnnouncements ||
     canManageVolunteer ||
     canEditCare ||
@@ -56,6 +61,15 @@ export default function StaffHome() {
 
       {showTiles ? (
         <div className="space-y-3">
+          {canManageAdopt && (
+            <ActionCard
+              to="/staff/adopt"
+              title="Adoptable rabbits"
+              subtitle="Add rabbits, photos & adoption status"
+              icon="heart"
+              tone="orange"
+            />
+          )}
           {canSeeHopShop && (
             <ActionCard
               to="/staff/hopshop"
