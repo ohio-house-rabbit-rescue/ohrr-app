@@ -237,7 +237,7 @@ function MemberCard({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="truncate font-display text-[15px] font-extrabold text-ink">
+            <span className="break-all font-display text-[15px] font-extrabold text-ink">
               {member.email ?? 'Team member'}
             </span>
             {isSelf && <span className="shrink-0 text-xs font-bold text-slate-400">(you)</span>}

@@ -1,4 +1,5 @@
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { Icon } from './icons'
 import ScrollToTop from './ScrollToTop'
@@ -13,26 +14,33 @@ function roleLabel(role: string | undefined) {
 export default function StaffLayout() {
   const { user, membership, can, signOut } = useAuth()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const onSignOut = async () => {
     await signOut()
     navigate('/staff/signin', { replace: true })
   }
 
-  // Nav appears only once onboarded. Hop Shop is the first gated feature; Team is
-  // for those who can invite/manage staff (owners/admins always can).
-  const showHopShop = Boolean(membership)
-  const showAnnouncements = can('announcements.post')
-  const showVolunteer = can('volunteers.shifts.manage')
-  const showLearn = can('content.education.edit')
-  const showTeam = can('staff.invite') || can('staff.permissions.manage')
-  const showActivity = can('audit.view')
+  // The section menu. Adding a section later = one line here; the dropdown never
+  // overflows or needs a scrolling tab strip, however many sections there are.
+  const navItems = [
+    { to: '/staff', label: 'Dashboard', end: true, show: true },
+    { to: '/staff/hopshop', label: 'Hop Shop', show: Boolean(membership) },
+    { to: '/staff/announcements', label: 'Announcements', show: can('announcements.post') },
+    { to: '/staff/volunteer', label: 'Volunteer opportunities', show: can('volunteers.shifts.manage') },
+    { to: '/staff/learn', label: 'Care guides', show: can('content.education.edit') },
+    {
+      to: '/staff/team',
+      label: 'Team',
+      show: can('staff.invite') || can('staff.permissions.manage'),
+    },
+    { to: '/staff/activity', label: 'Activity', show: can('audit.view') },
+  ].filter((i) => i.show)
 
-  const navClass = ({ isActive }: { isActive: boolean }) =>
-    [
-      'rounded-full px-3.5 py-1.5 text-sm font-bold transition',
-      isActive ? 'bg-brand-blue text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100',
-    ].join(' ')
+  // Which section are we in (for the menu button label)?
+  const current =
+    navItems.find((i) => i.to !== '/staff' && pathname.startsWith(i.to)) ?? navItems[0]
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -42,7 +50,7 @@ export default function StaffLayout() {
         {/* Top bar */}
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
           <div className="flex items-center justify-between px-4 py-3">
-            <Link to="/staff" className="flex items-center gap-2">
+            <Link to="/staff" className="flex items-center gap-2" onClick={() => setMenuOpen(false)}>
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-blue text-white">
                 <Icon name="settings" size={17} />
               </span>
@@ -74,42 +82,60 @@ export default function StaffLayout() {
             )}
           </div>
 
+          {/* Section menu — one compact line; opens a dropdown of all sections */}
           {membership && (
-            <nav className="flex items-center gap-1.5 border-t border-slate-100 px-3 py-2">
-              <NavLink to="/staff" end className={navClass}>
-                Dashboard
-              </NavLink>
-              {showHopShop && (
-                <NavLink to="/staff/hopshop" className={navClass}>
-                  Hop Shop
-                </NavLink>
+            <div className="relative border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((o) => !o)}
+                className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm font-bold text-ink transition hover:bg-slate-50"
+                aria-expanded={menuOpen}
+              >
+                <span className="flex items-center gap-2">
+                  <Icon name="home" size={15} className="text-brand-blue" />
+                  {current?.label ?? 'Menu'}
+                </span>
+                <Icon
+                  name="chevron"
+                  size={16}
+                  className={`text-slate-400 transition-transform ${
+                    menuOpen ? '-rotate-90' : 'rotate-90'
+                  }`}
+                />
+              </button>
+
+              {menuOpen && (
+                <>
+                  {/* backdrop to close on outside tap */}
+                  <button
+                    type="button"
+                    aria-label="Close menu"
+                    onClick={() => setMenuOpen(false)}
+                    className="fixed inset-0 z-30 cursor-default"
+                  />
+                  <nav className="absolute left-0 right-0 top-full z-40 max-h-[70vh] overflow-y-auto border-b border-slate-200 bg-white py-1 shadow-lg">
+                    {navItems.map((i) => (
+                      <NavLink
+                        key={i.to}
+                        to={i.to}
+                        end={i.end}
+                        onClick={() => setMenuOpen(false)}
+                        className={({ isActive }) =>
+                          [
+                            'block px-4 py-2.5 text-sm font-semibold transition',
+                            isActive
+                              ? 'bg-brand-blue-50 text-brand-blue'
+                              : 'text-slate-600 hover:bg-slate-50',
+                          ].join(' ')
+                        }
+                      >
+                        {i.label}
+                      </NavLink>
+                    ))}
+                  </nav>
+                </>
               )}
-              {showAnnouncements && (
-                <NavLink to="/staff/announcements" className={navClass}>
-                  News
-                </NavLink>
-              )}
-              {showVolunteer && (
-                <NavLink to="/staff/volunteer" className={navClass}>
-                  Volunteers
-                </NavLink>
-              )}
-              {showLearn && (
-                <NavLink to="/staff/learn" className={navClass}>
-                  Care
-                </NavLink>
-              )}
-              {showTeam && (
-                <NavLink to="/staff/team" className={navClass}>
-                  Team
-                </NavLink>
-              )}
-              {showActivity && (
-                <NavLink to="/staff/activity" className={navClass}>
-                  Activity
-                </NavLink>
-              )}
-            </nav>
+            </div>
           )}
         </header>
 
