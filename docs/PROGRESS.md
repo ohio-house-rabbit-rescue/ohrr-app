@@ -55,8 +55,13 @@
   home via `AnnouncementsBanner`. **Owner step:** apply
   `migrations/20260627063130_announcements.sql` in the Supabase SQL editor to switch it
   on (until then the banner shows nothing and the editor errors — nothing else breaks).
-  **Next areas:** Volunteer opportunities → Education/care content → Adoptable rabbits
-  (its own session: photo uploads + how it fits the Petfinder feed).
+  **#2 Volunteer opportunities is LIVE ([PR #32])**: `/staff/volunteer` (gated
+  `volunteers.shifts.manage`) manages the shifts / vet-transport runs / events shown
+  on the `VolunteerWay` pages — each category shows live staff data when present,
+  else the built-in samples; apply
+  `migrations/20260627064506_volunteer_opportunities.sql`. **Next areas:**
+  Education/care content → Adoptable rabbits (its own session: photo uploads via
+  Supabase Storage + how it fits the Petfinder feed).
 - **Workflow:** finished, verified work is merged straight to `main` (auto-deploys
   to Netlify) — the sponsor is the only stakeholder, so we don't park work in draft
   PRs. Still branch + PR per change for clean history. *(Exception: the staff-backend
