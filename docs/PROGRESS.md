@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-06-17
+- **Last updated:** 2026-06-27
 - **Repo:** https://github.com/chasingtheunicorn/ohrr-app
 - **Live site:** https://ohrr-app.netlify.app
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,9 +19,18 @@
 
 ## Current state (at a glance)
 
+- **Active phase (2026-06-27): staff backend (Supabase).** Building the staff-facing
+  admin — Supabase Auth + a role/capability access-control model, a capability-gated
+  **Hop Shop manager** (CRUD products + inventory), master-code owner bootstrap, and
+  (next) team invites + worker join. On branch **`feat/staff-backend`** with an
+  **open draft PR**, kept open through this multi-step build per the handoff's
+  persistence protocol; merges to `main` once verified against the live DB. See the
+  **Staff backend (Supabase)** section below.
 - **Workflow:** finished, verified work is merged straight to `main` (auto-deploys
   to Netlify) — the sponsor is the only stakeholder, so we don't park work in draft
-  PRs. Still branch + PR per change for clean history.
+  PRs. Still branch + PR per change for clean history. *(Exception: the staff-backend
+  build above keeps one draft PR open across steps, since its pieces — auth, RLS,
+  screens — only fully verify together against the live Supabase project.)*
 - **Latest on `main`:** [PR #13](https://github.com/chasingtheunicorn/ohrr-app/pull/13)
   (in-app polish: volunteer role codes, wrapping vendor filter, in-app surrender
   content) is **merged & live**, on top of #12 (event map) and #11 (volunteer hub +
@@ -53,9 +62,15 @@
   Adopt page can show OHRR's live adoptable rabbits. Credentials
   (`PETFINDER_CLIENT_ID/SECRET/ORG_ID`) are server-side only (set in Netlify env,
   never `VITE_`-prefixed). Until set, the page falls back to built-in sample data.
-- **Backend:** none yet. `.env.example` documents a future Supabase setup (public
-  anon key in browser, service_role server-side only) but it is **not wired in** —
-  v1 is read-only + outbound.
+- **Backend:** **Supabase (Postgres + Auth + RLS)** is now being wired in for the
+  **staff side** (`@supabase/supabase-js`, schema under `supabase/migrations/`,
+  client in `src/lib/supabase.ts`). The public attendee-facing app is still
+  read-only + outbound and builds/runs **without** Supabase env — staff screens show
+  a "not configured" notice until `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` are
+  set (`.env.local` locally, Netlify env when deployed; anon key only on the client,
+  never the service_role key). The Supabase schema is **already applied** to the live
+  project and the OHRR org + a one-time master code are bootstrapped (the migration
+  file just version-controls it).
 
 ---
 
@@ -224,6 +239,48 @@
   (one `.ics`, all saved) or **Google Calendar** (per-session links) via
   `src/lib/ics.ts`.
 
+### Staff backend (Supabase) — routes under `/staff` *(feat/staff-backend, in progress)*
+A separate, capability-gated admin shell for OHRR staff/volunteers, distinct from
+the public attendee app. Design = `docs/05-...md`; schema = the Drive
+`06-hopshop-backend.sql`. **Roles** owner/admin/staff; **capabilities** like
+`hopshop.products.create`, `hopshop.inventory.update`, `staff.invite`. Owners/admins
+implicitly hold all; staff hold only what's granted. **Row-Level Security in Postgres
+is the real gate** — the UI only hides/shows controls for convenience.
+
+- **Schema migration** — `supabase/migrations/20260627052536_hopshop_backend.sql`
+  version-controls the already-applied schema (organizations, memberships, the
+  permissions catalog + presets, invite codes, audit log, Hop Shop products +
+  inventory, all RLS + the SECURITY DEFINER RPCs). Idempotent. `supabase/README.md`
+  documents apply + `npm run gen:types`.
+- **TS types** — `src/lib/database.types.ts` (hand-authored to mirror the applied
+  schema until `supabase gen types --linked` can run with the project ref).
+- **Client + context** — `src/lib/supabase.ts` (env-gated client + `errMessage`),
+  `src/lib/capabilities.ts` (capability catalog + presets, mirrors the seed),
+  `src/lib/auth.tsx` (`AuthProvider`/`useAuth`: session, membership, effective
+  capabilities, `can()`, `refresh()`, `signOut()`).
+- **Sign-in** (`StaffSignIn`, `/staff/signin`) — Supabase Auth **email + password**
+  (sign in / create account; handles the "confirm your email" case). *(Chosen as the
+  most self-contained default; magic-link is a small swap — pending owner confirm.)*
+- **Owner bootstrap** (`StaffOnboard`, `/staff/start`) — "Enter master code" →
+  `rpc('redeem_master_code')` → caller becomes **Owner**.
+- **Dashboard** (`StaffHome`, `/staff`) — routes by state (→ signin / → start /
+  → dashboard); shows role, what you can manage, and a staff member's granted access.
+- **Hop Shop manager** (`HopShopManager`, `/staff/hopshop`) — list / **create / edit /
+  delete** products + a **stock stepper** (upserts `hopshop_inventory`). Every control
+  is gated by the matching `hopshop.*` capability via `can()`, **and** the DB enforces
+  it (RLS). View-only for members without write caps.
+- **Shell + guard** — `StaffLayout` (own top bar, role label, sign-out, contextual
+  nav) + `RequireMembership` (redirects to signin/start as needed). Wired in
+  `App.tsx`; `AuthProvider` wraps the app in `main.tsx`.
+- **Verified** so far via typecheck + `build` + browser render (sign-in renders,
+  guard redirects unauthenticated `/staff/hopshop` → signin, public app unaffected,
+  no console errors). **Live end-to-end auth/RLS not yet exercised** — needs the real
+  `VITE_SUPABASE_*` env to sign in and redeem the master code.
+- **Still to build (this feature):** Team screen (invite workers via
+  `create_invite_code`, per-capability toggles via `set_membership_permission`,
+  enable/disable via `set_membership_status`), worker **join** screen
+  (`redeem_invite_code`), and optionally an audit-log view (`audit.view`).
+
 ### Structure
 - `src/pages/*` — route components (listed above).
 - `src/components/*` — `OhrrLayout`/`OhrrTopBar`/`TabBar` (host shell),
@@ -264,8 +321,13 @@
   reader should treat this progress log as the live status. Consider refreshing
   them once we confirm with the sponsor.
 - **No automated tests / CI** yet.
-- **Dynamic features are mocked or client-only** — service sign-ups, follow, etc.
-  have no backend persistence (no Supabase wired in).
+- **Public dynamic features are still client-only / Netlify Forms** — service
+  sign-ups, follow, saved sessions, etc. have no database persistence. Supabase is
+  now wired for the **staff** side; extending it to attendee-facing persistence is a
+  separate, later step.
+- **Staff backend not yet verified live** — auth + RLS + the RPCs are coded and
+  build clean, but end-to-end (sign in → redeem master code → manage Hop Shop) needs
+  the real `VITE_SUPABASE_*` env to exercise against the live project.
 
 ---
 
@@ -317,9 +379,12 @@ strategy doc; not yet scheduled:
 - **Amazon Wish List — deep links to items** *(sponsor request, later)* — instead of
   one link to the list, link directly to individual items (open in the Amazon app).
 - **Hop Shop inventory back end** *(sponsor request; needs backend)* — the public
-  **browse-only** Hop Shop view is **built** (`/hop-shop`, example data). Still to do:
-  the staff tool to **scan a product + photograph it + set a quantity**, feeding real
-  stock (with photos) into that view, plus scan-in / scan-out catalog management.
+  **browse-only** Hop Shop view is **built** (`/hop-shop`, example data), and the
+  **staff Hop Shop manager** (`/staff/hopshop`, Supabase-backed CRUD + stock) is now
+  built behind the access-control model. Still to do: connect the **public** Hop Shop
+  view to the live `hopshop_products`/`hopshop_inventory` tables (it currently reads
+  static sample data), and add the nicer **scan-a-product + photograph + set-quantity**
+  staff flow + product photos (Supabase Storage) on top of the basic manager.
 - **In-app mailing-list signup** *(sponsor request, later; needs email backend)* —
   replace the outbound link with an in-app signup that uses the device profile email
   and **validates via an emailed code** entered back in the app.

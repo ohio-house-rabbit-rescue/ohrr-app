@@ -37,6 +37,13 @@ import Visit from './pages/Visit'
 import EventMap from './pages/EventMap'
 import BunfestPage from './pages/BunfestPage'
 import SilentAuction from './pages/SilentAuction'
+// Staff backend (Supabase-gated)
+import StaffLayout from './components/StaffLayout'
+import { RequireMembership } from './components/staffui'
+import StaffSignIn from './pages/StaffSignIn'
+import StaffOnboard from './pages/StaffOnboard'
+import StaffHome from './pages/StaffHome'
+import HopShopManager from './pages/HopShopManager'
 
 export default function App() {
   return (
@@ -93,6 +100,16 @@ export default function App() {
         <Route path="silent-auction" element={<SilentAuction />} />
         <Route path="p/:id" element={<BunfestPage />} />
         <Route path="give" element={<Give />} />
+      </Route>
+
+      {/* Staff backend — Supabase auth + capability-gated tools (separate shell) */}
+      <Route path="/staff" element={<StaffLayout />}>
+        <Route index element={<StaffHome />} />
+        <Route path="signin" element={<StaffSignIn />} />
+        <Route path="start" element={<StaffOnboard />} />
+        <Route element={<RequireMembership />}>
+          <Route path="hopshop" element={<HopShopManager />} />
+        </Route>
       </Route>
     </Routes>
   )
