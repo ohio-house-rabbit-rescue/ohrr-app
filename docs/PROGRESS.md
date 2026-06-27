@@ -59,9 +59,13 @@
   `volunteers.shifts.manage`) manages the shifts / vet-transport runs / events shown
   on the `VolunteerWay` pages — each category shows live staff data when present,
   else the built-in samples; apply
-  `migrations/20260627064506_volunteer_opportunities.sql`. **Next areas:**
-  Education/care content → Adoptable rabbits (its own session: photo uploads via
-  Supabase Storage + how it fits the Petfinder feed).
+  `migrations/20260627064506_volunteer_opportunities.sql`. **#3 Education / care guides
+  is LIVE ([PR #33])**: `/staff/learn` (gated `content.education.edit`) edits the
+  Rabbit Care articles — a one-click "Import the built-in guides" seeds the 7 existing
+  guides (light-markdown body: `##` headings, `-` bullets); `Learn`/`LearnTopic` render
+  live-or-built-in; apply `migrations/20260627065720_care_articles.sql` then tap import.
+  **Remaining:** Adoptable rabbits (its own session — photo uploads via Supabase
+  Storage + how it fits the Petfinder feed).
 - **Workflow:** finished, verified work is merged straight to `main` (auto-deploys
   to Netlify) — the sponsor is the only stakeholder, so we don't park work in draft
   PRs. Still branch + PR per change for clean history. *(Exception: the staff-backend
