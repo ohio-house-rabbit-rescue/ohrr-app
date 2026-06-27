@@ -240,6 +240,54 @@ export type Database = {
         }
         Relationships: []
       }
+      care_articles: {
+        Row: {
+          id: string
+          org_id: string
+          slug: string
+          title: string
+          icon: string
+          summary: string
+          body: string
+          tip: string | null
+          sort_order: number
+          is_published: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          slug: string
+          title: string
+          icon?: string
+          summary?: string
+          body?: string
+          tip?: string | null
+          sort_order?: number
+          is_published?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          slug?: string
+          title?: string
+          icon?: string
+          summary?: string
+          body?: string
+          tip?: string | null
+          sort_order?: number
+          is_published?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hopshop_products: {
         Row: {
           id: string

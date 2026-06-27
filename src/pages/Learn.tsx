@@ -1,7 +1,20 @@
 import { careTopics, CARE_DISCLAIMER } from '../data/care'
+import { useCareArticles, asIconName } from '../lib/careContent'
 import { PageHeader, Screen, ActionCard } from '../components/ui'
 
 export default function Learn() {
+  const live = useCareArticles()
+  const useLive = (live?.length ?? 0) > 0
+
+  const items = useLive
+    ? live!.map((a) => ({
+        id: a.slug,
+        title: a.title,
+        summary: a.summary,
+        icon: asIconName(a.icon),
+      }))
+    : careTopics.map((t) => ({ id: t.id, title: t.title, summary: t.summary, icon: t.icon }))
+
   return (
     <>
       <PageHeader
@@ -10,7 +23,7 @@ export default function Learn() {
         subtitle="Good care means happier rabbits — and fewer surrenders. Here are the essentials, right in the app."
       />
       <Screen className="space-y-2.5">
-        {careTopics.map((t) => (
+        {items.map((t) => (
           <ActionCard
             key={t.id}
             to={`/learn/${t.id}`}
