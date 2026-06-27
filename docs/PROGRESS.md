@@ -19,16 +19,22 @@
 
 ## Current state (at a glance)
 
-- **Active phase (2026-06-27): staff backend (Supabase).** Built the staff-facing
-  admin — Supabase Auth sign-in, a role/capability access-control model, master-code
-  owner bootstrap, a capability-gated **Hop Shop manager** (CRUD products +
-  inventory), a **Team** screen (invite workers + per-capability toggles +
-  enable/disable), and worker **join**. All six handoff build-steps are coded and
-  build/render clean; on branch **`feat/staff-backend`** in **draft [PR #28]**, kept
-  open per the handoff. **Remaining before merge:** live end-to-end verification once
-  the real `VITE_SUPABASE_*` env is set + the owner confirms (login = email+password,
-  admins = full-access, both confirmed 2026-06-27). See the **Staff backend
-  (Supabase)** section below.
+- **Staff backend (Supabase) — MERGED & LIVE (2026-06-27).** [PR #28] merged to
+  `main` (merge `a60b8b5`) and **deployed to `ohrr-app.netlify.app`**. The staff admin
+  is reachable at **`/staff`** (unlinked from the public app): Supabase Auth sign-in,
+  role/capability access control, master-code owner bootstrap, a capability-gated
+  **Hop Shop manager** (CRUD + inventory), a **Team** screen (invite + per-capability
+  toggles + enable/disable), and worker **join**. The browser-safe Supabase config is
+  committed in **`.env.production`** (public project URL + *publishable* anon key —
+  safe by design; secrets never committed) so the Netlify build connects without
+  dashboard env setup; verified the URL bakes into the live bundle and that RLS blocks
+  anonymous access. Owner decisions confirmed 2026-06-27: login = email+password,
+  admins = full access (no code change needed). **Still to finish:** the owner runs the
+  in-app flow (create owner account → redeem master code → manage Hop Shop → invite a
+  worker). **Heads-up:** the Supabase project currently has **email confirmation ON**
+  (`mailer_autoconfirm=false`), so new staff get a confirmation email — turn it off
+  (Auth → Providers → Email → "Confirm email") for frictionless signup, or click the
+  emailed link. See the **Staff backend (Supabase)** section below.
 - **Workflow:** finished, verified work is merged straight to `main` (auto-deploys
   to Netlify) — the sponsor is the only stakeholder, so we don't park work in draft
   PRs. Still branch + PR per change for clean history. *(Exception: the staff-backend
