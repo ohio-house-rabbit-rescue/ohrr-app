@@ -321,9 +321,12 @@ is the real gate** — the UI only hides/shows controls for convenience.
 - **Worker join** (`StaffJoin`, `/staff/join`) — enter invite code →
   `redeem_invite_code` → joins scoped to the invite's preset/caps. Linked from the
   master-code screen.
-- **Shell + guard** — `StaffLayout` (own top bar, role label, sign-out, contextual
-  nav) + `RequireMembership` (redirects to signin/start as needed). Wired in
-  `App.tsx`; `AuthProvider` wraps the app in `main.tsx`.
+- **Shell + guard** — `StaffLayout` (own top bar, role label, sign-out) + a compact
+  **dropdown section menu** ([PR #34]) that shows the current section and opens a list
+  of all of them — replaced the row of tabs that clipped once there were 7, and scales
+  to any number of sections with no horizontal scroll. + `RequireMembership` (redirects
+  to signin/start as needed). Wired in `App.tsx`; `AuthProvider` wraps the app in
+  `main.tsx`.
 - **Verified** so far via typecheck + `build` + browser render (sign-in renders,
   guard redirects unauthenticated `/staff/hopshop` → signin, public app unaffected,
   no console errors). **Live end-to-end auth/RLS not yet exercised** — needs the real
