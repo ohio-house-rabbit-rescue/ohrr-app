@@ -81,6 +81,9 @@ export default function AdoptRabbit() {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="font-display text-2xl font-black text-ink">{r.name}</h1>
             {r.bonded && <Badge tone="orange">Bonded pair</Badge>}
+            {r.status && !/available|adoptable/i.test(r.status) && (
+              <Badge tone="slate">{r.status}</Badge>
+            )}
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {r.age && <Badge tone="blue">{r.age}</Badge>}

@@ -288,6 +288,72 @@ export type Database = {
         }
         Relationships: []
       }
+      rabbits: {
+        Row: {
+          id: string
+          org_id: string
+          name: string
+          status: string
+          sex: string | null
+          age: string | null
+          breed: string | null
+          size: string | null
+          spayed_neutered: boolean
+          house_trained: boolean
+          bonded: boolean
+          description: string | null
+          tags: string[]
+          photos: string[]
+          sort_order: number
+          is_published: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          name: string
+          status?: string
+          sex?: string | null
+          age?: string | null
+          breed?: string | null
+          size?: string | null
+          spayed_neutered?: boolean
+          house_trained?: boolean
+          bonded?: boolean
+          description?: string | null
+          tags?: string[]
+          photos?: string[]
+          sort_order?: number
+          is_published?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          name?: string
+          status?: string
+          sex?: string | null
+          age?: string | null
+          breed?: string | null
+          size?: string | null
+          spayed_neutered?: boolean
+          house_trained?: boolean
+          bonded?: boolean
+          description?: string | null
+          tags?: string[]
+          photos?: string[]
+          sort_order?: number
+          is_published?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hopshop_products: {
         Row: {
           id: string
@@ -399,6 +465,10 @@ export type Database = {
           status: MembershipStatus
           created_at: string
         }[]
+      }
+      set_rabbit_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: undefined
       }
     }
     Enums: {

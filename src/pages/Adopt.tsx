@@ -60,7 +60,8 @@ export default function Adopt() {
         ) : (
           <p className="flex items-center gap-1.5 px-1 text-xs font-semibold text-slate-400">
             <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-            Live from Petfinder · {rabbits?.length ?? 0} bunnies looking for homes
+            {source === 'petfinder' ? 'Live from Petfinder' : 'OHRR’s adoptable rabbits'} ·{' '}
+            {rabbits?.length ?? 0} bunnies looking for homes
           </p>
         )}
 
@@ -139,6 +140,9 @@ function RabbitCard({ rabbit: r }: { rabbit: Rabbit }) {
         <div className="flex items-center gap-2">
           <h3 className="truncate font-display text-base font-extrabold text-ink">{r.name}</h3>
           {r.bonded && <Badge tone="orange">Pair</Badge>}
+          {r.status && !/available|adoptable/i.test(r.status) && (
+            <Badge tone="slate">{r.status}</Badge>
+          )}
         </div>
         <div className="mt-1 flex flex-wrap gap-1.5">
           {r.age && <Badge tone="slate">{r.age}</Badge>}
