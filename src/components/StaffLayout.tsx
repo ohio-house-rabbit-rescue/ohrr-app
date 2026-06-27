@@ -72,22 +72,25 @@ export default function StaffLayout() {
               </span>
             </Link>
 
-            {user ? (
-              <button
-                type="button"
-                onClick={onSignOut}
-                className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-50"
-              >
-                Sign out
-              </button>
-            ) : (
+            <div className="flex items-center gap-2">
+              {/* Always-available way back to the public app (kept signed in). */}
               <Link
                 to="/"
-                className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-50"
+                onClick={() => setMenuOpen(false)}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-50"
               >
-                Exit to app
+                <Icon name="arrowLeft" size={13} /> App
               </Link>
-            )}
+              {user && (
+                <button
+                  type="button"
+                  onClick={onSignOut}
+                  className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-50"
+                >
+                  Sign out
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Section menu — one compact line; opens a dropdown of all sections */}
