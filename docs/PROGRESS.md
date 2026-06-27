@@ -46,6 +46,17 @@
   (`mailer_autoconfirm=false`), so new staff get a confirmation email — turn it off
   (Auth → Providers → Email → "Confirm email") for frictionless signup, or click the
   emailed link. See the **Staff backend (Supabase)** section below.
+- **Staff-editable content (in progress, 2026-06-27).** Extending staff editing
+  beyond the Hop Shop to everything non-static (owner's request). Per-area pattern: a
+  DB table (RLS — public reads *published* rows, staff with that area's capability read
+  drafts + write), a staff editor screen, and the public app reads live data (with
+  sample fallback where it makes sense). **#1 Announcements is LIVE ([PR #31])**:
+  `/staff/announcements` (gated `announcements.post`) posts notices shown on the OHRR
+  home via `AnnouncementsBanner`. **Owner step:** apply
+  `migrations/20260627063130_announcements.sql` in the Supabase SQL editor to switch it
+  on (until then the banner shows nothing and the editor errors — nothing else breaks).
+  **Next areas:** Volunteer opportunities → Education/care content → Adoptable rabbits
+  (its own session: photo uploads + how it fits the Petfinder feed).
 - **Workflow:** finished, verified work is merged straight to `main` (auto-deploys
   to Netlify) — the sponsor is the only stakeholder, so we don't park work in draft
   PRs. Still branch + PR per change for clean history. *(Exception: the staff-backend
