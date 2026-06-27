@@ -11,6 +11,7 @@ import {
 import { Screen, Card, SectionLabel, SampleNote, Badge, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 import { RabbitPhoto } from '../components/RabbitPhoto'
+import { useVolunteerOpportunities, type VolunteerOpp } from '../lib/volunteerOpps'
 
 // Link into the sign-up form, pre-filled with the role, its stable code, and the
 // specific thing the volunteer tapped (a shift, a run, an event, or fostering) —
@@ -19,6 +20,38 @@ function signupHref(role: string, code: string, item?: string) {
   const params = new URLSearchParams({ role, code })
   if (item) params.set('item', item)
   return `/volunteer/signup?${params.toString()}`
+}
+
+// Uniform card for a staff-managed (live) opportunity, used across all categories.
+function LiveOppList({ opps, way }: { opps: VolunteerOpp[]; way: Way }) {
+  return (
+    <div className="space-y-3">
+      {opps.map((o) => (
+        <Card key={o.id}>
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-display text-base font-extrabold text-ink">{o.title}</h3>
+            {o.spots && <Badge tone="orange">{o.spots}</Badge>}
+          </div>
+          {o.when_text && (
+            <p className="mt-1 flex items-center gap-2 text-sm text-slate-600">
+              <Icon name="calendar" size={14} className="shrink-0 text-brand-blue" />
+              {o.when_text}
+            </p>
+          )}
+          {o.where_text && (
+            <p className="mt-0.5 flex items-center gap-2 text-sm text-slate-600">
+              <Icon name="mappin" size={14} className="shrink-0 text-brand-blue" />
+              {o.where_text}
+            </p>
+          )}
+          {o.detail && <p className="mt-2 text-sm leading-relaxed text-slate-600">{o.detail}</p>}
+          <Link to={signupHref(way.title, way.code, o.title)} className={`${btn.blue} mt-3 w-full`}>
+            Sign up <Icon name="chevron" size={16} />
+          </Link>
+        </Card>
+      ))}
+    </div>
+  )
 }
 
 export default function VolunteerWay() {
@@ -60,6 +93,8 @@ export default function VolunteerWay() {
 }
 
 function Socialization({ way }: { way: Way }) {
+  const live = useVolunteerOpportunities('socialization')
+  const showLive = (live?.length ?? 0) > 0
   return (
     <>
       <section className="space-y-2.5">
@@ -86,41 +121,62 @@ function Socialization({ way }: { way: Way }) {
 
       <section className="space-y-2.5">
         <SectionLabel>Open socialization shifts</SectionLabel>
-        <div className="space-y-2.5">
-          {socialShifts.map((s) => (
-            <Card key={s.id} className="flex items-center gap-3">
-              <span className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-blue-50 leading-none text-brand-blue">
-                <span className="text-[10px] font-bold uppercase">{s.day.slice(0, 3)}</span>
-                <span className="font-display text-lg font-black">{s.date.match(/\d+/)?.[0]}</span>
-              </span>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-display text-sm font-extrabold text-ink">
-                  {s.day}, {s.date}
-                </h3>
-                <p className="text-sm text-slate-500">{s.time}</p>
-                <p className="text-xs font-semibold text-brand-orange">
-                  {s.spots} {s.spots === 1 ? 'spot' : 'spots'} left
-                </p>
-              </div>
-              <Link
-                to={signupHref(way.title, way.code, `${s.day}, ${s.date} · ${s.time}`)}
-                className="rounded-full bg-brand-blue px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-blue-dark"
-              >
-                Sign up
-              </Link>
-            </Card>
-          ))}
-        </div>
+        {showLive ? (
+          <LiveOppList opps={live!} way={way} />
+        ) : (
+          <>
+            {live !== null && (
+              <SampleNote>These shifts are sample data — OHRR’s real schedule appears here.</SampleNote>
+            )}
+            <div className="space-y-2.5">
+              {socialShifts.map((s) => (
+                <Card key={s.id} className="flex items-center gap-3">
+                  <span className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-blue-50 leading-none text-brand-blue">
+                    <span className="text-[10px] font-bold uppercase">{s.day.slice(0, 3)}</span>
+                    <span className="font-display text-lg font-black">{s.date.match(/\d+/)?.[0]}</span>
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-display text-sm font-extrabold text-ink">
+                      {s.day}, {s.date}
+                    </h3>
+                    <p className="text-sm text-slate-500">{s.time}</p>
+                    <p className="text-xs font-semibold text-brand-orange">
+                      {s.spots} {s.spots === 1 ? 'spot' : 'spots'} left
+                    </p>
+                  </div>
+                  <Link
+                    to={signupHref(way.title, way.code, `${s.day}, ${s.date} · ${s.time}`)}
+                    className="rounded-full bg-brand-blue px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-blue-dark"
+                  >
+                    Sign up
+                  </Link>
+                </Card>
+              ))}
+            </div>
+          </>
+        )}
       </section>
     </>
   )
 }
 
 function VetTransport({ way }: { way: Way }) {
+  const live = useVolunteerOpportunities('vet-transport')
+  const showLive = (live?.length ?? 0) > 0
+  if (showLive) {
+    return (
+      <section className="space-y-2.5">
+        <SectionLabel>Upcoming transport runs</SectionLabel>
+        <LiveOppList opps={live!} way={way} />
+      </section>
+    )
+  }
   return (
     <section className="space-y-2.5">
       <SectionLabel>Upcoming transport runs</SectionLabel>
-      <SampleNote>These runs are sample data to show how claiming a ride works.</SampleNote>
+      {live !== null && (
+        <SampleNote>These runs are sample data to show how claiming a ride works.</SampleNote>
+      )}
       <div className="space-y-3">
         {transportRuns.map((r) => (
           <Card key={r.id}>
@@ -156,10 +212,22 @@ function VetTransport({ way }: { way: Way }) {
 }
 
 function Events({ way }: { way: Way }) {
+  const live = useVolunteerOpportunities('events')
+  const showLive = (live?.length ?? 0) > 0
+  if (showLive) {
+    return (
+      <section className="space-y-2.5">
+        <SectionLabel>Events needing hands</SectionLabel>
+        <LiveOppList opps={live!} way={way} />
+      </section>
+    )
+  }
   return (
     <section className="space-y-2.5">
       <SectionLabel>Events needing hands</SectionLabel>
-      <SampleNote>These events are sample data — OHRR’s real calendar will appear here.</SampleNote>
+      {live !== null && (
+        <SampleNote>These events are sample data — OHRR’s real calendar will appear here.</SampleNote>
+      )}
       <div className="space-y-3">
         {outreachEvents.map((e) => (
           <Card key={e.id}>

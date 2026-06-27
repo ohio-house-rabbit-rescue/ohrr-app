@@ -27,9 +27,11 @@ export default function StaffHome() {
   )
   const canSeeHopShop = isAdminish || hopshopCaps.length > 0
   const canPostAnnouncements = can('announcements.post')
+  const canManageVolunteer = can('volunteers.shifts.manage')
   const canManageTeam = can('staff.invite') || can('staff.permissions.manage')
   const canViewActivity = can('audit.view')
-  const showTiles = canSeeHopShop || canPostAnnouncements || canManageTeam || canViewActivity
+  const showTiles =
+    canSeeHopShop || canPostAnnouncements || canManageVolunteer || canManageTeam || canViewActivity
 
   // For a staff member, list the granted capabilities so they know their access.
   const grantedList = PERMISSION_CATALOG.filter((p) => capabilities.has(p.key))
@@ -67,6 +69,15 @@ export default function StaffHome() {
               title="Announcements"
               subtitle="Post notices that show on the app home"
               icon="gift"
+              tone="orange"
+            />
+          )}
+          {canManageVolunteer && (
+            <ActionCard
+              to="/staff/volunteer"
+              title="Volunteer opportunities"
+              subtitle="Shifts, transport runs & events"
+              icon="heart"
               tone="orange"
             />
           )}
