@@ -4,6 +4,7 @@ import { event } from '../data/event'
 import { OHRR_HUB } from '../data/content'
 import { Screen, SectionLabel, ActionCard, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
+import AnnouncementsBanner from '../components/AnnouncementsBanner'
 
 export default function OhrrHome() {
   return (
@@ -28,6 +29,9 @@ export default function OhrrHome() {
       </section>
 
       <Screen className="space-y-6">
+        {/* Live staff-posted notices (hidden when there are none) */}
+        <AnnouncementsBanner />
+
         {/* The big Midwest BunFest button — teased in BunFest's own colors */}
         <Link
           to="/bunfest"

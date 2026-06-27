@@ -48,6 +48,7 @@ import StaffHome from './pages/StaffHome'
 import HopShopManager from './pages/HopShopManager'
 import StaffTeam from './pages/StaffTeam'
 import StaffActivity from './pages/StaffActivity'
+import StaffAnnouncements from './pages/StaffAnnouncements'
 
 export default function App() {
   return (
@@ -115,6 +116,7 @@ export default function App() {
         <Route path="join" element={<StaffJoin />} />
         <Route element={<RequireMembership />}>
           <Route path="hopshop" element={<HopShopManager />} />
+          <Route path="announcements" element={<StaffAnnouncements />} />
           <Route path="team" element={<StaffTeam />} />
           <Route path="activity" element={<StaffActivity />} />
         </Route>
