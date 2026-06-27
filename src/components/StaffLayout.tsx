@@ -23,6 +23,7 @@ export default function StaffLayout() {
   // for those who can invite/manage staff (owners/admins always can).
   const showHopShop = Boolean(membership)
   const showAnnouncements = can('announcements.post')
+  const showVolunteer = can('volunteers.shifts.manage')
   const showTeam = can('staff.invite') || can('staff.permissions.manage')
   const showActivity = can('audit.view')
 
@@ -85,6 +86,11 @@ export default function StaffLayout() {
               {showAnnouncements && (
                 <NavLink to="/staff/announcements" className={navClass}>
                   News
+                </NavLink>
+              )}
+              {showVolunteer && (
+                <NavLink to="/staff/volunteer" className={navClass}>
+                  Volunteers
                 </NavLink>
               )}
               {showTeam && (

@@ -192,6 +192,54 @@ export type Database = {
         }
         Relationships: []
       }
+      volunteer_opportunities: {
+        Row: {
+          id: string
+          org_id: string
+          category: string
+          title: string
+          detail: string | null
+          when_text: string | null
+          where_text: string | null
+          spots: string | null
+          is_published: boolean
+          sort_order: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          category: string
+          title: string
+          detail?: string | null
+          when_text?: string | null
+          where_text?: string | null
+          spots?: string | null
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          category?: string
+          title?: string
+          detail?: string | null
+          when_text?: string | null
+          where_text?: string | null
+          spots?: string | null
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hopshop_products: {
         Row: {
           id: string
