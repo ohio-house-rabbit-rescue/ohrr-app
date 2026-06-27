@@ -35,11 +35,14 @@
   URL), an **Activity** (audit-log) view, and the **Team** screen now shows members by
   **email** via `list_org_members()` — apply
   `supabase/migrations/20260627053730_staff_admin_extras.sql` in the Supabase SQL
-  editor to enable it (falls back to short IDs otherwise). **Still to build for
-  release:** password reset, and connecting the **public** Hop Shop view to live
-  inventory (needs a public-read RLS policy + the owner's go-ahead — currently the
-  public shop shows sample data). **Heads-up:** the Supabase project currently has
-  **email confirmation ON**
+  editor to enable it (falls back to short IDs otherwise). **Password reset is now live ([PR #30])** — a
+  "Forgot password?" flow on sign-in + a `/staff/reset` page; it needs one Supabase
+  config step to accept the emailed link: add the app origin
+  (`https://ohrr-app.netlify.app`) under **Auth → URL Configuration** (Site URL +
+  Redirect URLs). The owner chose to **keep the public Hop Shop on curated samples**
+  for now (not wired to live inventory). With that, the **staff admin is
+  feature-complete for release** — what's left is owner-side Supabase config only
+  (below). **Heads-up:** the Supabase project currently has **email confirmation ON**
   (`mailer_autoconfirm=false`), so new staff get a confirmation email — turn it off
   (Auth → Providers → Email → "Confirm email") for frictionless signup, or click the
   emailed link. See the **Staff backend (Supabase)** section below.
@@ -276,8 +279,10 @@ is the real gate** — the UI only hides/shows controls for convenience.
   `src/lib/auth.tsx` (`AuthProvider`/`useAuth`: session, membership, effective
   capabilities, `can()`, `refresh()`, `signOut()`).
 - **Sign-in** (`StaffSignIn`, `/staff/signin`) — Supabase Auth **email + password**
-  (sign in / create account; handles the "confirm your email" case). *(Chosen as the
-  most self-contained default; magic-link is a small swap — pending owner confirm.)*
+  (sign in / create account; handles the "confirm your email" case), plus a
+  **"Forgot password?"** flow → `/staff/reset` (`StaffResetPassword`) that consumes
+  the recovery link and sets a new password. *(Email+password confirmed by the owner;
+  magic-link remains a small swap if ever wanted.)*
 - **Owner bootstrap** (`StaffOnboard`, `/staff/start`) — "Enter master code" →
   `rpc('redeem_master_code')` → caller becomes **Owner**.
 - **Dashboard** (`StaffHome`, `/staff`) — routes by state (→ signin / → start /
