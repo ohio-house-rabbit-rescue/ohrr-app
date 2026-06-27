@@ -28,10 +28,16 @@ export default function StaffHome() {
   const canSeeHopShop = isAdminish || hopshopCaps.length > 0
   const canPostAnnouncements = can('announcements.post')
   const canManageVolunteer = can('volunteers.shifts.manage')
+  const canEditCare = can('content.education.edit')
   const canManageTeam = can('staff.invite') || can('staff.permissions.manage')
   const canViewActivity = can('audit.view')
   const showTiles =
-    canSeeHopShop || canPostAnnouncements || canManageVolunteer || canManageTeam || canViewActivity
+    canSeeHopShop ||
+    canPostAnnouncements ||
+    canManageVolunteer ||
+    canEditCare ||
+    canManageTeam ||
+    canViewActivity
 
   // For a staff member, list the granted capabilities so they know their access.
   const grantedList = PERMISSION_CATALOG.filter((p) => capabilities.has(p.key))
@@ -79,6 +85,15 @@ export default function StaffHome() {
               subtitle="Shifts, transport runs & events"
               icon="heart"
               tone="orange"
+            />
+          )}
+          {canEditCare && (
+            <ActionCard
+              to="/staff/learn"
+              title="Care guides"
+              subtitle="Edit the Rabbit Care articles in Learn"
+              icon="book"
+              tone="blue"
             />
           )}
           {canManageTeam && (

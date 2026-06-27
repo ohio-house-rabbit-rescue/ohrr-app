@@ -24,6 +24,7 @@ export default function StaffLayout() {
   const showHopShop = Boolean(membership)
   const showAnnouncements = can('announcements.post')
   const showVolunteer = can('volunteers.shifts.manage')
+  const showLearn = can('content.education.edit')
   const showTeam = can('staff.invite') || can('staff.permissions.manage')
   const showActivity = can('audit.view')
 
@@ -91,6 +92,11 @@ export default function StaffLayout() {
               {showVolunteer && (
                 <NavLink to="/staff/volunteer" className={navClass}>
                   Volunteers
+                </NavLink>
+              )}
+              {showLearn && (
+                <NavLink to="/staff/learn" className={navClass}>
+                  Care
                 </NavLink>
               )}
               {showTeam && (
