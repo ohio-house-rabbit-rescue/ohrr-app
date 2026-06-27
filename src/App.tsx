@@ -41,6 +41,7 @@ import SilentAuction from './pages/SilentAuction'
 import StaffLayout from './components/StaffLayout'
 import { RequireMembership } from './components/staffui'
 import StaffSignIn from './pages/StaffSignIn'
+import StaffResetPassword from './pages/StaffResetPassword'
 import StaffOnboard from './pages/StaffOnboard'
 import StaffJoin from './pages/StaffJoin'
 import StaffHome from './pages/StaffHome'
@@ -109,6 +110,7 @@ export default function App() {
       <Route path="/staff" element={<StaffLayout />}>
         <Route index element={<StaffHome />} />
         <Route path="signin" element={<StaffSignIn />} />
+        <Route path="reset" element={<StaffResetPassword />} />
         <Route path="start" element={<StaffOnboard />} />
         <Route path="join" element={<StaffJoin />} />
         <Route element={<RequireMembership />}>

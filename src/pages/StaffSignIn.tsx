@@ -6,7 +6,7 @@ import { btn, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { NotConfigured, Spinner, FormError, staffInput } from '../components/staffui'
 
-type Mode = 'signin' | 'signup'
+type Mode = 'signin' | 'signup' | 'forgot'
 
 export default function StaffSignIn() {
   const { configured, loading, user } = useAuth()
@@ -17,6 +17,7 @@ export default function StaffSignIn() {
   const [status, setStatus] = useState<'idle' | 'submitting'>('idle')
   const [error, setError] = useState<string | null>(null)
   const [checkEmail, setCheckEmail] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   // Already signed in → let the dashboard route to the right place.
   useEffect(() => {
@@ -31,6 +32,14 @@ export default function StaffSignIn() {
     setError(null)
     setStatus('submitting')
     try {
+      if (mode === 'forgot') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/staff/reset`,
+        })
+        if (error) throw error
+        setResetSent(true)
+        return
+      }
       if (mode === 'signup') {
         const { data, error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
@@ -51,6 +60,7 @@ export default function StaffSignIn() {
     }
   }
 
+  // Signup: "confirm your email" interstitial.
   if (checkEmail) {
     return (
       <Screen className="space-y-4 text-center">
@@ -76,14 +86,52 @@ export default function StaffSignIn() {
     )
   }
 
+  // Forgot password: "check your email for the reset link" interstitial.
+  if (resetSent) {
+    return (
+      <Screen className="space-y-4 text-center">
+        <div className="pt-6 text-brand-blue" aria-hidden>
+          <Icon name="mail" size={40} className="mx-auto" />
+        </div>
+        <h1 className="font-display text-xl font-extrabold text-ink">Check your email</h1>
+        <p className="text-sm leading-relaxed text-slate-600">
+          If an account exists for <strong>{email}</strong>, we sent a link to reset your password.
+          Open it to choose a new one.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setResetSent(false)
+            setMode('signin')
+          }}
+          className={`${btn.blue} mx-auto`}
+        >
+          Back to sign in
+        </button>
+      </Screen>
+    )
+  }
+
+  const heading =
+    mode === 'signin' ? 'Staff sign-in' : mode === 'signup' ? 'Create your account' : 'Reset password'
+  const sub =
+    mode === 'forgot'
+      ? 'Enter your email and we’ll send a link to set a new password.'
+      : `For OHRR staff and volunteers. ${mode === 'signin' ? 'Sign in' : 'Create your account'} to manage the app.`
+  const submitLabel =
+    status === 'submitting'
+      ? 'Working…'
+      : mode === 'signin'
+        ? 'Sign in'
+        : mode === 'signup'
+          ? 'Create account'
+          : 'Send reset link'
+
   return (
     <Screen className="space-y-5">
       <div className="pt-2">
-        <h1 className="font-display text-2xl font-black text-ink">Staff sign-in</h1>
-        <p className="mt-1 text-sm leading-relaxed text-slate-600">
-          For OHRR staff and volunteers. {mode === 'signin' ? 'Sign in' : 'Create your account'} to
-          manage the app.
-        </p>
+        <h1 className="font-display text-2xl font-black text-ink">{heading}</h1>
+        <p className="mt-1 text-sm leading-relaxed text-slate-600">{sub}</p>
       </div>
 
       <Card>
@@ -99,18 +147,33 @@ export default function StaffSignIn() {
               onChange={(e) => setEmail(e.target.value)}
             />
           </label>
-          <label className="block text-sm font-semibold text-slate-700">
-            Password
-            <input
-              className={staffInput}
-              type="password"
-              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </label>
+          {mode !== 'forgot' && (
+            <label className="block text-sm font-semibold text-slate-700">
+              Password
+              <input
+                className={staffInput}
+                type="password"
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                required
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </label>
+          )}
+
+          {mode === 'signin' && (
+            <button
+              type="button"
+              onClick={() => {
+                setMode('forgot')
+                setError(null)
+              }}
+              className="text-sm font-semibold text-brand-blue hover:text-brand-blue-dark"
+            >
+              Forgot password?
+            </button>
+          )}
 
           <FormError>{error}</FormError>
 
@@ -119,28 +182,39 @@ export default function StaffSignIn() {
             disabled={status === 'submitting'}
             className={`${btn.primary} w-full disabled:opacity-60`}
           >
-            {status === 'submitting'
-              ? 'Working…'
-              : mode === 'signin'
-                ? 'Sign in'
-                : 'Create account'}
+            {submitLabel}
           </button>
         </form>
       </Card>
 
-      <p className="text-center text-sm text-slate-500">
-        {mode === 'signin' ? "New to the staff app?" : 'Already have an account?'}{' '}
-        <button
-          type="button"
-          onClick={() => {
-            setMode(mode === 'signin' ? 'signup' : 'signin')
-            setError(null)
-          }}
-          className="font-bold text-brand-blue hover:text-brand-blue-dark"
-        >
-          {mode === 'signin' ? 'Create an account' : 'Sign in'}
-        </button>
-      </p>
+      {mode === 'forgot' ? (
+        <p className="text-center text-sm text-slate-500">
+          <button
+            type="button"
+            onClick={() => {
+              setMode('signin')
+              setError(null)
+            }}
+            className="font-bold text-brand-blue hover:text-brand-blue-dark"
+          >
+            ← Back to sign in
+          </button>
+        </p>
+      ) : (
+        <p className="text-center text-sm text-slate-500">
+          {mode === 'signin' ? 'New to the staff app?' : 'Already have an account?'}{' '}
+          <button
+            type="button"
+            onClick={() => {
+              setMode(mode === 'signin' ? 'signup' : 'signin')
+              setError(null)
+            }}
+            className="font-bold text-brand-blue hover:text-brand-blue-dark"
+          >
+            {mode === 'signin' ? 'Create an account' : 'Sign in'}
+          </button>
+        </p>
+      )}
 
       <p className="text-center">
         <Link to="/" className="text-xs font-semibold text-slate-400 hover:text-slate-600">
