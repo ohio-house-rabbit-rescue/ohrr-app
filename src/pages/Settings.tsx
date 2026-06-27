@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { PageHeader, Screen, Card, SectionLabel, btn } from '../components/ui'
+import { PageHeader, Screen, Card, SectionLabel, ActionCard, btn } from '../components/ui'
 import { build } from '../data/version'
 import { PHOTO_CREDITS } from '../data/photos'
 import { useProfile, saveProfile, clearProfile } from '../lib/profile'
+import { useAuth } from '../lib/auth'
 
 function fmtDate(iso: string): string {
   try {
@@ -32,6 +33,7 @@ const inputClass =
 
 export default function Settings() {
   const profile = useProfile()
+  const { membership } = useAuth()
   const [email, setEmail] = useState(profile?.email ?? '')
   const [name, setName] = useState(profile?.name ?? '')
   const [justSaved, setJustSaved] = useState(false)
@@ -181,6 +183,25 @@ export default function Settings() {
               ))}
             </ul>
           </Card>
+        </section>
+
+        {/* ---- Staff entry (discreet; staff find it here, public ignores it) ---- */}
+        <section className="space-y-2">
+          <SectionLabel>OHRR staff</SectionLabel>
+          <ActionCard
+            to="/staff"
+            title={membership ? 'Staff dashboard' : 'Staff sign-in'}
+            subtitle={
+              membership
+                ? 'Manage the Hop Shop, your team, and more'
+                : 'For OHRR staff & volunteers — sign in to manage the app'
+            }
+            icon="users"
+            tone="blue"
+          />
+          <p className="px-1 text-xs leading-relaxed text-slate-400">
+            Staff-only. Adopters and visitors don’t need an account here.
+          </p>
         </section>
 
         {/* ---- About / version ---- */}

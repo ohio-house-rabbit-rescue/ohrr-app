@@ -260,6 +260,17 @@ export type Database = {
         Args: { p_membership: string; p_status: MembershipStatus }
         Returns: undefined
       }
+      list_org_members: {
+        Args: { p_org: string }
+        Returns: {
+          membership_id: string
+          user_id: string
+          email: string
+          role: MembershipRole
+          status: MembershipStatus
+          created_at: string
+        }[]
+      }
     }
     Enums: {
       membership_role: MembershipRole

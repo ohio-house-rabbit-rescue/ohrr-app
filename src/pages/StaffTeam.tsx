@@ -10,12 +10,15 @@ import {
   type Capability,
   type PermissionMeta,
 } from '../lib/capabilities'
-import type { Database, MembershipRole } from '../lib/database.types'
+import type { MembershipRole, MembershipStatus } from '../lib/database.types'
 
-type Member = Pick<
-  Database['public']['Tables']['memberships']['Row'],
-  'id' | 'user_id' | 'role' | 'status'
->
+interface Member {
+  id: string
+  user_id: string
+  email: string | null
+  role: MembershipRole
+  status: MembershipStatus
+}
 
 // Capabilities grouped by area, for the per-member toggle UI.
 const AREAS: { area: string; caps: PermissionMeta[] }[] = (() => {
@@ -231,17 +234,26 @@ function MemberCard({
 
   return (
     <Card className="space-y-2.5">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="font-display text-[15px] font-extrabold text-ink">
-            {isSelf ? 'You' : 'Team member'}
-          </span>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate font-display text-[15px] font-extrabold text-ink">
+              {member.email ?? 'Team member'}
+            </span>
+            {isSelf && <span className="shrink-0 text-xs font-bold text-slate-400">(you)</span>}
+          </div>
+          {!member.email && (
+            <span className="font-mono text-[11px] text-slate-400">
+              ID {member.user_id.slice(0, 8)}
+            </span>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
           <Badge tone={isAdminish ? 'blue' : 'slate'}>
             {member.role[0].toUpperCase() + member.role.slice(1)}
           </Badge>
           {member.status === 'disabled' && <Badge tone="orange">Disabled</Badge>}
         </div>
-        <span className="font-mono text-[11px] text-slate-400">{member.user_id.slice(0, 8)}</span>
       </div>
 
       {isAdminish ? (
@@ -314,25 +326,53 @@ export default function StaffTeam() {
   const load = useCallback(async () => {
     if (!orgId) return
     setError(null)
-    const [{ data: mem, error: mErr }, { data: grants, error: gErr }] = await Promise.all([
-      supabase
+    // Prefer list_org_members() so members show by email. If that function hasn't
+    // been applied to the DB yet, fall back to the memberships table (IDs only).
+    const [memRes, grantRes] = await Promise.all([
+      supabase.rpc('list_org_members', { p_org: orgId }),
+      supabase.from('membership_permissions').select('membership_id, permission_key'),
+    ])
+
+    let mem: Member[]
+    if (!memRes.error && memRes.data) {
+      mem = memRes.data.map((r) => ({
+        id: r.membership_id,
+        user_id: r.user_id,
+        email: r.email,
+        role: r.role,
+        status: r.status,
+      }))
+    } else {
+      const fb = await supabase
         .from('memberships')
         .select('id, user_id, role, status')
         .eq('org_id', orgId)
-        .order('created_at'),
-      supabase.from('membership_permissions').select('membership_id, permission_key'),
-    ])
-    if (mErr || gErr) {
-      setError(errMessage(mErr ?? gErr))
+        .order('created_at')
+      if (fb.error) {
+        setError(errMessage(fb.error))
+        setLoading(false)
+        return
+      }
+      mem = (fb.data ?? []).map((r) => ({
+        id: r.id,
+        user_id: r.user_id,
+        email: null,
+        role: r.role,
+        status: r.status,
+      }))
+    }
+
+    if (grantRes.error) {
+      setError(errMessage(grantRes.error))
       setLoading(false)
       return
     }
     const map = new Map<string, Set<string>>()
-    for (const g of grants ?? []) {
+    for (const g of grantRes.data ?? []) {
       if (!map.has(g.membership_id)) map.set(g.membership_id, new Set())
       map.get(g.membership_id)!.add(g.permission_key)
     }
-    setMembers(mem ?? [])
+    setMembers(mem)
     setGrantMap(map)
     setLoading(false)
   }, [orgId])
@@ -432,9 +472,8 @@ export default function StaffTeam() {
       </div>
 
       <p className="px-1 text-xs leading-relaxed text-slate-400">
-        Note: members show by role + a short ID, not email — Supabase keeps user emails private from
-        the client. Showing names/emails here needs a small server function (a follow-up); for now,
-        you know who you invited by the code you generated.
+        Members are shown by email. (If you see only short IDs, the database helper that exposes
+        emails hasn’t been added yet — it’s a one-time setup step.)
       </p>
     </Screen>
   )

@@ -27,7 +27,8 @@ export default function StaffHome() {
   )
   const canSeeHopShop = isAdminish || hopshopCaps.length > 0
   const canManageTeam = can('staff.invite') || can('staff.permissions.manage')
-  const showTiles = canSeeHopShop || canManageTeam
+  const canViewActivity = can('audit.view')
+  const showTiles = canSeeHopShop || canManageTeam || canViewActivity
 
   // For a staff member, list the granted capabilities so they know their access.
   const grantedList = PERMISSION_CATALOG.filter((p) => capabilities.has(p.key))
@@ -65,6 +66,15 @@ export default function StaffHome() {
               title="Team"
               subtitle="Invite staff and manage who can do what"
               icon="users"
+              tone="blue"
+            />
+          )}
+          {canViewActivity && (
+            <ActionCard
+              to="/staff/activity"
+              title="Activity"
+              subtitle="Who changed what, and when"
+              icon="clock"
               tone="blue"
             />
           )}
