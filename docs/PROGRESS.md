@@ -29,9 +29,17 @@
   safe by design; secrets never committed) so the Netlify build connects without
   dashboard env setup; verified the URL bakes into the live bundle and that RLS blocks
   anonymous access. Owner decisions confirmed 2026-06-27: login = email+password,
-  admins = full access (no code change needed). **Still to finish:** the owner runs the
-  in-app flow (create owner account → redeem master code → manage Hop Shop → invite a
-  worker). **Heads-up:** the Supabase project currently has **email confirmation ON**
+  admins = full access (no code change needed). Owner has **signed in + redeemed the
+  master code (verified live 2026-06-27)**. A **second increment is live ([PR #29])**:
+  a discreet **Settings → "OHRR Staff"** entry point (so staff don't need the `/staff`
+  URL), an **Activity** (audit-log) view, and the **Team** screen now shows members by
+  **email** via `list_org_members()` — apply
+  `supabase/migrations/20260627053730_staff_admin_extras.sql` in the Supabase SQL
+  editor to enable it (falls back to short IDs otherwise). **Still to build for
+  release:** password reset, and connecting the **public** Hop Shop view to live
+  inventory (needs a public-read RLS policy + the owner's go-ahead — currently the
+  public shop shows sample data). **Heads-up:** the Supabase project currently has
+  **email confirmation ON**
   (`mailer_autoconfirm=false`), so new staff get a confirmation email — turn it off
   (Auth → Providers → Email → "Confirm email") for frictionless signup, or click the
   emailed link. See the **Staff backend (Supabase)** section below.
