@@ -159,6 +159,39 @@ export type Database = {
         }
         Relationships: []
       }
+      announcements: {
+        Row: {
+          id: string
+          org_id: string
+          title: string
+          body: string
+          is_published: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          title: string
+          body: string
+          is_published?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          title?: string
+          body?: string
+          is_published?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hopshop_products: {
         Row: {
           id: string

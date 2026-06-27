@@ -22,6 +22,7 @@ export default function StaffLayout() {
   // Nav appears only once onboarded. Hop Shop is the first gated feature; Team is
   // for those who can invite/manage staff (owners/admins always can).
   const showHopShop = Boolean(membership)
+  const showAnnouncements = can('announcements.post')
   const showTeam = can('staff.invite') || can('staff.permissions.manage')
   const showActivity = can('audit.view')
 
@@ -79,6 +80,11 @@ export default function StaffLayout() {
               {showHopShop && (
                 <NavLink to="/staff/hopshop" className={navClass}>
                   Hop Shop
+                </NavLink>
+              )}
+              {showAnnouncements && (
+                <NavLink to="/staff/announcements" className={navClass}>
+                  News
                 </NavLink>
               )}
               {showTeam && (
