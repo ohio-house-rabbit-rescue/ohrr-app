@@ -26,6 +26,8 @@ export default function StaffHome() {
     (p) => p.area === 'Hop Shop' && can(p.key),
   )
   const canSeeHopShop = isAdminish || hopshopCaps.length > 0
+  const canManageTeam = can('staff.invite') || can('staff.permissions.manage')
+  const showTiles = canSeeHopShop || canManageTeam
 
   // For a staff member, list the granted capabilities so they know their access.
   const grantedList = PERMISSION_CATALOG.filter((p) => capabilities.has(p.key))
@@ -42,19 +44,30 @@ export default function StaffHome() {
         </p>
       </div>
 
-      {canSeeHopShop ? (
+      {showTiles ? (
         <div className="space-y-3">
-          <ActionCard
-            to="/staff/hopshop"
-            title="Hop Shop manager"
-            subtitle={
-              isAdminish
-                ? 'Add, edit & remove products; update stock'
-                : hopshopCaps.map((c) => c.description).join(' · ')
-            }
-            icon="bag"
-            tone="orange"
-          />
+          {canSeeHopShop && (
+            <ActionCard
+              to="/staff/hopshop"
+              title="Hop Shop manager"
+              subtitle={
+                isAdminish
+                  ? 'Add, edit & remove products; update stock'
+                  : hopshopCaps.map((c) => c.description).join(' · ')
+              }
+              icon="bag"
+              tone="orange"
+            />
+          )}
+          {canManageTeam && (
+            <ActionCard
+              to="/staff/team"
+              title="Team"
+              subtitle="Invite staff and manage who can do what"
+              icon="users"
+              tone="blue"
+            />
+          )}
         </div>
       ) : (
         <Card className="border-slate-200 bg-slate-50/80">

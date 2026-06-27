@@ -21,11 +21,8 @@ export default function StaffLayout() {
 
   // Nav appears only once onboarded. Hop Shop is the first gated feature; Team is
   // for those who can invite/manage staff (owners/admins always can).
-  // TEAM_ENABLED flips on once the Team screen lands (next build step) so we don't
-  // show a dead link in the meantime.
-  const TEAM_ENABLED = false
   const showHopShop = Boolean(membership)
-  const showTeam = TEAM_ENABLED && (can('staff.invite') || can('staff.permissions.manage'))
+  const showTeam = can('staff.invite') || can('staff.permissions.manage')
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     [

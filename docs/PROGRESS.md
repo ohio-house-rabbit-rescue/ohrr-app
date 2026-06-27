@@ -19,13 +19,16 @@
 
 ## Current state (at a glance)
 
-- **Active phase (2026-06-27): staff backend (Supabase).** Building the staff-facing
-  admin — Supabase Auth + a role/capability access-control model, a capability-gated
-  **Hop Shop manager** (CRUD products + inventory), master-code owner bootstrap, and
-  (next) team invites + worker join. On branch **`feat/staff-backend`** with an
-  **open draft PR**, kept open through this multi-step build per the handoff's
-  persistence protocol; merges to `main` once verified against the live DB. See the
-  **Staff backend (Supabase)** section below.
+- **Active phase (2026-06-27): staff backend (Supabase).** Built the staff-facing
+  admin — Supabase Auth sign-in, a role/capability access-control model, master-code
+  owner bootstrap, a capability-gated **Hop Shop manager** (CRUD products +
+  inventory), a **Team** screen (invite workers + per-capability toggles +
+  enable/disable), and worker **join**. All six handoff build-steps are coded and
+  build/render clean; on branch **`feat/staff-backend`** in **draft [PR #28]**, kept
+  open per the handoff. **Remaining before merge:** live end-to-end verification once
+  the real `VITE_SUPABASE_*` env is set + the owner confirms (login = email+password,
+  admins = full-access, both confirmed 2026-06-27). See the **Staff backend
+  (Supabase)** section below.
 - **Workflow:** finished, verified work is merged straight to `main` (auto-deploys
   to Netlify) — the sponsor is the only stakeholder, so we don't park work in draft
   PRs. Still branch + PR per change for clean history. *(Exception: the staff-backend
@@ -269,6 +272,16 @@ is the real gate** — the UI only hides/shows controls for convenience.
   delete** products + a **stock stepper** (upserts `hopshop_inventory`). Every control
   is gated by the matching `hopshop.*` capability via `can()`, **and** the DB enforces
   it (RLS). View-only for members without write caps.
+- **Team** (`StaffTeam`, `/staff/team`) — owner/admin (or `staff.invite` /
+  `staff.permissions.manage`): **invite a worker** (role + preset or custom caps →
+  `create_invite_code` → copyable single-use code), **per-capability toggles** on each
+  staff member (`set_membership_permission`), and **enable/disable** (`set_membership_status`).
+  Members currently show by role + short user-id (Supabase hides other users' emails
+  from the client — a small `list_org_members()` SECURITY DEFINER function is the
+  follow-up to show names/emails).
+- **Worker join** (`StaffJoin`, `/staff/join`) — enter invite code →
+  `redeem_invite_code` → joins scoped to the invite's preset/caps. Linked from the
+  master-code screen.
 - **Shell + guard** — `StaffLayout` (own top bar, role label, sign-out, contextual
   nav) + `RequireMembership` (redirects to signin/start as needed). Wired in
   `App.tsx`; `AuthProvider` wraps the app in `main.tsx`.
@@ -276,10 +289,12 @@ is the real gate** — the UI only hides/shows controls for convenience.
   guard redirects unauthenticated `/staff/hopshop` → signin, public app unaffected,
   no console errors). **Live end-to-end auth/RLS not yet exercised** — needs the real
   `VITE_SUPABASE_*` env to sign in and redeem the master code.
-- **Still to build (this feature):** Team screen (invite workers via
-  `create_invite_code`, per-capability toggles via `set_membership_permission`,
-  enable/disable via `set_membership_status`), worker **join** screen
-  (`redeem_invite_code`), and optionally an audit-log view (`audit.view`).
+- **Still to build (this feature):** live end-to-end verification against the real
+  Supabase project (sign in → redeem master code → manage Hop Shop → invite a worker
+  → worker joins → toggle caps); optionally a `list_org_members()` function to show
+  member names/emails on the Team screen; optionally an audit-log view (`audit.view`);
+  and connecting the **public** Hop Shop view to the live tables. Code-splitting the
+  staff bundle (it pushed the JS to ~707 kB / 199 kB gzip) is a nice-to-have.
 
 ### Structure
 - `src/pages/*` — route components (listed above).

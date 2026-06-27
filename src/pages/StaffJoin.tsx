@@ -6,7 +6,7 @@ import { btn, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { NotConfigured, Spinner, FormError, staffInput } from '../components/staffui'
 
-export default function StaffOnboard() {
+export default function StaffJoin() {
   const { configured, loading, user, membership, refresh } = useAuth()
   const navigate = useNavigate()
   const [code, setCode] = useState('')
@@ -23,7 +23,7 @@ export default function StaffOnboard() {
     setError(null)
     setStatus('submitting')
     try {
-      const { error } = await supabase.rpc('redeem_master_code', { p_code: code.trim() })
+      const { error } = await supabase.rpc('redeem_invite_code', { p_code: code.trim() })
       if (error) throw error
       await refresh()
       navigate('/staff', { replace: true })
@@ -36,21 +36,20 @@ export default function StaffOnboard() {
   return (
     <Screen className="space-y-5">
       <div className="pt-2">
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-blue-50 text-brand-blue">
-          <Icon name="star" size={22} />
+        <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-orange-50 text-brand-orange">
+          <Icon name="ticket" size={22} />
         </span>
-        <h1 className="mt-3 font-display text-2xl font-black text-ink">Enter your master code</h1>
+        <h1 className="mt-3 font-display text-2xl font-black text-ink">Enter your invite code</h1>
         <p className="mt-1 text-sm leading-relaxed text-slate-600">
-          Signed in as <strong>{user.email}</strong>. Redeeming the one-time master code makes you an{' '}
-          <strong>Owner</strong> of Ohio House Rabbit Rescue — you can then add staff and manage the
-          Hop Shop.
+          Signed in as <strong>{user.email}</strong>. An OHRR owner or admin gave you a personal
+          invite code — redeeming it joins you to the team with the access they set up for you.
         </p>
       </div>
 
       <Card>
         <form onSubmit={onSubmit} className="space-y-3">
           <label className="block text-sm font-semibold text-slate-700">
-            Master code
+            Invite code
             <input
               className={`${staffInput} font-mono tracking-wider`}
               autoComplete="off"
@@ -59,7 +58,7 @@ export default function StaffOnboard() {
               required
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="Provided by the OHRR owner"
+              placeholder="e.g. 9F3A2B7C1D"
             />
           </label>
 
@@ -70,17 +69,17 @@ export default function StaffOnboard() {
             disabled={status === 'submitting' || code.trim().length === 0}
             className={`${btn.primary} w-full disabled:opacity-60`}
           >
-            {status === 'submitting' ? 'Redeeming…' : 'Become Owner'}
+            {status === 'submitting' ? 'Joining…' : 'Join the team'}
           </button>
         </form>
       </Card>
 
       <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-[13px] leading-relaxed text-slate-600">
-        <p className="font-bold text-slate-700">Joining as a worker instead?</p>
+        <p className="font-bold text-slate-700">Are you an OHRR owner?</p>
         <p className="mt-1">
-          Workers don't use the master code — an owner or admin sends you a personal invite code.{' '}
-          <a href="/staff/join" className="font-bold text-brand-blue hover:text-brand-blue-dark">
-            Enter an invite code
+          Owners use the one-time master code instead.{' '}
+          <a href="/staff/start" className="font-bold text-brand-blue hover:text-brand-blue-dark">
+            Enter a master code
           </a>
         </p>
       </div>
