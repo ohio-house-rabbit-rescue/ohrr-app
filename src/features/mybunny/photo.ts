@@ -6,8 +6,9 @@
 
 export const PHOTO_MAX_PX = 512
 
+/** `file` is a picked File/Blob on the web, or a data URL from the native camera plugin. */
 export async function downscaleImage(
-  file: Blob,
+  file: Blob | string,
   maxPx: number = PHOTO_MAX_PX,
   quality = 0.82,
 ): Promise<string> {
@@ -31,19 +32,19 @@ export async function downscaleImage(
   return canvas.toDataURL('image/jpeg', quality)
 }
 
-function loadImage(file: Blob): Promise<HTMLImageElement> {
+function loadImage(file: Blob | string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file)
+    const objectUrl = typeof file === 'string' ? null : URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
-      URL.revokeObjectURL(url)
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
       resolve(img)
     }
     img.onerror = () => {
-      URL.revokeObjectURL(url)
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
       reject(new Error('That file doesn’t look like a photo this phone can open.'))
     }
-    img.src = url
+    img.src = objectUrl ?? (file as string)
   })
 }
 

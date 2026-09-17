@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Screen, Card, SectionLabel, SegTabs, Badge, ActionCard, ExternalCard, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
@@ -21,6 +21,16 @@ import {
 import { HOP_SHOP_TO, LEARN_TO, VET_DIRECTORY } from '../links'
 import HealthNotesSection from '../HealthNotes'
 import HelpSearch from '../../bunnyhelp/HelpSearch'
+import { isNative } from '../../../native/platform'
+import {
+  scheduleReminder,
+  cancelReminder,
+  cancelReminders,
+  isReminderScheduled,
+  resyncReminder,
+  type ScheduleOutcome,
+} from '../../../native/notifications'
+import { formatFireTime } from '../../../native/reminderSchedule'
 import {
   buildReminderIcs,
   buildAllRemindersIcs,
@@ -32,6 +42,7 @@ import {
 } from '../ics'
 import {
   useMyBunny,
+  getMyBunny,
   findBunny,
   remindersFor,
   isUpcoming,
@@ -262,6 +273,8 @@ function ArchiveSection({ bunny, today }: { bunny: Bunny; today: string }) {
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
+    // Native app: an archived bunny's reminders stop nudging this phone.
+    void cancelReminders(remindersFor(getMyBunny(), bunny.id).map((r) => r.id))
     archiveBunny(bunny.id, { reason, date, note })
     setOpen(false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -353,6 +366,24 @@ function RemindersSection({
 
   const addAll = () => downloadIcs(buildAllRemindersIcs(upcoming, bunny.name), allRemindersFilename(bunny.name))
 
+  // Native app: schedule every upcoming reminder on this phone in one go.
+  const [allMsg, setAllMsg] = useState<string | null>(null)
+  const remindAll = async () => {
+    let set = 0
+    let denied = false
+    for (const r of upcoming) {
+      const res = await scheduleReminder(r, bunny.name)
+      if (res.status === 'scheduled') set += 1
+      if (res.status === 'denied') denied = true
+    }
+    setAllMsg(
+      denied
+        ? 'Notifications are turned off for OHRR — allow them in your phone’s Settings, then try again.'
+        : `All set — ${set} reminder${set === 1 ? '' : 's'} will pop up on this phone at 9:00 AM when due.`,
+    )
+    window.setTimeout(() => setAllMsg(null), 8000)
+  }
+
   return (
     <section className="space-y-2.5">
       <div className="flex items-center justify-between">
@@ -398,12 +429,24 @@ function RemindersSection({
 
       <VetNote className="px-1" />
 
-      {upcoming.length > 1 && (
+      {upcoming.length > 1 && !isNative && (
         <div className="space-y-1.5 pt-1">
           <button type="button" onClick={addAll} className={`${btn.blue} w-full`}>
             <Icon name="calendar" size={16} /> Add all {upcoming.length} reminders to my phone’s calendar
           </button>
           <CalendarHint className="px-1" />
+        </div>
+      )}
+      {upcoming.length > 1 && isNative && (
+        <div className="space-y-1.5 pt-1">
+          <button type="button" onClick={() => void remindAll()} className={`${btn.blue} w-full`}>
+            <MbIcon name="bell" size={16} /> Remind me about all {upcoming.length} on this phone
+          </button>
+          {allMsg ? (
+            <p className="px-1 text-xs font-bold text-emerald-600">{allMsg}</p>
+          ) : (
+            <NotifyHint className="px-1" />
+          )}
         </div>
       )}
 
@@ -437,6 +480,10 @@ function ReminderRow({ r, bunny, today }: { r: Reminder; bunny: Bunny; today: st
   const onDone = () => {
     const next = markReminderDone(r.id, today)
     if (!next) return
+    // Native app: if this reminder is set on the phone, move it to the new date
+    // (a one-off that's now complete has no next date, so it's cancelled).
+    if (isUpcoming(next)) void resyncReminder(next, bunny.name)
+    else void cancelReminder(next.id)
     setDoneMsg(next.intervalDays ? `Done today — next ${formatDate(next.nextDue, today)}` : 'Done — moved to Completed')
     window.setTimeout(() => setDoneMsg(null), 4000)
   }
@@ -446,6 +493,8 @@ function ReminderRow({ r, bunny, today }: { r: Reminder; bunny: Bunny; today: st
     setCalMsg(true)
     window.setTimeout(() => setCalMsg(false), 6000)
   }
+
+  if (isNative) return <NativeReminderRow r={r} bunny={bunny} today={today} onDone={onDone} doneMsg={doneMsg} />
 
   return (
     <div className="p-4">
@@ -490,6 +539,122 @@ function ReminderRow({ r, bunny, today }: { r: Reminder; bunny: Bunny; today: st
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * Inside the Android / iOS app the calendar (.ics) download can't work, so the
+ * row offers "Remind me on this phone" — a local notification at 9:00 AM on the
+ * due date (and the next few occurrences of a repeat). Tapping again turns it off.
+ */
+function NativeReminderRow({
+  r,
+  bunny,
+  today,
+  onDone,
+  doneMsg,
+}: {
+  r: Reminder
+  bunny: Bunny
+  today: string
+  onDone: () => void
+  doneMsg: string | null
+}) {
+  const [on, setOn] = useState<boolean | null>(null) // null = still checking
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ tone: 'ok' | 'warn'; text: string } | null>(null)
+
+  useEffect(() => {
+    let live = true
+    // If the plugin can't answer (shouldn't happen in the app), treat it as "not set" so the button still works.
+    void isReminderScheduled(r.id).then(
+      (v) => live && setOn(v),
+      () => live && setOn(false),
+    )
+    return () => {
+      live = false
+    }
+  }, [r.id, r.nextDue, r.intervalDays])
+
+  const say = (tone: 'ok' | 'warn', text: string, ms = 7000) => {
+    setMsg({ tone, text })
+    window.setTimeout(() => setMsg(null), ms)
+  }
+
+  const toggle = async () => {
+    setBusy(true)
+    try {
+      if (on) {
+        await cancelReminder(r.id)
+        setOn(false)
+        say('ok', 'Reminder turned off on this phone.', 4000)
+      } else {
+        const res: ScheduleOutcome = await scheduleReminder(r, bunny.name)
+        if (res.status === 'scheduled') {
+          setOn(true)
+          const more = res.count > 1 ? ` (and the next ${res.count - 1} after that)` : ''
+          say('ok', `Set — ${formatFireTime(res.first)}${more}.`)
+        } else if (res.status === 'denied') {
+          say('warn', 'Notifications are turned off for OHRR. Allow them in your phone’s Settings, then tap again.', 10000)
+        }
+      }
+    } catch {
+      say('warn', 'Couldn’t set that reminder. Please try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-[15px] font-extrabold text-ink">{r.title}</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            {formatInterval(r.intervalDays)}
+            {r.lastDone && ` · last done ${formatDate(r.lastDone, today)}`}
+          </p>
+          {r.notes && <p className="mt-1 text-xs leading-relaxed text-slate-500">{r.notes}</p>}
+        </div>
+        <DuePill nextDue={r.nextDue} today={today} />
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={onDone} className={smallBtn}>
+          <MbIcon name="check" size={13} /> Mark done
+        </button>
+        <button
+          type="button"
+          onClick={() => void toggle()}
+          disabled={busy || on === null}
+          aria-pressed={on === true}
+          className={`${on ? smallBtn : smallBtnBlue} disabled:opacity-60`}
+        >
+          <MbIcon name="bell" size={13} /> {on ? 'Reminding on this phone' : 'Remind me on this phone'}
+        </button>
+        <Link to={`/my-bunny/${bunny.id}/reminders/${r.id}/edit`} className={smallBtn}>
+          <MbIcon name="edit" size={13} /> Edit
+        </Link>
+      </div>
+      {doneMsg && <p className="mt-2 text-xs font-bold text-emerald-600">{doneMsg}</p>}
+      {msg && (
+        <p className={`mt-2 text-xs font-bold ${msg.tone === 'ok' ? 'text-emerald-600' : 'text-amber-700'}`}>{msg.text}</p>
+      )}
+      {on && !msg && (
+        <p className="mt-2 text-xs text-slate-400">
+          Pops up at 9:00 AM when due — tap the bell again to turn it off.
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Native counterpart of CalendarHint. */
+function NotifyHint({ className = '' }: { className?: string }) {
+  return (
+    <p className={`text-xs leading-relaxed text-slate-400 ${className}`}>
+      Each reminder pops up as a notification on this phone at 9:00 AM on its due date — even if the
+      app is closed. Mark it done and the next one is set automatically.
+    </p>
   )
 }
 

@@ -57,6 +57,15 @@ import {
   type Reminder,
   type MyBunnyData,
 } from '../src/features/mybunny/storage.ts'
+import {
+  notificationBase,
+  notificationIds,
+  localMorning,
+  nextMorning,
+  occurrenceTimes,
+  OCCURRENCES,
+  SLOTS_PER_REMINDER,
+} from '../src/native/reminderSchedule.ts'
 
 let checks = 0
 /** JSON with object keys sorted at every level, so comparisons ignore key order. */
@@ -121,7 +130,7 @@ const oneOff: Reminder = { id: 'r3', bunnyId: 'b1', type: 'custom', title: 'Pick
 
 const ev = reminderEvent(nails, 'Clover')
 eq(ev.summary, 'Nail trim — Clover (OHRR app)', 'summary format')
-eq(ev.uid, 'r1@mybunny.ohrr-app.netlify.app', 'uid per reminder')
+eq(ev.uid, 'r1@mybunny.ohrr-app.pages.dev', 'uid per reminder')
 eq(ev.alarms, ['-PT0M'], 'non-yearly alarm')
 eq(reminderEvent(booster, 'Clover').alarms, ['-P1D', '-PT0M'], 'yearly gets day-before + at-time alarms')
 
@@ -138,7 +147,7 @@ ok(ics.includes('\r\nSUMMARY:Nail trim — Clover (OHRR app)\r\n'), 'SUMMARY')
 // long lines are folded on output, so unfold (drop CRLF+space) before matching content
 const unfolded = ics.replace(/\r\n /g, '')
 ok(unfolded.includes('\r\nDESCRIPTION:Use the small clippers\\; treats after\\, please\\n\\nRepeats every 42 days.'), 'DESCRIPTION escaped + notes')
-ok(unfolded.includes('https://ohrr-app.netlify.app/my-bunny'), 'link back to the app')
+ok(unfolded.includes('https://ohrr-app.pages.dev/my-bunny'), 'link back to the app')
 ok(ics !== unfolded, 'at least one line was folded')
 ok(ics.includes('\r\nBEGIN:VALARM\r\nACTION:DISPLAY\r\n'), 'VALARM block')
 ok(ics.includes('\r\nTRIGGER:-PT0M\r\n'), 'VALARM trigger')
@@ -452,5 +461,38 @@ try {
 eq(restoreErr, LIMIT_MESSAGE, 'restoring past the limit is refused with the same message')
 ok(Boolean(getMyBunny().bunnies.find((b) => b.id === made[0].id)?.archived), 'refused restore leaves the bunny archived')
 eq(getMyBunny().bunnies.find((b) => b.id === extra.id)?.role, 'resident', 'role is stored as given')
+
+/* ---------------------------------------------------- native reminder slots */
+// (src/native/reminderSchedule.ts — pure; the Capacitor calls live elsewhere)
+const b1 = notificationBase('r_abc123')
+eq(notificationBase('r_abc123'), b1, 'notification base is stable for an id')
+ok(b1 !== notificationBase('r_abc124'), 'different ids → different bases')
+ok(b1 >= 0 && b1 * SLOTS_PER_REMINDER + SLOTS_PER_REMINDER - 1 < 2 ** 31, 'every slot id fits a signed 32-bit int')
+eq(notificationIds('r_abc123').length, SLOTS_PER_REMINDER, 'one id per slot')
+eq(notificationIds('r_abc123')[0], b1 * SLOTS_PER_REMINDER, 'first slot = base * slots')
+eq(localMorning('2026-10-03')?.getHours(), 9, 'localMorning is 09:00 local')
+eq(localMorning('2026-10-03', 2)?.getDate(), 5, 'localMorning shifts by days')
+eq(localMorning('2026-13-03'), null, 'localMorning rejects a bad month')
+eq(localMorning('nope'), null, 'localMorning rejects junk')
+const at8 = new Date(2026, 9, 3, 8, 0)
+const at10 = new Date(2026, 9, 3, 10, 0)
+eq(nextMorning(at8).getDate(), 3, 'before 9 → today 09:00')
+eq(nextMorning(at10).getDate(), 4, 'after 9 → tomorrow 09:00')
+const slotOnce = occurrenceTimes({ nextDue: '2026-10-10', intervalDays: null }, at8)
+eq(slotOnce.length, 1, 'a one-off schedules once')
+eq(slotOnce[0].toISOString(), new Date(2026, 9, 10, 9, 0).toISOString(), 'one-off fires at 09:00 on nextDue')
+const overdue = occurrenceTimes({ nextDue: '2026-09-01', intervalDays: null }, at10)
+eq(overdue[0].toISOString(), new Date(2026, 9, 4, 9, 0).toISOString(), 'an overdue one-off nudges next 09:00')
+const rep = occurrenceTimes({ nextDue: '2026-10-10', intervalDays: 3 }, at8)
+eq(rep.length, OCCURRENCES, `a repeat schedules ${OCCURRENCES} occurrences`)
+eq(rep[1].getDate(), 13, 'second occurrence = nextDue + interval')
+eq(rep[5].getDate(), 25, 'sixth occurrence = nextDue + 5 × interval')
+const dailyToday = occurrenceTimes({ nextDue: '2026-10-03', intervalDays: 1 }, at10)
+eq(dailyToday[0].getDate(), 4, 'daily due today after 9 → nudge tomorrow')
+eq(dailyToday[1].getDate(), 5, '…and no duplicate of the tomorrow slot')
+eq(dailyToday.length, OCCURRENCES, 'daily still fills every slot')
+const yearly = occurrenceTimes({ nextDue: '2027-03-01', intervalDays: 365 }, at8)
+eq(yearly[1].getFullYear(), 2028, 'yearly second occurrence is a year on')
+eq(occurrenceTimes({ nextDue: 'bad', intervalDays: 7 }, at8), [], 'bad date → nothing to schedule')
 
 console.log(`OK — ${checks} checks passed`)

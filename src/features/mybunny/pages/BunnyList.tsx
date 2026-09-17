@@ -16,6 +16,7 @@ import {
   useDocumentTitle,
 } from '../ui'
 import { downloadBlob } from '../ics'
+import { isNative } from '../../../native/platform'
 import HelpSearch from '../../bunnyhelp/HelpSearch'
 import {
   useMyBunny,
@@ -54,9 +55,12 @@ function roleForFilter(f: RoleFilter): BunnyRole | null {
   return BUNNY_ROLES.find((r) => ROLE_LABEL[r] === f) ?? null
 }
 
+// Inside the Android/iOS app reminders are phone notifications; on the web they
+// go into the phone's calendar (see src/native/notifications.ts).
+const REMINDER_WORDS = isNative ? 'reminders that pop up on this phone' : 'reminders that live in your phone’s calendar'
 const SUBTITLE: Record<string, string> = {
-  'My Bunny': 'A care companion for your own rabbit — reminders that live in your phone’s calendar, a weight log, and a profile.',
-  'My Bunnies': 'Both of your rabbits in one place — reminders in your phone’s calendar, weight logs, and a profile each.',
+  'My Bunny': `A care companion for your own rabbit — ${REMINDER_WORDS}, a weight log, and a profile.`,
+  'My Bunnies': `Both of your rabbits in one place — ${REMINDER_WORDS}, weight logs, and a profile each.`,
   'My Fluffle': 'Every rabbit in your care in one place — reminders, weight logs, health notes and a profile each.',
 }
 
@@ -261,8 +265,10 @@ function EmptyState() {
   const rows = [
     {
       icon: <MbIcon name="bell" size={20} />,
-      title: 'Care reminders in your phone’s calendar',
-      text: 'Nail trims, RHDV2 boosters, vet check-ups, hay & pellet restocks — added to your calendar so your phone alerts you.',
+      title: isNative ? 'Care reminders on this phone' : 'Care reminders in your phone’s calendar',
+      text: isNative
+        ? 'Nail trims, RHDV2 boosters, vet check-ups, hay & pellet restocks — a notification at 9 AM on the day, even if the app is closed.'
+        : 'Nail trims, RHDV2 boosters, vet check-ups, hay & pellet restocks — added to your calendar so your phone alerts you.',
     },
     {
       icon: <MbIcon name="scale" size={20} />,
@@ -359,7 +365,15 @@ function BackupRestore({
           it to a new phone. Restoring adds anything from the backup that isn’t already here.
         </p>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={backup} className={`${btn.outline} disabled:opacity-60`} disabled={total === 0 || busy}>
+          {/* A blob download can't be handed to Files inside the native WebView; a share-sheet
+              export is a later build (needs @capacitor/share + filesystem). Restore still works. */}
+          <button
+            type="button"
+            onClick={backup}
+            className={`${btn.outline} disabled:opacity-60`}
+            disabled={total === 0 || busy || isNative}
+            title={isNative ? 'Not available in this test build yet' : undefined}
+          >
             <MbIcon name="download" size={15} /> Back up
           </button>
           <button
@@ -382,6 +396,11 @@ function BackupRestore({
         {msg && (
           <p className={`text-sm font-semibold ${msg.tone === 'ok' ? 'text-emerald-600' : 'text-red-600'}`}>
             {msg.text}
+          </p>
+        )}
+        {isNative && (
+          <p className="text-xs leading-relaxed text-amber-700">
+            Backing up to a file isn’t in this test build yet; restoring from one is.
           </p>
         )}
         <p className="text-xs text-slate-400">

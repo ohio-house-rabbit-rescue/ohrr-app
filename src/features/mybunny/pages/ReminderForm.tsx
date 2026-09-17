@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Screen, Card, SegTabs, btn } from '../../../components/ui'
 import { MbIcon } from '../icons'
 import { BackLink, Field, SaveWarning, VetNote, mbInput, useDocumentTitle } from '../ui'
+import { isNative } from '../../../native/platform'
+import { cancelReminder, resyncReminder } from '../../../native/notifications'
 import {
   useMyBunny,
   findBunny,
@@ -175,14 +177,20 @@ function Form({
       lastDone: lastDone || undefined,
       notes: notes || undefined,
     }
-    if (existing) updateReminder(existing.id, input)
-    else addReminder(input)
+    if (existing) {
+      updateReminder(existing.id, input)
+      // Native app: if it's set on this phone, move the notifications to the new date/title.
+      void resyncReminder({ ...input, id: existing.id }, bunnyName)
+    } else {
+      addReminder(input)
+    }
     onDone()
   }
 
   const onDelete = () => {
     if (!existing) return
     if (!window.confirm(`Delete “${existing.title}” for ${bunnyName}?`)) return
+    void cancelReminder(existing.id) // native app: no more nudges for it
     deleteReminder(existing.id)
     onDone()
   }
@@ -263,7 +271,15 @@ function Form({
             </Field>
           </div>
 
-          <Field label="Notes" optional hint="Goes into the calendar event too — e.g. which clinic, what to bring.">
+          <Field
+            label="Notes"
+            optional
+            hint={
+              isNative
+                ? 'Shown in the reminder notification too — e.g. which clinic, what to bring.'
+                : 'Goes into the calendar event too — e.g. which clinic, what to bring.'
+            }
+          >
             <textarea className={mbInput} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} />
           </Field>
 
@@ -273,7 +289,9 @@ function Form({
             {existing ? 'Save changes' : 'Save reminder'}
           </button>
           <p className="text-center text-xs leading-relaxed text-slate-400">
-            After saving, use “Add to my phone’s calendar” on {bunnyName}’s page so your phone alerts you.
+            {isNative
+              ? `After saving, tap “Remind me on this phone” on ${bunnyName}’s page so your phone alerts you.`
+              : `After saving, use “Add to my phone’s calendar” on ${bunnyName}’s page so your phone alerts you.`}
           </p>
         </form>
       </Card>

@@ -3,6 +3,7 @@ import type { Session } from '../data/sessions'
 import { event } from '../data/event'
 import { downloadIcs, googleCalendarUrl } from '../lib/ics'
 import { Icon } from './icons'
+import { isNative } from '../native/platform'
 
 // A bottom-sheet chooser for adding saved sessions to a calendar. Apple/iOS gets
 // a single .ics with every saved session; Google Calendar adds one event per
@@ -14,7 +15,9 @@ export default function CalendarSheet({
   sessions: Session[]
   onClose: () => void
 }) {
-  const [showGoogle, setShowGoogle] = useState(false)
+  // Inside the native app a blob (.ics) download can't reach the calendar app, so
+  // only the Google links are offered there (they open in the system browser).
+  const [showGoogle, setShowGoogle] = useState(isNative)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -50,7 +53,8 @@ export default function CalendarSheet({
           </button>
         </div>
 
-        {/* Apple / iOS — one file, all sessions */}
+        {/* Apple / iOS — one file, all sessions (web only) */}
+        {!isNative && (
         <button
           type="button"
           onClick={() => {
@@ -71,6 +75,7 @@ export default function CalendarSheet({
             </span>
           </span>
         </button>
+        )}
 
         {/* Google — one event per link */}
         <button
@@ -125,7 +130,7 @@ export default function CalendarSheet({
         )}
 
         <p className="mt-4 text-center text-xs text-slate-400">
-          On iPhone choose Apple · on Android choose Google
+          {isNative ? 'Each link opens Google Calendar in your browser' : 'On iPhone choose Apple · on Android choose Google'}
         </p>
       </div>
     </div>

@@ -5,6 +5,9 @@ import { MbIcon } from '../icons'
 import { BackLink, BunnyAvatar, Field, SaveWarning, mbInput, useDocumentTitle } from '../ui'
 import { downscaleImage, dataUrlKb, PHOTO_MAX_PX } from '../photo'
 import { useBunnyPhoto } from '../photos'
+import { isNative } from '../../../native/platform'
+import { pickPhoto, type PhotoSource } from '../../../native/camera'
+import { cancelReminders } from '../../../native/notifications'
 import {
   useMyBunny,
   findBunny,
@@ -12,6 +15,8 @@ import {
   updateBunny,
   deleteBunny,
   setBunnyPhoto,
+  getMyBunny,
+  remindersFor,
   activeBunnies,
   atBunnyLimit,
   collectionTitle,
@@ -97,19 +102,40 @@ function Form({
   const [notes, setNotes] = useState(existing?.notes ?? '')
   const [error, setError] = useState<string | null>(null)
 
-  const onPhoto = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = '' // so choosing the same file again still fires onChange
-    if (!file) return
+  // A picked File (web) or a data URL (native camera plugin) → same downscale.
+  const usePhoto = async (source: Blob | string) => {
     setPhotoBusy(true)
     setPhotoErr(null)
     try {
-      setPhoto(await downscaleImage(file))
+      setPhoto(await downscaleImage(source))
       setPhotoTouched(true)
     } catch (err) {
       setPhotoErr(err instanceof Error ? err.message : 'Couldn’t use that photo.')
     } finally {
       setPhotoBusy(false)
+    }
+  }
+
+  const onPhoto = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // so choosing the same file again still fires onChange
+    if (!file) return
+    await usePhoto(file)
+  }
+
+  // Inside the Android/iOS app the buttons call the native camera / photo
+  // picker; in a browser they click the hidden file inputs as before.
+  const pick = async (source: PhotoSource) => {
+    if (!isNative) {
+      ;(source === 'camera' ? cameraRef : libraryRef).current?.click()
+      return
+    }
+    setPhotoErr(null)
+    try {
+      const dataUrl = await pickPhoto(source)
+      if (dataUrl) await usePhoto(dataUrl)
+    } catch (err) {
+      setPhotoErr(err instanceof Error ? err.message : 'Couldn’t get that photo.')
     }
   }
 
@@ -170,6 +196,8 @@ function Form({
       `Remove ${existing.name} from this phone? Their reminders, weight log, health notes and photo go too. This can’t be undone (unless you have a backup).`,
     )
     if (!ok) return
+    // Native app: drop any scheduled "remind me on this phone" notifications too.
+    void cancelReminders(remindersFor(getMyBunny(), existing.id).map((r) => r.id))
     deleteBunny(existing.id)
     onDeleted()
   }
@@ -203,10 +231,10 @@ function Form({
                 <p className="text-sm font-bold text-slate-500">Shrinking…</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => cameraRef.current?.click()} className={photoBtn}>
+                  <button type="button" onClick={() => void pick('camera')} className={photoBtn}>
                     <MbIcon name="camera" size={15} /> Take a photo
                   </button>
-                  <button type="button" onClick={() => libraryRef.current?.click()} className={photoBtn}>
+                  <button type="button" onClick={() => void pick('library')} className={photoBtn}>
                     <MbIcon name="upload" size={15} /> Choose from library
                   </button>
                   {shownPhoto && (
