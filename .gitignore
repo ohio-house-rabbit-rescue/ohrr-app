@@ -32,3 +32,17 @@ desktop.ini
 
 # local Claude Code dev config
 .claude/
+
+# Capacitor native builds (the android/ and ios/ projects ARE committed;
+# each has its own .gitignore for build/, .gradle/, Pods/, DerivedData/ etc.)
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+android/local.properties
+android/app/release/
+android/app/debug/
+ios/App/App/public/
+ios/App/build/
+ios/App/Pods/
+ios/App/DerivedData/

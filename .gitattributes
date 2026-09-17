@@ -1,0 +1,20 @@
+# Native-project files that must keep Unix line endings even when checked out on
+# Windows (core.autocrlf=true would otherwise turn them into CRLF and break the
+# Mac/Linux shell scripts and Xcode's plist parser).
+android/gradlew            text eol=lf
+*.sh                       text eol=lf
+*.pbxproj                  text eol=lf
+*.plist                    text eol=lf
+*.storyboard               text eol=lf
+*.xcconfig                 text eol=lf
+*.swift                    text eol=lf
+Package.swift              text eol=lf
+Package.resolved           text eol=lf
+android/gradlew.bat        text eol=crlf
+
+# Binary assets
+*.png                      binary
+*.jpg                      binary
+*.jar                      binary
+*.keystore                 binary
+*.jks                      binary

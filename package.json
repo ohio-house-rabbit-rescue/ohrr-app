@@ -9,9 +9,22 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "gen:types": "supabase gen types typescript --linked > src/lib/database.types.ts"
+    "gen:types": "supabase gen types typescript --linked > src/lib/database.types.ts",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:android": "npx cap open android",
+    "cap:ios": "npx cap open ios",
+    "cap:assets": "npx capacitor-assets generate --iconBackgroundColor #0669ac --iconBackgroundColorDark #0669ac --splashBackgroundColor #0669ac --splashBackgroundColorDark #0669ac"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/camera": "^8.2.4",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3",
     "@supabase/supabase-js": "^2.108.2",
     "fuse.js": "^7.5.0",
     "react": "^19.1.0",
@@ -19,6 +32,8 @@
     "react-router-dom": "^7.6.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.2",
     "@tailwindcss/vite": "^4.1.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
