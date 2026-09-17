@@ -71,7 +71,7 @@ export const seedHeroSlides: HeroSlide[] = [
 
 // Bundled artwork used when a slide has no image_url (keyed by the CTA target).
 export const SLIDE_FALLBACK_IMAGES: Record<string, string> = {
-  '/bunfest': '/bunfest-2025-logo.jpg',
+  '/bunfest': '/bunfest-2026-logo.png',
   '/adopt': '/sample-bunnies/bunny-lop-caramel.jpg',
   '/bunfest/silent-auction': '/sample-auction/auction-basket.jpg',
   '/events': '/sample-bunnies/tail-fluffy.jpg',

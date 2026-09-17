@@ -15,10 +15,9 @@ const bunfest = seedEvents.find((e) => e.slug === BUNFEST_EVENT_SLUG)!
 export const event = {
   name: 'Midwest BunFest',
   edition: 2026,
-  // The year's event logo/theme art. Bundled in /public; swap the file + year
-  // when the 2026 artwork is released (the 2025 logo stands in until then).
-  logo: '/bunfest-2025-logo.jpg',
-  logoYear: 2025,
+  // The year's event logo/theme art, bundled in /public (2026 "Binky On!" by Jillian Lisska).
+  logo: '/bunfest-2026-logo.png',
+  logoYear: 2026,
   host: {
     name: 'Ohio House Rabbit Rescue',
     short: 'OHRR',
