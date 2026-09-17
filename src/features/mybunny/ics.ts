@@ -13,9 +13,9 @@
 
 import type { Reminder } from './storage'
 
-export const APP_URL = 'https://ohrr-app.netlify.app/my-bunny'
+export const APP_URL = 'https://ohrr-app.pages.dev/my-bunny'
 const PRODID = '-//Ohio House Rabbit Rescue//OHRR App My Bunny//EN'
-const UID_DOMAIN = 'mybunny.ohrr-app.netlify.app'
+const UID_DOMAIN = 'mybunny.ohrr-app.pages.dev'
 
 export interface IcsEvent {
   uid: string

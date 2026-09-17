@@ -10,7 +10,7 @@ import { SponsorLogo } from './SponsorLogo'
 import { groupByTier, hrefFor, prettyUrl, tierLabel, type Sponsor, type SponsorTier } from './types'
 
 export const SPONSOR_INQUIRY_EMAIL = ohrr.email
-export const SPONSOR_INFO_URL = 'https://ohrr-website.netlify.app/give'
+export const SPONSOR_INFO_URL = 'https://ohrr-website.pages.dev/give'
 
 function WebsiteLink({ website, className = '' }: { website: string; className?: string }) {
   return (

@@ -8,7 +8,7 @@
 
 - **Last updated:** 2026-09-17
 - **Repo:** https://github.com/chasingtheunicorn/ohrr-app
-- **Live site:** https://ohrr-app.netlify.app
+- **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
   Google Drive "OHRR App Design" folder holds the canonical *design* docs only).
 - **New here? Read [`START-HERE.md`](START-HERE.md) first** — storage map, how to
@@ -131,7 +131,7 @@
     2026 BunFest logo artwork is not bundled (2025 logo still shown, theme text is 2026).
 
 - **Staff backend (Supabase) — MERGED & LIVE (2026-06-27).** [PR #28] merged to
-  `main` (merge `a60b8b5`) and **deployed to `ohrr-app.netlify.app`**. The staff admin
+  `main` (merge `a60b8b5`) and **deployed to `ohrr-app.pages.dev`**. The staff admin
   is reachable at **`/staff`** (unlinked from the public app): Supabase Auth sign-in,
   role/capability access control, master-code owner bootstrap, a capability-gated
   **Hop Shop manager** (CRUD + inventory), a **Team** screen (invite + per-capability
@@ -149,7 +149,7 @@
   editor to enable it (falls back to short IDs otherwise). **Password reset is now live ([PR #30])** — a
   "Forgot password?" flow on sign-in + a `/staff/reset` page; it needs one Supabase
   config step to accept the emailed link: add the app origin
-  (`https://ohrr-app.netlify.app`) under **Auth → URL Configuration** (Site URL +
+  (`https://ohrr-app.pages.dev`) under **Auth → URL Configuration** (Site URL +
   Redirect URLs). The owner chose to **keep the public Hop Shop on curated samples**
   for now (not wired to live inventory). With that, the **staff admin is
   feature-complete for release** — what's left is owner-side Supabase config only
