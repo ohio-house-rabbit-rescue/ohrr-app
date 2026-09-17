@@ -34,7 +34,7 @@ function HeroCard({ slide }: { slide: HeroSlide }) {
           (isBunfest ? (
             <img src={image} alt={`Midwest BunFest ${event.logoYear} logo`} className="mx-auto block h-full w-auto" />
           ) : (
-            <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
+            <img src={image} alt="" className="h-full w-full object-cover" />
           ))}
         {countdown && (
           <span className="absolute right-2.5 top-2.5 rounded-full bg-[#e0950f] px-2.5 py-1 text-[11px] font-extrabold text-white shadow-sm">
@@ -70,11 +70,8 @@ export default function OhrrHome() {
   return (
     <div>
       {/* Hero */}
-      <section className="bg-gradient-to-b from-brand-blue to-brand-blue-dark px-5 pb-5 pt-5 text-white">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
-          Columbus, Ohio · 501(c)(3)
-        </span>
-        <h1 className="mt-2 font-display text-2xl font-black leading-tight">
+      <section className="bg-gradient-to-b from-brand-blue to-brand-blue-dark px-5 pb-4 pt-4 text-white">
+        <h1 className="font-display text-2xl font-black leading-tight">
           Every bunny deserves a home
         </h1>
         <p className="mt-1 text-[13px] leading-snug text-white/85">{ohrr.tagline}</p>
