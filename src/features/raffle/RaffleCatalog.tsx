@@ -11,6 +11,7 @@ import { Icon } from '../../components/icons'
 import { useAuctionItems, useAuctionSettings } from './useRaffleItems'
 import { RafflePhoto } from './RafflePhoto'
 import { formatValue, sessionLabel, type AuctionItem } from './types'
+import PresentedBy from '../sponsors/PresentedBy'
 
 const FILTERS = ['All', 'Morning', 'Afternoon'] as const
 type Filter = (typeof FILTERS)[number]
@@ -82,6 +83,7 @@ export default function RaffleCatalog() {
     <>
       <PageHeader icon="award" title="Silent Auction" subtitle="Midwest BunFest 2026" />
       <Screen className="space-y-4">
+        <PresentedBy surface="silent-auction" />
         <Link
           to="/bunfest"
           className="inline-flex items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"

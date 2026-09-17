@@ -10,6 +10,7 @@ import {
 import { useVolunteerOpportunities } from '../lib/volunteerOpps'
 import { PageHeader, Screen, SectionLabel, ActionCard, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
+import PresentedBy from '../features/sponsors/PresentedBy'
 
 function signupHref(role: string, code: string, item?: string) {
   const params = new URLSearchParams({ role, code })
@@ -29,6 +30,7 @@ export default function Volunteer() {
         subtitle="We truly are one big, happy volunteer family and we would love to have you join us."
       />
       <Screen className="space-y-6">
+        <PresentedBy surface="volunteer" />
         <p className="px-1 text-sm leading-relaxed text-slate-600">{volunteerIntro}</p>
 
         {/* The four real positions */}

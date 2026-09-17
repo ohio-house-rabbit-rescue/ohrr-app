@@ -11,6 +11,7 @@ import {
   VET_EXTERNAL_LISTS,
   type Vet,
 } from '../data/vets'
+import PresentedBy from '../features/sponsors/PresentedBy'
 
 function PhoneLink({ value }: { value: string }) {
   const digits = phoneDigits(value)
@@ -115,6 +116,7 @@ export default function Vets() {
         subtitle="Rabbits are exotic pets — these vets know bunnies. Tap to call, tap the address for directions."
       />
       <Screen className="space-y-5">
+        <PresentedBy surface="find-a-vet" />
         {/* Emergency banner */}
         <a
           href={telHref(EMERGENCY_VET.phone)}

@@ -5,6 +5,7 @@ import { useFollowing } from '../lib/follow'
 import { BunnyPhoto, StatusPill, FollowButton } from '../components/tailbits'
 import { PageHeader, Screen, Card, Badge, SampleNote, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
+import PresentedBy from '../features/sponsors/PresentedBy'
 
 const FILTERS = ['All', 'Just adopted', 'Going strong', 'Following'] as const
 type Filter = (typeof FILTERS)[number]
@@ -34,6 +35,7 @@ export default function Tails() {
         subtitle="Where OHRR bunnies are now — and how they’re doing. Follow the ones you love to check back on their journey."
       />
       <Screen className="space-y-4">
+        <PresentedBy surface="happy-tails" />
         <SampleNote>
           These are sample stories. Real Happy Tails from OHRR adopters will appear here — adopted
           from OHRR? Share yours below.

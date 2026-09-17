@@ -4,6 +4,7 @@ import { ohrr } from '../data/ohrr'
 import { useCareArticles, asIconName, fallbackArticles } from '../lib/careContent'
 import { PageHeader, Screen, ActionCard, SectionLabel, Card } from '../components/ui'
 import { Icon } from '../components/icons'
+import PresentedBy from '../features/sponsors/PresentedBy'
 
 export default function Learn() {
   const live = useCareArticles()
@@ -17,6 +18,7 @@ export default function Learn() {
         subtitle="OHRR’s bunny-care articles, right in the app — diet, litter boxes, bonding, toys, and more."
       />
       <Screen className="space-y-5">
+        <PresentedBy surface="care-library" />
         {/* Fast path into the vet directory */}
         <Link
           to="/vets"

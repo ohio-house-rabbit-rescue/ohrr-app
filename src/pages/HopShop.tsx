@@ -5,6 +5,7 @@ import { useHopShopProducts, money } from '../lib/hopshopPublic'
 import { mapsUrl } from '../lib/events'
 import { PageHeader, Screen, Card, SectionLabel } from '../components/ui'
 import { Icon } from '../components/icons'
+import PresentedBy from '../features/sponsors/PresentedBy'
 
 export default function HopShop() {
   const live = useHopShopProducts()
@@ -18,6 +19,7 @@ export default function HopShop() {
         subtitle="Food, supplies and toys at the Adoption Center — profits support OHRR."
       />
       <Screen className="space-y-5">
+        <PresentedBy surface="hop-shop" />
         <p className="px-1 text-sm leading-relaxed text-slate-600">{hopShopIntro}</p>
 
         {/* Hours + address (map link) */}

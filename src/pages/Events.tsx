@@ -13,6 +13,7 @@ import {
 } from '../lib/events'
 import { BUNFEST_EVENT_SLUG, type EventItem } from '../data/events'
 import { ohrr } from '../data/ohrr'
+import PresentedBy from '../features/sponsors/PresentedBy'
 
 function EventCard({ event: e, past = false }: { event: EventItem; past?: boolean }) {
   const [open, setOpen] = useState(false)
@@ -126,6 +127,7 @@ export default function Events() {
         subtitle="OHRR hoppenings — Midwest BunFest and everything else on the calendar."
       />
       <Screen className="space-y-6">
+        <PresentedBy surface="events" />
         <section className="space-y-2.5">
           <SectionLabel>Upcoming</SectionLabel>
           {upcoming.length === 0 ? (
