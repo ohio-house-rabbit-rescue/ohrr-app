@@ -33,6 +33,7 @@ export default function StaffHome() {
   const canPostAnnouncements = can('announcements.post')
   const canManageVolunteer = can('volunteers.shifts.manage')
   const canEditCare = can('content.education.edit')
+  const canManageAuction = can('events.bunfest.manage')
   const canManageTeam = can('staff.invite') || can('staff.permissions.manage')
   const canViewActivity = can('audit.view')
   const showTiles =
@@ -41,6 +42,7 @@ export default function StaffHome() {
     canPostAnnouncements ||
     canManageVolunteer ||
     canEditCare ||
+    canManageAuction ||
     canManageTeam ||
     canViewActivity
 
@@ -108,6 +110,15 @@ export default function StaffHome() {
               subtitle="Edit the Rabbit Care articles in Learn"
               icon="book"
               tone="blue"
+            />
+          )}
+          {canManageAuction && (
+            <ActionCard
+              to="/staff/raffle"
+              title="Silent Auction"
+              subtitle="BunFest auction items, photos & won status"
+              icon="award"
+              tone="orange"
             />
           )}
           {canManageTeam && (
