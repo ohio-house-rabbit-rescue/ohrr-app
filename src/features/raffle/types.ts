@@ -1,38 +1,39 @@
-// Midwest BunFest Silent Raffle — shared types & formatters for the public
-// catalog and the staff manager. Rows come straight from the `raffle_items`
-// table (see supabase/migrations/20260917130000_raffle_items.sql).
+// Midwest BunFest Silent Auction — shared types & formatters for the public
+// catalog and the staff manager. Rows come straight from the `raffle_items` /
+// `auction_settings` tables (see supabase/migrations/20260917130000_raffle_items.sql).
+// The table keeps its `raffle_items` name so the OHRR website can read it too.
 import type { Database } from '../../lib/database.types'
 
-export type RaffleItem = Database['public']['Tables']['raffle_items']['Row']
-export type RaffleItemInsert = Database['public']['Tables']['raffle_items']['Insert']
-export type RaffleItemUpdate = Database['public']['Tables']['raffle_items']['Update']
+export type AuctionItem = Database['public']['Tables']['raffle_items']['Row']
+export type AuctionItemInsert = Database['public']['Tables']['raffle_items']['Insert']
+export type AuctionItemUpdate = Database['public']['Tables']['raffle_items']['Update']
+export type AuctionSettings = Database['public']['Tables']['auction_settings']['Row']
 
 // The event this catalog belongs to (plain text in the table; no FK yet).
-export const RAFFLE_EVENT_SLUG = 'midwest-bunfest-2026'
-// BunFest day, used to turn a staff-entered closing time into a timestamptz.
-export const RAFFLE_EVENT_DATE = '2026-10-25'
-export const RAFFLE_EVENT_TZ = 'America/New_York'
+export const AUCTION_EVENT_SLUG = 'midwest-bunfest-2026'
+// BunFest day, used to turn a staff-entered close time into a timestamptz.
+export const AUCTION_EVENT_DATE = '2026-10-25'
+export const AUCTION_EVENT_TZ = 'America/New_York'
 
-export const RAFFLE_SESSIONS = [
+export const AUCTION_SESSIONS = [
   { value: 'morning', label: 'Morning' },
   { value: 'afternoon', label: 'Afternoon' },
   { value: 'all-day', label: 'All day' },
 ] as const
-export type RaffleSession = (typeof RAFFLE_SESSIONS)[number]['value']
+export type AuctionSession = (typeof AUCTION_SESSIONS)[number]['value']
 
-export const RAFFLE_STATUSES = [
+export const AUCTION_STATUSES = [
   { value: 'available', label: 'Available' },
-  { value: 'claimed', label: 'Claimed' },
-  { value: 'closed', label: 'Closed' },
+  { value: 'won', label: 'Won' },
 ] as const
-export type RaffleStatus = (typeof RAFFLE_STATUSES)[number]['value']
+export type AuctionStatus = (typeof AUCTION_STATUSES)[number]['value']
 
 export function sessionLabel(value: string): string {
-  return RAFFLE_SESSIONS.find((s) => s.value === value)?.label ?? value
+  return AUCTION_SESSIONS.find((s) => s.value === value)?.label ?? value
 }
 
 export function statusLabel(value: string): string {
-  return RAFFLE_STATUSES.find((s) => s.value === value)?.label ?? value
+  return AUCTION_STATUSES.find((s) => s.value === value)?.label ?? value
 }
 
 // "$35" / "$12.50"
@@ -55,20 +56,25 @@ export function centsToDollars(cents: number | null | undefined): string {
   return (cents / 100).toFixed(2).replace(/\.00$/, '')
 }
 
-// "2:30 pm" in the event's time zone (what visitors on the floor expect to see).
-export function formatClosesAt(iso: string | null | undefined): string | null {
-  if (!iso) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  return d
-    .toLocaleTimeString('en-US', { timeZone: RAFFLE_EVENT_TZ, hour: 'numeric', minute: '2-digit' })
-    .toLowerCase()
+// Public order: available items first, then won; within each, sort_order then title.
+export function sortAuctionItems<T extends { sort_order: number; title: string; status: string }>(
+  items: T[],
+): T[] {
+  const rank = (s: string) => (s === 'available' ? 0 : 1)
+  return [...items].sort(
+    (a, b) =>
+      rank(a.status) - rank(b.status) ||
+      a.sort_order - b.sort_order ||
+      a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
+  )
 }
 
-// Sort the way both screens list items: sort_order, then title.
-export function sortRaffleItems<T extends { sort_order: number; title: string }>(items: T[]): T[] {
+// Staff order: purely sort_order then title (status doesn't move rows around).
+export function sortForStaff<T extends { sort_order: number; title: string }>(items: T[]): T[] {
   return [...items].sort(
-    (a, b) => a.sort_order - b.sort_order || a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
+    (a, b) =>
+      a.sort_order - b.sort_order ||
+      a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }),
   )
 }
 
@@ -78,7 +84,19 @@ export function itemInitial(title: string): string {
   return ch ? ch.toUpperCase() : '?'
 }
 
-/* ---- closing time <-> timestamptz on BunFest day, in America/New_York ---- */
+/* ---- session close times <-> timestamptz on BunFest day, America/New_York ----
+   Used by the staff "Auction setup" panel only; the public catalog never shows
+   a time. */
+
+// "12:15 pm" in the event's time zone.
+export function formatEventTime(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return d
+    .toLocaleTimeString('en-US', { timeZone: AUCTION_EVENT_TZ, hour: 'numeric', minute: '2-digit' })
+    .toLowerCase()
+}
 
 // The zone's UTC offset (ms) at a given instant, via Intl (handles DST).
 function tzOffsetMs(ts: number, timeZone: string): number {
@@ -99,24 +117,23 @@ function tzOffsetMs(ts: number, timeZone: string): number {
 
 // "14:30" (a <input type="time"> value) → ISO timestamptz for that wall-clock
 // time on BunFest day in the event's zone. Empty input → null.
-export function closingTimeToIso(time: string): string | null {
+export function eventTimeToIso(time: string): string | null {
   const m = /^(\d{1,2}):(\d{2})/.exec(time.trim())
   if (!m) return null
-  const [y, mo, d] = RAFFLE_EVENT_DATE.split('-').map(Number)
+  const [y, mo, d] = AUCTION_EVENT_DATE.split('-').map(Number)
   const wall = Date.UTC(y, mo - 1, d, Number(m[1]), Number(m[2]))
-  let ts = wall - tzOffsetMs(wall, RAFFLE_EVENT_TZ)
-  const again = tzOffsetMs(ts, RAFFLE_EVENT_TZ)
-  ts = wall - again
+  let ts = wall - tzOffsetMs(wall, AUCTION_EVENT_TZ)
+  ts = wall - tzOffsetMs(ts, AUCTION_EVENT_TZ)
   return new Date(ts).toISOString()
 }
 
 // ISO timestamptz → "14:30" in the event's zone (to prefill the time input).
-export function isoToClosingTime(iso: string | null | undefined): string {
+export function isoToEventTime(iso: string | null | undefined): string {
   if (!iso) return ''
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: RAFFLE_EVENT_TZ,
+    timeZone: AUCTION_EVENT_TZ,
     hourCycle: 'h23',
     hour: '2-digit',
     minute: '2-digit',

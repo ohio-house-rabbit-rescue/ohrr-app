@@ -203,7 +203,6 @@ export type Database = {
           value_cents: number | null
           photo_url: string | null
           session: string
-          closes_at: string | null
           status: string
           is_published: boolean
           sort_order: number
@@ -221,7 +220,6 @@ export type Database = {
           value_cents?: number | null
           photo_url?: string | null
           session?: string
-          closes_at?: string | null
           status?: string
           is_published?: boolean
           sort_order?: number
@@ -239,12 +237,38 @@ export type Database = {
           value_cents?: number | null
           photo_url?: string | null
           session?: string
-          closes_at?: string | null
           status?: string
           is_published?: boolean
           sort_order?: number
           created_by?: string | null
           created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      auction_settings: {
+        Row: {
+          org_id: string
+          event_slug: string
+          morning_closes_at: string | null
+          afternoon_closes_at: string | null
+          intro_text: string | null
+          updated_at: string
+        }
+        Insert: {
+          org_id: string
+          event_slug?: string
+          morning_closes_at?: string | null
+          afternoon_closes_at?: string | null
+          intro_text?: string | null
+          updated_at?: string
+        }
+        Update: {
+          org_id?: string
+          event_slug?: string
+          morning_closes_at?: string | null
+          afternoon_closes_at?: string | null
+          intro_text?: string | null
           updated_at?: string
         }
         Relationships: []
