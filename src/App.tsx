@@ -53,6 +53,7 @@ import StaffAnnouncements from './pages/StaffAnnouncements'
 import StaffVolunteer from './pages/StaffVolunteer'
 import StaffLearn from './pages/StaffLearn'
 import StaffAdopt from './pages/StaffAdopt'
+import StaffBunnyHelp from './pages/StaffBunnyHelp'
 // My Bunny (local-first care companion) — lazy so it stays out of the main bundle
 const MyBunnyRoutes = lazy(() => import('./features/mybunny/routes'))
 
@@ -134,6 +135,7 @@ export default function App() {
           <Route path="announcements" element={<StaffAnnouncements />} />
           <Route path="volunteer" element={<StaffVolunteer />} />
           <Route path="learn" element={<StaffLearn />} />
+          <Route path="bunny-help" element={<StaffBunnyHelp />} />
           <Route path="team" element={<StaffTeam />} />
           <Route path="activity" element={<StaffActivity />} />
         </Route>

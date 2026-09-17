@@ -38,6 +38,7 @@ export default function StaffLayout() {
     { to: '/staff/announcements', label: 'Announcements', show: can('announcements.post') },
     { to: '/staff/volunteer', label: 'Volunteer opportunities', show: can('volunteers.shifts.manage') },
     { to: '/staff/learn', label: 'Care guides', show: can('content.education.edit') },
+    { to: '/staff/bunny-help', label: 'Bunny Help topics', show: can('content.education.edit') },
     {
       to: '/staff/team',
       label: 'Team',
