@@ -37,6 +37,8 @@ import Visit from './pages/Visit'
 import EventMap from './pages/EventMap'
 import BunfestPage from './pages/BunfestPage'
 import SilentAuction from './pages/SilentAuction'
+import RaffleCatalog from './features/raffle/RaffleCatalog'
+import RaffleItemDetail from './features/raffle/RaffleItemDetail'
 // Staff backend (Supabase-gated)
 import StaffLayout from './components/StaffLayout'
 import { RequireMembership } from './components/staffui'
@@ -106,6 +108,8 @@ export default function App() {
         <Route path="visit" element={<Visit />} />
         <Route path="map" element={<EventMap />} />
         <Route path="silent-auction" element={<SilentAuction />} />
+        <Route path="auction" element={<RaffleCatalog />} />
+        <Route path="auction/:id" element={<RaffleItemDetail />} />
         <Route path="p/:id" element={<BunfestPage />} />
         <Route path="give" element={<Give />} />
       </Route>
