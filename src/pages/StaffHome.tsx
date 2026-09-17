@@ -38,6 +38,7 @@ export default function StaffHome() {
   const canManageSponsors = can('events.bunfest.manage')
   const canManageTeam = can('staff.invite') || can('staff.permissions.manage')
   const canViewActivity = can('audit.view')
+  const canManageSettings = can('settings.manage')
   const showTiles =
     canSeeHopShop ||
     canManageAdopt ||
@@ -48,7 +49,8 @@ export default function StaffHome() {
     canManageAuction ||
     canManageSponsors ||
     canManageTeam ||
-    canViewActivity
+    canViewActivity ||
+    canManageSettings
 
   // For a staff member, list the granted capabilities so they know their access.
   const grantedList = PERMISSION_CATALOG.filter((p) => capabilities.has(p.key))
@@ -167,6 +169,15 @@ export default function StaffHome() {
               title="Activity"
               subtitle="Who changed what, and when"
               icon="clock"
+              tone="blue"
+            />
+          )}
+          {canManageSettings && (
+            <ActionCard
+              to="/staff/settings"
+              title="Settings"
+              subtitle="App settings & test features (on/off)"
+              icon="settings"
               tone="blue"
             />
           )}

@@ -64,6 +64,7 @@ import StaffRaffle from './pages/StaffRaffle'
 import PartnersPage from './features/sponsors/PartnersPage'
 import PartnerPerksPage from './features/sponsors/PartnerPerksPage'
 import StaffSponsors from './pages/StaffSponsors'
+import StaffSettings from './pages/StaffSettings'
 
 export default function App() {
   return (
@@ -152,6 +153,7 @@ export default function App() {
           <Route path="sponsors" element={<StaffSponsors />} />
           <Route path="team" element={<StaffTeam />} />
           <Route path="activity" element={<StaffActivity />} />
+          <Route path="settings" element={<StaffSettings />} />
         </Route>
       </Route>
     </Routes>

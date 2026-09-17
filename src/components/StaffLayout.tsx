@@ -48,6 +48,7 @@ export default function StaffLayout() {
       show: can('staff.invite') || can('staff.permissions.manage'),
     },
     { to: '/staff/activity', label: 'Activity', show: can('audit.view') },
+    { to: '/staff/settings', label: 'Settings', show: can('settings.manage') },
   ].filter((i) => i.show)
 
   // Which section are we in (for the menu button label)?
