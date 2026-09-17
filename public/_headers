@@ -1,0 +1,5 @@
+# Pre-launch: the OHRR app is link-only until it ships to the app stores.
+# Mirrors the X-Robots-Tag rule in netlify.toml for hosts that read _headers
+# (Cloudflare Pages). Remove at app-store launch, together with robots.txt.
+/*
+  X-Robots-Tag: noindex, nofollow
