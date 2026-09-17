@@ -60,12 +60,33 @@ export interface Reminder {
 
 export type WeightUnit = 'lb' | 'g'
 
+/** A dated entry on a bunny's health timeline (often saved from a Bunny Help topic). */
+export interface HealthNote {
+  id: string
+  bunnyId: string
+  /** YYYY-MM-DD */
+  date: string
+  topicSlug?: string
+  topicTitle?: string
+  /** What you noticed. */
+  noticed: string
+  /** What you did about it. */
+  did?: string
+  /** Optional follow-up (e.g. "vet Thursday"). */
+  followUp?: string
+  resolved: boolean
+  /** ISO timestamp */
+  createdAt: string
+}
+
 export interface MyBunnyData {
   version: 1
   bunnies: Bunny[]
   /** Weight log per bunny id, sorted by date ascending. */
   weights: Record<string, WeightEntry[]>
   reminders: Reminder[]
+  /** Health timeline entries across all bunnies. */
+  health: HealthNote[]
   prefs: { weightUnit: WeightUnit }
 }
 
@@ -305,7 +326,7 @@ export function formatWeightDelta(grams: number, unit: WeightUnit): string | nul
 /* -------------------------------------------------------------- the store */
 
 function emptyData(): MyBunnyData {
-  return { version: 1, bunnies: [], weights: {}, reminders: [], prefs: { weightUnit: 'lb' } }
+  return { version: 1, bunnies: [], weights: {}, reminders: [], health: [], prefs: { weightUnit: 'lb' } }
 }
 
 const REMINDER_TYPES: ReminderType[] = ['nails', 'rhdv2', 'vet', 'hay', 'pellets', 'litter', 'custom']
@@ -391,6 +412,26 @@ function sanitizeWeights(v: unknown, bunnyIds: Set<string>): Record<string, Weig
   return out
 }
 
+function sanitizeHealthNote(v: unknown, bunnyIds: Set<string>): HealthNote | null {
+  if (!isRecord(v)) return null
+  const id = str(v.id)
+  const bunnyId = str(v.bunnyId)
+  const noticed = str(v.noticed)
+  if (!id || !bunnyId || !noticed || !bunnyIds.has(bunnyId) || !isIsoDate(v.date)) return null
+  return {
+    id,
+    bunnyId,
+    date: v.date,
+    ...(str(v.topicSlug) ? { topicSlug: (v.topicSlug as string).trim() } : {}),
+    ...(str(v.topicTitle) ? { topicTitle: (v.topicTitle as string).trim() } : {}),
+    noticed: noticed.trim(),
+    ...(str(v.did) ? { did: (v.did as string).trim() } : {}),
+    ...(str(v.followUp) ? { followUp: (v.followUp as string).trim() } : {}),
+    resolved: v.resolved === true,
+    createdAt: typeof v.createdAt === 'string' ? v.createdAt : new Date().toISOString(),
+  }
+}
+
 /** Sort ascending by date, keeping only the last entry per date. */
 function sortWeights(entries: WeightEntry[]): WeightEntry[] {
   const byDate = new Map<string, WeightEntry>()
@@ -409,9 +450,12 @@ export function sanitize(raw: unknown): MyBunnyData {
   const reminders = Array.isArray(raw.reminders)
     ? raw.reminders.map((r) => sanitizeReminder(r, ids)).filter((r): r is Reminder => r !== null)
     : []
+  const health = Array.isArray(raw.health)
+    ? raw.health.map((h) => sanitizeHealthNote(h, ids)).filter((h): h is HealthNote => h !== null)
+    : []
   const prefs =
     isRecord(raw.prefs) && raw.prefs.weightUnit === 'g' ? { weightUnit: 'g' as const } : base.prefs
-  return { version: 1, bunnies, weights: sanitizeWeights(raw.weights, ids), reminders, prefs }
+  return { version: 1, bunnies, weights: sanitizeWeights(raw.weights, ids), reminders, health, prefs }
 }
 
 /** Safe JSON parse → sanitized dataset (never throws). */
@@ -518,6 +562,7 @@ export function deleteBunny(id: string): void {
     ...data,
     bunnies: data.bunnies.filter((b) => b.id !== id),
     reminders: data.reminders.filter((r) => r.bunnyId !== id),
+    health: data.health.filter((h) => h.bunnyId !== id),
     weights,
   })
 }
@@ -607,6 +652,41 @@ function cleanReminderInput(input: ReminderInput): ReminderInput {
   return out
 }
 
+export type HealthNoteInput = Omit<HealthNote, 'id' | 'createdAt'>
+
+export function addHealthNote(input: HealthNoteInput): HealthNote {
+  const note: HealthNote = { ...cleanHealthInput(input), id: newId('h'), createdAt: new Date().toISOString() }
+  commit({ ...data, health: [...data.health, note] })
+  return note
+}
+
+export function updateHealthNote(id: string, patch: Partial<HealthNoteInput>): void {
+  commit({
+    ...data,
+    health: data.health.map((h) =>
+      h.id === id ? { id: h.id, createdAt: h.createdAt, ...cleanHealthInput({ ...h, ...patch }) } : h,
+    ),
+  })
+}
+
+export function deleteHealthNote(id: string): void {
+  commit({ ...data, health: data.health.filter((h) => h.id !== id) })
+}
+
+function cleanHealthInput(input: HealthNoteInput): HealthNoteInput {
+  const out: HealthNoteInput = {
+    bunnyId: input.bunnyId,
+    date: isIsoDate(input.date) ? input.date : todayIso(),
+    noticed: input.noticed.trim(),
+    resolved: input.resolved === true,
+  }
+  if (input.topicSlug?.trim()) out.topicSlug = input.topicSlug.trim()
+  if (input.topicTitle?.trim()) out.topicTitle = input.topicTitle.trim()
+  if (input.did?.trim()) out.did = input.did.trim()
+  if (input.followUp?.trim()) out.followUp = input.followUp.trim()
+  return out
+}
+
 /* ---------------------------------------------------------------- queries */
 
 export function findBunny(d: MyBunnyData, id: string | undefined): Bunny | undefined {
@@ -651,6 +731,17 @@ export function weightsFor(d: MyBunnyData, bunnyId: string): WeightEntry[] {
   return d.weights[bunnyId] ?? []
 }
 
+/** A bunny's health notes, newest first (open ones before resolved on the same date). */
+export function healthNotesFor(d: MyBunnyData, bunnyId: string): HealthNote[] {
+  return d.health
+    .filter((h) => h.bunnyId === bunnyId)
+    .sort((a, b) => {
+      if (a.date !== b.date) return a.date < b.date ? 1 : -1
+      if (a.resolved !== b.resolved) return a.resolved ? 1 : -1
+      return a.createdAt < b.createdAt ? 1 : -1
+    })
+}
+
 /* --------------------------------------------------------- backup/restore */
 
 export function exportJson(d: MyBunnyData = data): string {
@@ -665,6 +756,7 @@ export interface ImportResult {
   bunnies: number
   reminders: number
   weights: number
+  health: number
 }
 
 /**
@@ -681,6 +773,8 @@ export function mergeData(
   const newBunnies = incoming.bunnies.filter((b) => !bunnyIds.has(b.id))
   const reminderIds = new Set(current.reminders.map((r) => r.id))
   const newReminders = incoming.reminders.filter((r) => !reminderIds.has(r.id))
+  const healthIds = new Set(current.health.map((h) => h.id))
+  const newHealth = incoming.health.filter((h) => !healthIds.has(h.id))
 
   const weights: Record<string, WeightEntry[]> = { ...current.weights }
   let weightCount = 0
@@ -697,9 +791,15 @@ export function mergeData(
       bunnies: [...current.bunnies, ...newBunnies],
       reminders: [...current.reminders, ...newReminders],
       weights,
+      health: [...current.health, ...newHealth],
       prefs: current.prefs,
     },
-    result: { bunnies: newBunnies.length, reminders: newReminders.length, weights: weightCount },
+    result: {
+      bunnies: newBunnies.length,
+      reminders: newReminders.length,
+      weights: weightCount,
+      health: newHealth.length,
+    },
   }
 }
 

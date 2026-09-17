@@ -222,6 +222,7 @@ const current: MyBunnyData = {
   bunnies: [{ id: 'b1', name: 'Clover', createdAt: 'x' }],
   reminders: [nails],
   weights: { b1: [{ date: '2026-09-01', grams: 1900 }] },
+  health: [{ id: 'h1', bunnyId: 'b1', date: '2026-09-01', noticed: 'Soft poops', resolved: true, createdAt: 'x' }],
   prefs: { weightUnit: 'g' },
 }
 const incoming: MyBunnyData = {
@@ -229,6 +230,10 @@ const incoming: MyBunnyData = {
   bunnies: [{ id: 'b1', name: 'Clover B.', createdAt: 'y' }, { id: 'b2', name: 'Pip', createdAt: 'z' }],
   reminders: [{ ...nails, title: 'Nail trim (backup)' }, booster],
   weights: { b1: [{ date: '2026-08-01', grams: 1850 }], b2: [{ date: '2026-09-10', grams: 1200 }] },
+  health: [
+    { id: 'h1', bunnyId: 'b1', date: '2026-09-01', noticed: 'SHOULD NOT OVERWRITE', resolved: false, createdAt: 'y' },
+    { id: 'h2', bunnyId: 'b2', date: '2026-09-12', noticed: 'Not eating hay', topicSlug: 'hay-pellets', topicTitle: 'Hay', resolved: false, createdAt: 'z' },
+  ],
   prefs: { weightUnit: 'lb' },
 }
 const merged = mergeData(current, incoming)
@@ -237,8 +242,19 @@ eq(merged.data.reminders.map((r) => r.title), ['Nail trim', 'RHDV2 vaccine boost
 eq(merged.data.weights.b1.map((w) => w.date), ['2026-08-01', '2026-09-01'], 'merge unions weights')
 eq(merged.data.weights.b2.length, 1, 'merge adds weights for a new bunny')
 eq(merged.data.prefs.weightUnit, 'g', 'merge keeps local prefs')
-eq(merged.result, { bunnies: 1, reminders: 1, weights: 2 }, 'merge result counts only what was added')
-eq(mergeData(merged.data, incoming).result, { bunnies: 0, reminders: 0, weights: 0 }, 'restoring the same backup twice adds nothing')
+eq(merged.data.health.map((h) => h.noticed), ['Soft poops', 'Not eating hay'], 'merge keeps local health note, adds new')
+eq(merged.result, { bunnies: 1, reminders: 1, weights: 2, health: 1 }, 'merge result counts only what was added')
+eq(mergeData(merged.data, incoming).result, { bunnies: 0, reminders: 0, weights: 0, health: 0 }, 'restoring the same backup twice adds nothing')
+// health notes sanitize: orphan + missing fields dropped
+const hs = sanitize({ bunnies: [{ id: 'b1', name: 'C' }], health: [
+  { id: 'h1', bunnyId: 'b1', date: '2026-09-01', noticed: '  Hiding ', resolved: 'yes' },
+  { id: 'h2', bunnyId: 'ghost', date: '2026-09-01', noticed: 'x' },
+  { id: 'h3', bunnyId: 'b1', date: 'bad', noticed: 'x' },
+] })
+eq(hs.health.length, 1, 'sanitize drops orphan / malformed health notes')
+eq(hs.health[0].noticed, 'Hiding', 'sanitize trims health note text')
+eq(hs.health[0].resolved, false, 'non-boolean resolved → false')
+eq(sanitize({ bunnies: [] }).health, [], 'old data without health → []')
 
 // due counting + ordering
 const ds: MyBunnyData = {
@@ -251,6 +267,7 @@ const ds: MyBunnyData = {
     { id: 'r4', bunnyId: 'b1', type: 'hay', title: 'Hay restock', intervalDays: 14, nextDue: '2026-09-30' },
   ],
   weights: {},
+  health: [],
   prefs: { weightUnit: 'lb' },
 }
 eq(dueCount(ds, today), { overdue: 1, today: 1, total: 2 }, 'dueCount ignores completed one-offs')

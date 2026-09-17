@@ -288,6 +288,73 @@ export type Database = {
         }
         Relationships: []
       }
+      // Bunny Help topics — mirrors supabase/migrations/20260917140000_care_topics.sql
+      care_topics: {
+        Row: {
+          id: string
+          org_id: string
+          slug: string
+          title: string
+          aliases: string[]
+          category: string
+          urgency: string
+          summary: string
+          what_to_do: string
+          article_slug: string | null
+          show_vets: boolean
+          hopshop_note: string | null
+          reviewed_by: string | null
+          reviewed_at: string | null
+          is_published: boolean
+          sort_order: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          slug: string
+          title: string
+          aliases?: string[]
+          category: string
+          urgency: string
+          summary?: string
+          what_to_do?: string
+          article_slug?: string | null
+          show_vets?: boolean
+          hopshop_note?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          slug?: string
+          title?: string
+          aliases?: string[]
+          category?: string
+          urgency?: string
+          summary?: string
+          what_to_do?: string
+          article_slug?: string | null
+          show_vets?: boolean
+          hopshop_note?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rabbits: {
         Row: {
           id: string
