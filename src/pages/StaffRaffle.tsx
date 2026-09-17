@@ -1,9 +1,12 @@
 // Staff manager for the Midwest BunFest Silent Auction (route /staff/raffle;
 // gated on events.bunfest.manage — the DB enforces it too). Phone-first: adding
 // an item starts with the camera, then the details. The "Auction setup" panel
-// holds the two session close times and an optional intro line; the public
-// catalog shows the intro line only, never the times.
+// holds the two session close times, an optional intro line, and the raffle
+// ticket pricing + details (the public raffle page shows those only when staff
+// have entered them; the ticket form itself is a test feature switched on in
+// /staff/settings). The public catalog shows the intro line only, never the times.
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen, SectionLabel } from '../components/ui'
@@ -20,6 +23,7 @@ import {
   formatEventTime,
   formatValue,
   isoToEventTime,
+  rafflePriceLine,
   sessionLabel,
   sortForStaff,
   type AuctionItem,
@@ -579,16 +583,23 @@ function ItemCard({
 function SetupPanel({
   orgId,
   settings,
+  canManageSettings,
   onSaved,
 }: {
   orgId: string
   settings: AuctionSettings | null
+  canManageSettings: boolean
   onSaved: () => void
 }) {
   const [editing, setEditing] = useState(false)
   const [morning, setMorning] = useState('')
   const [afternoon, setAfternoon] = useState('')
   const [intro, setIntro] = useState('')
+  // Raffle tickets (dollars / counts as typed; blank = not set)
+  const [ticketPrice, setTicketPrice] = useState('')
+  const [bundleQty, setBundleQty] = useState('')
+  const [bundlePrice, setBundlePrice] = useState('')
+  const [raffleDetails, setRaffleDetails] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -596,6 +607,10 @@ function SetupPanel({
     setMorning(isoToEventTime(settings?.morning_closes_at))
     setAfternoon(isoToEventTime(settings?.afternoon_closes_at))
     setIntro(settings?.intro_text ?? '')
+    setTicketPrice(centsToDollars(settings?.raffle_ticket_price_cents))
+    setBundleQty(settings?.raffle_bundle_qty ? String(settings.raffle_bundle_qty) : '')
+    setBundlePrice(centsToDollars(settings?.raffle_bundle_price_cents))
+    setRaffleDetails(settings?.raffle_details ?? '')
     setError(null)
     setEditing(true)
   }
@@ -604,6 +619,14 @@ function SetupPanel({
     e.preventDefault()
     setBusy(true)
     setError(null)
+    const qty = Number.parseInt(bundleQty, 10)
+    const bundle_qty = Number.isFinite(qty) && qty >= 2 ? qty : null
+    const bundle_price = dollarsToCents(bundlePrice)
+    if ((bundle_qty === null) !== (bundle_price === null)) {
+      setBusy(false)
+      setError('Enter both the bundle quantity (2 or more) and the bundle price, or leave both blank.')
+      return
+    }
     const { error } = await supabase.from('auction_settings').upsert(
       {
         org_id: orgId,
@@ -611,6 +634,10 @@ function SetupPanel({
         morning_closes_at: eventTimeToIso(morning),
         afternoon_closes_at: eventTimeToIso(afternoon),
         intro_text: intro.trim() || null,
+        raffle_ticket_price_cents: dollarsToCents(ticketPrice),
+        raffle_bundle_qty: bundle_qty,
+        raffle_bundle_price_cents: bundle_price,
+        raffle_details: raffleDetails.trim() || null,
       },
       { onConflict: 'org_id,event_slug' },
     )
@@ -625,6 +652,7 @@ function SetupPanel({
 
   const morningLabel = formatEventTime(settings?.morning_closes_at)
   const afternoonLabel = formatEventTime(settings?.afternoon_closes_at)
+  const priceLabel = rafflePriceLine(settings)
 
   return (
     <section className="space-y-2.5">
@@ -655,6 +683,68 @@ function SetupPanel({
                 placeholder="Shown at the top of the public catalog"
               />
             </label>
+
+            <div className="space-y-3 border-t border-slate-100 pt-3">
+              <div>
+                <p className="font-display text-[15px] font-extrabold text-ink">Raffle tickets</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                  Shown on the BunFest raffle page. Leave a price blank and the app shows no price
+                  at all — nothing is assumed.
+                </p>
+              </div>
+              <label className="block text-sm font-semibold text-slate-700">
+                Ticket price ($ each)
+                <input
+                  className={staffInput}
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  placeholder="Not set"
+                  value={ticketPrice}
+                  onChange={(e) => setTicketPrice(e.target.value)}
+                />
+              </label>
+              <div className="flex gap-3">
+                <label className="block flex-1 text-sm font-semibold text-slate-700">
+                  Bundle quantity
+                  <input
+                    className={staffInput}
+                    type="number"
+                    inputMode="numeric"
+                    min="2"
+                    step="1"
+                    placeholder="e.g. 6"
+                    value={bundleQty}
+                    onChange={(e) => setBundleQty(e.target.value)}
+                  />
+                </label>
+                <label className="block flex-1 text-sm font-semibold text-slate-700">
+                  Bundle price ($)
+                  <input
+                    className={staffInput}
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    placeholder="Not set"
+                    value={bundlePrice}
+                    onChange={(e) => setBundlePrice(e.target.value)}
+                  />
+                </label>
+              </div>
+              <label className="block text-sm font-semibold text-slate-700">
+                Raffle details (optional)
+                <textarea
+                  className={staffInput}
+                  rows={3}
+                  value={raffleDetails}
+                  onChange={(e) => setRaffleDetails(e.target.value)}
+                  placeholder="Where tickets are sold, drawing time, how winners are notified"
+                />
+              </label>
+            </div>
+
             <FormError>{error}</FormError>
             <div className="flex gap-2">
               <button type="submit" disabled={busy} className={`${btn.primary} flex-1 disabled:opacity-60`}>
@@ -686,6 +776,27 @@ function SetupPanel({
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Intro line</p>
               <p className="mt-0.5 text-sm text-slate-600">
                 {settings?.intro_text?.trim() || <span className="text-slate-400">None — the catalog shows items only</span>}
+              </p>
+            </div>
+            <div className="space-y-2 border-t border-slate-100 pt-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Raffle tickets</p>
+              <p className="text-sm font-semibold text-ink">
+                {priceLabel ?? <span className="font-normal text-slate-400">Price not set — the app shows no price</span>}
+              </p>
+              <p className="whitespace-pre-line text-sm text-slate-600">
+                {settings?.raffle_details?.trim() || <span className="text-slate-400">No details yet</span>}
+              </p>
+              <p className="text-xs leading-relaxed text-slate-500">
+                The in-app ticket reservation form is a test feature: it appears on the raffle
+                page only while switched on in{' '}
+                {canManageSettings ? (
+                  <Link to="/staff/settings" className="font-bold text-brand-blue hover:text-brand-blue-dark">
+                    Settings
+                  </Link>
+                ) : (
+                  <span>Settings (owners and admins)</span>
+                )}
+                .
               </p>
             </div>
             <button type="button" onClick={startEdit} className={pill}>
@@ -828,7 +939,9 @@ export default function StaffRaffle() {
         />
       )}
 
-      {!loading && <SetupPanel orgId={orgId} settings={settings} onSaved={load} />}
+      {!loading && (
+        <SetupPanel orgId={orgId} settings={settings} canManageSettings={can('settings.manage')} onSaved={load} />
+      )}
 
       <FormError>{error}</FormError>
 

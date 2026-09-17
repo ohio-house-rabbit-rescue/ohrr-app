@@ -4,11 +4,15 @@ import { PageHeader, Screen, Card, Badge, SectionLabel, btn } from '../component
 import { ContactLinks } from '../components/ContactLinks'
 import { ReserveSession } from '../components/ReserveSession'
 import { RaffleTickets } from '../components/RaffleTickets'
+import { useAuctionSettings } from '../features/raffle/useRaffleItems'
 import { Icon } from '../components/icons'
 
 export default function BunfestPage() {
   const { id } = useParams()
   const page = bunfestPageById(id)
+  // Raffle page only: staff-entered raffle details + ticket pricing (auction_settings).
+  const auction = useAuctionSettings(page?.feature === 'raffle')
+  const raffleDetails = auction?.raffle_details?.trim() || null
 
   if (!page) {
     return (
@@ -75,6 +79,12 @@ export default function BunfestPage() {
                   ))}
                 </ul>
               )}
+              {/* Live staff-entered raffle details (where tickets are sold, drawing time, ...) */}
+              {s.slot === 'raffle-details' && raffleDetails && (
+                <p className="mt-2.5 whitespace-pre-line rounded-xl bg-slate-50 px-3 py-2 text-sm leading-relaxed text-slate-700">
+                  {raffleDetails}
+                </p>
+              )}
             </Card>
           ))}
         </div>
@@ -87,7 +97,8 @@ export default function BunfestPage() {
             services={p.reserve.services}
           />
         )}
-        {p.feature === 'raffle' && <RaffleTickets />}
+        {/* Test feature — renders only while switched on in /staff/settings */}
+        {p.feature === 'raffle' && <RaffleTickets pricing={auction} />}
 
         {/* Email sign-up (e.g. toymaking) */}
         {p.emailSignup && (

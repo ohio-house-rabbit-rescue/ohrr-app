@@ -56,6 +56,46 @@ export function centsToDollars(cents: number | null | undefined): string {
   return (cents / 100).toFixed(2).replace(/\.00$/, '')
 }
 
+/* ---- raffle-ticket pricing (staff-entered in auction_settings; nothing is
+   hard-coded). A bundle counts only when BOTH its qty (>= 2) and price are set. ---- */
+
+export type RafflePricing = Pick<
+  AuctionSettings,
+  'raffle_ticket_price_cents' | 'raffle_bundle_qty' | 'raffle_bundle_price_cents'
+>
+
+export function raffleBundle(p: RafflePricing | null | undefined): { qty: number; cents: number } | null {
+  const qty = p?.raffle_bundle_qty ?? null
+  const cents = p?.raffle_bundle_price_cents ?? null
+  if (qty === null || cents === null || qty < 2 || cents < 0) return null
+  return { qty, cents }
+}
+
+// "$2 each" / "$2 each · 6 for $10" / "6 for $10", or null when nothing is set.
+export function rafflePriceLine(p: RafflePricing | null | undefined): string | null {
+  const each = p?.raffle_ticket_price_cents ?? null
+  const bundle = raffleBundle(p)
+  const parts: string[] = []
+  if (each !== null && each >= 0) parts.push(`${formatValue(each)} each`)
+  if (bundle) parts.push(`${bundle.qty} for ${formatValue(bundle.cents)}`)
+  return parts.length ? parts.join(' · ') : null
+}
+
+// Total for `qty` tickets: best price using whole bundles first, then singles.
+// null when the single-ticket price isn't set (a bundle alone can't price an
+// arbitrary quantity) — the app then shows no total.
+export function raffleTotalCents(p: RafflePricing | null | undefined, qty: number): number | null {
+  const each = p?.raffle_ticket_price_cents ?? null
+  if (each === null || each < 0 || qty < 1) return null
+  const bundle = raffleBundle(p)
+  if (!bundle) return qty * each
+  const bundles = Math.floor(qty / bundle.qty)
+  const singles = qty % bundle.qty
+  // Never charge more for a bundle than the same tickets bought singly.
+  const bundleCost = Math.min(bundle.cents, bundle.qty * each)
+  return bundles * bundleCost + singles * each
+}
+
 // Public order: available items first, then won; within each, sort_order then title.
 export function sortAuctionItems<T extends { sort_order: number; title: string; status: string }>(
   items: T[],

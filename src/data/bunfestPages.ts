@@ -8,6 +8,9 @@ export interface InfoSection {
   heading?: string
   body?: string
   list?: string[]
+  // Optional live add-on rendered under the copy: 'raffle-details' shows the
+  // staff-entered auction_settings.raffle_details text when one is set.
+  slot?: 'raffle-details'
 }
 
 export interface BunfestPage {
@@ -113,6 +116,7 @@ export const bunfestPages: BunfestPage[] = [
       {
         heading: 'Raffle',
         body: 'Midwest BunFest also features a raffle. Details for 2026 will be posted here as the event gets closer.',
+        slot: 'raffle-details',
       },
     ],
     feature: 'raffle',

@@ -1,6 +1,9 @@
 import { useState } from 'react'
-import { Card, SectionLabel, btn } from './ui'
+import { Card, SectionLabel, Badge, btn } from './ui'
 import { Icon } from './icons'
+import { useFeatureFlag } from '../features/settings/useSetting'
+import { RAFFLE_TICKETS_FLAG } from '../features/settings/testFeatures'
+import { formatValue, rafflePriceLine, raffleTotalCents, type RafflePricing } from '../features/raffle/types'
 
 const input =
   'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
@@ -11,21 +14,26 @@ function encode(data: Record<string, string>) {
     .join('&')
 }
 
-// Raffle pricing: $1 each, or 6 for $5.
-function priceCents(qty: number) {
-  return Math.floor(qty / 6) * 500 + (qty % 6) * 100
-}
-function money(cents: number) {
-  return `$${(cents / 100).toFixed(2).replace(/\.00$/, '')}`
-}
 function makeCode() {
   return `MWBF-${Math.floor(10000 + Math.random() * 90000)}`
 }
 
-// Get raffle tickets in the app. There's no payment processor yet, so this
-// reserves your numbered tickets and you pay at the raffle table — which also
-// saves writing your name & number on each paper ticket.
-export function RaffleTickets() {
+// TEST FEATURE — reserve numbered raffle tickets in the app and pay at the
+// raffle table. Hidden by default: it renders only while an owner has switched
+// on `raffle_tickets_enabled` in /staff/settings. Pricing is never hard-coded:
+// it comes from auction_settings (staff enter it in /staff/raffle → Auction
+// setup); when unset, no price or total is shown at all.
+//
+// Reservations post to the Netlify Form `raffle-request` (registered as a
+// hidden form in index.html) — quantity, total, ticket codes, name, phone.
+// Ticket codes are generated client-side; there is no payment processing.
+export function RaffleTickets({ pricing }: { pricing: RafflePricing | null }) {
+  const flag = useFeatureFlag(RAFFLE_TICKETS_FLAG)
+  if (flag.loading || !flag.value) return null
+  return <RaffleTicketsForm pricing={pricing} />
+}
+
+function RaffleTicketsForm({ pricing }: { pricing: RafflePricing | null }) {
   const [qty, setQty] = useState(1)
   const [form, setForm] = useState({ name: '', phone: '' })
   const [status, setStatus] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle')
@@ -34,7 +42,9 @@ export function RaffleTickets() {
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [k]: e.target.value }))
 
-  const total = priceCents(qty)
+  const priceLine = rafflePriceLine(pricing)
+  const total = raffleTotalCents(pricing, qty)
+  const totalLabel = total === null ? '' : formatValue(total) ?? ''
 
   const onSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault()
@@ -47,7 +57,7 @@ export function RaffleTickets() {
         body: encode({
           'form-name': 'raffle-request',
           quantity: String(qty),
-          total: money(total),
+          total: totalLabel,
           tickets: codes.join(', '),
           ...form,
         }),
@@ -59,18 +69,30 @@ export function RaffleTickets() {
     }
   }
 
+  const label = (
+    <div className="flex items-center gap-2">
+      <SectionLabel>{status === 'done' ? 'Your raffle tickets' : 'Get raffle tickets'}</SectionLabel>
+      <Badge tone="orange">Preview</Badge>
+    </div>
+  )
+
   if (status === 'done') {
     return (
       <section className="space-y-2.5">
-        <SectionLabel>Your raffle tickets</SectionLabel>
+        {label}
         <Card className="border-brand-orange/30 bg-brand-orange-50/40">
           <h3 className="font-display text-base font-extrabold text-ink">
             {tickets.length} {tickets.length === 1 ? 'ticket' : 'tickets'} reserved
           </h3>
           <p className="mt-1 text-sm leading-relaxed text-slate-600">
-            Show these at the raffle table to pay{' '}
-            <strong className="font-bold text-ink">{money(total)}</strong> and drop them in the
-            buckets for the prizes you want.
+            Show these at the raffle table to pay
+            {totalLabel && (
+              <>
+                {' '}
+                <strong className="font-bold text-ink">{totalLabel}</strong>
+              </>
+            )}
+            .
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {tickets.map((c) => (
@@ -83,8 +105,8 @@ export function RaffleTickets() {
             ))}
           </div>
           <p className="mt-3 text-xs text-slate-400">
-            Sample flow — payment happens in person until in-app payments are set up. Raffle
-            drawings are at 12:30 PM.
+            Test feature — payment happens in person at the raffle table; nothing is charged in
+            the app.
           </p>
         </Card>
       </section>
@@ -93,7 +115,7 @@ export function RaffleTickets() {
 
   return (
     <section className="space-y-2.5">
-      <SectionLabel>Get raffle tickets</SectionLabel>
+      {label}
       <Card>
         <form
           name="raffle-request"
@@ -105,7 +127,7 @@ export function RaffleTickets() {
         >
           <input type="hidden" name="form-name" value="raffle-request" />
           <input type="hidden" name="quantity" value={qty} />
-          <input type="hidden" name="total" value={money(total)} />
+          <input type="hidden" name="total" value={totalLabel} />
           <p className="hidden">
             <label>
               Don’t fill this out: <input name="bot-field" />
@@ -134,10 +156,14 @@ export function RaffleTickets() {
               </button>
             </div>
           </div>
-          <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            $1 each, or 6 for $5 ·{' '}
-            <strong className="font-bold text-ink">Total: {money(total)}</strong>
-          </p>
+          {/* Price line only when staff have entered pricing — never a placeholder. */}
+          {(priceLine || totalLabel) && (
+            <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              {priceLine}
+              {priceLine && totalLabel && ' · '}
+              {totalLabel && <strong className="font-bold text-ink">Total: {totalLabel}</strong>}
+            </p>
+          )}
 
           <label className="block text-sm font-semibold text-slate-700">
             Your name
@@ -160,8 +186,8 @@ export function RaffleTickets() {
             {status === 'submitting' ? 'Reserving…' : `Get ${qty} ${qty === 1 ? 'ticket' : 'tickets'}`}
           </button>
           <p className="text-center text-xs leading-relaxed text-slate-400">
-            Reserves your numbered tickets — pay at the raffle table at BunFest (in-app payment is
-            coming).
+            Reserves your numbered tickets — pay at the raffle table at BunFest. Test feature;
+            nothing is charged in the app.
           </p>
         </form>
       </Card>

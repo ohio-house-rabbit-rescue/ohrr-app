@@ -68,12 +68,14 @@ export function useAuctionItem(id: string | undefined): AuctionItem | null | und
   return item
 }
 
-// The event's auction setup row (intro line etc.). `null` when none is saved.
-export function useAuctionSettings(): AuctionSettings | null {
+// The event's auction setup row (intro line, raffle-ticket pricing/details).
+// `null` when none is saved. Pass `enabled = false` to skip the fetch on
+// screens that don't need it.
+export function useAuctionSettings(enabled = true): AuctionSettings | null {
   const [settings, setSettings] = useState<AuctionSettings | null>(null)
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return
+    if (!isSupabaseConfigured || !enabled) return
     let active = true
     supabase
       .from('auction_settings')
@@ -87,7 +89,7 @@ export function useAuctionSettings(): AuctionSettings | null {
     return () => {
       active = false
     }
-  }, [])
+  }, [enabled])
 
   return settings
 }
