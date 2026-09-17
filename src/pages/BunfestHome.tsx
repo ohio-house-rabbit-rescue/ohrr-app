@@ -1,10 +1,14 @@
 import { Link } from 'react-router-dom'
 import { event, activities } from '../data/event'
 import { BUNFEST_HUB } from '../data/content'
+import { useBunfestEvent, eventDate, eventTime } from '../lib/events'
 import { Screen, SectionLabel, ActionCard, IconTile, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 
 export default function BunfestHome() {
+  // Date / time / venue / theme from the shared BunFest event record (live
+  // when staff have published it, else the bundled seed) — never stale.
+  const bunfest = useBunfestEvent()
   return (
     <div>
       {/* Hero */}
@@ -24,16 +28,21 @@ export default function BunfestHome() {
           The Midwest’s biggest rabbit party
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-white/90">{event.tagline}</p>
+        {bunfest.theme && (
+          <p className="mt-2 text-sm font-bold text-white">
+            {new Date(bunfest.startsAt).getFullYear()} theme: {bunfest.theme}
+          </p>
+        )}
 
         <div className="mt-4 space-y-1.5 text-sm">
           <span className="flex items-center gap-2">
-            <Icon name="calendar" size={16} className="text-white/80" /> {event.date}
+            <Icon name="calendar" size={16} className="text-white/80" /> {eventDate(bunfest)}
           </span>
           <span className="flex items-center gap-2">
-            <Icon name="clock" size={16} className="text-white/80" /> {event.timeLabel}
+            <Icon name="clock" size={16} className="text-white/80" /> {eventTime(bunfest)}
           </span>
           <span className="flex items-center gap-2">
-            <Icon name="mappin" size={16} className="text-white/80" /> {event.venue.name} · {event.venue.city}
+            <Icon name="mappin" size={16} className="text-white/80" /> {bunfest.venue} · {bunfest.city}
           </span>
         </div>
 

@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom'
 import { event } from '../data/event'
 import { ohrr } from '../data/ohrr'
+import { useBunfestEvent, eventDate, eventTime, mapsUrl } from '../lib/events'
 import { PageHeader, Screen, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 
 export default function Visit() {
+  const bunfest = useBunfestEvent()
   return (
     <>
       <PageHeader
@@ -21,8 +23,8 @@ export default function Visit() {
             </span>
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">When</p>
-              <p className="font-bold text-ink">{event.date}</p>
-              <p className="text-sm text-slate-500">{event.timeLabel}</p>
+              <p className="font-bold text-ink">{eventDate(bunfest)}</p>
+              <p className="text-sm text-slate-500">{eventTime(bunfest)}</p>
             </div>
           </div>
         </Card>
@@ -35,8 +37,17 @@ export default function Visit() {
             </span>
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Where</p>
-              <p className="font-bold text-ink">{event.venue.name}</p>
-              <p className="text-sm text-slate-500">{event.venue.address}</p>
+              <p className="font-bold text-ink">{bunfest.venue}</p>
+              {bunfest.address && (
+                <a
+                  href={mapsUrl(bunfest.address)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-semibold text-brand-blue underline decoration-brand-blue/30 underline-offset-2"
+                >
+                  {bunfest.address}
+                </a>
+              )}
             </div>
           </div>
           <Link
@@ -73,10 +84,10 @@ export default function Visit() {
         <Card>
           <h3 className="font-display text-base font-extrabold text-ink">Good to know</h3>
           <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-slate-600">
-            <li>🅿️ {event.venue.parking}</li>
-            <li>💳 Cash & cards accepted for vendors, the auction, and raffle.</li>
-            <li>🐰 Bringing your rabbit? Read the Rabbit Attendance Agreement first.</li>
-            <li>👟 Comfortable shoes — it’s a full day of browsing and talks.</li>
+            <li>{event.venue.parking}</li>
+            <li>Cash & cards accepted for vendors, the auction, and raffle.</li>
+            <li>Bringing your rabbit? Read the Rabbit Attendance Agreement first.</li>
+            <li>Comfortable shoes — it’s a full day of browsing and talks.</li>
           </ul>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-sm font-bold text-brand-blue">
             <Link to="/bunfest/p/bringing-bunny" className="inline-flex items-center gap-1 hover:text-brand-blue-dark">

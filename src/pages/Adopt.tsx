@@ -14,6 +14,7 @@ import {
 } from '../components/ui'
 import { Icon } from '../components/icons'
 import { RabbitPhoto } from '../components/RabbitPhoto'
+import { AdoptionStepsCard } from './AdoptHowItWorks'
 
 const AGE_ORDER: AgeGroup[] = ['Baby', 'Young', 'Adult', 'Senior']
 
@@ -96,12 +97,25 @@ export default function Adopt() {
           </div>
         )}
 
+        {/* How adopting works — the 3 real steps from OHRR's site */}
+        <div className="space-y-2.5 pt-1">
+          <SectionLabel>How adopting works</SectionLabel>
+          <AdoptionStepsCard />
+          <Link
+            to="/adopt/how-it-works"
+            className="flex items-center justify-between gap-3 rounded-2xl border border-brand-blue/20 bg-brand-blue-50/60 px-4 py-3 text-sm font-bold text-brand-blue"
+          >
+            <span>Still deciding? Bunny matchmaking · Adoption Policy · Petfinder &amp; Adopt-A-Pet</span>
+            <Icon name="chevron" size={16} className="shrink-0" />
+          </Link>
+        </div>
+
         {/* Before you adopt */}
         <div className="space-y-2.5 pt-1">
           <SectionLabel>Before you adopt</SectionLabel>
           <Card>
             <p className="text-sm text-slate-600">
-              Every OHRR rabbit is spayed/neutered and vaccinated. Adopters agree to:
+              Every OHRR rabbit is spayed/neutered. From the Adoption Policy, adopters agree to:
             </p>
             <ul className="mt-3 space-y-2">
               {adoptRequirements.map((r, i) => (
@@ -115,7 +129,12 @@ export default function Adopt() {
 
         <Card className="border-brand-blue/20 bg-brand-blue-50/60">
           <p className="text-sm leading-relaxed text-slate-600">
-            Adoptions are by appointment at the Adoption Center, {ohrr.address}. Questions? Call{' '}
+            Adoptions are by appointment on Saturdays and Sundays at the Adoption Center,{' '}
+            {ohrr.address}. Questions? Email{' '}
+            <a href={`mailto:${ohrr.email}`} className="break-all font-semibold text-brand-blue">
+              {ohrr.email}
+            </a>{' '}
+            or call{' '}
             <a href={ohrr.phoneHref} className="font-semibold text-brand-blue">
               {ohrr.phone}
             </a>

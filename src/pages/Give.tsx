@@ -1,8 +1,78 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { givingOptions } from '../data/giving'
-import { event } from '../data/event'
-import { PageHeader, Screen } from '../components/ui'
+import { givingOptions, OHRR_EIN, type GivingOption } from '../data/giving'
+import { ohrr } from '../data/ohrr'
+import { PageHeader, Screen, SectionLabel } from '../components/ui'
 import { Icon } from '../components/icons'
+
+function isExternal(url?: string) {
+  return Boolean(url && !url.startsWith('mailto:'))
+}
+
+function GivingCard({ g }: { g: GivingOption }) {
+  const [open, setOpen] = useState(false)
+  const ctaCls =
+    'inline-flex items-center gap-1 rounded-full bg-brand-blue px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-blue-dark active:scale-[.98]'
+  const cta = g.to ? (
+    <Link to={g.to} className={ctaCls}>
+      {g.cta} <Icon name="chevron" size={14} />
+    </Link>
+  ) : (
+    <a
+      href={g.url}
+      target={isExternal(g.url) ? '_blank' : undefined}
+      rel="noopener noreferrer"
+      className={ctaCls}
+    >
+      {g.cta} <Icon name={isExternal(g.url) ? 'external' : 'mail'} size={14} />
+    </a>
+  )
+
+  return (
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+      <h3 className="font-display text-[15px] font-extrabold text-ink">{g.title}</h3>
+      <p className="mt-0.5 text-sm leading-relaxed text-slate-500">{g.description}</p>
+
+      {open && g.details && (
+        <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+          {g.details.map((d, i) => (
+            <p key={i} className="text-sm leading-relaxed text-slate-600">
+              {d}
+            </p>
+          ))}
+          {g.links && g.links.length > 0 && (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
+              {g.links.map((l) => (
+                <a
+                  key={l.url}
+                  href={l.url}
+                  target={isExternal(l.url) ? '_blank' : undefined}
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-sm font-bold text-brand-blue"
+                >
+                  {l.label} <Icon name={isExternal(l.url) ? 'external' : 'mail'} size={12} />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {cta}
+        {g.details && (
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+          >
+            {open ? 'Less' : 'More'}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function Give() {
   const featured = givingOptions.filter((g) => g.featured)
@@ -13,9 +83,9 @@ export default function Give() {
       <PageHeader
         icon="heart"
         title="Support OHRR"
-        subtitle="A 501(c)(3) nonprofit. Every gift funds rescue, vet care, spay/neuter & education — all year."
+        subtitle="A 501(c)(3) nonprofit that receives no government funds. Every gift funds rescue, vet care, spay/neuter & education — all year."
       />
-      <Screen className="space-y-4">
+      <Screen className="space-y-5">
         {featured.map((g) => (
           <a
             key={g.id}
@@ -36,50 +106,26 @@ export default function Give() {
         ))}
 
         <div className="space-y-2.5">
-          <p className="px-1 text-xs font-extrabold uppercase tracking-wider text-slate-400">
-            More ways to help
-          </p>
+          <SectionLabel>Every way to give</SectionLabel>
           <div className="grid grid-cols-1 gap-3">
-            {rest.map((g) => {
-              const cls =
-                'group rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md'
-              const inner = (
-                <>
-                  <span className="block font-display text-[15px] font-extrabold text-ink">
-                    {g.title}
-                  </span>
-                  <span className="mt-0.5 block text-sm leading-relaxed text-slate-500">
-                    {g.description}
-                  </span>
-                  <span className="mt-1.5 inline-block text-sm font-bold text-brand-blue group-hover:text-brand-blue-dark">
-                    {g.cta} →
-                  </span>
-                </>
-              )
-              return g.to ? (
-                <Link key={g.id} to={g.to} className={cls}>
-                  {inner}
-                </Link>
-              ) : (
-                <a key={g.id} href={g.url} target="_blank" rel="noopener noreferrer" className={cls}>
-                  {inner}
-                </a>
-              )
-            })}
+            {rest.map((g) => (
+              <GivingCard key={g.id} g={g} />
+            ))}
           </div>
         </div>
 
         <p className="px-1 text-center text-xs leading-relaxed text-slate-400">
-          Links open Ohio House Rabbit Rescue’s official pages at{' '}
+          Ohio House Rabbit Rescue is a 501(c)(3) · EIN {OHRR_EIN}. Links open OHRR’s official
+          pages at{' '}
           <a
-            href={event.links.ohrr}
+            href={ohrr.links.site}
             target="_blank"
             rel="noopener noreferrer"
             className="font-semibold text-brand-blue underline"
           >
             ohiohouserabbitrescue.org
           </a>
-          . Donations are processed by OHRR, not this app.
+          ; donations are processed by OHRR, not this app.
         </p>
       </Screen>
     </>

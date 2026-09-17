@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from './supabase'
 import type { Database } from './database.types'
 import type { IconName } from '../components/icons'
-import { careTopics, type CareTopic } from '../data/care'
+import { seedCareArticles, type SeedArticle } from '../data/careArticles'
 
 export type CareArticle = Database['public']['Tables']['care_articles']['Row']
 
@@ -62,46 +62,65 @@ export function parseArticleBody(body: string): ArticleBlock[] {
   return blocks
 }
 
-// Convert a built-in CareTopic's rich sections into the editable markdown body,
-// used by the staff editor's one-click "import the built-in guides".
-export function careTopicToBody(topic: CareTopic): string {
-  return topic.sections
-    .map((s) => {
-      const parts: string[] = []
-      if (s.heading) parts.push(`## ${s.heading}`)
-      if (s.body) parts.push(s.body)
-      if (s.list) parts.push(s.list.map((i) => `- ${i}`).join('\n'))
-      return parts.join('\n\n')
+// Split text into plain runs and tappable URLs / emails, so links inside a
+// staff-written body (or a seeded article) work without any markup.
+export type TextRun = { type: 'text'; text: string } | { type: 'link'; href: string; text: string }
+
+const LINK_RE = /(https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"’”)]|[\w.+-]+@[\w-]+\.[\w.-]+\w)/g
+
+export function linkify(text: string): TextRun[] {
+  const runs: TextRun[] = []
+  let last = 0
+  for (const m of text.matchAll(LINK_RE)) {
+    const idx = m.index ?? 0
+    if (idx > last) runs.push({ type: 'text', text: text.slice(last, idx) })
+    const raw = m[0]
+    const isEmail = !raw.startsWith('http')
+    runs.push({
+      type: 'link',
+      href: isEmail ? `mailto:${raw}` : raw,
+      text: isEmail ? raw : raw.replace(/^https?:\/\//, '').replace(/\/$/, ''),
     })
-    .join('\n\n')
+    last = idx + raw.length
+  }
+  if (last < text.length) runs.push({ type: 'text', text: text.slice(last) })
+  return runs
 }
 
-export interface StarterArticle {
-  slug: string
-  title: string
-  icon: string
-  summary: string
-  body: string
-  tip: string | null
-  sort_order: number
-}
+// The bundled articles as importable rows (the staff editor's one-click
+// "Import the built-in guides", and the app's fallback when the table is empty).
+export type StarterArticle = Omit<SeedArticle, 'source'>
 
-// The built-in guides as importable rows (faithful conversion; cta/link are
-// dropped — they can be re-added inline as text if wanted).
 export function starterArticles(): StarterArticle[] {
-  return careTopics.map((t, i) => ({
-    slug: t.id,
-    title: t.title,
-    icon: t.icon,
-    summary: t.summary,
-    body: careTopicToBody(t),
-    tip: t.tip ?? null,
-    sort_order: i,
+  return seedCareArticles.map(({ source: _source, ...a }) => a)
+}
+
+// The seed shaped like DB rows so Learn/LearnTopic render one shape either way.
+export function fallbackArticles(): CareArticle[] {
+  const now = '1970-01-01T00:00:00.000Z'
+  return seedCareArticles.map((a) => ({
+    id: a.slug,
+    org_id: '',
+    slug: a.slug,
+    title: a.title,
+    icon: a.icon,
+    summary: a.summary,
+    body: a.body,
+    tip: a.tip,
+    sort_order: a.sort_order,
+    is_published: true,
+    created_by: null,
+    created_at: now,
+    updated_at: now,
   }))
 }
 
+export function articleSource(slug: string): string | undefined {
+  return seedCareArticles.find((a) => a.slug === slug)?.source
+}
+
 // Public hook: live PUBLISHED care articles, ordered. null while loading, [] when
-// none/absent — so callers fall back to the built-in careTopics.
+// none/absent — so callers fall back to the bundled seed.
 export function useCareArticles(): CareArticle[] | null {
   const [items, setItems] = useState<CareArticle[] | null>(null)
 
@@ -117,8 +136,8 @@ export function useCareArticles(): CareArticle[] | null {
       .eq('is_published', true)
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true })
-      .then(({ data }) => {
-        if (active) setItems(data ?? [])
+      .then(({ data, error }) => {
+        if (active) setItems(error ? [] : (data ?? []))
       })
     return () => {
       active = false

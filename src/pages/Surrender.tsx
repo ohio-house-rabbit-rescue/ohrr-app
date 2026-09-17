@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { ohrr } from '../data/ohrr'
 import {
   surrenderIntro,
   surrenderSteps,
@@ -129,6 +130,14 @@ export default function Surrender() {
             Fill out the official relinquishment form right here in the app. Please contact OHRR
             first to confirm there’s space.
           </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5 px-1 text-sm font-bold text-brand-blue">
+            <a href={ohrr.links.ownerSurrenderForm} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1">
+              Owner form on ohiohouserabbitrescue.org <Icon name="external" size={13} />
+            </a>
+            <a href={ohrr.links.goodSamaritanForm} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1">
+              Good Samaritan form on ohiohouserabbitrescue.org <Icon name="external" size={13} />
+            </a>
+          </div>
         </section>
 
         {/* Contact */}

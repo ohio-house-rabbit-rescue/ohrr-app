@@ -1,10 +1,14 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import OhrrLayout from './components/OhrrLayout'
 import BunfestLayout from './components/BunfestLayout'
 // OHRR host app
 import OhrrHome from './pages/OhrrHome'
 import Adopt from './pages/Adopt'
+import AdoptHowItWorks from './pages/AdoptHowItWorks'
 import AdoptRabbit from './pages/AdoptRabbit'
+import Events from './pages/Events'
+import Vets from './pages/Vets'
+import FoundRabbit from './pages/FoundRabbit'
 import Tails from './pages/Tails'
 import TailDetail from './pages/TailDetail'
 import ShareTail from './pages/ShareTail'
@@ -52,6 +56,8 @@ import StaffAnnouncements from './pages/StaffAnnouncements'
 import StaffVolunteer from './pages/StaffVolunteer'
 import StaffLearn from './pages/StaffLearn'
 import StaffAdopt from './pages/StaffAdopt'
+import StaffEvents from './pages/StaffEvents'
+import StaffVets from './pages/StaffVets'
 
 export default function App() {
   return (
@@ -60,7 +66,13 @@ export default function App() {
       <Route element={<OhrrLayout />}>
         <Route path="/" element={<OhrrHome />} />
         <Route path="/adopt" element={<Adopt />} />
+        <Route path="/adopt/how-it-works" element={<AdoptHowItWorks />} />
         <Route path="/adopt/:id" element={<AdoptRabbit />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/vets" element={<Vets />} />
+        <Route path="/found" element={<FoundRabbit />} />
+        {/* The shared hero/featured slides (website + app) link to /give */}
+        <Route path="/give" element={<Navigate to="/support" replace />} />
         <Route path="/tails" element={<Tails />} />
         <Route path="/tails/share" element={<ShareTail />} />
         <Route path="/tails/:id" element={<TailDetail />} />
@@ -123,6 +135,8 @@ export default function App() {
           <Route path="announcements" element={<StaffAnnouncements />} />
           <Route path="volunteer" element={<StaffVolunteer />} />
           <Route path="learn" element={<StaffLearn />} />
+          <Route path="vets" element={<StaffVets />} />
+          <Route path="events" element={<StaffEvents />} />
           <Route path="team" element={<StaffTeam />} />
           <Route path="activity" element={<StaffActivity />} />
         </Route>

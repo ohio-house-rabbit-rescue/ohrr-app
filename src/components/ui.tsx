@@ -212,7 +212,7 @@ export function SegTabs<T extends string>({
 export function SampleNote({ children }: { children?: ReactNode }) {
   return (
     <div className="flex gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] leading-relaxed text-amber-900">
-      <span aria-hidden className="mt-0.5">ℹ️</span>
+      <Icon name="info" size={16} className="mt-0.5 shrink-0" />
       <p>
         <strong className="font-bold">Heads up:</strong> {children ?? SAMPLE_DATA_NOTE}
       </p>

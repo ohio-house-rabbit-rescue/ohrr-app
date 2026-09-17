@@ -59,12 +59,12 @@ export const faqCategories: FaqCategory[] = [
       {
         q: 'Can rabbits live outside?',
         a: 'No — house rabbits live indoors as part of the family. Outdoors exposes them to predators, parasites, and temperature extremes.',
-        link: { label: 'Living Space guide', to: '/learn/housing' },
+        link: { label: 'Bunny Living Space', to: '/learn/bunny-living-space' },
       },
       {
         q: 'I found a rabbit outside — what do I do?',
         a: 'A friendly or colorful rabbit found outdoors is almost always a lost or dumped pet that can’t survive on its own. Contain it safely and reach out for help.',
-        link: { label: 'Caught a stray?', to: '/learn/stray' },
+        link: { label: 'Found a rabbit?', to: '/found' },
       },
       {
         q: 'Can OHRR help me bond two rabbits?',
@@ -83,7 +83,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'What are the ways to give?',
-        a: 'One-time or recurring donations, workplace/matching gifts, the Amazon wishlist, the Hop Shop, the Legacy Fund (planned giving), and Midwest BunFest. Most supporters never find them all — they’re gathered here.',
+        a: 'Donate online, workplace/matching gifts, Kroger Community Rewards, the Amazon wish list, the merch store, the OHRR license plate, online affiliates, hosting a fundraiser, the Legacy Fund, and more — they’re all gathered here.',
         link: { label: 'Support OHRR', to: '/support' },
       },
       {
@@ -98,13 +98,13 @@ export const faqCategories: FaqCategory[] = [
     items: [
       {
         q: 'How do I volunteer?',
-        a: 'Sign up right in the app — bunny socialization, vet transport, events, or fostering. Each sign-up tells OHRR exactly which role you chose.',
+        a: 'OHRR’s four positions are Bunny Socialization, Buncare, Vet Delivery & Pick-up, and Bunny Field Rescuer — each with its requirements and real sign-up right in the app, plus a list of other needs.',
         link: { label: 'Volunteer', to: '/volunteer' },
       },
       {
-        q: 'What does fostering involve?',
-        a: 'You provide a safe indoor space and daily care; OHRR covers vet care and supplies and supports you the whole way. It’s the fastest way to grow rescue capacity.',
-        link: { label: 'Foster a rabbit', to: '/volunteer/foster' },
+        q: 'Where do I find a rabbit-savvy vet?',
+        a: 'OHRR’s vet directory is in the app — filter by region, tap to call, and see who is open 24/7 for exotics emergencies.',
+        link: { label: 'Find a vet', to: '/vets' },
       },
       {
         q: 'I’m struggling with my rabbit — can I surrender it?',

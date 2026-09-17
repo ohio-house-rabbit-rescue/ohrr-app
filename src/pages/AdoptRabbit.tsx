@@ -37,7 +37,7 @@ export default function AdoptRabbit() {
     return (
       <Screen className="space-y-4 text-center">
         <div className="pt-6 text-5xl" aria-hidden>
-          🐰
+          <img src="/ohrr-mark.png" alt="" className="mx-auto h-14 w-14 object-contain" />
         </div>
         <h1 className="font-display text-xl font-extrabold text-ink">This bunny has hopped on</h1>
         <p className="text-sm text-slate-600">

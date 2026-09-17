@@ -1,90 +1,104 @@
-import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { hopShopItems, hopShopCategories } from '../data/hopshop'
+import { hopShopIntro, hopShopProducts, hopShopPurchaseNote } from '../data/hopshop'
 import { ohrr } from '../data/ohrr'
-import { PageHeader, Screen, Card, Badge, SampleNote, SegTabs } from '../components/ui'
+import { useHopShopProducts, money } from '../lib/hopshopPublic'
+import { mapsUrl } from '../lib/events'
+import { PageHeader, Screen, Card, SectionLabel } from '../components/ui'
 import { Icon } from '../components/icons'
 
-const CATEGORIES = ['All', ...hopShopCategories] as const
-type Filter = (typeof CATEGORIES)[number]
-
 export default function HopShop() {
-  const [category, setCategory] = useState<Filter>('All')
-
-  const list = useMemo(
-    () => (category === 'All' ? hopShopItems : hopShopItems.filter((i) => i.category === category)),
-    [category],
-  )
+  const live = useHopShopProducts()
+  const inStock = live ?? []
 
   return (
     <>
       <PageHeader
         icon="bag"
         title="Hop Shop"
-        subtitle="Rabbit supplies and OHRR merch — every purchase funds rescue, vet care, and education."
+        subtitle="Food, supplies and toys at the Adoption Center — profits support OHRR."
       />
-      <Screen className="space-y-4">
-        <SampleNote>
-          This is sample inventory to show how the shop works. OHRR’s real, in-stock items will
-          appear here as the team adds them.
-        </SampleNote>
+      <Screen className="space-y-5">
+        <p className="px-1 text-sm leading-relaxed text-slate-600">{hopShopIntro}</p>
 
-        {/* Where to shop */}
+        {/* Hours + address (map link) */}
         <Card className="border-slate-200 bg-slate-50/80">
-          <p className="text-sm leading-relaxed text-slate-600">
-            Browse what’s available, then pick it up in person — at the OHRR Adoption Center or the
-            Hop Shop table at Midwest BunFest. (Purchases happen in person, not in the app.)
+          <div className="flex items-center gap-2 text-sm">
+            <Icon name="clock" size={15} className="shrink-0 text-brand-blue" />
+            <span className="font-semibold text-ink">Hop Shop hours:</span>
+            <span className="text-slate-600">{ohrr.hopShopHours}</span>
+          </div>
+          <div className="mt-2.5 flex items-start gap-2 text-sm">
+            <Icon name="mappin" size={15} className="mt-0.5 shrink-0 text-brand-blue" />
+            <span>
+              <a
+                href={mapsUrl(ohrr.address)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-brand-blue underline decoration-brand-blue/30 underline-offset-2"
+              >
+                {ohrr.addressLine1}, {ohrr.addressLine2}
+              </a>
+              <span className="mt-1 block text-xs leading-relaxed text-slate-500">{ohrr.directions}</span>
+            </span>
+          </div>
+          <p className="mt-2.5 text-xs text-slate-500">
+            {ohrr.adoptionsNote} —{' '}
+            <Link to="/appointment" className="font-semibold text-brand-blue">
+              schedule a visit
+            </Link>
+            . {hopShopPurchaseNote}
           </p>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex items-start gap-2">
-              <Icon name="mappin" size={15} className="mt-0.5 shrink-0 text-brand-blue" />
-              <span className="text-slate-600">{ohrr.address}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Icon name="clock" size={15} className="shrink-0 text-brand-blue" />
-              <span className="text-slate-600">{ohrr.hours}</span>
-            </div>
-          </dl>
         </Card>
 
-        <SegTabs options={CATEGORIES} value={category} onChange={setCategory} wrap />
+        {/* Live inventory, when OHRR opens it to the public */}
+        {inStock.length > 0 && (
+          <section className="space-y-2.5">
+            <SectionLabel>In the shop now</SectionLabel>
+            <div className="grid grid-cols-1 gap-3">
+              {inStock.map((p) => (
+                <Card key={p.id} className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-display text-[15px] font-extrabold text-ink">{p.name}</h3>
+                    {p.description && (
+                      <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{p.description}</p>
+                    )}
+                  </div>
+                  {p.price_cents > 0 && (
+                    <span className="shrink-0 font-display text-lg font-black text-brand-blue">
+                      {money(p.price_cents)}
+                    </span>
+                  )}
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
 
-        <div className="grid grid-cols-1 gap-3">
-          {list.map((item) => (
-            <Card key={item.id} className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-display text-[15px] font-extrabold text-ink">{item.name}</h3>
-                </div>
-                <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{item.blurb}</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <Badge tone="orange">{item.category}</Badge>
-                  <span
-                    className={`text-xs font-bold ${
-                      item.stock === 'Low stock' ? 'text-amber-600' : 'text-emerald-600'
-                    }`}
-                  >
-                    {item.stock}
-                  </span>
-                </div>
+        {/* What the shop carries */}
+        <section className="space-y-2.5">
+          <SectionLabel>Products for purchase</SectionLabel>
+          <Card className="divide-y divide-slate-100 !p-0">
+            {hopShopProducts.map((p) => (
+              <div key={p.name} className="px-4 py-3">
+                <p className="font-display text-[15px] font-extrabold text-ink">{p.name}</p>
+                {p.note && <p className="mt-0.5 text-sm leading-relaxed text-slate-500">{p.note}</p>}
               </div>
-              <span className="shrink-0 font-display text-lg font-black text-brand-blue">
-                {item.price}
-              </span>
-            </Card>
-          ))}
-        </div>
+            ))}
+          </Card>
+        </section>
 
-        <Card className="border-brand-orange/20 bg-brand-orange-50/50 text-center">
+        <Card className="border-brand-orange/20 bg-brand-orange-50/50">
           <p className="text-sm leading-relaxed text-slate-600">
-            Planning a trip to pick something up? Visits are by appointment.
+            Setting up for a new bunny? See{' '}
+            <Link to="/learn/bunny-living-space" className="font-semibold text-brand-blue">
+              Bunny Living Space
+            </Link>{' '}
+            for what to buy first. The Hop Shop also has a table at{' '}
+            <Link to="/bunfest" className="font-semibold text-brand-blue">
+              Midwest BunFest
+            </Link>
+            .
           </p>
-          <Link
-            to="/appointment"
-            className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
-          >
-            Schedule a visit <Icon name="chevron" size={14} />
-          </Link>
         </Card>
       </Screen>
     </>

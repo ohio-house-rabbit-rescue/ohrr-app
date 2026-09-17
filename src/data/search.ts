@@ -1,12 +1,13 @@
 // A simple in-app global search index, compiled from the app's content so the
-// header search can find screens, rabbits, vendors, care topics, tails, volunteer
-// roles, giving options, and BunFest sessions. Page-specific search can layer on
-// later; for now search covers the whole app.
+// header search can find screens, rabbits, vendors, care articles, vets, events,
+// tails, volunteer roles, giving options, and BunFest sessions.
 import { sampleRabbits } from './adoptables'
 import { vendors } from './vendors'
-import { careTopics } from './care'
+import { seedCareArticles } from './careArticles'
+import { seedVets } from './vets'
+import { seedEvents } from './events'
 import { tails } from './tails'
-import { volunteerWays } from './volunteer'
+import { volunteerWays, otherVolunteerNeeds } from './volunteer'
 import { givingOptions } from './giving'
 import { sessions } from './sessions'
 
@@ -28,17 +29,22 @@ const mk = (title: string, subtitle: string, to: string, group: string, extra = 
 
 const screens: { title: string; subtitle: string; to: string; extra?: string }[] = [
   { title: 'Home', subtitle: 'OHRR home', to: '/' },
-  { title: 'Adopt a Rabbit', subtitle: 'Adoptable bunnies', to: '/adopt', extra: 'adoption apply' },
+  { title: 'Adopt a Rabbit', subtitle: 'Adoptable bunnies & how adopting works', to: '/adopt', extra: 'adoption apply application petfinder' },
+  { title: 'Adoption Policy', subtitle: 'Requirements, fees & procedure', to: '/adopt/how-it-works', extra: 'policy fee bonded pair indoor' },
   { title: 'Happy Tails', subtitle: 'Adoption stories', to: '/tails', extra: 'follow updates' },
   { title: 'Bunny Services', subtitle: 'Bonding & vet clinic', to: '/services', extra: 'appointment' },
-  { title: 'Rabbit Care', subtitle: 'Learn', to: '/learn', extra: 'diet housing health' },
-  { title: 'Volunteer', subtitle: 'Ways to help', to: '/volunteer', extra: 'foster transport socialize' },
-  { title: 'Support OHRR', subtitle: 'Donate & give', to: '/support', extra: 'donation gift wishlist' },
+  { title: 'Rabbit Care', subtitle: 'Learn', to: '/learn', extra: 'diet housing health litter toys' },
+  { title: 'Find a Vet', subtitle: 'Rabbit-savvy vets in Ohio', to: '/vets', extra: 'veterinarian emergency exotic spay neuter medvet' },
+  { title: 'Found a Rabbit?', subtitle: 'Strays, field rescue & surrender', to: '/found', extra: 'stray lost abandoned catch surrender admissions' },
+  { title: 'Volunteer', subtitle: 'Ways to help', to: '/volunteer', extra: 'socialization buncare transport field rescue' },
+  { title: 'Events', subtitle: 'OHRR hoppenings', to: '/events', extra: 'calendar bunfest' },
+  { title: 'Support OHRR', subtitle: 'Donate & give', to: '/support', extra: 'donation gift wishlist kroger license plate merch' },
+  { title: 'Hop Shop', subtitle: 'Supplies & merch', to: '/hop-shop', extra: 'hay pellets litter toys store hours' },
   { title: 'Surrendering a Rabbit', subtitle: 'Owner surrender', to: '/surrender', extra: 'relinquish intake give up rehome' },
-  { title: 'About OHRR', subtitle: 'Mission & contact', to: '/about', extra: 'hours phone address' },
+  { title: 'About OHRR', subtitle: 'Mission, team & contact', to: '/about', extra: 'hours phone address directions instagram facebook' },
   { title: 'Settings', subtitle: 'Your info & app', to: '/settings', extra: 'profile email version' },
   { title: 'Help', subtitle: 'How the app works', to: '/help', extra: 'guide' },
-  { title: 'Midwest BunFest', subtitle: 'The festival', to: '/bunfest', extra: 'event october' },
+  { title: 'Midwest BunFest', subtitle: 'The festival', to: '/bunfest', extra: 'event october binky on' },
   { title: 'BunFest Schedule', subtitle: 'Education sessions', to: '/bunfest/schedule', extra: 'talks' },
   { title: 'BunFest Vendors', subtitle: 'Marketplace', to: '/bunfest/vendors', extra: 'shopping' },
   { title: 'Event Map', subtitle: 'Floor plan', to: '/bunfest/map', extra: 'booth' },
@@ -52,12 +58,15 @@ export const searchIndex: SearchItem[] = [
   ...sampleRabbits.map((r) =>
     mk(r.name, `${r.breed ?? 'Rabbit'} · adoptable`, `/adopt/${r.id}`, 'Adoptable rabbits', `${r.tags?.join(' ') ?? ''} ${r.description ?? ''}`),
   ),
-  ...careTopics.map((c) =>
-    mk(c.title, c.summary, `/learn/${c.id}`, 'Rabbit care', c.sections.map((s) => s.heading ?? '').join(' ')),
+  ...seedCareArticles.map((c) => mk(c.title, c.summary, `/learn/${c.slug}`, 'Rabbit care', c.body.slice(0, 400))),
+  ...seedVets.map((v) =>
+    mk(v.name, [v.city, v.region].filter(Boolean).join(' · '), '/vets', 'Vets', `${v.doctors ?? ''} ${v.notes ?? ''} ${v.isEmergency ? 'emergency 24/7' : ''}`),
   ),
+  ...seedEvents.map((e) => mk(e.title, [e.venue, e.city].filter(Boolean).join(' · '), '/events', 'Events', `${e.theme ?? ''} ${e.summary ?? ''}`)),
   ...vendors.map((v) => mk(v.name, v.category, `/bunfest/vendors/${v.id}`, 'BunFest vendors', v.description)),
   ...tails.map((t) => mk(t.bunny, 'Happy Tail', `/tails/${t.id}`, 'Happy Tails', t.summary)),
-  ...volunteerWays.map((w) => mk(w.title, w.tagline, `/volunteer/${w.slug}`, 'Volunteer', '')),
+  ...volunteerWays.map((w) => mk(w.title, w.tagline, `/volunteer/${w.slug}`, 'Volunteer', w.requirements.join(' '))),
+  ...otherVolunteerNeeds.map((n) => mk(n, 'Other volunteer need', '/volunteer', 'Volunteer', '')),
   ...givingOptions.map((g) => mk(g.title, g.description, '/support', 'Ways to give', '')),
   ...sessions
     .filter((s) => !s.isBreak)

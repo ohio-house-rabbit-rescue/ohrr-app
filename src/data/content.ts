@@ -1,6 +1,7 @@
 // App-wide constants and navigation for both the OHRR host app and the
 // Midwest BunFest sub-app.
 import type { IconName } from '../components/icons'
+import { BUNNY_PHOTOS } from './photos'
 
 export const SAMPLE_DATA_NOTE =
   'Showing the most recent (2025) lineup. The 2026 roster is announced closer to the event.'
@@ -26,22 +27,43 @@ export interface HubItem {
 export const OHRR_TABS: TabItem[] = [
   { to: '/', label: 'Home', icon: 'home', end: true },
   { to: '/adopt', label: 'Adopt', icon: 'heart' },
-  { to: '/tails', label: 'Tails', icon: 'sparkles' },
   { to: '/learn', label: 'Learn', icon: 'book' },
   { to: '/volunteer', label: 'Volunteer', icon: 'users' },
-  { to: '/support', label: 'Support', icon: 'gift' },
+  { to: '/events', label: 'Events', icon: 'calendar' },
+  { to: '/support', label: 'Give', icon: 'gift' },
+]
+
+// Home quick actions — real photos, no icons. (Photos are the bundled,
+// freely-licensed rabbit photos credited on the Settings screen.)
+export interface QuickAction {
+  to: string
+  title: string
+  subtitle: string
+  photo: string
+}
+
+export const OHRR_QUICK_ACTIONS: QuickAction[] = [
+  { to: '/vets', title: 'Find a vet', subtitle: 'Rabbit-savvy vets · 24/7 emergency', photo: BUNNY_PHOTOS.silver },
+  { to: '/found', title: 'Found a stray?', subtitle: 'Catch it safely & who to call', photo: BUNNY_PHOTOS.tailGreyGrass },
+  { to: '/adopt', title: 'Adopt', subtitle: 'Meet the bunnies & how it works', photo: BUNNY_PHOTOS.caramelLop },
+  { to: '/volunteer', title: 'Volunteer', subtitle: 'Four ways to help the buns', photo: BUNNY_PHOTOS.tailGreyLap },
+  { to: '/support', title: 'Give', subtitle: 'Every way to support OHRR', photo: BUNNY_PHOTOS.spotted },
+  { to: '/events', title: 'Events', subtitle: 'What’s coming up', photo: BUNNY_PHOTOS.tailFluffy },
 ]
 
 export const OHRR_HUB: HubItem[] = [
-  { to: '/adopt', title: 'Adopt a Rabbit', subtitle: 'Meet adoptable buns & apply', icon: 'heart' },
+  { to: '/adopt', title: 'Adopt a Rabbit', subtitle: 'Meet adoptable buns & how adopting works', icon: 'heart' },
   { to: '/tails', title: 'Happy Tails', subtitle: 'See where adopted bunnies are now', icon: 'sparkles' },
-  { to: '/rescues', title: 'Find a Rescue', subtitle: 'Rabbit rescues across the country', icon: 'mappin' },
+  { to: '/learn', title: 'Rabbit Care', subtitle: 'Diet, litter, bonding, toys & more', icon: 'book' },
+  { to: '/vets', title: 'Find a Vet', subtitle: 'Rabbit-savvy vets across Ohio', icon: 'phone' },
+  { to: '/found', title: 'Found a Rabbit?', subtitle: 'Strays, field rescue & surrender', icon: 'mappin' },
+  { to: '/volunteer', title: 'Volunteer', subtitle: 'Socialization, Buncare, vet runs & rescue', icon: 'users' },
+  { to: '/events', title: 'Events', subtitle: 'Midwest BunFest & OHRR hoppenings', icon: 'calendar' },
+  { to: '/support', title: 'Support OHRR', subtitle: 'Donate & every way to give', icon: 'gift', tone: 'orange' },
+  { to: '/hop-shop', title: 'Hop Shop', subtitle: 'Supplies & OHRR merch at the center', icon: 'bag' },
   { to: '/services', title: 'Bunny Services', subtitle: 'Bonding sessions & vet clinic days', icon: 'calendar' },
-  { to: '/learn', title: 'Rabbit Care', subtitle: 'Diet, housing, bonding & more', icon: 'book' },
-  { to: '/volunteer', title: 'Volunteer', subtitle: 'Give your time to the buns', icon: 'users' },
-  { to: '/support', title: 'Support OHRR', subtitle: 'Donate & ways to help', icon: 'gift', tone: 'orange' },
-  { to: '/hop-shop', title: 'Hop Shop', subtitle: 'Rabbit supplies & OHRR merch', icon: 'bag' },
-  { to: '/about', title: 'About OHRR', subtitle: 'Our mission, story & contact', icon: 'info' },
+  { to: '/rescues', title: 'Find a Rescue', subtitle: 'Rabbit rescues across the country', icon: 'mappin' },
+  { to: '/about', title: 'About OHRR', subtitle: 'Mission, story, team & contact', icon: 'info' },
 ]
 
 /* ---------- Midwest BunFest sub-app (all routes under /bunfest) ---------- */

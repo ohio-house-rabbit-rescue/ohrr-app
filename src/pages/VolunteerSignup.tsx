@@ -43,7 +43,7 @@ export default function VolunteerSignup() {
     return (
       <Screen className="space-y-4 text-center">
         <div className="pt-6 text-5xl" aria-hidden>
-          🐰
+          <img src="/ohrr-mark.png" alt="" className="mx-auto h-14 w-14 object-contain" />
         </div>
         <h1 className="font-display text-xl font-extrabold text-ink">You’re on the list!</h1>
         <p className="text-sm leading-relaxed text-slate-600">

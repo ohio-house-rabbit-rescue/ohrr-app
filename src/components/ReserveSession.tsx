@@ -60,7 +60,7 @@ export function ReserveSession({
         <SectionLabel>Reserve a session</SectionLabel>
         <Card className="border-brand-blue/20 bg-brand-blue-50/50 text-center">
           <div className="text-4xl" aria-hidden>
-            🐰
+            <img src="/ohrr-mark.png" alt="" className="mx-auto h-14 w-14 object-contain" />
           </div>
           <h3 className="mt-1 font-display text-base font-extrabold text-ink">Time requested!</h3>
           <p className="mt-1 text-sm leading-relaxed text-slate-600">

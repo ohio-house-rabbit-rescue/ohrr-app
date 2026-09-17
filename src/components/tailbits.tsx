@@ -30,7 +30,7 @@ export function BunnyPhoto({
       aria-label={name}
     >
       <span className="text-[2.5rem] leading-none drop-shadow-sm" aria-hidden>
-        🐰
+        <img src="/ohrr-mark.png" alt="" className="mx-auto h-14 w-14 object-contain" />
       </span>
     </div>
   )
