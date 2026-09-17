@@ -6,7 +6,8 @@
 import { Link } from 'react-router-dom'
 import { Icon } from '../../components/icons'
 import { CountBadge } from './ui'
-import { useMyBunny, dueCount, nextReminder, describeDue, todayIso } from './storage'
+import { useBunnyPhoto } from './photos'
+import { useMyBunny, dueCount, nextReminder, describeDue, todayIso, activeBunnies, collectionTitle } from './storage'
 import { useCareTopics } from '../bunnyhelp/useTopics'
 import type { CareTopic } from '../bunnyhelp/types'
 
@@ -49,11 +50,12 @@ export default function MyBunnyHomeCard() {
   const { topics } = useCareTopics()
   const today = todayIso()
   const counts = dueCount(data, today)
-  const bunnies = data.bunnies
+  const bunnies = activeBunnies(data)
   const hasBunny = bunnies.length > 0
   const tip = tipOfTheDay(topics)
-  const photo =
-    bunnies.find((b) => b.photoDataUrl)?.photoDataUrl ?? SAMPLE_PHOTOS[dayOfYear() % SAMPLE_PHOTOS.length]
+  const first = bunnies.find((b) => b.hasPhoto)
+  const ownPhoto = useBunnyPhoto(first?.id, first?.hasPhoto)
+  const photo = ownPhoto ?? SAMPLE_PHOTOS[dayOfYear() % SAMPLE_PHOTOS.length]
 
   let headline: string
   let status: string
@@ -90,7 +92,9 @@ export default function MyBunnyHomeCard() {
         />
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-brand-blue">My Bunny</span>
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-brand-blue">
+              {collectionTitle(bunnies.length)}
+            </span>
             <CountBadge overdue={counts.overdue} today={counts.today} />
           </span>
           <span className="mt-0.5 block truncate font-display text-[17px] font-black leading-tight text-ink">

@@ -6,14 +6,17 @@ import { MbIcon } from '../icons'
 import {
   BackLink,
   BunnyAvatar,
+  BunnyPhoto,
   CalendarHint,
   DuePill,
   EmergencyCard,
   Field,
+  RoleChip,
   SaveWarning,
   VetNote,
   WeightChart,
   mbInput,
+  useDocumentTitle,
 } from '../ui'
 import { HOP_SHOP_TO, LEARN_TO, VET_DIRECTORY } from '../links'
 import HealthNotesSection from '../HealthNotes'
@@ -38,6 +41,10 @@ import {
   addWeight,
   deleteWeight,
   setWeightUnit,
+  archiveBunny,
+  restoreBunny,
+  activeBunnies,
+  collectionTitle,
   todayIso,
   formatAge,
   formatDate,
@@ -47,6 +54,9 @@ import {
   gramsToLbOz,
   lbOzToGrams,
   REMINDER_PRESETS,
+  ARCHIVE_REASONS,
+  ARCHIVE_REASON_LABEL,
+  type ArchiveReason,
   type Bunny,
   type Reminder,
   type WeightEntry,
@@ -59,6 +69,8 @@ export default function BunnyProfile() {
   const { id } = useParams()
   const data = useMyBunny()
   const bunny = findBunny(data, id)
+  const title = collectionTitle(activeBunnies(data).length)
+  useDocumentTitle(bunny ? `${bunny.name} · ${title}` : title)
 
   if (!bunny) {
     return (
@@ -77,15 +89,19 @@ export default function BunnyProfile() {
   const weights = weightsFor(data, bunny.id)
   const health = healthNotesFor(data, bunny.id)
   const age = formatAge(bunny, today)
+  const archived = Boolean(bunny.archived)
 
   return (
     <div>
-      <ProfileHeader bunny={bunny} />
+      <ProfileHeader bunny={bunny} title={title} />
 
       <Screen className="space-y-6">
+        {bunny.archived && <ArchivedBanner bunny={bunny} today={today} />}
+
         <div>
           <h1 className="font-display text-2xl font-black text-ink">{bunny.name}</h1>
           <div className="mt-2 flex flex-wrap gap-1.5">
+            <RoleChip role={bunny.role} />
             {age && <Badge tone="blue">{age}</Badge>}
             {bunny.sex && bunny.sex !== 'unknown' && <Badge tone="blue">{SEX_LABEL[bunny.sex]}</Badge>}
             {bunny.breed && <Badge tone="slate">{bunny.breed}</Badge>}
@@ -98,7 +114,7 @@ export default function BunnyProfile() {
         {/* Bunny Help — "Clover is…" routes to OHRR's own guidance; notes save to the timeline below */}
         <HelpSearch bunnyId={bunny.id} bunnyName={bunny.name} />
 
-        <RemindersSection bunny={bunny} reminders={reminders} today={today} />
+        <RemindersSection bunny={bunny} reminders={reminders} today={today} archived={archived} />
 
         <WeightSection bunny={bunny} entries={weights} unit={data.prefs.weightUnit} today={today} />
 
@@ -138,6 +154,8 @@ export default function BunnyProfile() {
           </Card>
         )}
 
+        {!archived && <ArchiveSection bunny={bunny} today={today} />}
+
         <EmergencyCard />
       </Screen>
     </div>
@@ -146,38 +164,19 @@ export default function BunnyProfile() {
 
 /* ------------------------------------------------------------- header */
 
-function ProfileHeader({ bunny }: { bunny: Bunny }) {
+function ProfileHeader({ bunny, title }: { bunny: Bunny; title: string }) {
   const editBtn =
     'inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-bold shadow-md backdrop-blur transition'
-  if (bunny.photoDataUrl) {
-    return (
-      <div className="relative">
-        <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100">
-          <img src={bunny.photoDataUrl} alt={bunny.name} className="h-full w-full object-cover" />
-        </div>
-        <Link
-          to="/my-bunny"
-          aria-label="Back to My Bunny"
-          className="absolute left-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-ink shadow-md backdrop-blur transition hover:bg-white"
-        >
-          <Icon name="arrowLeft" size={20} />
-        </Link>
-        <Link to={`/my-bunny/${bunny.id}/edit`} className={`${editBtn} absolute right-4 top-4 bg-white/90 text-ink hover:bg-white`}>
-          <MbIcon name="edit" size={15} /> Edit
-        </Link>
-      </div>
-    )
-  }
-  return (
+  const noPhoto = (
     <div className="bg-gradient-to-b from-brand-blue to-brand-blue-dark px-5 pb-6 pt-4 text-white">
       <div className="flex items-center justify-between">
-        <BackLinkOnBlue />
+        <BackLinkOnBlue title={title} />
         <Link to={`/my-bunny/${bunny.id}/edit`} className={`${editBtn} bg-white/15 text-white hover:bg-white/25`}>
           <MbIcon name="edit" size={15} /> Edit
         </Link>
       </div>
       <div className="mt-4 flex items-center gap-4">
-        <BunnyAvatar bunny={bunny} size={72} />
+        <BunnyAvatar bunny={{ ...bunny, hasPhoto: false }} size={72} />
         <Link
           to={`/my-bunny/${bunny.id}/edit`}
           className="text-sm font-semibold text-white/80 underline decoration-white/40 underline-offset-2 hover:text-white"
@@ -187,13 +186,143 @@ function ProfileHeader({ bunny }: { bunny: Bunny }) {
       </div>
     </div>
   )
+  if (!bunny.hasPhoto) return noPhoto
+  return (
+    <div className="relative">
+      <div className={`w-full overflow-hidden bg-slate-100 ${bunny.archived ? 'grayscale-[30%]' : ''}`}>
+        <BunnyPhoto bunny={bunny} className="aspect-[4/3] h-auto w-full" />
+      </div>
+      <Link
+        to="/my-bunny"
+        aria-label={`Back to ${title}`}
+        className="absolute left-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-ink shadow-md backdrop-blur transition hover:bg-white"
+      >
+        <Icon name="arrowLeft" size={20} />
+      </Link>
+      <Link to={`/my-bunny/${bunny.id}/edit`} className={`${editBtn} absolute right-4 top-4 bg-white/90 text-ink hover:bg-white`}>
+        <MbIcon name="edit" size={15} /> Edit
+      </Link>
+    </div>
+  )
 }
 
-function BackLinkOnBlue() {
+function BackLinkOnBlue({ title }: { title: string }) {
   return (
     <Link to="/my-bunny" className="inline-flex items-center gap-1 text-sm font-bold text-white/90 hover:text-white">
-      <Icon name="arrowLeft" size={16} /> My Bunny
+      <Icon name="arrowLeft" size={16} /> {title}
     </Link>
+  )
+}
+
+/* ------------------------------------------------------------ archive */
+
+/** Shown at the top of an archived bunny's profile: reason, date, note, and the way back. */
+function ArchivedBanner({ bunny, today }: { bunny: Bunny; today: string }) {
+  const [err, setErr] = useState<string | null>(null)
+  const a = bunny.archived!
+  const restore = () => {
+    try {
+      restoreBunny(bunny.id)
+      setErr(null)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Couldn’t restore.')
+    }
+  }
+  return (
+    <Card className="border-slate-300 bg-slate-100/80">
+      <div className="flex items-start gap-3">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-200 text-slate-600">
+          <MbIcon name="lock" size={18} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Archived</p>
+          <p className="mt-0.5 font-display text-[15px] font-extrabold text-ink">
+            {ARCHIVE_REASON_LABEL[a.reason]} · {formatDate(a.date, today)}
+          </p>
+          {a.note && <p className="mt-1 text-sm leading-relaxed text-slate-600">{a.note}</p>}
+          <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
+            {bunny.name}’s records are kept here, but they’re off Home and their reminders aren’t counted.
+          </p>
+          <button type="button" onClick={restore} className={`${btn.outline} mt-3 px-4 py-2`}>
+            Restore {bunny.name}
+          </button>
+          {err && <p className="mt-2 text-xs font-semibold text-red-600">{err}</p>}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+/** "Archive this bunny" — reason, date (default today) and an optional note. Nothing is deleted. */
+function ArchiveSection({ bunny, today }: { bunny: Bunny; today: string }) {
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState<ArchiveReason>('adopted')
+  const [date, setDate] = useState(today)
+  const [note, setNote] = useState('')
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    archiveBunny(bunny.id, { reason, date, note })
+    setOpen(false)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  if (!open) {
+    return (
+      <section className="space-y-1.5">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="mx-auto flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100"
+        >
+          <MbIcon name="lock" size={15} /> Archive this bunny
+        </button>
+        <p className="text-center text-xs leading-relaxed text-slate-400">
+          Adopted out, rehomed or passed away? Archiving keeps every record but takes {bunny.name} off Home.
+        </p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="space-y-2.5">
+      <SectionLabel>Archive {bunny.name}</SectionLabel>
+      <Card>
+        <form onSubmit={onSubmit} className="space-y-3">
+          <p className="text-sm leading-relaxed text-slate-600">
+            {bunny.name}’s profile, weight log, health notes and reminders stay on this phone; they just move to
+            the Archived list and stop being counted. You can restore them any time.
+          </p>
+          <Field label="Reason">
+            <select className={mbInput} value={reason} onChange={(e) => setReason(e.target.value as ArchiveReason)}>
+              {ARCHIVE_REASONS.map((r) => (
+                <option key={r} value={r}>
+                  {ARCHIVE_REASON_LABEL[r]}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Date">
+            <input type="date" className={mbInput} value={date} max={today} onChange={(e) => setDate(e.target.value)} required />
+          </Field>
+          <Field label="Note" optional hint="e.g. who adopted them, or anything you want to remember.">
+            <input className={mbInput} value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} />
+          </Field>
+          <div className="flex gap-2">
+            <button type="submit" className={`${btn.blue} flex-1`}>
+              Archive {bunny.name}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </Card>
+    </section>
   )
 }
 
@@ -204,11 +333,22 @@ const smallBtn =
 const smallBtnBlue =
   'inline-flex items-center gap-1.5 rounded-full bg-brand-blue px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-brand-blue-dark active:scale-[.98]'
 
-function RemindersSection({ bunny, reminders, today }: { bunny: Bunny; reminders: Reminder[]; today: string }) {
+function RemindersSection({
+  bunny,
+  reminders,
+  today,
+  archived,
+}: {
+  bunny: Bunny
+  reminders: Reminder[]
+  today: string
+  archived: boolean
+}) {
   const upcoming = reminders.filter(isUpcoming)
   const completed = reminders.filter((r) => !isUpcoming(r))
   const usedTypes = new Set(upcoming.map((r) => r.type))
-  const suggestions = REMINDER_PRESETS.filter((p) => p.type !== 'custom' && !usedTypes.has(p.type))
+  // No nudges to track more for a bunny who has left.
+  const suggestions = archived ? [] : REMINDER_PRESETS.filter((p) => p.type !== 'custom' && !usedTypes.has(p.type))
   const newTo = `/my-bunny/${bunny.id}/reminders/new`
 
   const addAll = () => downloadIcs(buildAllRemindersIcs(upcoming, bunny.name), allRemindersFilename(bunny.name))
@@ -216,7 +356,7 @@ function RemindersSection({ bunny, reminders, today }: { bunny: Bunny; reminders
   return (
     <section className="space-y-2.5">
       <div className="flex items-center justify-between">
-        <SectionLabel>Care reminders</SectionLabel>
+        <SectionLabel>Care reminders{archived ? ' · not counted while archived' : ''}</SectionLabel>
         <Link to={newTo} className="inline-flex items-center gap-1 px-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark">
           <MbIcon name="plus" size={14} /> Add
         </Link>
@@ -225,7 +365,9 @@ function RemindersSection({ bunny, reminders, today }: { bunny: Bunny; reminders
       {upcoming.length === 0 ? (
         <Card>
           <p className="text-sm leading-relaxed text-slate-600">
-            No reminders yet. Start with the usual ones — each has a typical interval you can change.
+            {archived
+              ? 'No reminders on record.'
+              : 'No reminders yet. Start with the usual ones — each has a typical interval you can change.'}
           </p>
         </Card>
       ) : (

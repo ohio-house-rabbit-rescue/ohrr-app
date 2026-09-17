@@ -1,26 +1,69 @@
 // My Bunny — local-first "care companion" data for the visitor's OWN rabbit(s).
 //
-// Everything lives on the device (localStorage, one versioned JSON blob under
-// `ohrr.mybunny.v1`). No account, no backend, nothing is transmitted. Same
-// useSyncExternalStore pattern as lib/profile.ts and lib/follow.ts, so any
+// Everything lives on the device. Metadata (bunnies, reminders, weights, health
+// notes) is one versioned JSON blob in localStorage under `ohrr.mybunny.v2`;
+// photos live in IndexedDB (see photos.ts), one record per bunny id, so a
+// rescue or foster can keep up to MAX_BUNNIES rabbits without hitting
+// localStorage's ~5 MB ceiling. No account, no backend, nothing is transmitted.
+//
+// v1 (`ohrr.mybunny.v1`) embedded each photo as `photoDataUrl` in the JSON. On
+// first load after the upgrade the v1 blob is read, the photos are copied into
+// IndexedDB, the JSON is re-saved as v2 with `hasPhoto: true` instead of the
+// data URL, and the v1 key is removed once every photo landed.
+//
+// Same useSyncExternalStore pattern as lib/profile.ts and lib/follow.ts, so any
 // screen re-renders when the data changes. All localStorage access is wrapped
 // in try/catch — in private mode or when the quota is full the app keeps
 // working in memory and `getLastSaveError()` tells the UI.
 //
-// This module deliberately has no relative imports so its pure helpers can be
-// exercised by a plain `node` script (see scripts/check-mybunny.ts).
+// The only relative import is photos.ts, which has no top-level browser
+// access, so the pure helpers here can still be exercised by a plain `node`
+// script (see scripts/mybunny-check.ts).
 
 import { useSyncExternalStore } from 'react'
+// Explicit .ts extension so plain `node scripts/mybunny-check.ts` can resolve it too.
+import { deletePhoto, getAllPhotos, putPhoto, putPhotos } from './photos.ts'
 
 /* ------------------------------------------------------------------ types */
 
 export type Sex = 'female' | 'male' | 'unknown'
 
+/** The person's relationship to the rabbit — how a rescue, foster or sponsor keeps records. */
+export type BunnyRole = 'pet' | 'foster' | 'sponsored' | 'resident'
+
+export const BUNNY_ROLES: readonly BunnyRole[] = ['pet', 'foster', 'sponsored', 'resident']
+
+export const ROLE_LABEL: Record<BunnyRole, string> = {
+  pet: 'My pet',
+  foster: 'Foster',
+  sponsored: 'Sponsored',
+  resident: 'Rescue resident',
+}
+
+export type ArchiveReason = 'adopted' | 'rehomed' | 'passed' | 'other'
+
+export const ARCHIVE_REASONS: readonly ArchiveReason[] = ['adopted', 'rehomed', 'passed', 'other']
+
+export const ARCHIVE_REASON_LABEL: Record<ArchiveReason, string> = {
+  adopted: 'Adopted',
+  rehomed: 'Rehomed',
+  passed: 'Passed away',
+  other: 'Other',
+}
+
+export interface BunnyArchive {
+  reason: ArchiveReason
+  /** YYYY-MM-DD */
+  date: string
+  note?: string
+}
+
 export interface Bunny {
   id: string
   name: string
-  /** Downscaled (≤512px) JPEG data URL chosen by the user. */
-  photoDataUrl?: string
+  /** True when a downscaled photo is stored in IndexedDB under this bunny's id. */
+  hasPhoto?: boolean
+  role: BunnyRole
   /** YYYY-MM-DD */
   birthday?: string
   /** Used when the birthday isn't known. Age keeps counting up from `approxAgeAsOf`. */
@@ -32,6 +75,8 @@ export interface Bunny {
   /** YYYY-MM-DD spayed / neutered */
   fixedOn?: string
   notes?: string
+  /** Set when the bunny has left (adopted, rehomed, passed away…). Records are kept. */
+  archived?: BunnyArchive
   /** ISO timestamp */
   createdAt: string
 }
@@ -80,7 +125,7 @@ export interface HealthNote {
 }
 
 export interface MyBunnyData {
-  version: 1
+  version: 2
   bunnies: Bunny[]
   /** Weight log per bunny id, sorted by date ascending. */
   weights: Record<string, WeightEntry[]>
@@ -90,7 +135,25 @@ export interface MyBunnyData {
   prefs: { weightUnit: WeightUnit }
 }
 
-export const STORAGE_KEY = 'ohrr.mybunny.v1'
+export const STORAGE_KEY = 'ohrr.mybunny.v2'
+/** The pre-IndexedDB blob, read once and migrated. */
+export const LEGACY_STORAGE_KEY = 'ohrr.mybunny.v1'
+
+/** Active (non-archived) bunnies per phone. Photos are in IndexedDB, so this is a UX limit, not a storage one. */
+export const MAX_BUNNIES = 100
+
+export const LIMIT_MESSAGE = `That’s ${MAX_BUNNIES} bunnies on this phone — the most My Bunny can keep track of. Archive or remove one to add another.`
+
+/* ---------------------------------------------------------- naming */
+
+/** 1 → "My Bunny", 2 → "My Bunnies", 3+ → "My Fluffle" (a group of rabbits is a fluffle). */
+export function collectionTitle(activeCount: number): string {
+  if (activeCount >= 3) return 'My Fluffle'
+  if (activeCount === 2) return 'My Bunnies'
+  return 'My Bunny'
+}
+
+export const FLUFFLE_NOTE = 'A group of rabbits is called a fluffle.'
 
 /* --------------------------------------------------- reminder suggestions */
 
@@ -323,10 +386,10 @@ export function formatWeightDelta(grams: number, unit: WeightUnit): string | nul
   return `${sign}${oz} oz`
 }
 
-/* -------------------------------------------------------------- the store */
+/* ------------------------------------------------------------- sanitize */
 
 function emptyData(): MyBunnyData {
-  return { version: 1, bunnies: [], weights: {}, reminders: [], health: [], prefs: { weightUnit: 'lb' } }
+  return { version: 2, bunnies: [], weights: {}, reminders: [], health: [], prefs: { weightUnit: 'lb' } }
 }
 
 const REMINDER_TYPES: ReminderType[] = ['nails', 'rhdv2', 'vet', 'hay', 'pellets', 'litter', 'custom']
@@ -340,24 +403,41 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
+function isPhotoDataUrl(v: unknown): v is string {
+  return typeof v === 'string' && v.startsWith('data:image/')
+}
+
+function sanitizeArchive(v: unknown): BunnyArchive | undefined {
+  if (!isRecord(v)) return undefined
+  const reason = ARCHIVE_REASONS.includes(v.reason as ArchiveReason) ? (v.reason as ArchiveReason) : 'other'
+  if (!isIsoDate(v.date)) return undefined
+  return { reason, date: v.date, ...(str(v.note) ? { note: (v.note as string).trim() } : {}) }
+}
+
+/**
+ * A v1 record carried its photo inline as `photoDataUrl`; v2 keeps only a
+ * `hasPhoto` flag (the picture itself lives in IndexedDB). Either form of input
+ * sanitizes to the v2 shape — the inline photo is stripped here and picked up
+ * separately by `extractPhotos()`.
+ */
 function sanitizeBunny(v: unknown): Bunny | null {
   if (!isRecord(v)) return null
   const id = str(v.id)
   const name = str(v.name)
   if (!id || !name) return null
-  const photo =
-    typeof v.photoDataUrl === 'string' && v.photoDataUrl.startsWith('data:image/')
-      ? v.photoDataUrl
-      : undefined
+  const hasPhoto = v.hasPhoto === true || isPhotoDataUrl(v.photoDataUrl)
+  const role = BUNNY_ROLES.includes(v.role as BunnyRole) ? (v.role as BunnyRole) : 'pet'
   const sex = SEXES.includes(v.sex as Sex) ? (v.sex as Sex) : undefined
   const approx =
     typeof v.approxAgeMonths === 'number' && Number.isFinite(v.approxAgeMonths) && v.approxAgeMonths >= 0
       ? Math.round(v.approxAgeMonths)
       : undefined
+  const archived = sanitizeArchive(v.archived)
   return {
     id,
     name: name.trim(),
-    ...(photo ? { photoDataUrl: photo } : {}),
+    ...(hasPhoto ? { hasPhoto: true } : {}),
+    role,
     ...(isIsoDate(v.birthday) ? { birthday: v.birthday } : {}),
     ...(approx !== undefined ? { approxAgeMonths: approx } : {}),
     ...(isIsoDate(v.approxAgeAsOf) ? { approxAgeAsOf: v.approxAgeAsOf } : {}),
@@ -365,8 +445,19 @@ function sanitizeBunny(v: unknown): Bunny | null {
     ...(str(v.breed) ? { breed: (v.breed as string).trim() } : {}),
     ...(isIsoDate(v.fixedOn) ? { fixedOn: v.fixedOn } : {}),
     ...(str(v.notes) ? { notes: v.notes as string } : {}),
+    ...(archived ? { archived } : {}),
     createdAt: typeof v.createdAt === 'string' ? v.createdAt : new Date().toISOString(),
   }
+}
+
+/** Inline photos (v1 blobs and backup files) keyed by bunny id — what goes into IndexedDB. */
+export function extractPhotos(raw: unknown): Record<string, string> {
+  const out: Record<string, string> = {}
+  if (!isRecord(raw) || !Array.isArray(raw.bunnies)) return out
+  for (const b of raw.bunnies) {
+    if (isRecord(b) && str(b.id) && isPhotoDataUrl(b.photoDataUrl)) out[b.id as string] = b.photoDataUrl
+  }
+  return out
 }
 
 function sanitizeReminder(v: unknown, bunnyIds: Set<string>): Reminder | null {
@@ -439,7 +530,7 @@ function sortWeights(entries: WeightEntry[]): WeightEntry[] {
   return [...byDate.values()].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
 }
 
-/** Coerce anything (old versions, hand-edited backups, garbage) into a valid dataset. */
+/** Coerce anything (v1 blobs, backups, hand-edited files, garbage) into a valid v2 dataset. */
 export function sanitize(raw: unknown): MyBunnyData {
   const base = emptyData()
   if (!isRecord(raw)) return base
@@ -455,7 +546,7 @@ export function sanitize(raw: unknown): MyBunnyData {
     : []
   const prefs =
     isRecord(raw.prefs) && raw.prefs.weightUnit === 'g' ? { weightUnit: 'g' as const } : base.prefs
-  return { version: 1, bunnies, weights: sanitizeWeights(raw.weights, ids), reminders, health, prefs }
+  return { version: 2, bunnies, weights: sanitizeWeights(raw.weights, ids), reminders, health, prefs }
 }
 
 /** Safe JSON parse → sanitized dataset (never throws). */
@@ -468,32 +559,81 @@ export function parseData(text: string | null | undefined): MyBunnyData {
   }
 }
 
-function load(): MyBunnyData {
+/* -------------------------------------------------------------- the store */
+
+function readKey(key: string): string | null {
   try {
-    return parseData(localStorage.getItem(STORAGE_KEY))
+    return localStorage.getItem(key)
   } catch {
-    return emptyData()
+    return null
   }
 }
 
-let data: MyBunnyData = load()
+/** v2 when present; otherwise the v1 blob (re-saved as v2 on the first write). */
+function load(): { data: MyBunnyData; fromLegacy: boolean } {
+  const v2 = readKey(STORAGE_KEY)
+  if (v2 !== null) return { data: parseData(v2), fromLegacy: false }
+  const v1 = readKey(LEGACY_STORAGE_KEY)
+  if (v1 !== null) return { data: parseData(v1), fromLegacy: true }
+  return { data: emptyData(), fromLegacy: false }
+}
+
+const loaded = load()
+let data: MyBunnyData = loaded.data
 let lastSaveError: string | null = null
 const listeners = new Set<() => void>()
 
-function commit(next: MyBunnyData) {
-  data = next
+function persist(next: MyBunnyData): boolean {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     lastSaveError = null
+    return true
   } catch (e) {
-    // Private mode / quota exceeded (large photos). Keep working in memory.
+    // Private mode / quota exceeded. Keep working in memory.
     lastSaveError =
       e instanceof Error && /quota/i.test(e.name + e.message)
-        ? 'This phone’s storage for the app is full — try a smaller photo or remove one.'
+        ? 'This phone’s storage for the app is full — remove a bunny or some notes to make room.'
         : 'Couldn’t save on this phone (private browsing?). Changes will be lost when you close the app.'
+    return false
   }
+}
+
+function commit(next: MyBunnyData) {
+  data = next
+  persist(next)
   listeners.forEach((l) => l())
 }
+
+/**
+ * One-time v1 → v2 migration of photos. Runs at load whenever the v1 key still
+ * exists: its inline photos are copied into IndexedDB (only for bunnies that
+ * still have `hasPhoto`, so a photo removed since isn't resurrected), the v2
+ * blob is written, and the v1 key is removed once every photo landed. If any
+ * write fails the v1 key stays, so the next load simply tries again.
+ */
+function migrateLegacy() {
+  const raw = readKey(LEGACY_STORAGE_KEY)
+  if (raw === null) return
+  if (loaded.fromLegacy) persist(data)
+  let photos: Record<string, string> = {}
+  try {
+    photos = extractPhotos(JSON.parse(raw))
+  } catch {
+    // Unreadable v1 blob: nothing to carry over.
+  }
+  const keep = new Set(data.bunnies.filter((b) => b.hasPhoto).map((b) => b.id))
+  for (const id of Object.keys(photos)) if (!keep.has(id)) delete photos[id]
+  void putPhotos(photos).then((failed) => {
+    if (failed.length > 0) return
+    try {
+      localStorage.removeItem(LEGACY_STORAGE_KEY)
+    } catch {
+      /* leave it; harmless */
+    }
+  })
+}
+
+migrateLegacy()
 
 function subscribe(cb: () => void) {
   listeners.add(cb)
@@ -535,7 +675,9 @@ export function newId(prefix = 'b'): string {
 
 export type BunnyInput = Omit<Bunny, 'id' | 'createdAt'>
 
+/** Throws with LIMIT_MESSAGE when the phone already has MAX_BUNNIES active bunnies. */
 export function addBunny(input: BunnyInput): Bunny {
+  if (atBunnyLimit(data)) throw new Error(LIMIT_MESSAGE)
   const bunny: Bunny = {
     ...cleanBunnyInput(input),
     id: newId('b'),
@@ -554,7 +696,28 @@ export function updateBunny(id: string, patch: Partial<BunnyInput>): void {
   })
 }
 
-/** Removes the bunny plus its reminders and weight log. */
+/**
+ * Store or remove a bunny's photo (IndexedDB) and flip its `hasPhoto` flag.
+ * Resolves false — and sets the save warning — when the photo couldn't be kept.
+ */
+export async function setBunnyPhoto(id: string, dataUrl: string | undefined): Promise<boolean> {
+  if (!dataUrl) {
+    await deletePhoto(id)
+    if (findBunny(data, id)?.hasPhoto) updateBunny(id, { hasPhoto: false })
+    return true
+  }
+  const ok = await putPhoto(id, dataUrl)
+  if (ok) {
+    if (!findBunny(data, id)?.hasPhoto) updateBunny(id, { hasPhoto: true })
+  } else {
+    if (findBunny(data, id)?.hasPhoto) updateBunny(id, { hasPhoto: false })
+    lastSaveError = 'Couldn’t keep the photo on this phone (private browsing, or storage is blocked). Everything else was saved.'
+    listeners.forEach((l) => l())
+  }
+  return ok
+}
+
+/** Removes the bunny plus its reminders, weight log, health notes and photo. */
 export function deleteBunny(id: string): void {
   const weights = { ...data.weights }
   delete weights[id]
@@ -565,13 +728,49 @@ export function deleteBunny(id: string): void {
     health: data.health.filter((h) => h.bunnyId !== id),
     weights,
   })
+  void deletePhoto(id)
+}
+
+/** Pure: the dataset with one bunny archived (records untouched). */
+export function applyArchive(d: MyBunnyData, id: string, archive: BunnyArchive): MyBunnyData {
+  const clean: BunnyArchive = {
+    reason: ARCHIVE_REASONS.includes(archive.reason) ? archive.reason : 'other',
+    date: isIsoDate(archive.date) ? archive.date : todayIso(),
+    ...(archive.note?.trim() ? { note: archive.note.trim() } : {}),
+  }
+  return { ...d, bunnies: d.bunnies.map((b) => (b.id === id ? { ...b, archived: clean } : b)) }
+}
+
+/** Pure: the dataset with one bunny back in the active list. */
+export function applyRestore(d: MyBunnyData, id: string): MyBunnyData {
+  return {
+    ...d,
+    bunnies: d.bunnies.map((b) => {
+      if (b.id !== id) return b
+      const { archived: _drop, ...rest } = b
+      return rest
+    }),
+  }
+}
+
+export function archiveBunny(id: string, archive: BunnyArchive): void {
+  commit(applyArchive(data, id, archive))
+}
+
+/** Throws with LIMIT_MESSAGE when restoring would exceed MAX_BUNNIES active bunnies. */
+export function restoreBunny(id: string): void {
+  if (findBunny(data, id)?.archived && atBunnyLimit(data)) throw new Error(LIMIT_MESSAGE)
+  commit(applyRestore(data, id))
 }
 
 // Drop empty optional fields so the stored record stays tidy. Note: a patch
 // that sets a field to undefined clears it (the spread above lets that through).
 function cleanBunnyInput(input: BunnyInput): BunnyInput {
-  const out: BunnyInput = { name: input.name.trim() }
-  if (input.photoDataUrl) out.photoDataUrl = input.photoDataUrl
+  const out: BunnyInput = {
+    name: input.name.trim(),
+    role: BUNNY_ROLES.includes(input.role) ? input.role : 'pet',
+  }
+  if (input.hasPhoto === true) out.hasPhoto = true
   if (isIsoDate(input.birthday)) out.birthday = input.birthday
   if (typeof input.approxAgeMonths === 'number' && input.approxAgeMonths >= 0 && !out.birthday) {
     out.approxAgeMonths = Math.round(input.approxAgeMonths)
@@ -581,6 +780,8 @@ function cleanBunnyInput(input: BunnyInput): BunnyInput {
   if (input.breed?.trim()) out.breed = input.breed.trim()
   if (isIsoDate(input.fixedOn)) out.fixedOn = input.fixedOn
   if (input.notes?.trim()) out.notes = input.notes.trim()
+  const archived = sanitizeArchive(input.archived)
+  if (archived) out.archived = archived
   return out
 }
 
@@ -693,6 +894,26 @@ export function findBunny(d: MyBunnyData, id: string | undefined): Bunny | undef
   return d.bunnies.find((b) => b.id === id)
 }
 
+export function isArchived(b: Pick<Bunny, 'archived'>): boolean {
+  return Boolean(b.archived)
+}
+
+/** Bunnies still in your care, in the order they were added. */
+export function activeBunnies(d: MyBunnyData): Bunny[] {
+  return d.bunnies.filter((b) => !b.archived)
+}
+
+/** Archived bunnies, most recently archived first. */
+export function archivedBunnies(d: MyBunnyData): Bunny[] {
+  return d.bunnies
+    .filter((b) => b.archived)
+    .sort((a, b) => (a.archived!.date < b.archived!.date ? 1 : a.archived!.date > b.archived!.date ? -1 : 0))
+}
+
+export function atBunnyLimit(d: MyBunnyData): boolean {
+  return activeBunnies(d).length >= MAX_BUNNIES
+}
+
 /** A bunny's reminders, upcoming first (soonest due at the top), then completed one-offs. */
 export function remindersFor(d: MyBunnyData, bunnyId: string): Reminder[] {
   return d.reminders
@@ -709,16 +930,21 @@ export function nextReminder(d: MyBunnyData, bunnyId: string): Reminder | undefi
   return remindersFor(d, bunnyId).find(isUpcoming)
 }
 
-/** How many upcoming reminders are due today or overdue (across all bunnies, or one). */
+/**
+ * How many upcoming reminders are due today or overdue — across all ACTIVE
+ * bunnies, or one. An archived bunny's reminders are kept but never counted.
+ */
 export function dueCount(
   d: MyBunnyData,
   today: string = todayIso(),
   bunnyId?: string,
 ): { overdue: number; today: number; total: number } {
+  const archived = new Set(d.bunnies.filter((b) => b.archived).map((b) => b.id))
   let overdue = 0
   let dueToday = 0
   for (const r of d.reminders) {
     if (bunnyId && r.bunnyId !== bunnyId) continue
+    if (archived.has(r.bunnyId)) continue
     if (!isUpcoming(r)) continue
     const s = dueStatus(r.nextDue, today)
     if (s === 'overdue') overdue += 1
@@ -744,12 +970,38 @@ export function healthNotesFor(d: MyBunnyData, bunnyId: string): HealthNote[] {
 
 /* --------------------------------------------------------- backup/restore */
 
-export function exportJson(d: MyBunnyData = data): string {
+/**
+ * Pure: the backup file text. Photos are embedded per bunny as `photoDataUrl`
+ * (the same shape v1 used), so one file carries everything — including
+ * archived bunnies and their records.
+ */
+export function buildBackup(d: MyBunnyData, photos: Record<string, string> = {}): string {
+  const bunnies = d.bunnies.map((b) => (photos[b.id] ? { ...b, photoDataUrl: photos[b.id] } : b))
   return JSON.stringify(
-    { ...d, exportedAt: new Date().toISOString(), app: 'ohrr-app/my-bunny' },
+    { ...d, bunnies, exportedAt: new Date().toISOString(), app: 'ohrr-app/my-bunny' },
     null,
     2,
   )
+}
+
+/** Pure: a backup file's text → sanitized dataset + the photos it embedded. Throws on unreadable input. */
+export function parseBackup(text: string): { data: MyBunnyData; photos: Record<string, string> } {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new Error('That file isn’t a My Bunny backup.')
+  }
+  if (!isRecord(parsed) || !Array.isArray(parsed.bunnies)) {
+    throw new Error('That file isn’t a My Bunny backup.')
+  }
+  return { data: sanitize(parsed), photos: extractPhotos(parsed) }
+}
+
+/** The current data plus every stored photo, as backup file text. */
+export async function exportBackup(): Promise<string> {
+  const photos = await getAllPhotos()
+  return buildBackup(data, photos)
 }
 
 export interface ImportResult {
@@ -787,7 +1039,7 @@ export function mergeData(
   }
   return {
     data: {
-      version: 1,
+      version: 2,
       bunnies: [...current.bunnies, ...newBunnies],
       reminders: [...current.reminders, ...newReminders],
       weights,
@@ -803,20 +1055,30 @@ export function mergeData(
   }
 }
 
-/** Parse + validate a backup file's text, then merge it in. Throws on unreadable input. */
-export function importJson(text: string): ImportResult {
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(text)
-  } catch {
-    throw new Error('That file isn’t a My Bunny backup.')
+/**
+ * Parse + validate a backup file's text, merge it in, and write the photos of
+ * any newly added bunnies to IndexedDB. Throws on unreadable input. `photos`
+ * counts the pictures that were actually stored.
+ */
+export async function importBackup(text: string): Promise<ImportResult & { photos: number }> {
+  const { data: incoming, photos } = parseBackup(text)
+  const before = new Set(data.bunnies.map((b) => b.id))
+  const merged = mergeData(data, incoming)
+  const fresh: Record<string, string> = {}
+  for (const b of merged.data.bunnies) {
+    if (!before.has(b.id) && b.hasPhoto && photos[b.id]) fresh[b.id] = photos[b.id]
   }
-  if (!isRecord(parsed) || !Array.isArray(parsed.bunnies)) {
-    throw new Error('That file isn’t a My Bunny backup.')
+  const failed = await putPhotos(fresh)
+  if (failed.length > 0) {
+    const bad = new Set(failed)
+    merged.data.bunnies = merged.data.bunnies.map((b) => {
+      if (!bad.has(b.id)) return b
+      const { hasPhoto: _drop, ...rest } = b
+      return rest
+    })
   }
-  const merged = mergeData(data, sanitize(parsed))
   commit(merged.data)
-  return merged.result
+  return { ...merged.result, photos: Object.keys(fresh).length - failed.length }
 }
 
 export function backupFilename(today: string = todayIso()): string {

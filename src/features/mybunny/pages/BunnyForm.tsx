@@ -2,17 +2,27 @@ import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Screen, Card, SegTabs, btn } from '../../../components/ui'
 import { MbIcon } from '../icons'
-import { BackLink, BunnyAvatar, Field, SaveWarning, mbInput } from '../ui'
+import { BackLink, BunnyAvatar, Field, SaveWarning, mbInput, useDocumentTitle } from '../ui'
 import { downscaleImage, dataUrlKb, PHOTO_MAX_PX } from '../photo'
+import { useBunnyPhoto } from '../photos'
 import {
   useMyBunny,
   findBunny,
   addBunny,
   updateBunny,
   deleteBunny,
+  setBunnyPhoto,
+  activeBunnies,
+  atBunnyLimit,
+  collectionTitle,
   ageMonths,
   todayIso,
+  BUNNY_ROLES,
+  ROLE_LABEL,
+  LIMIT_MESSAGE,
+  MAX_BUNNIES,
   type Sex,
+  type BunnyRole,
   type BunnyInput,
 } from '../storage'
 
@@ -31,30 +41,52 @@ export default function BunnyForm() {
   const data = useMyBunny()
   const existing = id ? findBunny(data, id) : undefined
   const editing = Boolean(id)
+  const title = collectionTitle(activeBunnies(data).length)
+  useDocumentTitle(existing ? `Edit ${existing.name} · ${title}` : `Add a bunny · ${title}`)
 
   if (editing && !existing) return <Missing />
+  if (!editing && atBunnyLimit(data)) return <AtLimit title={title} />
 
-  return <Form key={existing?.id ?? 'new'} existing={existing} onDone={(bunnyId) => navigate(`/my-bunny/${bunnyId}`, { replace: true })} onDeleted={() => navigate('/my-bunny', { replace: true })} />
+  return (
+    <Form
+      key={existing?.id ?? 'new'}
+      existing={existing}
+      title={title}
+      onDone={(bunnyId) => navigate(`/my-bunny/${bunnyId}`, { replace: true })}
+      onDeleted={() => navigate('/my-bunny', { replace: true })}
+    />
+  )
 }
 
 function Form({
   existing,
+  title,
   onDone,
   onDeleted,
 }: {
   existing: ReturnType<typeof findBunny>
+  title: string
   onDone: (bunnyId: string) => void
   onDeleted: () => void
 }) {
-  const fileRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const libraryRef = useRef<HTMLInputElement>(null)
   const today = todayIso()
   const hadApprox = existing?.approxAgeMonths !== undefined && !existing?.birthday
   const currentApproxMonths = hadApprox && existing ? (ageMonths(existing, today) ?? 0) : 0
 
-  const [name, setName] = useState(existing?.name ?? '')
-  const [photo, setPhoto] = useState<string | undefined>(existing?.photoDataUrl)
+  // The stored photo (IndexedDB) shows until the person picks or removes one;
+  // `photoTouched` is what tells us to write the change on save.
+  const stored = useBunnyPhoto(existing?.id, existing?.hasPhoto)
+  const [photo, setPhoto] = useState<string | undefined>(undefined)
+  const [photoTouched, setPhotoTouched] = useState(false)
+  const shownPhoto = photoTouched ? photo : stored
   const [photoBusy, setPhotoBusy] = useState(false)
   const [photoErr, setPhotoErr] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  const [name, setName] = useState(existing?.name ?? '')
+  const [role, setRole] = useState<BunnyRole>(existing?.role ?? 'pet')
   const [ageMode, setAgeMode] = useState<AgeMode>(hadApprox ? 'Approximate age' : 'Birthday')
   const [birthday, setBirthday] = useState(existing?.birthday ?? '')
   const [approxYears, setApproxYears] = useState(hadApprox ? String(Math.floor(currentApproxMonths / 12)) : '')
@@ -73,6 +105,7 @@ function Form({
     setPhotoErr(null)
     try {
       setPhoto(await downscaleImage(file))
+      setPhotoTouched(true)
     } catch (err) {
       setPhotoErr(err instanceof Error ? err.message : 'Couldn’t use that photo.')
     } finally {
@@ -80,17 +113,23 @@ function Form({
     }
   }
 
-  const onSubmit = (e: FormEvent) => {
+  const removePhoto = () => {
+    setPhoto(undefined)
+    setPhotoTouched(true)
+  }
+
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!name.trim()) {
       setError('Give your bunny a name.')
       return
     }
     // Every optional key is set explicitly (possibly undefined) so an edit can
-    // clear a field, not just add one.
+    // clear a field, not just add one. `hasPhoto` is owned by setBunnyPhoto.
     const input: BunnyInput = {
       name,
-      photoDataUrl: photo,
+      role,
+      hasPhoto: existing?.hasPhoto,
       birthday: undefined,
       approxAgeMonths: undefined,
       approxAgeAsOf: undefined,
@@ -107,34 +146,45 @@ function Form({
       input.approxAgeMonths = y * 12 + m
       input.approxAgeAsOf = today
     }
-    if (existing) {
-      updateBunny(existing.id, input)
-      onDone(existing.id)
-    } else {
-      onDone(addBunny(input).id)
+    setSaving(true)
+    try {
+      let bunnyId: string
+      if (existing) {
+        updateBunny(existing.id, input)
+        bunnyId = existing.id
+      } else {
+        bunnyId = addBunny(input).id
+      }
+      if (photoTouched) await setBunnyPhoto(bunnyId, photo)
+      onDone(bunnyId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Couldn’t save.')
+    } finally {
+      setSaving(false)
     }
   }
 
   const onDelete = () => {
     if (!existing) return
     const ok = window.confirm(
-      `Remove ${existing.name} from this phone? Their reminders and weight log go too. This can’t be undone (unless you have a backup).`,
+      `Remove ${existing.name} from this phone? Their reminders, weight log, health notes and photo go too. This can’t be undone (unless you have a backup).`,
     )
     if (!ok) return
     deleteBunny(existing.id)
     onDeleted()
   }
 
-  const previewBunny = { name: name || '?', photoDataUrl: photo }
+  const previewBunny = { id: existing?.id ?? 'new', name: name || '?', hasPhoto: false }
+  const photoBtn = `${btn.outline} px-3.5 py-2 disabled:opacity-60`
 
   return (
     <Screen className="space-y-4">
-      <BackLink to={existing ? `/my-bunny/${existing.id}` : '/my-bunny'} label={existing ? existing.name : 'My Bunny'} />
+      <BackLink to={existing ? `/my-bunny/${existing.id}` : '/my-bunny'} label={existing ? existing.name : title} />
 
       <div>
-        <p className="text-xs font-extrabold uppercase tracking-wider text-brand-blue">My Bunny</p>
+        <p className="text-xs font-extrabold uppercase tracking-wider text-brand-blue">{title}</p>
         <h1 className="mt-1 font-display text-2xl font-black text-ink">
-          {existing ? `Edit ${existing.name}` : 'Add your bunny'}
+          {existing ? `Edit ${existing.name}` : 'Add a bunny'}
         </h1>
         {!existing && (
           <p className="mt-1 text-sm text-slate-500">Only the name is required — add the rest whenever.</p>
@@ -145,42 +195,54 @@ function Form({
 
       <Card>
         <form onSubmit={onSubmit} className="space-y-4">
-          {/* Photo */}
+          {/* Photo — camera or library; both go through the same downscale */}
           <div className="flex items-center gap-4">
-            <BunnyAvatar bunny={previewBunny} size={80} />
+            <BunnyAvatar bunny={previewBunny} src={shownPhoto} size={80} />
             <div className="min-w-0 flex-1 space-y-1.5">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  disabled={photoBusy}
-                  className={`${btn.outline} px-4 py-2 disabled:opacity-60`}
-                >
-                  <MbIcon name="camera" size={15} /> {photoBusy ? 'Shrinking…' : photo ? 'Change photo' : 'Add a photo'}
-                </button>
-                {photo && !photoBusy && (
-                  <button
-                    type="button"
-                    onClick={() => setPhoto(undefined)}
-                    className="rounded-full px-3 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100"
-                  >
-                    Remove
+              {photoBusy ? (
+                <p className="text-sm font-bold text-slate-500">Shrinking…</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => cameraRef.current?.click()} className={photoBtn}>
+                    <MbIcon name="camera" size={15} /> Take a photo
                   </button>
-                )}
-              </div>
+                  <button type="button" onClick={() => libraryRef.current?.click()} className={photoBtn}>
+                    <MbIcon name="upload" size={15} /> Choose from library
+                  </button>
+                  {shownPhoto && (
+                    <button
+                      type="button"
+                      onClick={removePhoto}
+                      className="rounded-full px-3 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              )}
               <p className="text-xs leading-relaxed text-slate-400">
-                {photo
-                  ? `Shrunk to ${PHOTO_MAX_PX}px (about ${dataUrlKb(photo)} KB) and kept on this phone only.`
+                {shownPhoto
+                  ? `Shrunk to ${PHOTO_MAX_PX}px (about ${dataUrlKb(shownPhoto)} KB) and kept on this phone only.`
                   : `Photos are shrunk to ${PHOTO_MAX_PX}px and kept on this phone only.`}
               </p>
               {photoErr && <p className="text-xs font-semibold text-red-600">{photoErr}</p>}
+              {/* `capture` opens the phone's camera directly; without it the picker shows the library. */}
               <input
-                ref={fileRef}
+                ref={cameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={onPhoto}
+                aria-label="Take a photo"
+              />
+              <input
+                ref={libraryRef}
                 type="file"
                 accept="image/*"
                 className="hidden"
                 onChange={onPhoto}
-                aria-label="Choose a photo"
+                aria-label="Choose a photo from your library"
               />
             </div>
           </div>
@@ -195,6 +257,16 @@ function Form({
               autoComplete="off"
               placeholder="e.g. Clover"
             />
+          </Field>
+
+          <Field label="This bunny is" hint="How you’re connected — handy if you foster, sponsor or help run a rescue.">
+            <select className={mbInput} value={role} onChange={(e) => setRole(e.target.value as BunnyRole)} required>
+              {BUNNY_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABEL[r]}
+                </option>
+              ))}
+            </select>
           </Field>
 
           {/* Age */}
@@ -282,8 +354,8 @@ function Form({
 
           {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
 
-          <button type="submit" disabled={photoBusy} className={`${btn.primary} w-full disabled:opacity-60`}>
-            {existing ? 'Save changes' : 'Save bunny'}
+          <button type="submit" disabled={photoBusy || saving} className={`${btn.primary} w-full disabled:opacity-60`}>
+            {saving ? 'Saving…' : existing ? 'Save changes' : 'Save bunny'}
           </button>
         </form>
       </Card>
@@ -309,6 +381,25 @@ function Missing() {
       <Link to="/my-bunny" className={`${btn.blue} mx-auto`}>
         Back to My Bunny
       </Link>
+    </Screen>
+  )
+}
+
+function AtLimit({ title }: { title: string }) {
+  return (
+    <Screen className="space-y-4">
+      <BackLink to="/my-bunny" label={title} />
+      <Card className="space-y-3">
+        <h1 className="font-display text-xl font-extrabold text-ink">That’s a full fluffle</h1>
+        <p className="text-sm leading-relaxed text-slate-600">{LIMIT_MESSAGE}</p>
+        <p className="text-xs leading-relaxed text-slate-400">
+          Archiving keeps a bunny’s whole record (profile, weights, notes, reminders) — it just moves them out of
+          your active {MAX_BUNNIES}.
+        </p>
+        <Link to="/my-bunny" className={`${btn.blue} w-full`}>
+          Back to {title}
+        </Link>
+      </Card>
     </Screen>
   )
 }

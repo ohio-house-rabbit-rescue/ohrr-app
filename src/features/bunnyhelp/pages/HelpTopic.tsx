@@ -5,7 +5,7 @@ import { Icon } from '../../../components/icons'
 import { MbIcon } from '../../mybunny/icons'
 import { BackLink, EmergencyCard, Field, VetDirectoryLink, mbInput } from '../../mybunny/ui'
 import { HOP_SHOP_TO, VET_DIRECTORY } from '../../mybunny/links'
-import { useMyBunny, findBunny, addHealthNote, todayIso, type Bunny } from '../../mybunny/storage'
+import { useMyBunny, findBunny, activeBunnies, addHealthNote, todayIso, type Bunny } from '../../mybunny/storage'
 import { useCareTopics, useLearnSlugs } from '../useTopics'
 import { CategoryChip, Disclaimer, NotReviewedLine, UrgencyChip, WhatToDo } from '../ui'
 import { RESOURCES_URL, type CareTopic } from '../types'
@@ -100,7 +100,13 @@ export default function HelpTopic() {
         )}
       </section>
 
-      <SaveAsHealthNote topic={topic} bunnies={data.bunnies} bunny={bunny} q={q} />
+      {/* Active bunnies only — plus the one we came from, even if archived */}
+      <SaveAsHealthNote
+        topic={topic}
+        bunnies={bunny?.archived ? [bunny, ...activeBunnies(data)] : activeBunnies(data)}
+        bunny={bunny}
+        q={q}
+      />
 
       <Disclaimer className="px-1" />
     </Screen>

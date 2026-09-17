@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Screen, Card, SegTabs, btn } from '../../../components/ui'
 import { MbIcon } from '../icons'
-import { BackLink, Field, SaveWarning, VetNote, mbInput } from '../ui'
+import { BackLink, Field, SaveWarning, VetNote, mbInput, useDocumentTitle } from '../ui'
 import {
   useMyBunny,
   findBunny,
@@ -13,6 +13,8 @@ import {
   addDays,
   todayIso,
   isIsoDate,
+  activeBunnies,
+  collectionTitle,
   REMINDER_PRESETS,
   type Reminder,
   type ReminderType,
@@ -61,6 +63,8 @@ export default function ReminderForm() {
   const data = useMyBunny()
   const bunny = findBunny(data, id)
   const existing = rid ? data.reminders.find((r) => r.id === rid && r.bunnyId === id) : undefined
+  const title = collectionTitle(activeBunnies(data).length)
+  useDocumentTitle(bunny ? `${existing ? 'Edit reminder' : 'New reminder'} · ${bunny.name} · ${title}` : title)
 
   if (!bunny || (rid && !existing)) {
     return (
@@ -69,7 +73,7 @@ export default function ReminderForm() {
           {bunny ? 'That reminder isn’t here any more' : 'That bunny isn’t on this phone'}
         </h1>
         <Link to={bunny ? `/my-bunny/${bunny.id}` : '/my-bunny'} className={`${btn.blue} mx-auto`}>
-          {bunny ? `Back to ${bunny.name}` : 'Back to My Bunny'}
+          {bunny ? `Back to ${bunny.name}` : `Back to ${title}`}
         </Link>
       </Screen>
     )

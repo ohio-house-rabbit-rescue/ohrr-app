@@ -34,15 +34,43 @@ import {
   mergeData,
   dueCount,
   remindersFor,
+  collectionTitle,
+  isIsoDate,
+  extractPhotos,
+  activeBunnies,
+  archivedBunnies,
+  atBunnyLimit,
+  applyArchive,
+  applyRestore,
+  buildBackup,
+  parseBackup,
+  addBunny,
+  archiveBunny,
+  restoreBunny,
+  getMyBunny,
+  nextReminder,
+  MAX_BUNNIES,
+  LIMIT_MESSAGE,
+  STORAGE_KEY,
+  LEGACY_STORAGE_KEY,
+  type Bunny,
   type Reminder,
   type MyBunnyData,
 } from '../src/features/mybunny/storage.ts'
 
 let checks = 0
+/** JSON with object keys sorted at every level, so comparisons ignore key order. */
+function canon(v: unknown): string {
+  return JSON.stringify(v, (_k, val) =>
+    val && typeof val === 'object' && !Array.isArray(val)
+      ? Object.fromEntries(Object.keys(val).sort().map((k) => [k, (val as Record<string, unknown>)[k]]))
+      : val,
+  )
+}
 function eq<T>(actual: T, expected: T, label: string) {
   checks += 1
-  const a = JSON.stringify(actual)
-  const e = JSON.stringify(expected)
+  const a = canon(actual)
+  const e = canon(expected)
   if (a !== e) {
     console.error(`FAIL ${label}\n  expected ${e}\n  actual   ${a}`)
     process.exit(1)
@@ -204,7 +232,9 @@ const messy = {
 const clean = sanitize(messy)
 eq(clean.bunnies.length, 1, 'sanitize drops invalid bunnies')
 eq(clean.bunnies[0].name, 'Clover', 'sanitize trims name')
-eq(clean.bunnies[0].photoDataUrl, undefined, 'sanitize rejects non-data-URL photo')
+eq(clean.bunnies[0].hasPhoto, undefined, 'sanitize rejects non-data-URL photo (no hasPhoto)')
+eq(extractPhotos(messy), {}, 'extractPhotos ignores non-data-URL photo')
+eq(clean.bunnies[0].role, 'pet', 'missing role → pet')
 eq(clean.bunnies[0].birthday, undefined, 'sanitize drops malformed birthday')
 eq(clean.bunnies[0].approxAgeMonths, 15, 'sanitize rounds approx age')
 eq(clean.reminders.map((r) => r.id), ['r1', 'r2'], 'sanitize drops orphan reminders')
@@ -214,20 +244,23 @@ eq(clean.weights.b1, [{ date: '2026-08-01', grams: 1850 }, { date: '2026-09-01',
 eq(clean.weights.ghost, undefined, 'orphan weights dropped')
 eq(clean.prefs.weightUnit, 'lb', 'bad unit → lb')
 eq(parseData('{not json').bunnies, [], 'parseData survives bad JSON')
-eq(parseData(null).version, 1, 'parseData null → empty v1')
+eq(parseData(null).version, 2, 'parseData null → empty v2')
 
 // merge: same ids replaced, new ones added, weights unioned
 const current: MyBunnyData = {
-  version: 1,
-  bunnies: [{ id: 'b1', name: 'Clover', createdAt: 'x' }],
+  version: 2,
+  bunnies: [{ id: 'b1', name: 'Clover', role: 'pet', createdAt: 'x' }],
   reminders: [nails],
   weights: { b1: [{ date: '2026-09-01', grams: 1900 }] },
   health: [{ id: 'h1', bunnyId: 'b1', date: '2026-09-01', noticed: 'Soft poops', resolved: true, createdAt: 'x' }],
   prefs: { weightUnit: 'g' },
 }
 const incoming: MyBunnyData = {
-  version: 1,
-  bunnies: [{ id: 'b1', name: 'Clover B.', createdAt: 'y' }, { id: 'b2', name: 'Pip', createdAt: 'z' }],
+  version: 2,
+  bunnies: [
+    { id: 'b1', name: 'Clover B.', role: 'pet', createdAt: 'y' },
+    { id: 'b2', name: 'Pip', role: 'foster', createdAt: 'z' },
+  ],
   reminders: [{ ...nails, title: 'Nail trim (backup)' }, booster],
   weights: { b1: [{ date: '2026-08-01', grams: 1850 }], b2: [{ date: '2026-09-10', grams: 1200 }] },
   health: [
@@ -258,8 +291,8 @@ eq(sanitize({ bunnies: [] }).health, [], 'old data without health → []')
 
 // due counting + ordering
 const ds: MyBunnyData = {
-  version: 1,
-  bunnies: [{ id: 'b1', name: 'Clover', createdAt: 'x' }],
+  version: 2,
+  bunnies: [{ id: 'b1', name: 'Clover', role: 'pet', createdAt: 'x' }],
   reminders: [
     { ...nails, nextDue: '2026-09-10' },
     { ...booster, nextDue: '2026-09-17' },
@@ -272,5 +305,152 @@ const ds: MyBunnyData = {
 }
 eq(dueCount(ds, today), { overdue: 1, today: 1, total: 2 }, 'dueCount ignores completed one-offs')
 eq(remindersFor(ds, 'b1').map((r) => r.id), ['r1', 'r2', 'r4', 'r3'], 'remindersFor: upcoming by date, completed last')
+
+/* ------------------------------------------------------- count-based title */
+
+eq(collectionTitle(0), 'My Bunny', 'title: none yet → My Bunny')
+eq(collectionTitle(1), 'My Bunny', 'title: 1 → My Bunny')
+eq(collectionTitle(2), 'My Bunnies', 'title: 2 → My Bunnies')
+eq(collectionTitle(3), 'My Fluffle', 'title: 3 → My Fluffle')
+eq(collectionTitle(100), 'My Fluffle', 'title: 100 → My Fluffle')
+
+/* ------------------------------------------------ v1 → v2 photo migration */
+
+const PHOTO = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q=='
+eq(STORAGE_KEY, 'ohrr.mybunny.v2', 'store key is v2')
+eq(LEGACY_STORAGE_KEY, 'ohrr.mybunny.v1', 'legacy key is v1')
+const v1blob = {
+  version: 1,
+  bunnies: [
+    { id: 'b1', name: 'Clover', photoDataUrl: PHOTO, sex: 'female', createdAt: 'x' },
+    { id: 'b2', name: 'Pip', createdAt: 'y' },
+  ],
+  reminders: [{ id: 'r1', bunnyId: 'b1', type: 'nails', title: 'Nail trim', intervalDays: 42, nextDue: '2026-10-29' }],
+  weights: { b1: [{ date: '2026-09-01', grams: 1900 }] },
+  prefs: { weightUnit: 'g' },
+}
+const v1text = JSON.stringify(v1blob)
+const migrated = parseData(v1text)
+eq(migrated.version, 2, 'v1 blob loads as v2')
+eq(migrated.bunnies.map((b) => b.hasPhoto), [true, undefined], 'v1 photo → hasPhoto flag; none → no flag')
+ok(!v1text.includes('hasPhoto'), 'v1 fixture really had no hasPhoto')
+ok(!JSON.stringify(migrated).includes('data:image'), 'v2 JSON carries no photo data')
+ok(!('photoDataUrl' in migrated.bunnies[0]), 'photoDataUrl is stripped from the record')
+eq(extractPhotos(v1blob), { b1: PHOTO }, 'extractPhotos pulls the v1 photo by bunny id (what goes into IndexedDB)')
+eq(migrated.bunnies.map((b) => b.role), ['pet', 'pet'], 'v1 bunnies default to role pet')
+eq(migrated.reminders.length, 1, 'v1 reminders survive')
+eq(migrated.weights.b1?.length, 1, 'v1 weights survive')
+eq(migrated.prefs.weightUnit, 'g', 'v1 prefs survive')
+eq(sanitize({ bunnies: [{ id: 'b1', name: 'C', hasPhoto: true }] }).bunnies[0].hasPhoto, true, 'v2 hasPhoto flag is kept')
+eq(sanitize({ bunnies: [{ id: 'b1', name: 'C', hasPhoto: 'yes' }] }).bunnies[0].hasPhoto, undefined, 'non-boolean hasPhoto dropped')
+eq(sanitize({ bunnies: [{ id: 'b1', name: 'C', role: 'resident' }] }).bunnies[0].role, 'resident', 'role kept')
+eq(sanitize({ bunnies: [{ id: 'b1', name: 'C', role: 'owner' }] }).bunnies[0].role, 'pet', 'unknown role → pet')
+
+/* ------------------------------------------------------------ archive */
+
+const fluffle: MyBunnyData = {
+  version: 2,
+  bunnies: [
+    { id: 'b1', name: 'Clover', role: 'pet', createdAt: 'x' },
+    { id: 'b2', name: 'Pip', role: 'foster', createdAt: 'y' },
+    { id: 'b3', name: 'Mochi', role: 'sponsored', createdAt: 'z' },
+  ],
+  reminders: [
+    { id: 'r1', bunnyId: 'b1', type: 'nails', title: 'Nail trim', intervalDays: 42, nextDue: '2026-09-10' },
+    { id: 'r2', bunnyId: 'b2', type: 'hay', title: 'Hay restock', intervalDays: 14, nextDue: '2026-09-17' },
+    { id: 'r3', bunnyId: 'b3', type: 'vet', title: 'Vet check-up', intervalDays: 365, nextDue: '2026-09-01' },
+  ],
+  weights: { b2: [{ date: '2026-09-01', grams: 1200 }] },
+  health: [{ id: 'h1', bunnyId: 'b2', date: '2026-09-02', noticed: 'Sneezing', resolved: false, createdAt: 'y' }],
+  prefs: { weightUnit: 'lb' },
+}
+eq(dueCount(fluffle, today), { overdue: 2, today: 1, total: 3 }, 'all three count before archiving')
+eq(activeBunnies(fluffle).map((b) => b.id), ['b1', 'b2', 'b3'], 'all active before archiving')
+eq(collectionTitle(activeBunnies(fluffle).length), 'My Fluffle', 'three active → fluffle')
+
+const arch = applyArchive(fluffle, 'b2', { reason: 'adopted', date: '2026-09-15', note: '  Went home with the Lees  ' })
+eq(arch.bunnies[1].archived, { reason: 'adopted', date: '2026-09-15', note: 'Went home with the Lees' }, 'archive stored (note trimmed)')
+eq(activeBunnies(arch).map((b) => b.id), ['b1', 'b3'], 'archived bunny leaves the active list')
+eq(archivedBunnies(arch).map((b) => b.id), ['b2'], 'archived bunny is in the archived list')
+eq(collectionTitle(activeBunnies(arch).length), 'My Bunnies', 'two active → My Bunnies')
+eq(dueCount(arch, today), { overdue: 2, today: 0, total: 2 }, 'archived bunny’s due-today reminder is not counted')
+eq(dueCount(arch, today, 'b2'), { overdue: 0, today: 0, total: 0 }, 'per-bunny count is zero while archived')
+eq(remindersFor(arch, 'b2').length, 1, 'archived bunny keeps its reminders')
+eq(nextReminder(arch, 'b2')?.id, 'r2', 'archived bunny’s reminders still readable on its profile')
+eq(arch.weights.b2?.length, 1, 'archived bunny keeps its weight log')
+eq(arch.health.length, 1, 'archived bunny keeps its health notes')
+eq(applyArchive(fluffle, 'b1', { reason: 'whatever' as never, date: 'bad' }).bunnies[0].archived?.reason, 'other', 'bad reason → other')
+ok(isIsoDate(applyArchive(fluffle, 'b1', { reason: 'passed', date: 'bad' }).bunnies[0].archived?.date), 'bad date → a real date (today)')
+const restored = applyRestore(arch, 'b2')
+eq(restored.bunnies[1].archived, undefined, 'restore clears the archive')
+eq(activeBunnies(restored).length, 3, 'restore puts the bunny back in the active list')
+eq(dueCount(restored, today).total, 3, 'restore counts the reminders again')
+// sanitize round-trips the archive and drops a malformed one
+eq(sanitize(JSON.parse(JSON.stringify(arch))).bunnies[1].archived, arch.bunnies[1].archived, 'archive survives sanitize')
+eq(sanitize({ bunnies: [{ id: 'b1', name: 'C', archived: { reason: 'adopted', date: 'nope' } }] }).bunnies[0].archived, undefined, 'archive without a valid date is dropped')
+// mergeData keeps archived bunnies from a backup
+const mergedArch = mergeData(current, arch)
+eq(mergedArch.data.bunnies.find((b) => b.id === 'b2')?.archived?.reason, 'adopted', 'merge preserves an archived bunny')
+eq(mergedArch.result.bunnies, 2, 'merge added the two new bunnies (one archived)')
+
+/* --------------------------------------------- backup round-trip (photos) */
+
+const withPhoto: MyBunnyData = {
+  ...arch,
+  bunnies: arch.bunnies.map((b) => (b.id === 'b1' ? { ...b, hasPhoto: true } : b)),
+}
+const backupText = buildBackup(withPhoto, { b1: PHOTO })
+const backupRaw = JSON.parse(backupText)
+eq(backupRaw.app, 'ohrr-app/my-bunny', 'backup is tagged')
+eq(backupRaw.version, 2, 'backup is v2')
+eq(backupRaw.bunnies[0].photoDataUrl, PHOTO, 'backup embeds the photo as a data URL')
+eq(backupRaw.bunnies[1].photoDataUrl, undefined, 'bunnies without a photo have none embedded')
+eq(backupRaw.bunnies[1].archived.reason, 'adopted', 'backup includes the archived bunny')
+const rt = parseBackup(backupText)
+eq(rt.photos, { b1: PHOTO }, 'import recovers the photo (for IndexedDB)')
+eq(rt.data.bunnies, withPhoto.bunnies, 'import recovers every bunny record, hasPhoto flag and archive intact')
+eq(rt.data.reminders, withPhoto.reminders, 'import recovers reminders')
+eq(rt.data.weights, withPhoto.weights, 'import recovers weights')
+eq(rt.data.health, withPhoto.health, 'import recovers health notes')
+ok(!JSON.stringify(rt.data).includes('data:image'), 'imported metadata carries no photo bytes')
+let threw = false
+try {
+  parseBackup('{"nope":true}')
+} catch {
+  threw = true
+}
+ok(threw, 'parseBackup rejects a non-backup file')
+
+/* ------------------------------------------ live store: limit + archive */
+
+eq(MAX_BUNNIES, 100, 'MAX_BUNNIES is 100')
+eq(getMyBunny().bunnies.length, 0, 'store starts empty under node (no localStorage)')
+const made: Bunny[] = []
+for (let i = 0; i < MAX_BUNNIES; i += 1) made.push(addBunny({ name: `Bun ${i + 1}`, role: i % 2 ? 'foster' : 'pet' }))
+eq(getMyBunny().bunnies.length, MAX_BUNNIES, 'can add exactly MAX_BUNNIES')
+ok(atBunnyLimit(getMyBunny()), 'atBunnyLimit at MAX_BUNNIES')
+let limitErr = ''
+try {
+  addBunny({ name: 'One too many', role: 'pet' })
+} catch (e) {
+  limitErr = e instanceof Error ? e.message : String(e)
+}
+eq(limitErr, LIMIT_MESSAGE, 'the 101st add is refused with the friendly message')
+eq(getMyBunny().bunnies.length, MAX_BUNNIES, 'nothing was added past the limit')
+archiveBunny(made[0].id, { reason: 'rehomed', date: today })
+ok(!atBunnyLimit(getMyBunny()), 'archiving one frees a slot (archived bunnies don’t count)')
+eq(activeBunnies(getMyBunny()).length, MAX_BUNNIES - 1, 'active count drops after archive')
+eq(archivedBunnies(getMyBunny()).length, 1, 'archived count rises after archive')
+const extra = addBunny({ name: 'Newcomer', role: 'resident' })
+eq(getMyBunny().bunnies.length, MAX_BUNNIES + 1, 'a new bunny can be added once one is archived')
+let restoreErr = ''
+try {
+  restoreBunny(made[0].id)
+} catch (e) {
+  restoreErr = e instanceof Error ? e.message : String(e)
+}
+eq(restoreErr, LIMIT_MESSAGE, 'restoring past the limit is refused with the same message')
+ok(Boolean(getMyBunny().bunnies.find((b) => b.id === made[0].id)?.archived), 'refused restore leaves the bunny archived')
+eq(getMyBunny().bunnies.find((b) => b.id === extra.id)?.role, 'resident', 'role is stored as given')
 
 console.log(`OK — ${checks} checks passed`)

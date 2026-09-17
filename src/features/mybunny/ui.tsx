@@ -2,12 +2,13 @@
 // (Card, btn, Badge …) and adds the few things this feature needs: a photo /
 // initial avatar, due-status pills, the emergency card, the weight trend line,
 // and a couple of form helpers.
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, btn } from '../../components/ui'
 import { Icon } from '../../components/icons'
 import { MbIcon } from './icons'
 import { EMERGENCY_VET, VET_DIRECTORY } from './links'
+import { useBunnyPhoto } from './photos'
 import {
   dueStatus,
   describeDue,
@@ -15,7 +16,10 @@ import {
   formatWeight,
   todayIso,
   useSaveError,
+  FLUFFLE_NOTE,
+  ROLE_LABEL,
   type Bunny,
+  type BunnyRole,
   type DueStatus,
   type WeightEntry,
   type WeightUnit,
@@ -28,24 +32,31 @@ export const VET_NOTE = 'Typical starting points — confirm what’s right for 
 
 /* ---------------------------------------------------------------- avatar */
 
+type AvatarBunny = Pick<Bunny, 'id' | 'name' | 'hasPhoto'>
+
 /**
- * The rabbit's own photo, or — with no photo — a neutral circle carrying the
- * rabbit's initial. Deliberately no cartoon / emoji placeholder.
+ * The rabbit's own photo (from IndexedDB, via the cached hook), or — with no
+ * photo — a neutral circle carrying the rabbit's initial. Deliberately no
+ * cartoon / emoji placeholder. `src` overrides the stored photo (form preview).
  */
 export function BunnyAvatar({
   bunny,
   size = 56,
   className = '',
+  src,
 }: {
-  bunny: Pick<Bunny, 'name' | 'photoDataUrl'>
+  bunny: AvatarBunny
   size?: number
   className?: string
+  src?: string
 }) {
+  const stored = useBunnyPhoto(bunny.id, bunny.hasPhoto)
+  const photo = src ?? stored
   const style = { width: size, height: size }
-  if (bunny.photoDataUrl) {
+  if (photo) {
     return (
       <img
-        src={bunny.photoDataUrl}
+        src={photo}
         alt={bunny.name}
         style={style}
         className={`shrink-0 rounded-full object-cover ring-2 ring-white shadow-sm ${className}`}
@@ -63,6 +74,163 @@ export function BunnyAvatar({
       {initial}
     </span>
   )
+}
+
+/**
+ * Same photo-or-initial idea as BunnyAvatar, but fills whatever box it's given
+ * (rounded tiles on Home, the profile header). `fallback` renders when there's
+ * no photo instead of the initial.
+ */
+export function BunnyPhoto({
+  bunny,
+  className = '',
+  fallback,
+}: {
+  bunny: AvatarBunny
+  className?: string
+  fallback?: ReactNode
+}) {
+  const photo = useBunnyPhoto(bunny.id, bunny.hasPhoto)
+  if (photo) return <img src={photo} alt={bunny.name} className={`object-cover ${className}`} />
+  if (fallback !== undefined) return <>{fallback}</>
+  const initial = (bunny.name.trim()[0] ?? '?').toUpperCase()
+  return (
+    <span
+      role="img"
+      aria-label={`${bunny.name} (no photo yet)`}
+      className={`inline-flex items-center justify-center bg-slate-200 font-display text-2xl font-black text-slate-600 ${className}`}
+    >
+      {initial}
+    </span>
+  )
+}
+
+/**
+ * Horizontally scrollable row of round avatars with the name under each — the
+ * 3+ ("fluffle") layout on Home and at the top of the list. Tapping one opens
+ * that bunny; an "Add" tile closes the row while there's room for more.
+ */
+export function AvatarRow({
+  bunnies,
+  showAdd,
+  size = 56,
+  className = '',
+}: {
+  bunnies: AvatarBunny[]
+  showAdd: boolean
+  size?: number
+  className?: string
+}) {
+  const tile = 'flex w-[68px] shrink-0 snap-start flex-col items-center gap-1.5'
+  const label = 'w-full truncate text-center text-[12px] font-bold leading-tight'
+  return (
+    <div
+      className={`no-scrollbar -mx-3 flex snap-x gap-1 overflow-x-auto px-3 pb-1 pt-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
+      role="list"
+      aria-label="Your rabbits"
+    >
+      {bunnies.map((b) => (
+        <Link key={b.id} to={`/my-bunny/${b.id}`} className={`${tile} group`} role="listitem">
+          <BunnyAvatar bunny={b} size={size} className="transition group-hover:ring-brand-orange/60" />
+          <span className={`${label} text-ink`}>{b.name}</span>
+        </Link>
+      ))}
+      {showAdd && (
+        <Link to="/my-bunny/new" className={`${tile} group`} role="listitem" aria-label="Add a bunny">
+          <span
+            style={{ width: size, height: size }}
+            className="inline-flex shrink-0 items-center justify-center rounded-full border-2 border-dashed border-brand-orange/50 text-brand-orange transition group-hover:border-brand-orange group-hover:bg-brand-orange-50"
+          >
+            <MbIcon name="plus" size={Math.round(size * 0.4)} />
+          </span>
+          <span className={`${label} text-brand-orange`}>Add</span>
+        </Link>
+      )}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------ role chip */
+
+const roleTone: Record<BunnyRole, string> = {
+  pet: 'bg-slate-100 text-slate-600',
+  foster: 'bg-brand-orange-50 text-brand-orange',
+  sponsored: 'bg-brand-blue-50 text-brand-blue',
+  resident: 'bg-emerald-50 text-emerald-700',
+}
+
+/** Small chip for the person's relationship to the rabbit (pet / foster / sponsored / resident). */
+export function RoleChip({ role, className = '' }: { role: BunnyRole; className?: string }) {
+  return (
+    <span
+      className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold ${roleTone[role]} ${className}`}
+    >
+      {ROLE_LABEL[role]}
+    </span>
+  )
+}
+
+/* ------------------------------------------------------------ fluffle */
+
+const FLUFFLE_SEEN_KEY = 'ohrr.mybunny.fluffleSeen'
+
+/**
+ * One-line explanation of "fluffle", shown until dismissed (remembered on
+ * this phone). Rendered wherever the count-aware title first says "My Fluffle".
+ */
+export function FluffleNote({ className = '' }: { className?: string }) {
+  const [seen, setSeen] = useState(() => {
+    try {
+      return localStorage.getItem(FLUFFLE_SEEN_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  if (seen) return null
+  const dismiss = () => {
+    setSeen(true)
+    try {
+      localStorage.setItem(FLUFFLE_SEEN_KEY, '1')
+    } catch {
+      /* fine — it just shows again next time */
+    }
+  }
+  return (
+    <p className={`flex items-start gap-2 rounded-2xl bg-brand-blue-50/70 px-3.5 py-2.5 text-[13px] leading-snug text-slate-700 ${className}`}>
+      <Icon name="info" size={15} className="mt-0.5 shrink-0 text-brand-blue" />
+      <span className="min-w-0 flex-1">
+        <strong className="font-bold text-brand-blue">Why “fluffle”?</strong> {FLUFFLE_NOTE} With three or more,
+        that’s what we call yours.
+      </span>
+      <button
+        type="button"
+        onClick={dismiss}
+        aria-label="Got it"
+        className="shrink-0 rounded-full px-2 text-xs font-bold text-brand-blue hover:bg-brand-blue-50"
+      >
+        Got it
+      </button>
+    </p>
+  )
+}
+
+/** Tooltip text for the title (only meaningful for "My Fluffle"). */
+export function titleTooltip(title: string): string | undefined {
+  return title === 'My Fluffle' ? FLUFFLE_NOTE : undefined
+}
+
+/* ------------------------------------------------------- document title */
+
+/** Sets the browser tab title while the screen is mounted; restores it after. */
+export function useDocumentTitle(title: string) {
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const previous = document.title
+    document.title = `${title} · OHRR`
+    return () => {
+      document.title = previous
+    }
+  }, [title])
 }
 
 /* ------------------------------------------------------------- due pills */
