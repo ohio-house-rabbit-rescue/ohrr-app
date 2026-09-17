@@ -19,6 +19,38 @@
 
 ## Current state (at a glance)
 
+- **App settings + raffle-ticket TEST feature — LIVE (2026-09-17).** Sponsor decision:
+  the in-app "reserve numbered raffle tickets, pay at the table" flow is a **test
+  feature** — hidden from the public by default and shown only while an owner switches
+  it on in the app; its pricing is **never hard-coded** (the old "$1 each / 6 for $5"
+  was unverified and is gone) — staff enter it.
+  - **Migration (apply AFTER `20260917130000_raffle_items.sql`):**
+    `supabase/migrations/20260917170000_app_settings.sql` — seeds the capability
+    `settings.manage` (Staff area; owners/admins hold it implicitly), creates
+    `app_settings` (org_id, key, jsonb value; public select, writes gated on
+    `settings.manage`; **non-secret flags only** — every row is publicly readable), and
+    adds nullable `raffle_ticket_price_cents`, `raffle_bundle_qty`,
+    `raffle_bundle_price_cents`, `raffle_details` to `auction_settings`. Until it's
+    applied the app quietly behaves as "everything off / nothing set".
+  - **Staff → Settings** (`/staff/settings`, `StaffSettings`, gated `settings.manage`;
+    nav entry + dashboard tile): a "Test features" list of switches
+    (`src/features/settings/testFeatures.ts` — add a feature = one `{key,label,description}`
+    entry). First switch: **Raffle ticket reservation** → `app_settings`
+    `raffle_tickets_enabled` = `{"enabled": true}`.
+  - **Staff → Silent Auction → Auction setup** now has a **Raffle tickets** group: ticket
+    price ($ → cents), optional bundle (quantity + price; both or neither), and a free-text
+    details line (where tickets are sold, drawing time…). Saved with the same upsert.
+  - **Public:** `RaffleTickets` (on `/bunfest/p/raffle`) renders **only** while the flag is
+    on, carries a small **Preview** chip, and shows a price line / total **only** from
+    `auction_settings` (unset → no price shown, blank total in the form post). The
+    staff `raffle_details` text appears under the page's neutral "Raffle" copy when set.
+    Reservations still post to the Netlify Form `raffle-request` (hidden form registered
+    in `index.html`: quantity, total, MWBF-##### ticket codes, name, phone) — codes are
+    generated client-side; **no payment processing** was added.
+  - Hook: `src/features/settings/useSetting.ts` — `useSetting<T>(key, fallback)` /
+    `useFeatureFlag(key)` (silent fallback on missing table/row), `fetchSettings(orgId)`,
+    `setSetting(key, value, {orgId, userId})`.
+
 - **Live-site parity + shared data contract — LIVE (2026-09-17).** Everything on
   the read-only WordPress site (ohiohouserabbitrescue.org) is now IN the app, built
   for phones, and the app shares ONE Supabase backend with the new OHRR website:
@@ -290,8 +322,10 @@
   on the activity pages: **Bunny Spa / Glamour Shots** have an in-app **session
   reservation** (`ReserveSession`: service + 30-min time window + name/phone/bunny →
   OHRR confirms; pay at the table — no payment backend needed), and the **Raffle** has
-  an in-app **ticket flow** (`RaffleTickets`: quantity with the real $1-each /
-  6-for-$5 pricing → reserves numbered MWBF-##### tickets to pay for at the table).
+  an in-app **ticket flow** (`RaffleTickets`: quantity → reserves numbered MWBF-#####
+  tickets to pay for at the table). **Since 2026-09-17 this is a TEST feature:** hidden
+  unless switched on in `/staff/settings`, and pricing comes only from
+  `auction_settings` (staff-entered; nothing hard-coded).
   Post to Netlify (`spa-reservation`, `glamour-reservation`, `raffle-request`),
   clearly labelled "pay in person until in-app payment is set up."
 - **Silent Auction gallery** (`SilentAuction`, `/bunfest/silent-auction`)
