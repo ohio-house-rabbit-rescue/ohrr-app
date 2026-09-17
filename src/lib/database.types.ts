@@ -620,6 +620,101 @@ export type Database = {
         }
         Relationships: []
       }
+      // --- Sponsors (mirrors supabase/migrations/20260917150000_sponsors.sql) ---
+      sponsors: {
+        Row: {
+          id: string
+          org_id: string
+          name: string
+          tier: string
+          blurb: string | null
+          logo_url: string | null
+          website: string | null
+          perk_title: string | null
+          perk_detail: string | null
+          perk_code: string | null
+          term_start: string | null
+          term_end: string | null
+          is_active: boolean
+          sort_order: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          name: string
+          tier?: string
+          blurb?: string | null
+          logo_url?: string | null
+          website?: string | null
+          perk_title?: string | null
+          perk_detail?: string | null
+          perk_code?: string | null
+          term_start?: string | null
+          term_end?: string | null
+          is_active?: boolean
+          sort_order?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          name?: string
+          tier?: string
+          blurb?: string | null
+          logo_url?: string | null
+          website?: string | null
+          perk_title?: string | null
+          perk_detail?: string | null
+          perk_code?: string | null
+          term_start?: string | null
+          term_end?: string | null
+          is_active?: boolean
+          sort_order?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sponsor_placements: {
+        Row: {
+          id: string
+          org_id: string
+          sponsor_id: string
+          surface: string
+          starts_at: string | null
+          ends_at: string | null
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          sponsor_id: string
+          surface: string
+          starts_at?: string | null
+          ends_at?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          sponsor_id?: string
+          surface?: string
+          starts_at?: string | null
+          ends_at?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      // --- end Sponsors ---
       hopshop_products: {
         Row: {
           id: string
