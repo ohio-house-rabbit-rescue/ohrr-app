@@ -25,7 +25,8 @@
 | **Code + docs (working copy)** | Local disk: `C:\Users\johns\ohrr-app` | ✅ local SSD | the app |
 | **Code remote (canonical)** | GitHub: `chasingtheunicorn/ohrr-app` | ✅ cloud | the app — source of truth |
 | **Design docs (canonical)** | Drive Shared Drive → "07-OHRR App / OHRR App Design" (`00`–`04` + this file) | ✅ cloud | research & strategy |
-| **Live app** | https://ohrr-app.pages.dev (Netlify auto-deploys `main`) | ✅ cloud | what's shipped |
+| **Live app** | https://ohrr-app.pages.dev (Cloudflare Pages auto-deploys `main`) | ✅ cloud | what's shipped |
+| **Phone builds (Android/iOS)** | Repo `android/` + `ios/` (Capacitor); built files, test keystore + passwords in Drive "07-OHRR App / Mobile builds"; steps in `docs/HANDOFF.md` (= *OHRR Mobile Build Handoff.docx* in Drive) | ✅ cloud | the test builds |
 | **Claude session transcripts** | Local only: `C:\Users\johns\.claude\projects\<project>\*.jsonl` | ⚠️ local only — **not** the record | a convenience |
 | **Project memory (AI)** | Local: `…\.claude\projects\<project>\memory\` | ⚠️ local only | AI continuity |
 

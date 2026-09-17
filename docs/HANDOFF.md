@@ -1,0 +1,180 @@
+# OHRR Mobile Build Handoff
+
+> Android + iPhone internal test builds of the OHRR app · 2026-09-17
+
+> Same content as **OHRR Mobile Build Handoff.docx** in the Drive folder "07-OHRR App". Regenerate both from one source if you change it (see docs/PROGRESS.md, 2026-09-17).
+
+This document is for whoever builds and installs the OHRR app on phones for internal testing — the Mac owner for iPhone (Xcode / TestFlight) and anyone with Android Studio for Android (Play Console internal testing). It is written to be followed top to bottom without needing the code history. Nothing here is for a public store release yet; the last section lists what that will need.
+
+## 1. What was built
+
+- The OHRR web app (the same React app that runs at https://ohrr-app.pages.dev) is now wrapped in a native shell with Capacitor 8. One codebase: the web build keeps working unchanged, and the same build is copied into the Android and iOS projects.
+- App id / bundle id: `org.ohiohouserabbitrescue.app` · App name: OHRR · Version 0.1.0 (Android versionCode 1).
+- Inside the app (and only there) a few things behave natively: My Bunny “Take a photo” / “Choose from library” use the phone camera and photo picker; care reminders become phone notifications (“Remind me on this phone”, 9:00 AM on the due date); every link to another website — donate, merch, Petfinder, vet websites, the OHRR website — opens in the phone’s browser; the status bar is brand blue and there is a brand-blue splash screen with the OHRR mark; Android’s back button walks back through the app.
+- On the web nothing changed: file inputs, calendar (.ics) downloads and plain links stay as they were.
+
+## 2. Where everything is
+
+| Thing | Where |
+|---|---|
+| Source code | https://github.com/ohio-house-rabbit-rescue/ohrr-app — branch **main** (the web app auto-deploys from it to Cloudflare Pages) |
+| Android project | `android/` in the repo (open it in Android Studio) |
+| iPhone project | `ios/App/App.xcodeproj` in the repo (open it in Xcode — Capacitor 8 uses Swift Package Manager, so there is no .xcworkspace and no CocoaPods) |
+| Capacitor config | `capacitor.config.ts` (app id, name, splash / status-bar / notification settings) |
+| Native code the app uses | `src/native/` (platform.ts, camera.ts, notifications.ts, browser.ts, NativeBridge.tsx) |
+| Icon + splash sources | `resources/` (made from public/ohrr-mark.png by `scripts/make-native-assets.py`); generated into android/ and ios/ by `npm run cap:assets` |
+| Ready-made Android builds | G:\Shared drives\07-OHRR App\Mobile builds\android\ — ohrr-0.1.0-vc1-release.aab (for Play Console) and ohrr-0.1.0-vc1-debug.apk (sideload) |
+| Android test signing key | G:\Shared drives\07-OHRR App\Mobile builds\keys\ohrr-test.keystore + README.txt (passwords). Never in the repo. |
+| iPhone builds | G:\Shared drives\07-OHRR App\Mobile builds\ios\ — empty until the Mac produces one (see section 4) |
+| This document | docs/HANDOFF.md in the repo, and G:\Shared drives\07-OHRR App\OHRR Mobile Build Handoff.docx |
+
+### npm scripts
+
+| Command | What it does |
+|---|---|
+| `npm run build` | Builds the web app into `dist/` (what Cloudflare runs) |
+| `npm run cap:sync` | `npm run build` + `npx cap sync` — copies the fresh web build into android/ and ios/ and updates native plugins. Run after ANY web change. |
+| `npm run cap:ios` | Opens the iPhone project in Xcode (Mac only) |
+| `npm run cap:android` | Opens the Android project in Android Studio |
+| `npm run cap:assets` | Regenerates icons + splash from `resources/` (only needed if the mark changes) |
+| `node scripts/mybunny-check.ts` | Browser-free checks for My Bunny + the reminder-notification maths (205 checks) |
+
+## 3. Prerequisites
+
+### Mac (iPhone builds)
+
+- macOS with **Xcode 16.4 or newer** from the App Store (Xcode 26 is fine). Open it once and let it install the iOS platform.
+- **Node.js 22 or newer** (https://nodejs.org — the LTS installer) and git (Xcode installs git; or https://git-scm.com).
+- An **Apple ID signed in to Xcode** (Xcode → Settings → Accounts). Running on your own iPhone works with a free personal team; TestFlight needs the paid Apple Developer Program membership (see section 9).
+- An iPhone with a USB cable (or on the same Wi-Fi, once paired) for a device run.
+- CocoaPods is **not** required — Capacitor 8 fetches its iOS libraries with Swift Package Manager, built into Xcode.
+
+### Windows or Mac (Android builds)
+
+- **Android Studio** (Ladybug 2024.2 or newer) with the default SDK; in SDK Manager make sure **Android 15 (API 35)** and **Android 16 (API 36)** platforms are installed (compileSdk is 36).
+- **JDK 21** — Android Studio bundles one; if building from a terminal set `JAVA_HOME` to it (Capacitor 8 needs 21, not 17).
+- Node.js 22+ and git, as above.
+- The test keystore from the Drive keys folder (section 5).
+
+## 4. iPhone: build and run (on the Mac)
+
+1. Open Terminal and clone the repo: `git clone https://github.com/ohio-house-rabbit-rescue/ohrr-app.git` then `cd ohrr-app`.
+2. Install the JavaScript packages: `npm install`.
+3. Build the web app and copy it into the native projects: `npm run cap:sync`. (This must be run before Xcode — the web build inside ios/ is not committed.)
+4. Open the project in Xcode: `npm run cap:ios` (or double-click `ios/App/App.xcodeproj`). The first open takes a minute while Swift Package Manager fetches Capacitor and the plugins — wait for the progress bar in the top of the Xcode window to finish.
+5. In the left sidebar click the blue **App** project, then the **App** target → **Signing & Capabilities** tab. Tick **Automatically manage signing** and choose your **Team**.
+6. If Xcode says the bundle identifier `org.ohiohouserabbitrescue.app` is not available to your team, change **Bundle Identifier** on that same tab to something you own for now (for example `com.yourname.ohrr`). Switch it back to the OHRR one once the OHRR organisation account exists — TestFlight and the store listing must use the final id.
+7. Plug in the iPhone, pick it in the device menu at the top (next to “App”), and press **Run** (▶). The first time, on the phone go to Settings → General → VPN & Device Management and trust your developer certificate, then run again.
+8. Try the test checklist in section 7 on the phone.
+9. **TestFlight (internal testers):** in Xcode pick **Any iOS Device (arm64)** as the destination, then **Product → Archive**. When the Organizer opens, click **Distribute App → TestFlight & App Store → Upload** and accept the defaults (Xcode manages signing; “Upload your app’s symbols” is fine). After Apple processes it (5–30 min) go to https://appstoreconnect.apple.com → the app → **TestFlight** → add testers under **Internal Testing** (up to 100 people with App Store Connect roles, no review needed). They install the TestFlight app and accept the invitation.
+10. Every new upload needs a higher **Build** number: App target → **General** → Identity → Build (1 → 2 → 3…). Version can stay 0.1.0 while testing.
+
+## 5. Android: build and share
+
+Two ready-made builds are already in the Drive folder (section 2). To make a new one after a change:
+
+### Option A — Android Studio (point and click)
+
+1. In the repo run `npm install` (first time) and `npm run cap:sync`.
+2. Copy `android/keystore.properties.example` to `android/keystore.properties` and fill in the four values from `G:\Shared drives\07-OHRR App\Mobile builds\keys\README.txt` (the file is gitignored, so it never goes to GitHub). On a Mac copy `ohrr-test.keystore` somewhere local and point `storeFile` at it.
+3. Open the project: `npm run cap:android`. Let Gradle sync finish (bottom status bar).
+4. For a quick install on a phone plugged in with USB debugging on: press **Run** (▶).
+5. For Play Console: **Build → Generate Signed App Bundle / APK → Android App Bundle → Next**, choose the keystore file, alias `ohrr-test` and the passwords from README.txt, pick **release**, **Create**. The .aab lands in `android/app/release/`.
+
+### Option B — terminal (what produced the files in Drive)
+
+```
+npm install
+npm run cap:sync
+cd android
+# Windows:  .\gradlew.bat bundleRelease      Mac/Linux:  ./gradlew bundleRelease
+#   -> android/app/build/outputs/bundle/release/app-release.aab   (signed if keystore.properties exists)
+# Windows:  .\gradlew.bat assembleDebug      Mac/Linux:  ./gradlew assembleDebug
+#   -> android/app/build/outputs/apk/debug/app-debug.apk         (sideload only)
+```
+
+If Gradle cannot find the SDK, create `android/local.properties` with one line, e.g. `sdk.dir=C:/Users/you/AppData/Local/Android/Sdk` (Mac: `sdk.dir=/Users/you/Library/Android/sdk`). Android Studio writes this file for you when you open the project.
+
+### Upload to Play Console (internal testing)
+
+1. Go to https://play.google.com/console with the existing Google Play account → **Create app** (name OHRR, App, Free). Fill only what it insists on for now.
+2. **Testing → Internal testing → Create new release**. Keep **Play App Signing** on (default) — Google then holds the real signing key and our test keystore becomes the upload key.
+3. Upload `ohrr-0.1.0-vc1-release.aab` (or your new .aab). Release name = 0.1.0 (1). **Save → Review release → Start rollout to Internal testing**.
+4. **Testers** tab → create an email list of testers (up to 100) → save → copy the **opt-in link** and send it. Testers open it on their phone, accept, and install from the Play Store. Internal testing needs no review and updates appear within minutes.
+5. For each later upload raise `versionCode` in `android/app/build.gradle` (1 → 2 → 3…); Play rejects a bundle whose versionCode is not higher than the last.
+
+### The keystore rule
+
+The first bundle uploaded to a Play Console app ties that app to its signing key. If the public release is ever uploaded with this test keystore, every future update must be signed with it — losing it would mean a new app listing and losing every install. So: keep `ohrr-test.keystore` and README.txt in the Drive keys folder forever, never delete or “clean up” that folder, and leave Play App Signing on so Google can reset a lost upload key.
+
+## 6. Making a change and rebuilding both
+
+1. Make the change in the web code (`src/`), test it in the browser with `npm run dev`, commit and push to `main` as usual — the website build updates by itself.
+2. Run `npm run cap:sync`. This rebuilds `dist/` and copies it into android/ and ios/.
+3. Android: open Android Studio (or run the gradle command) and build again. Raise `versionCode` if it is going to Play.
+4. iPhone: open Xcode, raise the Build number, Run or Archive again.
+5. The native folders (android/, ios/) are committed, so after `git pull` on another machine the same two commands (`npm install`, `npm run cap:sync`) bring it up to date. Only change files inside android/ or ios/ when you mean to (version numbers, signing, permissions).
+
+## 7. What to test on the phone (test-build checklist)
+
+- App opens on a brand-blue splash with the OHRR mark, then Home; the status bar is blue with white icons.
+- My Bunny → Add a bunny → **Take a photo** asks for camera permission and opens the camera; **Choose from library** opens the photo picker; the photo shows shrunk in the form and after saving.
+- On a bunny’s page add a reminder, tap **Remind me on this phone** → the first time the phone asks to allow notifications; the button turns into “Reminding on this phone” with the first date. **Mark done** moves it to the next date. Delete or archive stops it. (To see one fire quickly, set Next due to today and change the phone clock past 9 AM, or set it to tomorrow.)
+- Tapping a notification opens that bunny’s page.
+- Give / Donate, Hop Shop, Petfinder, vet websites and the “OHRR website” links open in the phone’s browser (Chrome Custom Tab / Safari sheet), and closing it returns to the app.
+- Phone numbers (`tel:`) and emails (`mailto:`) open the dialer / mail app.
+- Android back button goes back a screen; on Home it leaves the app.
+- Staff → Sign in works (Supabase is the live backend, same as the website).
+- Nothing is uploaded from My Bunny — it stays on the phone (same as the web).
+
+## 8. Deliberately OFF or not available in these test builds
+
+- **Raffle ticket reservation** — a test feature behind the `raffle_tickets_enabled` app setting; it stays OFF (staff can toggle it at /staff/settings, but leave it off for testers).
+- **Live adoptable rabbits (Petfinder)** — the Petfinder proxy is not configured on Cloudflare, so the Adopt page shows the built-in sample rabbits, clearly labelled. Same on the web today.
+- **Sign-up / request forms** (service sign-up, volunteer sign-up, appointment, share a Happy Tail, surrender intake, BunFest spa/glamour reservation) post to Netlify Forms, which is not wired up on Cloudflare Pages — so on the web and in the app they show “received” without reaching anyone. A pre-existing gap from the Netlify → Cloudflare move; needs a Cloudflare form endpoint (or Supabase) before public release.
+- **My Bunny “Back up” to a file** is disabled inside the app (a browser-style file download cannot reach the Files app in the native shell). Restore from a file works. A share-sheet export is a later build (needs the free @capacitor/share + @capacitor/filesystem plugins).
+- **BunFest “Apple / iOS Calendar” (.ics)** is hidden inside the app for the same reason; the Google Calendar links remain.
+- **Push notifications, in-app purchases, analytics** — none; nothing paid or third-party was added. Reminders are local notifications scheduled on the phone.
+- The app is portrait-only on phones (it is a phone-shaped design).
+
+## 9. Before a PUBLIC release (not needed for testing)
+
+1. **Apple:** enrol Ohio House Rabbit Rescue as an *organisation* in the Apple Developer Program (needs a D-U-N-S number for the nonprofit, the legal entity name, and someone with authority to sign). Apply for the **nonprofit fee waiver** (US 501(c)(3) organisations can have the $99/year waived — in the enrolment flow, or via https://developer.apple.com/support/membership-fee-waiver/). Until then the bundle id can be used from a personal team for testing only.
+2. **Google Play:** the existing account must be verified as an organisation (D-U-N-S again, or the org’s documents) and a new personal account would need a 14-day closed test with 12 testers before production — check which applies to this account in Play Console → Setup → Advanced settings.
+3. **Privacy policy URL:** https://ohrr-website.pages.dev/privacy — after board review; both stores require it in the listing and (Apple) in App Store Connect → App Privacy. Fill in the data-safety / privacy-nutrition questionnaires: My Bunny data stays on device; Supabase auth is staff-only; no ads or tracking.
+4. **Remove `noindex`:** delete the `<meta name="robots" content="noindex, nofollow">` line in `index.html`, the `X-Robots-Tag` header in `public/_headers` (and netlify.toml), and `public/robots.txt`, so the web app can be found once the stores link to it.
+5. **Store listing text:** app name, short + full description, category (Lifestyle or Education), contact email, support URL (the OHRR website).
+6. **Screenshots:** the iPhone sizes App Store Connect asks for (currently the 6.9″ and 6.5″ sets) and phone screenshots for Play — take them from the test build.
+7. **Icons:** the generated icon (OHRR mark in a white disc on brand blue) is fine to ship; if the sponsor wants a different treatment, change `scripts/make-native-assets.py`, run it and `npm run cap:assets`.
+8. **Donations open externally** — already done (Give / Support links leave the app), which is what Apple 3.1.1 / 3.2.2 and Play policy expect for nonprofit donations that are not in-app purchases.
+9. **Versioning:** set version 1.0.0 in package.json, `android/app/build.gradle` (versionName + versionCode) and Xcode (Version + Build).
+10. **Signing for production:** decide whether to keep using the test keystore as the Play upload key (fine with Play App Signing on) or generate a fresh one — either way, keep it in the Drive keys folder with its passwords.
+
+## 10. Troubleshooting
+
+| Symptom | What to do |
+|---|---|
+| Xcode: “No such module Capacitor” or packages missing | Wait for Swift Package Manager to finish (progress bar at the top). If stuck: File → Packages → Reset Package Caches, then Product → Clean Build Folder (Shift-Cmd-K) and build again. Make sure `npm install` was run — the plugin packages are read from node_modules. |
+| Xcode: “Signing for App requires a development team” | App target → Signing & Capabilities → tick Automatically manage signing → choose a Team (sign in at Xcode → Settings → Accounts first). |
+| Xcode: bundle identifier not available / already in use | Someone else registered it or your team cannot use it yet — change it temporarily (section 4 step 6). |
+| iPhone: “Untrusted Developer” when opening the app | Settings → General → VPN & Device Management → trust the developer app (free-team builds only). |
+| App shows a blank white screen | `npm run cap:sync` was not run (no web build inside the native project) — run it and build again. Check for errors in Safari → Develop → [iPhone] (iOS) or chrome://inspect (Android). |
+| Xcode says CocoaPods / Podfile | Not needed — this project uses Swift Package Manager. Ignore Pods entirely. |
+| Android Studio: Gradle sync fails / “SDK location not found” | Create `android/local.properties` with `sdk.dir=…` (section 5) or File → Sync Project. Also confirm API 35/36 platforms are installed in SDK Manager. |
+| Android: “Unsupported class file major version” / Java errors | Gradle needs JDK 21. Android Studio → Settings → Build Tools → Gradle → Gradle JDK → choose the embedded JDK (21). In a terminal set `JAVA_HOME` to a JDK 21. |
+| Play Console rejects the bundle: “not signed” / “debug key” | The .aab must be the release bundle signed with the test keystore (keystore.properties in place, or Generate Signed App Bundle). Debug APKs are for sideloading only. |
+| Play Console: “version code 1 has already been used” | Raise versionCode in `android/app/build.gradle` and rebuild. |
+| Notifications never appear on Android 13+ | Tap “Remind me on this phone” once so the app asks for permission; if it was denied, Settings → Apps → OHRR → Notifications → Allow. Reminders fire at 9:00 AM on the due date. Battery-saver modes can delay them slightly (they are scheduled with “allow while idle”). |
+| Notifications never appear on iPhone | Settings → Notifications → OHRR → Allow. iOS also drops pending notifications if the app is deleted and reinstalled — set them again. |
+| Camera button does nothing / permission denied | Android: Settings → Apps → OHRR → Permissions → Camera. iPhone: Settings → OHRR → Camera / Photos. The app shows a message pointing there. |
+| Donate / website links open inside the app instead of the browser | They should not — every http(s) link to another site is intercepted (src/native/browser.ts). If one slips through, note the page; it is a one-line fix. |
+| `npm run cap:sync` fails with “dist not found” | The web build failed first — run `npm run build` alone and fix the error it prints. |
+
+## Appendix — how the native pieces fit
+
+- `capacitor.config.ts`: app id / name, `webDir: dist`, `server.androidScheme: https` (the app is served from https://localhost inside the Android WebView, like the website), splash and status-bar colours, notification small icon.
+- `src/native/platform.ts`: `isNative` (true only inside the app) and the status-bar / splash setup. Every native call in the app checks `isNative` first, so the web bundle only carries this check.
+- `src/native/camera.ts`: `pickPhoto('camera' | 'library')` → Capacitor Camera → data URL → the same 512px downscale as the web.
+- `src/native/reminderSchedule.ts` + `notifications.ts`: a reminder id becomes a stable numeric notification id; a one-off schedules once at 9:00 AM local; a repeat schedules the next 6 occurrences; Mark done / edit re-schedule, delete / archive cancel; an overdue reminder nudges at the next 9:00 AM.
+- `src/native/browser.ts` + `NativeBridge.tsx`: one document-level click handler sends outside http(s) links (or `target="_blank"`) to the system browser; the Android back button and notification taps are handled in NativeBridge, mounted once in `main.tsx`.
+- Android permissions (`android/app/src/main/AndroidManifest.xml`): CAMERA, POST_NOTIFICATIONS, SCHEDULE_EXACT_ALARM, RECEIVE_BOOT_COMPLETED. The photo picker needs no storage permission. iOS usage strings are in `ios/App/App/Info.plist`.
