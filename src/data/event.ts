@@ -3,6 +3,14 @@
 // partners, and sponsors reflect the 2025 program (most recent published lineup)
 // and will be refreshed as the 2026 roster is announced.
 import type { IconName } from '../components/icons'
+import { seedEvents, BUNFEST_EVENT_SLUG } from './events'
+import { eventDate, eventDateShort, eventTime, eventIsoDay } from '../lib/eventFormat'
+
+// The date / time / venue / theme below come from the shared BunFest event
+// record (src/data/events.ts — the same row the staff Events manager edits).
+// Screens read the LIVE record via useBunfestEvent(); these static values are
+// the seed used by calendar export and as the fallback.
+const bunfest = seedEvents.find((e) => e.slug === BUNFEST_EVENT_SLUG)!
 
 export const event = {
   name: 'Midwest BunFest',
@@ -19,14 +27,15 @@ export const event = {
   tagline: 'The largest rabbit festival & educational expo in the Eastern U.S.',
   blurb:
     'A family-friendly celebration of house rabbits — education from vets and rabbit experts, specialty vendors, a bunny spa, glamour shots, a silent auction & raffle, and rescues from across the country. All proceeds support Ohio House Rabbit Rescue.',
-  date: 'Sunday, October 25, 2026',
-  dateShort: 'Sun, Oct 25, 2026',
-  isoDate: '2026-10-25', // machine-readable event day (used for calendar export)
-  timeLabel: '10:00 AM – 4:00 PM',
+  theme: bunfest.theme ?? '',
+  date: eventDate(bunfest),
+  dateShort: eventDateShort(bunfest),
+  isoDate: eventIsoDay(bunfest), // machine-readable event day (used for calendar export)
+  timeLabel: eventTime(bunfest),
   venue: {
-    name: 'The Makoy',
-    address: '5462 Center St., Hilliard, OH 43026',
-    city: 'Hilliard, Ohio',
+    name: bunfest.venue ?? '',
+    address: bunfest.address ?? '',
+    city: bunfest.city ?? '',
     parking: 'Ample free parking in The Makoy lot.',
   },
   admission: [

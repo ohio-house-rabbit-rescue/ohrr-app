@@ -1,6 +1,8 @@
 // Typed schema for the OHRR Supabase backend.
 //
-// HAND-AUTHORED to mirror supabase/migrations/20260627052536_hopshop_backend.sql
+// HAND-AUTHORED to mirror the migrations under supabase/migrations/ (hopshop
+// backend, announcements, volunteer_opportunities, care_articles, rabbits,
+// events, vets, hero_slides)
 // (the schema already applied to the live project). The Supabase CLI's
 // `gen types` needs the project ref + an access token, which aren't in the repo;
 // once those are available, regenerate with `npm run gen:types` and replace this
@@ -348,6 +350,189 @@ export type Database = {
           photos?: string[]
           sort_order?: number
           is_published?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      events: {
+        Row: {
+          id: string
+          org_id: string
+          slug: string
+          title: string
+          starts_at: string
+          ends_at: string | null
+          venue: string | null
+          address: string | null
+          city: string | null
+          summary: string | null
+          body: string | null
+          theme: string | null
+          url: string | null
+          is_published: boolean
+          sort_order: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          slug: string
+          title: string
+          starts_at: string
+          ends_at?: string | null
+          venue?: string | null
+          address?: string | null
+          city?: string | null
+          summary?: string | null
+          body?: string | null
+          theme?: string | null
+          url?: string | null
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          slug?: string
+          title?: string
+          starts_at?: string
+          ends_at?: string | null
+          venue?: string | null
+          address?: string | null
+          city?: string | null
+          summary?: string | null
+          body?: string | null
+          theme?: string | null
+          url?: string | null
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vets: {
+        Row: {
+          id: string
+          org_id: string
+          name: string
+          doctors: string | null
+          address: string | null
+          city: string | null
+          region: string
+          phone: string | null
+          phone2: string | null
+          email: string | null
+          website: string | null
+          notes: string | null
+          is_emergency: boolean
+          is_low_cost_spay: boolean
+          is_published: boolean
+          sort_order: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          name: string
+          doctors?: string | null
+          address?: string | null
+          city?: string | null
+          region: string
+          phone?: string | null
+          phone2?: string | null
+          email?: string | null
+          website?: string | null
+          notes?: string | null
+          is_emergency?: boolean
+          is_low_cost_spay?: boolean
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          name?: string
+          doctors?: string | null
+          address?: string | null
+          city?: string | null
+          region?: string
+          phone?: string | null
+          phone2?: string | null
+          email?: string | null
+          website?: string | null
+          notes?: string | null
+          is_emergency?: boolean
+          is_low_cost_spay?: boolean
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      hero_slides: {
+        Row: {
+          id: string
+          org_id: string
+          placement: string
+          headline: string
+          subline: string | null
+          image_url: string | null
+          cta_label: string | null
+          cta_url: string | null
+          starts_at: string | null
+          ends_at: string | null
+          is_published: boolean
+          sort_order: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          placement?: string
+          headline: string
+          subline?: string | null
+          image_url?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
+          starts_at?: string | null
+          ends_at?: string | null
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          placement?: string
+          headline?: string
+          subline?: string | null
+          image_url?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
+          starts_at?: string | null
+          ends_at?: string | null
+          is_published?: boolean
+          sort_order?: number
           created_by?: string | null
           created_at?: string
           updated_at?: string
