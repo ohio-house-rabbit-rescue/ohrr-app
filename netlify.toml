@@ -12,3 +12,10 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Pre-launch: link-only. Search engines are told not to index or follow anything.
+# Anyone with the URL can still open the app. Remove at app-store launch.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"

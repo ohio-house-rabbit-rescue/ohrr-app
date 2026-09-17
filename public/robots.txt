@@ -1,0 +1,5 @@
+# Pre-launch: the OHRR app is link-only until it ships to the app stores.
+# Keep it out of search engines. Remove this (and the X-Robots-Tag header in
+# netlify.toml) at launch.
+User-agent: *
+Disallow: /
