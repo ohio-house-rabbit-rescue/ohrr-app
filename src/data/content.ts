@@ -33,22 +33,24 @@ export const OHRR_TABS: TabItem[] = [
   { to: '/support', label: 'Give', icon: 'gift' },
 ]
 
-// Home quick actions — real photos, no icons. (Photos are the bundled,
-// freely-licensed rabbit photos credited on the Settings screen.)
-export interface QuickAction {
+// Home quick actions. Sponsor rule: a card for a FUNCTION (find a vet, volunteer,
+// events…) shows a fixed line icon so people see and remember its purpose — a
+// photo is only for things that ARE content, so only "Adopt" (real rabbits) keeps
+// one. (The photo is a bundled, freely-licensed rabbit photo credited on Settings.)
+// Exactly one of `icon` / `photo` is set.
+export type QuickAction = {
   to: string
   title: string
   subtitle: string
-  photo: string
-}
+} & ({ icon: IconName; photo?: undefined } | { photo: string; icon?: undefined })
 
 export const OHRR_QUICK_ACTIONS: QuickAction[] = [
-  { to: '/vets', title: 'Find a vet', subtitle: 'Rabbit-savvy vets · 24/7 emergency', photo: BUNNY_PHOTOS.silver },
-  { to: '/found', title: 'Found a stray?', subtitle: 'Catch it safely & who to call', photo: BUNNY_PHOTOS.tailGreyGrass },
+  { to: '/vets', title: 'Find a vet', subtitle: 'Rabbit-savvy vets · 24/7 emergency', icon: 'phone' },
+  { to: '/found', title: 'Found a stray?', subtitle: 'Catch it safely & who to call', icon: 'mappin' },
   { to: '/adopt', title: 'Adopt', subtitle: 'Meet the bunnies & how it works', photo: BUNNY_PHOTOS.caramelLop },
-  { to: '/volunteer', title: 'Volunteer', subtitle: 'Four ways to help the buns', photo: BUNNY_PHOTOS.tailGreyLap },
-  { to: '/support', title: 'Give', subtitle: 'Every way to support OHRR', photo: BUNNY_PHOTOS.spotted },
-  { to: '/events', title: 'Events', subtitle: 'What’s coming up', photo: BUNNY_PHOTOS.tailFluffy },
+  { to: '/volunteer', title: 'Volunteer', subtitle: 'Four ways to help the buns', icon: 'users' },
+  { to: '/support', title: 'Give', subtitle: 'Every way to support OHRR', icon: 'gift' },
+  { to: '/events', title: 'Events', subtitle: 'What’s coming up', icon: 'calendar' },
 ]
 
 export const OHRR_HUB: HubItem[] = [

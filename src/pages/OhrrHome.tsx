@@ -2,11 +2,11 @@ import { Link } from 'react-router-dom'
 import { ohrr } from '../data/ohrr'
 import { event } from '../data/event'
 import { OHRR_HUB, OHRR_QUICK_ACTIONS } from '../data/content'
-import { slideImage, appPath, type HeroSlide } from '../data/heroSlides'
+import { slideVisual, appPath, type HeroSlide } from '../data/heroSlides'
 import { useHeroSlides } from '../lib/heroSlides'
 import { useBunfestEvent, eventDate } from '../lib/events'
 import { Screen, SectionLabel, ActionCard, Card } from '../components/ui'
-import { PhotoCard } from '../components/PhotoCard'
+import { PhotoCard, IconPhotoTile } from '../components/PhotoCard'
 import { Icon } from '../components/icons'
 import AnnouncementsBanner from '../components/AnnouncementsBanner'
 import PresentedBy from '../features/sponsors/PresentedBy'
@@ -14,12 +14,15 @@ import MyBunnyHomeCard from '../features/mybunny/HomeCard'
 
 // One top card, in the existing "big BunFest button" styling. The BunFest slide
 // keeps BunFest's own palette + logo and shows the live event date; any other
-// slide uses the OHRR brand gradient with its photo.
+// slide uses the OHRR brand gradient. Its picture slot follows the sponsor rule
+// (slideVisual): an uploaded image always wins, an adopt card shows a real
+// rabbit, and every other function card shows its fixed line icon centred on
+// the tinted top area so the purpose is recognisable at a glance.
 function HeroCard({ slide }: { slide: HeroSlide }) {
   const to = appPath(slide.ctaUrl) ?? '/'
   const isBunfest = to === '/bunfest'
   const bunfest = useBunfestEvent()
-  const image = slideImage(slide)
+  const visual = slideVisual(slide)
   const cls = isBunfest ? 'from-[#1690bf] to-[#0f7197]' : 'from-brand-blue to-brand-blue-dark'
   const days = isBunfest ? Math.ceil((new Date(bunfest.startsAt).getTime() - Date.now()) / 86_400_000) : NaN
   const countdown = Number.isFinite(days) && days > 0 ? `In ${days} day${days === 1 ? '' : 's'}` : null
@@ -30,11 +33,21 @@ function HeroCard({ slide }: { slide: HeroSlide }) {
       className={`group relative w-[76%] max-w-[300px] shrink-0 snap-start overflow-hidden rounded-3xl bg-gradient-to-br ${cls} text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0`}
     >
       <div className={`relative h-[118px] ${isBunfest ? 'bg-white p-2.5' : 'bg-white/10'}`}>
-        {image &&
-          (isBunfest ? (
-            <img src={image} alt={`Midwest BunFest ${event.logoYear} logo`} className="mx-auto block h-full w-auto" />
+        {visual &&
+          ('image' in visual ? (
+            isBunfest ? (
+              <img
+                src={visual.image}
+                alt={`Midwest BunFest ${event.logoYear} logo`}
+                className="mx-auto block h-full w-full object-contain"
+              />
+            ) : (
+              <img src={visual.image} alt="" className="h-full w-full object-cover" />
+            )
           ) : (
-            <img src={image} alt="" className="h-full w-full object-cover" />
+            <span aria-hidden="true" className="flex h-full items-center justify-center">
+              <Icon name={visual.icon} size={56} className="text-white/95 transition duration-300 group-hover:scale-[1.06]" />
+            </span>
           ))}
         {countdown && (
           <span className="absolute right-2.5 top-2.5 rounded-full bg-[#e0950f] px-2.5 py-1 text-[11px] font-extrabold text-white shadow-sm">
@@ -94,13 +107,17 @@ export default function OhrrHome() {
           </div>
         )}
 
-        {/* Quick actions — real photos, no icons */}
+        {/* Quick actions — fixed line icons for functions; a real rabbit photo only for Adopt */}
         <div className="space-y-2.5">
           <SectionLabel>Quick actions</SectionLabel>
           <div className="grid grid-cols-3 gap-2">
-            {OHRR_QUICK_ACTIONS.map((q) => (
-              <PhotoCard key={q.to} to={q.to} title={q.title} subtitle={q.subtitle} photo={q.photo} variant="tile" />
-            ))}
+            {OHRR_QUICK_ACTIONS.map((q) =>
+              q.icon ? (
+                <IconPhotoTile key={q.to} to={q.to} title={q.title} subtitle={q.subtitle} icon={q.icon} variant="tile" />
+              ) : (
+                <PhotoCard key={q.to} to={q.to} title={q.title} subtitle={q.subtitle} photo={q.photo} variant="tile" />
+              ),
+            )}
           </div>
         </div>
 

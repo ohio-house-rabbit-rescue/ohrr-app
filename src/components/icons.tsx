@@ -1,5 +1,12 @@
 import type { ReactNode } from 'react'
 
+// The shared OHRR line-icon set. The website (ohrr-website/src/components/icons.tsx)
+// carries a copy so the same icon means the same thing on both surfaces:
+// calendar = events, gift = ways to give, award = silent auction, users = volunteer,
+// book = care guides, phone = vets, mappin = found a rabbit / surrender, bag = Hop Shop,
+// sparkles = news / Happy Tails, star = partners, mail = contact, device = the app.
+// Keep the two files in sync.
+
 export type IconName =
   | 'home'
   | 'calendar'
@@ -27,6 +34,7 @@ export type IconName =
   | 'help'
   | 'mic'
   | 'x'
+  | 'device'
 
 const paths: Record<IconName, ReactNode> = {
   home: <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />,
@@ -174,6 +182,13 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <path d="M6 6l12 12" />
       <path d="M18 6 6 18" />
+    </>
+  ),
+  // A phone outline — "Get the OHRR app" on the website; kept here for parity.
+  device: (
+    <>
+      <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" />
+      <line x1="10.5" y1="18" x2="13.5" y2="18" />
     </>
   ),
 }
