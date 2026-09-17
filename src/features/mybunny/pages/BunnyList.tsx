@@ -5,6 +5,7 @@ import { Icon } from '../../../components/icons'
 import { MbIcon } from '../icons'
 import { BunnyAvatar, DuePill, EmergencyCard, PrivacyLine, SaveWarning, dueText } from '../ui'
 import { downloadBlob } from '../ics'
+import HelpSearch from '../../bunnyhelp/HelpSearch'
 import {
   useMyBunny,
   todayIso,
@@ -70,6 +71,9 @@ export default function BunnyList() {
             </div>
           </Card>
         )}
+
+        {/* Bunny Help — routes "my bunny is…" to OHRR's own guidance */}
+        <HelpSearch bunnyId={data.bunnies.length === 1 ? data.bunnies[0].id : undefined} />
 
         {hasBunnies ? (
           <div className="space-y-2.5">
@@ -191,7 +195,9 @@ function BackupRestore({ data }: { data: MyBunnyData }) {
         tone: 'ok',
         text: `Restored ${result.bunnies} bunn${result.bunnies === 1 ? 'y' : 'ies'}, ${result.reminders} reminder${
           result.reminders === 1 ? '' : 's'
-        } and ${result.weights} weight entr${result.weights === 1 ? 'y' : 'ies'}.`,
+        }, ${result.weights} weight entr${result.weights === 1 ? 'y' : 'ies'} and ${result.health} health note${
+          result.health === 1 ? '' : 's'
+        }.`,
       })
     } catch (err) {
       setMsg({ tone: 'err', text: err instanceof Error ? err.message : 'Couldn’t read that file.' })

@@ -16,6 +16,8 @@ import {
   mbInput,
 } from '../ui'
 import { HOP_SHOP_TO, LEARN_TO, VET_DIRECTORY } from '../links'
+import HealthNotesSection from '../HealthNotes'
+import HelpSearch from '../../bunnyhelp/HelpSearch'
 import {
   buildReminderIcs,
   buildAllRemindersIcs,
@@ -31,6 +33,7 @@ import {
   remindersFor,
   isUpcoming,
   weightsFor,
+  healthNotesFor,
   markReminderDone,
   addWeight,
   deleteWeight,
@@ -72,6 +75,7 @@ export default function BunnyProfile() {
   const today = todayIso()
   const reminders = remindersFor(data, bunny.id)
   const weights = weightsFor(data, bunny.id)
+  const health = healthNotesFor(data, bunny.id)
   const age = formatAge(bunny, today)
 
   return (
@@ -91,9 +95,14 @@ export default function BunnyProfile() {
 
         <SaveWarning />
 
+        {/* Bunny Help — "Clover is…" routes to OHRR's own guidance; notes save to the timeline below */}
+        <HelpSearch bunnyId={bunny.id} bunnyName={bunny.name} />
+
         <RemindersSection bunny={bunny} reminders={reminders} today={today} />
 
         <WeightSection bunny={bunny} entries={weights} unit={data.prefs.weightUnit} today={today} />
+
+        <HealthNotesSection bunny={bunny} notes={health} today={today} />
 
         <section className="space-y-2.5">
           <SectionLabel>Quick links</SectionLabel>
