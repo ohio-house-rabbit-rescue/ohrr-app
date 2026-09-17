@@ -41,6 +41,7 @@ export default function StaffLayout() {
     { to: '/staff/vets', label: 'Vet directory', show: can('content.education.edit') },
     { to: '/staff/events', label: 'Events', show: can('events.bunfest.manage') },
     { to: '/staff/raffle', label: 'Silent Auction', show: can('events.bunfest.manage') },
+    { to: '/staff/sponsors', label: 'Sponsors & partners', show: can('events.bunfest.manage') },
     {
       to: '/staff/team',
       label: 'Team',
