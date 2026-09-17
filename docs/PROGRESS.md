@@ -549,3 +549,6 @@ strategy doc; not yet scheduled:
    "OHRR App Design" folder as `04-progress-log.md`.
 4. **Before ending a turn:** everything committed + pushed and this log current,
    so a fresh session can resume from GitHub + Drive alone.
+
+## 2026-09-17 — Home screen: more above the fold
+Sponsor: "the app has just BunFest above the fold — we need more ideas and options on the phone screen." Home now opens with a compact **My Bunny** strip (your bunny's photo or a rotating sample, greeting by name, next reminder / due badge, and a one-line "Today's tip" from OHRR's care topics that changes daily), then the hero slides as a **swipeable row** (BunFest first with a countdown; the next card peeks), then **quick actions 3-across**. The blue header is slimmer (its Adopt/Donate buttons duplicated the tab bar). Same data as before; hero/featured slides come from `hero_slides`.

@@ -5,7 +5,7 @@ import { OHRR_HUB, OHRR_QUICK_ACTIONS } from '../data/content'
 import { slideImage, appPath, type HeroSlide } from '../data/heroSlides'
 import { useHeroSlides } from '../lib/heroSlides'
 import { useBunfestEvent, eventDate } from '../lib/events'
-import { Screen, SectionLabel, ActionCard, Card, btn } from '../components/ui'
+import { Screen, SectionLabel, ActionCard, Card } from '../components/ui'
 import { PhotoCard } from '../components/PhotoCard'
 import { Icon } from '../components/icons'
 import AnnouncementsBanner from '../components/AnnouncementsBanner'
@@ -17,52 +17,43 @@ import MyBunnyHomeCard from '../features/mybunny/HomeCard'
 // slide uses the OHRR brand gradient with its photo.
 function HeroCard({ slide }: { slide: HeroSlide }) {
   const to = appPath(slide.ctaUrl) ?? '/'
-  const isBunfest = to.startsWith('/bunfest')
+  const isBunfest = to === '/bunfest'
   const bunfest = useBunfestEvent()
   const image = slideImage(slide)
-  const cls = isBunfest
-    ? 'from-[#1690bf] to-[#0f7197]'
-    : 'from-brand-blue to-brand-blue-dark'
-  const ctaCls = isBunfest ? 'bg-[#e0950f] group-hover:bg-[#bd7c08]' : 'bg-brand-orange group-hover:bg-brand-orange-dark'
+  const cls = isBunfest ? 'from-[#1690bf] to-[#0f7197]' : 'from-brand-blue to-brand-blue-dark'
+  const days = isBunfest ? Math.ceil((new Date(bunfest.startsAt).getTime() - Date.now()) / 86_400_000) : NaN
+  const countdown = Number.isFinite(days) && days > 0 ? `In ${days} day${days === 1 ? '' : 's'}` : null
 
   return (
     <Link
       to={to}
-      className={`group relative block overflow-hidden rounded-3xl bg-gradient-to-br ${cls} p-5 text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl`}
+      className={`group relative w-[76%] max-w-[300px] shrink-0 snap-start overflow-hidden rounded-3xl bg-gradient-to-br ${cls} text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0`}
     >
-      {image &&
-        (isBunfest ? (
-          <div className="rounded-2xl bg-white p-3 shadow-sm">
-            <img
-              src={image}
-              alt={`Midwest BunFest ${event.logoYear} logo`}
-              className="mx-auto block h-auto w-full max-w-[280px]"
-            />
-          </div>
-        ) : (
-          <div className="aspect-[16/9] overflow-hidden rounded-2xl bg-white/10 shadow-sm">
+      <div className={`relative h-[118px] ${isBunfest ? 'bg-white p-2.5' : 'bg-white/10'}`}>
+        {image &&
+          (isBunfest ? (
+            <img src={image} alt={`Midwest BunFest ${event.logoYear} logo`} className="mx-auto block h-full w-auto" />
+          ) : (
             <img src={image} alt="" loading="lazy" className="h-full w-full object-cover" />
-          </div>
-        ))}
-      <div className="relative mt-3">
-        {isBunfest && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider">
-            <Icon name="star" size={13} /> Our flagship event
-            {bunfest.theme ? ` · ${bunfest.theme}` : ''}
+          ))}
+        {countdown && (
+          <span className="absolute right-2.5 top-2.5 rounded-full bg-[#e0950f] px-2.5 py-1 text-[11px] font-extrabold text-white shadow-sm">
+            {countdown}
           </span>
         )}
-        <h2 className="mt-2 font-display text-xl font-black leading-tight">{slide.headline}</h2>
-        {slide.subline && <p className="mt-1 max-w-[19rem] text-sm text-white/90">{slide.subline}</p>}
+      </div>
+      <div className="p-3.5">
         {isBunfest && (
-          <span className="mt-2 flex items-center gap-1.5 text-sm font-bold text-white">
-            <Icon name="calendar" size={14} className="shrink-0 text-white/90" /> {eventDate(bunfest)}
-            {bunfest.venue ? ` · ${bunfest.venue}` : ''}
+          <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-white/85">
+            <Icon name="star" size={11} /> Our flagship event{bunfest.theme ? ` · ${bunfest.theme}` : ''}
           </span>
         )}
-        <span
-          className={`mt-3 inline-flex items-center gap-1.5 rounded-full ${ctaCls} px-5 py-2.5 text-sm font-extrabold text-white shadow-sm transition`}
-        >
-          {slide.ctaLabel ?? (isBunfest ? 'Enter BunFest' : 'Open')} <Icon name="chevron" size={16} />
+        <h2 className="mt-0.5 line-clamp-2 font-display text-[17px] font-black leading-tight">{slide.headline}</h2>
+        <p className="mt-1 line-clamp-1 text-[12px] font-semibold text-white/85">
+          {isBunfest ? `${eventDate(bunfest)}${bunfest.venue ? ` · ${bunfest.venue}` : ''}` : slide.subline ?? ''}
+        </p>
+        <span className="mt-2 inline-flex items-center gap-1 text-[12px] font-extrabold text-white">
+          {slide.ctaLabel ?? (isBunfest ? 'Enter BunFest' : 'Open')} <Icon name="chevron" size={14} />
         </span>
       </div>
     </Link>
@@ -72,27 +63,21 @@ function HeroCard({ slide }: { slide: HeroSlide }) {
 export default function OhrrHome() {
   // Top cards: active hero slides (live from the shared hero_slides table when
   // present, else the bundled seed) — the BunFest slide first by sort order.
-  const slides = useHeroSlides('hero')
+  const heroSlides = useHeroSlides('hero')
+  const featuredSlides = useHeroSlides('featured')
+  const slides = [...heroSlides, ...featuredSlides]
 
   return (
     <div>
       {/* Hero */}
-      <section className="bg-gradient-to-b from-brand-blue to-brand-blue-dark px-5 pb-7 pt-6 text-white">
+      <section className="bg-gradient-to-b from-brand-blue to-brand-blue-dark px-5 pb-5 pt-5 text-white">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
           Columbus, Ohio · 501(c)(3)
         </span>
-        <h1 className="mt-3 font-display text-3xl font-black leading-tight">
+        <h1 className="mt-2 font-display text-2xl font-black leading-tight">
           Every bunny deserves a home
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-white/85">{ohrr.tagline}</p>
-        <div className="mt-5 flex gap-2.5">
-          <Link to="/adopt" className={btn.white}>
-            Adopt a rabbit
-          </Link>
-          <Link to="/support" className={btn.primary}>
-            Donate
-          </Link>
-        </div>
+        <p className="mt-1 text-[13px] leading-snug text-white/85">{ohrr.tagline}</p>
       </section>
 
       <Screen className="space-y-6">
@@ -100,9 +85,12 @@ export default function OhrrHome() {
         <AnnouncementsBanner />
         <PresentedBy surface="home" />
 
+        {/* My Bunny first — the user's own rabbit is the daily reason to open the app */}
+        <MyBunnyHomeCard />
+
         {/* Top cards — hero slides */}
         {slides.length > 0 && (
-          <div className="space-y-3">
+          <div className="-mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {slides.map((s) => (
               <HeroCard key={s.id} slide={s} />
             ))}
@@ -112,15 +100,12 @@ export default function OhrrHome() {
         {/* Quick actions — real photos, no icons */}
         <div className="space-y-2.5">
           <SectionLabel>Quick actions</SectionLabel>
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-3 gap-2">
             {OHRR_QUICK_ACTIONS.map((q) => (
-              <PhotoCard key={q.to} to={q.to} title={q.title} subtitle={q.subtitle} photo={q.photo} />
+              <PhotoCard key={q.to} to={q.to} title={q.title} subtitle={q.subtitle} photo={q.photo} variant="tile" />
             ))}
           </div>
         </div>
-
-        {/* My Bunny — the year-round care companion (badge shows due/overdue reminders) */}
-        <MyBunnyHomeCard />
 
         {/* OHRR sections */}
         <div className="space-y-2.5">
