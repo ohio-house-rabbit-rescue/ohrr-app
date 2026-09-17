@@ -19,6 +19,39 @@
 
 ## Current state (at a glance)
 
+- **Icons for functions, photos only for content — on `main` (2026-09-17).** Sponsor rule
+  (already applied on the website, now matched in the app): *"For things like upcoming
+  events use an ICON so it never changes and people see and remember the purpose — versus
+  the image of a bunny."* Real photos stay only where the thing IS content (real rabbits,
+  auction items, artwork, the BunFest logo, sponsor logos, My Bunny photos).
+  - **Home → Quick actions** (`OHRR_QUICK_ACTIONS` in `src/data/content.ts`): Find a vet →
+    `phone`, Found a stray → `mappin`, Volunteer → `users`, Give → `gift`, Events →
+    `calendar` — rendered by the new `IconPhotoTile` (`src/components/PhotoCard.tsx`): the
+    same square tile as `PhotoCard variant="tile"`, a large brand-blue line icon on a
+    brand-blue-50 tile, title bottom-left. **Adopt keeps its real rabbit photo.** A
+    `QuickAction` now carries exactly one of `icon` / `photo`. 3-across grid unchanged.
+  - **Home → hero / featured cards** (`HeroCard` in `OhrrHome`): picture slot follows
+    `slideVisual()` in `src/data/heroSlides.ts` — an uploaded `image_url` always wins →
+    `/bunfest` shows the logo → `/adopt…` shows a real rabbit → every other link shows its
+    fixed icon centred on the tinted top band. `SLIDE_FALLBACK_IMAGES` now holds only the
+    BunFest logo and the Adopt photo; `slideIcon()` / `isAdoptSlide()` / `slideVisual()`
+    mirror the website's (`ROUTE_ICONS`: silent-auction/auction/sponsors → `award`,
+    bunfest/events/services/appointment/schedule → `calendar`, give/support → `gift`,
+    volunteer → `users`, vets → `phone`, learn → `book`, found/surrender/rescues/map/visit
+    → `mappin`, hop-shop/vendors → `bag`, tails/news → `sparkles`, partners/perks →
+    `ticket`, partners → `star`, contact → `mail`, about → `info`, help → `help`,
+    my-bunny → `heart`, app → `device`, adopt → `heart` only when no photo applies).
+    Seed function slides carry a seed-only `icon` like the website's seed (no DB column;
+    `scripts/generate-seed-sql.mjs` ignores it).
+  - **Icon set parity:** `device` (phone outline) added to `src/components/icons.tsx` so the
+    app and website icon files match again.
+  - **Audit result:** BunFest hub, Explore, Learn, Volunteer, Give, Vets, Found, Hop Shop,
+    Events, Partners, Silent Auction catalog and the BunFest activity grid already used
+    `ActionCard` / `IconTile` / icon `PageHeader`s — no photo-for-category left anywhere
+    else. Untouched (content): adoptable cards + gallery, Happy Tails, My Bunny photos and
+    the rotating sample rabbit on the empty My Bunny strip, auction item photos, sponsor
+    logos, the BunFest logo, OHRR logo/mark.
+
 - **App settings + raffle-ticket TEST feature — LIVE (2026-09-17).** Sponsor decision:
   the in-app "reserve numbered raffle tickets, pay at the table" flow is a **test
   feature** — hidden from the public by default and shown only while an owner switches
