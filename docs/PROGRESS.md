@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-06-27
+- **Last updated:** 2026-09-17
 - **Repo:** https://github.com/chasingtheunicorn/ohrr-app
 - **Live site:** https://ohrr-app.netlify.app
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,52 @@
 ---
 
 ## Current state (at a glance)
+
+- **Live-site parity + shared data contract — LIVE (2026-09-17).** Everything on
+  the read-only WordPress site (ohiohouserabbitrescue.org) is now IN the app, built
+  for phones, and the app shares ONE Supabase backend with the new OHRR website:
+  - **New tables (migrations to paste into the Supabase SQL editor, in this order):**
+    `supabase/migrations/20260917120000_events.sql`,
+    `supabase/migrations/20260917120100_vets.sql`,
+    `supabase/migrations/20260917120150_hero_slides.sql` (+ public `site-images`
+    Storage bucket), then the seed
+    `supabase/migrations/20260917120200_seed_live_site_content.sql` (idempotent;
+    BunFest 2026 event, 27 vets, 13 care articles, the 4 volunteer positions, 6
+    hero/featured slides). The seed is **generated** from the app's own data files by
+    `node scripts/generate-seed-sql.mjs` (Node 22.6+), so the app fallback, the DB and
+    the website agree — edit `src/data/{events,vets,careArticles,volunteer,heroSlides}.ts`
+    and re-run; never hand-edit the seed. Until the migrations are applied every screen
+    silently uses the bundled seed (`useEvents`, `useVets`, `useHeroSlides`,
+    `useCareArticles` fallback).
+  - **New public screens:** `/events` (upcoming first, map + calendar links),
+    `/vets` (Find a rabbit-savvy vet: region filter, MedVet Hilliard 24/7 emergency
+    banner, tap-to-call, EMERGENCY badges, low-cost spay/neuter, HRS vet lists, the
+    live-site disclaimer), `/found` (Found a rabbit? / Need to surrender?: domestic-vs-wild,
+    catching a stray, CHRS Help Line + Columbus Rabbit Field Rescue path, Admissions facts
+    + both official online applications), `/adopt/how-it-works` (3 steps, still-deciding
+    hour-long visit, free bunny matchmaking + what to expect at a bunny date, Petfinder /
+    Adopt-A-Pet links, Adoption Policy summary + fees). `/give` redirects to `/support`.
+  - **Rebuilt screens:** Home (photo quick actions: Find a vet · Found a stray · Adopt ·
+    Volunteer · Give · Events; top cards from `hero_slides`; BunFest date/theme live),
+    Give (EVERY channel incl. Kroger, license plate, merch, affiliates, Legacy Fund,
+    Spay It Forward — with in-app "More" detail), Volunteer + VolunteerWay (the 4 REAL
+    positions with verbatim requirements + real sign-up links; other needs; group visits;
+    live "Open shifts"), Learn (13 seeded articles from the Resources page + Living Space
+    + Stray, bare URLs tappable, vet card), Hop Shop (real product list, hours, map,
+    live "In the shop now" when RLS allows), About (Mission & Vision, Background,
+    Volunteer Family, contact parity incl. landmark directions, media email, socials).
+    The BunFest sub-app reads its date/time/venue/theme from the BunFest event record
+    via `useBunfestEvent()`.
+  - **Staff:** `/staff/events` (gated `events.bunfest.manage`) and `/staff/vets`
+    (gated `content.education.edit`), both with one-tap import of the bundled seed;
+    nav entries + dashboard tiles; volunteer categories now `socialization` / `buncare` /
+    `vet-transport` / `field-rescue` / `events` (unknown values tolerated).
+  - **Unchanged by sponsor instruction:** adoptable rabbits stay on the labelled sample
+    data; the Petfinder function was not touched. Link-only/noindex settings untouched.
+  - **Could not fetch/verify:** the Binkybunny.com "cost of a house rabbit" page (404 —
+    summarized from OHRR's description only, still linked); the Columbus Rabbit Field
+    Rescue Facebook group has no public URL on the live site (named, not linked); the
+    2026 BunFest logo artwork is not bundled (2025 logo still shown, theme text is 2026).
 
 - **Staff backend (Supabase) — MERGED & LIVE (2026-06-27).** [PR #28] merged to
   `main` (merge `a60b8b5`) and **deployed to `ohrr-app.netlify.app`**. The staff admin
