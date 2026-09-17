@@ -40,7 +40,8 @@ import Sponsors from './pages/Sponsors'
 import Visit from './pages/Visit'
 import EventMap from './pages/EventMap'
 import BunfestPage from './pages/BunfestPage'
-import SilentAuction from './pages/SilentAuction'
+import RaffleCatalog from './features/raffle/RaffleCatalog'
+import RaffleItemDetail from './features/raffle/RaffleItemDetail'
 // Staff backend (Supabase-gated)
 import StaffLayout from './components/StaffLayout'
 import { RequireMembership } from './components/staffui'
@@ -58,6 +59,7 @@ import StaffLearn from './pages/StaffLearn'
 import StaffAdopt from './pages/StaffAdopt'
 import StaffEvents from './pages/StaffEvents'
 import StaffVets from './pages/StaffVets'
+import StaffRaffle from './pages/StaffRaffle'
 
 export default function App() {
   return (
@@ -117,7 +119,9 @@ export default function App() {
         <Route path="sponsors" element={<Sponsors />} />
         <Route path="visit" element={<Visit />} />
         <Route path="map" element={<EventMap />} />
-        <Route path="silent-auction" element={<SilentAuction />} />
+        <Route path="silent-auction" element={<Navigate to="/bunfest/auction" replace />} />
+        <Route path="auction" element={<RaffleCatalog />} />
+        <Route path="auction/:id" element={<RaffleItemDetail />} />
         <Route path="p/:id" element={<BunfestPage />} />
         <Route path="give" element={<Give />} />
       </Route>
@@ -137,6 +141,7 @@ export default function App() {
           <Route path="learn" element={<StaffLearn />} />
           <Route path="vets" element={<StaffVets />} />
           <Route path="events" element={<StaffEvents />} />
+          <Route path="raffle" element={<StaffRaffle />} />
           <Route path="team" element={<StaffTeam />} />
           <Route path="activity" element={<StaffActivity />} />
         </Route>

@@ -34,6 +34,7 @@ export default function StaffHome() {
   const canManageVolunteer = can('volunteers.shifts.manage')
   const canEditCare = can('content.education.edit')
   const canManageEvents = can('events.bunfest.manage')
+  const canManageAuction = can('events.bunfest.manage')
   const canManageTeam = can('staff.invite') || can('staff.permissions.manage')
   const canViewActivity = can('audit.view')
   const showTiles =
@@ -43,6 +44,7 @@ export default function StaffHome() {
     canManageVolunteer ||
     canEditCare ||
     canManageEvents ||
+    canManageAuction ||
     canManageTeam ||
     canViewActivity
 
@@ -127,6 +129,15 @@ export default function StaffHome() {
               title="Events"
               subtitle="Midwest BunFest & OHRR hoppenings"
               icon="calendar"
+              tone="orange"
+            />
+          )}
+          {canManageAuction && (
+            <ActionCard
+              to="/staff/raffle"
+              title="Silent Auction"
+              subtitle="BunFest auction items, photos & won status"
+              icon="award"
               tone="orange"
             />
           )}
