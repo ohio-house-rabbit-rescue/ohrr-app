@@ -9,6 +9,7 @@ import { Screen, SectionLabel, ActionCard, Card, btn } from '../components/ui'
 import { PhotoCard } from '../components/PhotoCard'
 import { Icon } from '../components/icons'
 import AnnouncementsBanner from '../components/AnnouncementsBanner'
+import PresentedBy from '../features/sponsors/PresentedBy'
 
 // One top card, in the existing "big BunFest button" styling. The BunFest slide
 // keeps BunFest's own palette + logo and shows the live event date; any other
@@ -96,6 +97,7 @@ export default function OhrrHome() {
       <Screen className="space-y-6">
         {/* Live staff-posted notices (hidden when there are none) */}
         <AnnouncementsBanner />
+        <PresentedBy surface="home" />
 
         {/* Top cards — hero slides */}
         {slides.length > 0 && (
