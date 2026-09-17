@@ -119,6 +119,7 @@ export const bunfestPages: BunfestPage[] = [
     relatedLabel: 'Silent auction',
     related: [{ label: 'Browse the silent auction items', to: '/bunfest/auction' }],
   },
+  {
     id: 'toymaking',
     title: 'Toymaking Workshop',
     subtitle: 'Build an enrichment toy and playmat to take home for your bunny.',
