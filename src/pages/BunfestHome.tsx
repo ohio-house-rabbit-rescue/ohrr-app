@@ -4,6 +4,7 @@ import { BUNFEST_HUB } from '../data/content'
 import { useBunfestEvent, eventDate, eventTime } from '../lib/events'
 import { Screen, SectionLabel, ActionCard, IconTile, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
+import PresentedBy from '../features/sponsors/PresentedBy'
 
 export default function BunfestHome() {
   // Date / time / venue / theme from the shared BunFest event record (live
@@ -57,6 +58,7 @@ export default function BunfestHome() {
       </section>
 
       <Screen className="space-y-6">
+        <PresentedBy surface="bunfest" />
         {/* At the festival */}
         <div className="space-y-2.5">
           <SectionLabel>At the festival</SectionLabel>

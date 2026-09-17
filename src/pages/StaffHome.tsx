@@ -35,6 +35,7 @@ export default function StaffHome() {
   const canEditCare = can('content.education.edit')
   const canManageEvents = can('events.bunfest.manage')
   const canManageAuction = can('events.bunfest.manage')
+  const canManageSponsors = can('events.bunfest.manage')
   const canManageTeam = can('staff.invite') || can('staff.permissions.manage')
   const canViewActivity = can('audit.view')
   const showTiles =
@@ -45,6 +46,7 @@ export default function StaffHome() {
     canEditCare ||
     canManageEvents ||
     canManageAuction ||
+    canManageSponsors ||
     canManageTeam ||
     canViewActivity
 
@@ -139,6 +141,15 @@ export default function StaffHome() {
               subtitle="BunFest auction items, photos & won status"
               icon="award"
               tone="orange"
+            />
+          )}
+          {canManageSponsors && (
+            <ActionCard
+              to="/staff/sponsors"
+              title="Sponsors & partners"
+              subtitle="Partner roster, perks & “Presented by” placements"
+              icon="award"
+              tone="blue"
             />
           )}
           {canManageTeam && (

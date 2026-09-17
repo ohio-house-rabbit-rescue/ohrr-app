@@ -60,6 +60,10 @@ import StaffAdopt from './pages/StaffAdopt'
 import StaffEvents from './pages/StaffEvents'
 import StaffVets from './pages/StaffVets'
 import StaffRaffle from './pages/StaffRaffle'
+// Sponsors — Phase 1 (public partners/perks + staff manager)
+import PartnersPage from './features/sponsors/PartnersPage'
+import PartnerPerksPage from './features/sponsors/PartnerPerksPage'
+import StaffSponsors from './pages/StaffSponsors'
 
 export default function App() {
   return (
@@ -105,6 +109,9 @@ export default function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/help" element={<Help />} />
         <Route path="/search" element={<Search />} />
+        {/* Sponsors — Phase 1 */}
+        <Route path="/partners" element={<PartnersPage />} />
+        <Route path="/partners/perks" element={<PartnerPerksPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>
 
@@ -142,6 +149,7 @@ export default function App() {
           <Route path="vets" element={<StaffVets />} />
           <Route path="events" element={<StaffEvents />} />
           <Route path="raffle" element={<StaffRaffle />} />
+          <Route path="sponsors" element={<StaffSponsors />} />
           <Route path="team" element={<StaffTeam />} />
           <Route path="activity" element={<StaffActivity />} />
         </Route>

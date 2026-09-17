@@ -60,6 +60,7 @@ export const OHRR_HUB: HubItem[] = [
   { to: '/volunteer', title: 'Volunteer', subtitle: 'Socialization, Buncare, vet runs & rescue', icon: 'users' },
   { to: '/events', title: 'Events', subtitle: 'Midwest BunFest & OHRR hoppenings', icon: 'calendar' },
   { to: '/support', title: 'Support OHRR', subtitle: 'Donate & every way to give', icon: 'gift', tone: 'orange' },
+  { to: '/partners', title: 'Our Partners', subtitle: 'The businesses behind OHRR & BunFest', icon: 'award' },
   { to: '/hop-shop', title: 'Hop Shop', subtitle: 'Supplies & OHRR merch at the center', icon: 'bag' },
   { to: '/services', title: 'Bunny Services', subtitle: 'Bonding sessions & vet clinic days', icon: 'calendar' },
   { to: '/rescues', title: 'Find a Rescue', subtitle: 'Rabbit rescues across the country', icon: 'mappin' },
