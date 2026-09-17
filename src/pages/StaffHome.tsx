@@ -33,6 +33,7 @@ export default function StaffHome() {
   const canPostAnnouncements = can('announcements.post')
   const canManageVolunteer = can('volunteers.shifts.manage')
   const canEditCare = can('content.education.edit')
+  const canManageEvents = can('events.bunfest.manage')
   const canManageTeam = can('staff.invite') || can('staff.permissions.manage')
   const canViewActivity = can('audit.view')
   const showTiles =
@@ -41,6 +42,7 @@ export default function StaffHome() {
     canPostAnnouncements ||
     canManageVolunteer ||
     canEditCare ||
+    canManageEvents ||
     canManageTeam ||
     canViewActivity
 
@@ -108,6 +110,24 @@ export default function StaffHome() {
               subtitle="Edit the Rabbit Care articles in Learn"
               icon="book"
               tone="blue"
+            />
+          )}
+          {canEditCare && (
+            <ActionCard
+              to="/staff/vets"
+              title="Vet directory"
+              subtitle="Rabbit-savvy vets shown in Find a vet"
+              icon="phone"
+              tone="blue"
+            />
+          )}
+          {canManageEvents && (
+            <ActionCard
+              to="/staff/events"
+              title="Events"
+              subtitle="Midwest BunFest & OHRR hoppenings"
+              icon="calendar"
+              tone="orange"
             />
           )}
           {canManageTeam && (

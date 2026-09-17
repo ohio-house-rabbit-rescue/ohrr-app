@@ -4,15 +4,10 @@ import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { Spinner, FormError, staffInput } from '../components/staffui'
-import {
-  OPP_CATEGORIES,
-  categoryLabel,
-  type OppCategory,
-  type VolunteerOpp,
-} from '../lib/volunteerOpps'
+import { OPP_CATEGORIES, categoryLabel, type VolunteerOpp } from '../lib/volunteerOpps'
 
 interface Draft {
-  category: OppCategory
+  category: string
   title: string
   when_text: string
   where_text: string
@@ -33,7 +28,7 @@ const emptyDraft: Draft = {
 
 function draftFrom(o: VolunteerOpp): Draft {
   return {
-    category: (o.category as OppCategory) ?? 'socialization',
+    category: o.category || 'socialization',
     title: o.title,
     when_text: o.when_text ?? '',
     where_text: o.where_text ?? '',
@@ -81,13 +76,17 @@ function OppForm({
         <select
           className={staffInput}
           value={draft.category}
-          onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value as OppCategory }))}
+          onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}
         >
           {OPP_CATEGORIES.map((c) => (
             <option key={c.value} value={c.value}>
               {c.label}
             </option>
           ))}
+          {/* Tolerate a category that isn't in the catalog (e.g. added in the DB). */}
+          {!OPP_CATEGORIES.some((c) => c.value === draft.category) && (
+            <option value={draft.category}>{draft.category}</option>
+          )}
         </select>
       </label>
       <label className="block text-sm font-semibold text-slate-700">
@@ -369,7 +368,8 @@ export default function StaffVolunteer() {
         <div>
           <h1 className="font-display text-2xl font-black text-ink">Volunteer opportunities</h1>
           <p className="mt-1 text-sm text-slate-600">
-            Shifts, transport runs, and events that show on the Volunteer pages.
+            Open shifts for each volunteer position (and events needing hands) shown on the
+            Volunteer pages.
           </p>
         </div>
         {!creating && (

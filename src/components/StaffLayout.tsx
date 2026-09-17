@@ -38,6 +38,8 @@ export default function StaffLayout() {
     { to: '/staff/announcements', label: 'Announcements', show: can('announcements.post') },
     { to: '/staff/volunteer', label: 'Volunteer opportunities', show: can('volunteers.shifts.manage') },
     { to: '/staff/learn', label: 'Care guides', show: can('content.education.edit') },
+    { to: '/staff/vets', label: 'Vet directory', show: can('content.education.edit') },
+    { to: '/staff/events', label: 'Events', show: can('events.bunfest.manage') },
     {
       to: '/staff/team',
       label: 'Team',
