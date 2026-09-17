@@ -2,7 +2,7 @@
 //
 // HAND-AUTHORED to mirror the migrations under supabase/migrations/ (hopshop
 // backend, announcements, volunteer_opportunities, care_articles, rabbits,
-// events, vets, hero_slides)
+// events, vets, hero_slides, raffle_items/auction_settings, sponsors, app_settings)
 // (the schema already applied to the live project). The Supabase CLI's
 // `gen types` needs the project ref + an access token, which aren't in the repo;
 // once those are available, regenerate with `npm run gen:types` and replace this
@@ -255,6 +255,10 @@ export type Database = {
           morning_closes_at: string | null
           afternoon_closes_at: string | null
           intro_text: string | null
+          raffle_ticket_price_cents: number | null
+          raffle_bundle_qty: number | null
+          raffle_bundle_price_cents: number | null
+          raffle_details: string | null
           updated_at: string
         }
         Insert: {
@@ -263,6 +267,10 @@ export type Database = {
           morning_closes_at?: string | null
           afternoon_closes_at?: string | null
           intro_text?: string | null
+          raffle_ticket_price_cents?: number | null
+          raffle_bundle_qty?: number | null
+          raffle_bundle_price_cents?: number | null
+          raffle_details?: string | null
           updated_at?: string
         }
         Update: {
@@ -271,6 +279,34 @@ export type Database = {
           morning_closes_at?: string | null
           afternoon_closes_at?: string | null
           intro_text?: string | null
+          raffle_ticket_price_cents?: number | null
+          raffle_bundle_qty?: number | null
+          raffle_bundle_price_cents?: number | null
+          raffle_details?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: {
+          org_id: string
+          key: string
+          value: Json
+          updated_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          org_id: string
+          key: string
+          value?: Json
+          updated_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          org_id?: string
+          key?: string
+          value?: Json
+          updated_by?: string | null
           updated_at?: string
         }
         Relationships: []

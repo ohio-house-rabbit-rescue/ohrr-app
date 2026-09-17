@@ -22,6 +22,7 @@ export const CAPABILITIES = [
   'staff.invite',
   'staff.permissions.manage',
   'audit.view',
+  'settings.manage',
 ] as const
 
 export type Capability = (typeof CAPABILITIES)[number]
@@ -52,6 +53,7 @@ export const PERMISSION_CATALOG: PermissionMeta[] = [
   { key: 'staff.invite', area: 'Staff', description: 'Invite workers' },
   { key: 'staff.permissions.manage', area: 'Staff', description: 'Grant/revoke worker permissions & status' },
   { key: 'audit.view', area: 'Staff', description: 'View the activity log' },
+  { key: 'settings.manage', area: 'Staff', description: 'Change app settings and turn test features on/off' },
 ]
 
 // The preset → capabilities bundles, mirroring `permission_presets` in the seed.
