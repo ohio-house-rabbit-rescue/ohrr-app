@@ -1,13 +1,32 @@
-// The top-of-Home strip for My Bunny: photo (the user's own, or a rotating
-// bundled sample until they add one), a greeting by name, the next reminder or
-// due badge, and a one-line daily tip drawn from OHRR's care topics — a small
-// reason to glance every day. Compact on purpose so BunFest and the quick
-// actions still show above the fold. Screens themselves are lazy-loaded.
+// The top-of-Home strip for My Bunny — a small reason to glance every day.
+// Compact on purpose so BunFest and the quick actions still show above the
+// fold. The layout follows how many (active) bunnies are on the phone:
+//   0 / 1  photo (the user's own, or a rotating bundled sample), greeting by
+//          name, next reminder / due badge, "Open" — the original strip
+//   2      greeting line, then two side-by-side photo tiles (name + due pill)
+//          that open each bunny directly
+//   3+     "fluffle" greeting with the count, then a scrollable row of round
+//          avatars (+ an Add tile while there's room)
+// Archived bunnies never appear here. A one-line "Today's tip" from OHRR's
+// care topics sits under every variant. Screens themselves are lazy-loaded.
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from '../../components/icons'
-import { CountBadge } from './ui'
+import { AvatarRow, BunnyPhoto, CountBadge, DuePill, titleTooltip } from './ui'
 import { useBunnyPhoto } from './photos'
-import { useMyBunny, dueCount, nextReminder, describeDue, todayIso, activeBunnies, collectionTitle } from './storage'
+import {
+  useMyBunny,
+  dueCount,
+  nextReminder,
+  describeDue,
+  dueStatus,
+  todayIso,
+  activeBunnies,
+  atBunnyLimit,
+  collectionTitle,
+  type Bunny,
+  type MyBunnyData,
+} from './storage'
 import { useCareTopics } from '../bunnyhelp/useTopics'
 import type { CareTopic } from '../bunnyhelp/types'
 
@@ -32,11 +51,6 @@ function greeting(now = new Date()): string {
   return 'Good evening'
 }
 
-function nameList(names: string[]): string {
-  if (names.length <= 2) return names.join(' & ')
-  return `${names[0]}, ${names[1]} & ${names.length - 2} more`
-}
-
 /** A different everyday-care topic each day — never the emergency ones. */
 function tipOfTheDay(topics: CareTopic[]): CareTopic | null {
   const pool = topics.filter(
@@ -45,56 +59,90 @@ function tipOfTheDay(topics: CareTopic[]): CareTopic | null {
   return pool.length ? pool[dayOfYear() % pool.length] : null
 }
 
+function remindersDueText(total: number): string {
+  return `${total} reminder${total === 1 ? '' : 's'} due`
+}
+
+/** "Next: Nail trim · due in 5 days" across the given bunnies, or the all-clear. */
+function nextUpText(data: MyBunnyData, bunnies: Bunny[], today: string): string {
+  const next = bunnies
+    .map((b) => nextReminder(data, b.id))
+    .filter(Boolean)
+    .sort((a, b) => (a!.nextDue < b!.nextDue ? -1 : 1))[0]
+  return next ? `Next: ${next.title} · ${describeDue(next.nextDue, today).toLowerCase()}` : 'All caught up — nothing due'
+}
+
+const card =
+  'rounded-3xl border border-brand-blue/15 bg-white p-3 shadow-sm transition hover:border-brand-blue/40 hover:shadow-md'
+const label = 'text-[11px] font-extrabold uppercase tracking-wider text-brand-blue'
+const openPill =
+  'shrink-0 rounded-full bg-brand-orange px-3.5 py-2 text-[13px] font-extrabold text-white shadow-sm transition group-hover:bg-brand-orange-dark hover:bg-brand-orange-dark'
+
 export default function MyBunnyHomeCard() {
   const data = useMyBunny()
   const { topics } = useCareTopics()
   const today = todayIso()
   const counts = dueCount(data, today)
   const bunnies = activeBunnies(data)
-  const hasBunny = bunnies.length > 0
+  const title = collectionTitle(bunnies.length)
   const tip = tipOfTheDay(topics)
-  const first = bunnies.find((b) => b.hasPhoto)
-  const ownPhoto = useBunnyPhoto(first?.id, first?.hasPhoto)
-  const photo = ownPhoto ?? SAMPLE_PHOTOS[dayOfYear() % SAMPLE_PHOTOS.length]
+  // The single-bunny strip shows that bunny's own photo when there is one.
+  const one = bunnies.length === 1 ? bunnies[0] : undefined
+  const onePhoto = useBunnyPhoto(one?.id, one?.hasPhoto)
 
-  let headline: string
-  let status: string
-  let statusTone = 'text-slate-500'
-  if (!hasBunny) {
-    headline = 'Meet My Bunny'
-    status = 'Reminders on your phone, a weight log & quick answers.'
+  let body: ReactNode
+  if (bunnies.length >= 3) {
+    body = (
+      <div className={card}>
+        <Header title={title} counts={counts} />
+        <p className="mt-0.5 line-clamp-2 font-display text-[17px] font-black leading-tight text-ink">
+          {greeting()} — {bunnies.length} in your fluffle
+          {counts.total > 0 ? ` · ${remindersDueText(counts.total)}` : ''}
+        </p>
+        <AvatarRow bunnies={bunnies} showAdd={!atBunnyLimit(data)} className="mt-2.5" />
+      </div>
+    )
+  } else if (bunnies.length === 2) {
+    body = (
+      <div className={card}>
+        <Header title={title} counts={counts} />
+        <p className="mt-0.5 truncate font-display text-[17px] font-black leading-tight text-ink">
+          {greeting()}, {bunnies[0].name} &amp; {bunnies[1].name}
+        </p>
+        <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+          {bunnies.map((b) => (
+            <PairTile key={b.id} bunny={b} data={data} today={today} />
+          ))}
+        </div>
+      </div>
+    )
   } else {
-    headline = `${greeting()}, ${nameList(bunnies.map((b) => b.name))}`
-    if (counts.total > 0) {
-      status = `${counts.total} reminder${counts.total === 1 ? '' : 's'} need${counts.total === 1 ? 's' : ''} attention`
-      statusTone = 'text-brand-orange'
+    const hasBunny = Boolean(one)
+    const photo = onePhoto ?? SAMPLE_PHOTOS[dayOfYear() % SAMPLE_PHOTOS.length]
+    let headline: string
+    let status: string
+    let statusTone = 'text-slate-500'
+    if (!one) {
+      headline = 'Meet My Bunny'
+      status = 'Reminders on your phone, a weight log & quick answers.'
     } else {
-      const next = bunnies
-        .map((b) => nextReminder(data, b.id))
-        .filter(Boolean)
-        .sort((a, b) => (a!.nextDue < b!.nextDue ? -1 : 1))[0]
-      status = next
-        ? `Next: ${next.title} · ${describeDue(next.nextDue, today).toLowerCase()}`
-        : 'All caught up — nothing due'
+      headline = `${greeting()}, ${one.name}`
+      if (counts.total > 0) {
+        status = `${counts.total} reminder${counts.total === 1 ? '' : 's'} need${counts.total === 1 ? 's' : ''} attention`
+        statusTone = 'text-brand-orange'
+      } else {
+        status = nextUpText(data, bunnies, today)
+      }
     }
-  }
-
-  return (
-    <div className="space-y-2">
+    body = (
       <Link
         to={hasBunny ? '/my-bunny' : '/my-bunny/new'}
-        className="group flex items-center gap-3.5 rounded-3xl border border-brand-blue/15 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-blue/40 hover:shadow-md active:translate-y-0"
+        className={`group flex items-center gap-3.5 ${card} hover:-translate-y-0.5 active:translate-y-0`}
       >
-        <img
-          src={photo}
-          alt={hasBunny ? bunnies[0].name : ''}
-          className="h-[72px] w-[72px] shrink-0 rounded-2xl object-cover"
-        />
+        <img src={photo} alt={one ? one.name : ''} className="h-[72px] w-[72px] shrink-0 rounded-2xl object-cover" />
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-brand-blue">
-              {collectionTitle(bunnies.length)}
-            </span>
+            <span className={label}>{title}</span>
             <CountBadge overdue={counts.overdue} today={counts.today} />
           </span>
           <span className="mt-0.5 block truncate font-display text-[17px] font-black leading-tight text-ink">
@@ -102,10 +150,14 @@ export default function MyBunnyHomeCard() {
           </span>
           <span className={`mt-0.5 block text-[13px] leading-snug ${statusTone}`}>{status}</span>
         </span>
-        <span className="shrink-0 rounded-full bg-brand-orange px-3.5 py-2 text-[13px] font-extrabold text-white shadow-sm transition group-hover:bg-brand-orange-dark">
-          {hasBunny ? 'Open' : 'Add'}
-        </span>
+        <span className={openPill}>{hasBunny ? 'Open' : 'Add'}</span>
       </Link>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {body}
 
       {tip && (
         <Link
@@ -120,5 +172,46 @@ export default function MyBunnyHomeCard() {
         </Link>
       )}
     </div>
+  )
+}
+
+/** Label + due badge on the left, "Open" on the right — the multi-bunny cards' top row. */
+function Header({ title, counts }: { title: string; counts: { overdue: number; today: number } }) {
+  return (
+    <div className="flex items-center gap-2">
+      <Link to="/my-bunny" className="flex min-w-0 flex-1 items-center gap-2" title={titleTooltip(title)}>
+        <span className={label}>{title}</span>
+        <CountBadge overdue={counts.overdue} today={counts.today} />
+      </Link>
+      <Link to="/my-bunny" className={openPill}>
+        Open
+      </Link>
+    </div>
+  )
+}
+
+/** One of the two side-by-side tiles: photo, name, and what's next for that bunny. */
+function PairTile({ bunny, data, today }: { bunny: Bunny; data: MyBunnyData; today: string }) {
+  const next = nextReminder(data, bunny.id)
+  const status = next ? dueStatus(next.nextDue, today) : null
+  const urgent = status === 'overdue' || status === 'today'
+  return (
+    <Link
+      to={`/my-bunny/${bunny.id}`}
+      className="group min-w-0 rounded-2xl transition hover:-translate-y-0.5 active:translate-y-0"
+    >
+      <BunnyPhoto bunny={bunny} className="aspect-[4/3] h-auto w-full rounded-2xl" />
+      <span className="mt-1.5 flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate font-display text-[15px] font-extrabold text-ink">{bunny.name}</span>
+        {next && urgent && <DuePill nextDue={next.nextDue} today={today} />}
+      </span>
+      <span className="block truncate text-[12px] leading-snug text-slate-500">
+        {next
+          ? urgent
+            ? next.title
+            : `${next.title} · ${describeDue(next.nextDue, today).toLowerCase()}`
+          : 'No reminders yet'}
+      </span>
+    </Link>
   )
 }
