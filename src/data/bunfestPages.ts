@@ -103,28 +103,22 @@ export const bunfestPages: BunfestPage[] = [
   {
     id: 'raffle',
     title: 'Raffle & Silent Auction',
-    subtitle: 'Bid and win — bunny toys, treats, jewelry, gift baskets, and more.',
+    subtitle: 'Bid and win — proceeds support Ohio House Rabbit Rescue.',
     icon: 'ticket',
-    chips: ['Raffle: $1 / ticket', '6 for $5'],
     sections: [
       {
-        heading: 'Raffle',
-        body: 'Tickets are $1 each or 6 for $5. Sales begin at 10:00 AM with drawings at 12:30 PM. Write your name and phone number on each ticket and drop it in the bucket for any prize you want — put as many as you like toward a single prize.',
-      },
-      {
         heading: 'Silent Auction',
-        body: 'Two sessions with different items each: the first from 10:00 AM–12:15 PM, a new set from 1:00–3:15 PM. Bid during the session, or use “buy it now” to lock in a favorite.',
+        body: 'Midwest BunFest features a silent auction. Preview the items that will be available — donated by our partners and community — in the Silent Auction catalog. Session details are posted with each item.',
       },
       {
-        heading: 'Where it goes',
-        body: 'All proceeds go toward OHRR’s adoption center, education programs, and foster rabbits.',
+        heading: 'Raffle',
+        body: 'Midwest BunFest also features a raffle. Details for 2026 will be posted here as the event gets closer.',
       },
     ],
     feature: 'raffle',
     relatedLabel: 'Silent auction',
     related: [{ label: 'Browse the silent auction items', to: '/bunfest/auction' }],
   },
-  {
     id: 'toymaking',
     title: 'Toymaking Workshop',
     subtitle: 'Build an enrichment toy and playmat to take home for your bunny.',
