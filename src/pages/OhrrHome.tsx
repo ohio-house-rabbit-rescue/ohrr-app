@@ -5,6 +5,7 @@ import { OHRR_HUB } from '../data/content'
 import { Screen, SectionLabel, ActionCard, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 import AnnouncementsBanner from '../components/AnnouncementsBanner'
+import MyBunnyHomeCard from '../features/mybunny/HomeCard'
 
 export default function OhrrHome() {
   return (
@@ -60,6 +61,9 @@ export default function OhrrHome() {
             </span>
           </div>
         </Link>
+
+        {/* My Bunny — the year-round care companion (badge shows due/overdue reminders) */}
+        <MyBunnyHomeCard />
 
         {/* OHRR sections */}
         <div className="space-y-2.5">

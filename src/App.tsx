@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import OhrrLayout from './components/OhrrLayout'
 import BunfestLayout from './components/BunfestLayout'
@@ -52,6 +53,8 @@ import StaffAnnouncements from './pages/StaffAnnouncements'
 import StaffVolunteer from './pages/StaffVolunteer'
 import StaffLearn from './pages/StaffLearn'
 import StaffAdopt from './pages/StaffAdopt'
+// My Bunny (local-first care companion) — lazy so it stays out of the main bundle
+const MyBunnyRoutes = lazy(() => import('./features/mybunny/routes'))
 
 export default function App() {
   return (
@@ -91,6 +94,14 @@ export default function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/help" element={<Help />} />
         <Route path="/search" element={<Search />} />
+        <Route
+          path="/my-bunny/*"
+          element={
+            <Suspense fallback={null}>
+              <MyBunnyRoutes />
+            </Suspense>
+          }
+        />
         <Route path="*" element={<NotFound />} />
       </Route>
 
