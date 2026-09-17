@@ -10,6 +10,7 @@ import { PhotoCard } from '../components/PhotoCard'
 import { Icon } from '../components/icons'
 import AnnouncementsBanner from '../components/AnnouncementsBanner'
 import PresentedBy from '../features/sponsors/PresentedBy'
+import MyBunnyHomeCard from '../features/mybunny/HomeCard'
 
 // One top card, in the existing "big BunFest button" styling. The BunFest slide
 // keeps BunFest's own palette + logo and shows the live event date; any other
@@ -117,6 +118,9 @@ export default function OhrrHome() {
             ))}
           </div>
         </div>
+
+        {/* My Bunny — the year-round care companion (badge shows due/overdue reminders) */}
+        <MyBunnyHomeCard />
 
         {/* OHRR sections */}
         <div className="space-y-2.5">

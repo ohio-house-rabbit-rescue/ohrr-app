@@ -42,6 +42,7 @@ export default function StaffLayout() {
     { to: '/staff/events', label: 'Events', show: can('events.bunfest.manage') },
     { to: '/staff/raffle', label: 'Silent Auction', show: can('events.bunfest.manage') },
     { to: '/staff/sponsors', label: 'Sponsors & partners', show: can('events.bunfest.manage') },
+    { to: '/staff/bunny-help', label: 'Bunny Help topics', show: can('content.education.edit') },
     {
       to: '/staff/team',
       label: 'Team',

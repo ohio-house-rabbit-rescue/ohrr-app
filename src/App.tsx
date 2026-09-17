@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import OhrrLayout from './components/OhrrLayout'
 import BunfestLayout from './components/BunfestLayout'
@@ -65,6 +66,9 @@ import PartnersPage from './features/sponsors/PartnersPage'
 import PartnerPerksPage from './features/sponsors/PartnerPerksPage'
 import StaffSponsors from './pages/StaffSponsors'
 import StaffSettings from './pages/StaffSettings'
+import StaffBunnyHelp from './pages/StaffBunnyHelp'
+// My Bunny (local-first care companion) — lazy so it stays out of the main bundle
+const MyBunnyRoutes = lazy(() => import('./features/mybunny/routes'))
 
 export default function App() {
   return (
@@ -113,6 +117,14 @@ export default function App() {
         {/* Sponsors — Phase 1 */}
         <Route path="/partners" element={<PartnersPage />} />
         <Route path="/partners/perks" element={<PartnerPerksPage />} />
+        <Route
+          path="/my-bunny/*"
+          element={
+            <Suspense fallback={null}>
+              <MyBunnyRoutes />
+            </Suspense>
+          }
+        />
         <Route path="*" element={<NotFound />} />
       </Route>
 
@@ -151,6 +163,7 @@ export default function App() {
           <Route path="events" element={<StaffEvents />} />
           <Route path="raffle" element={<StaffRaffle />} />
           <Route path="sponsors" element={<StaffSponsors />} />
+          <Route path="bunny-help" element={<StaffBunnyHelp />} />
           <Route path="team" element={<StaffTeam />} />
           <Route path="activity" element={<StaffActivity />} />
           <Route path="settings" element={<StaffSettings />} />

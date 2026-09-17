@@ -154,6 +154,9 @@ export default function StaffHome() {
               tone="blue"
             />
           )}
+          {canEditCare && (
+            <ActionCard to="/staff/bunny-help" title="Bunny Help topics" subtitle="What “My bunny is…” answers with" icon="help" tone="blue" />
+          )}
           {canManageTeam && (
             <ActionCard
               to="/staff/team"
