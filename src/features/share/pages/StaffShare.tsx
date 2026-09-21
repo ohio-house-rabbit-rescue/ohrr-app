@@ -22,6 +22,8 @@ import {
 } from '../templates'
 import { canvasToBlob, renderCard } from '../render'
 import { canShareFiles, copyText, savePng, sharePng } from '../share'
+import { createPost, uploadPostPng } from '../queue'
+import { useNavigate } from 'react-router-dom'
 
 type Tab = 'suggested' | 'rabbits' | 'events' | 'messages' | 'custom'
 
@@ -177,6 +179,8 @@ function PostRow({ post, onPick }: { post: CardPost; onPick: () => void }) {
 }
 
 function Composer({ post, onBack }: { post: CardPost; onBack: () => void }) {
+  const navigate = useNavigate()
+  const { membership, user } = useAuth()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [format, setFormat] = useState<CardFormat>('square')
   const [caption, setCaption] = useState(post.caption)
@@ -227,6 +231,30 @@ function Composer({ post, onBack }: { post: CardPost; onBack: () => void }) {
   const copy = async () => {
     setStatus((await copyText(caption)) ? 'Caption copied.' : 'Could not copy — select the text and copy it.')
   }
+  // Store the card + caption in the post queue for whoever releases posts.
+  const queue = async () => {
+    const c = canvasRef.current
+    if (!c || !membership) return
+    setBusy(true)
+    setError(null)
+    try {
+      const blob = await canvasToBlob(c)
+      const url = await uploadPostPng(blob, membership.orgId)
+      const created = await createPost(membership.orgId, user?.id ?? '', {
+        title: post.label,
+        caption,
+        image_url: url,
+        image_alt: post.card.headline,
+        platforms: format === 'story' ? ['instagram'] : ['instagram', 'facebook'],
+        scheduled_for: null,
+        source: `kit:${post.id}`,
+      })
+      navigate(`/staff/posts/${created.id}`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save to the queue')
+      setBusy(false)
+    }
+  }
 
   return (
     <Screen className="space-y-4">
@@ -254,6 +282,9 @@ function Composer({ post, onBack }: { post: CardPost; onBack: () => void }) {
 
       <button type="button" onClick={() => void share()} disabled={busy} className={`${btn.primary} w-full py-4 text-base disabled:opacity-60`}>
         <Icon name="external" size={18} /> {shareable ? 'Share' : 'Save image + copy caption'}
+      </button>
+      <button type="button" onClick={() => void queue()} disabled={busy} className={`${btn.blue} w-full disabled:opacity-60`}>
+        <Icon name="calendar" size={16} /> Save to the post queue (post later)
       </button>
       <div className="grid grid-cols-2 gap-2">
         <button type="button" onClick={() => void save()} disabled={busy} className={`${btn.outline} w-full`}>

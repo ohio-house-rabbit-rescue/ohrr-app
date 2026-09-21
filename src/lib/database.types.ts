@@ -1107,6 +1107,55 @@ export type Database = {
         }
         Relationships: []
       }
+      // Post queue (20260921130000_social_posts.sql)
+      social_posts: {
+        Row: {
+          id: string
+          org_id: string
+          title: string
+          caption: string
+          image_url: string | null
+          image_alt: string | null
+          platforms: string[]
+          scheduled_for: string | null
+          status: 'draft' | 'approved' | 'posted' | 'archived'
+          source: string | null
+          notes: string | null
+          created_by: string | null
+          approved_by: string | null
+          approved_at: string | null
+          posted_by: string | null
+          posted_at: string | null
+          posted_to: string[] | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          title: string
+          caption?: string
+          image_url?: string | null
+          image_alt?: string | null
+          platforms?: string[]
+          scheduled_for?: string | null
+          status?: 'draft' | 'approved' | 'posted' | 'archived'
+          source?: string | null
+          notes?: string | null
+          created_by?: string | null
+        }
+        Update: {
+          title?: string
+          caption?: string
+          image_url?: string | null
+          image_alt?: string | null
+          platforms?: string[]
+          scheduled_for?: string | null
+          notes?: string | null
+          source?: string | null
+        }
+        Relationships: []
+      }
       hopshop_inventory: {
         Row: {
           product_id: string
@@ -1316,6 +1365,15 @@ export type Database = {
         Returns: undefined
       }
       count_pending_bookings: {
+        Args: { p_org: string }
+        Returns: number
+      }
+      // Post queue
+      set_social_post_status: {
+        Args: { p_id: string; p_status: string; p_posted_to?: string[] | null }
+        Returns: undefined
+      }
+      count_ready_posts: {
         Args: { p_org: string }
         Returns: number
       }

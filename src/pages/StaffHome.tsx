@@ -18,6 +18,7 @@ export default function StaffHome() {
   // Hooks before any early return: the Inbox badge count (0 when not allowed).
   const newCount = useNewRequestCount(membership && can('inbox.manage') ? membership.orgId : null)
   const pendingCount = usePendingBookingCount(membership && can('bookings.manage') ? membership.orgId : null)
+  const readyPosts = useReadyPostCount(membership && (can('announcements.post') || can('social.publish')) ? membership.orgId : null)
 
   if (!configured) return <NotConfigured />
   if (loading) return <Spinner />
@@ -27,6 +28,7 @@ export default function StaffHome() {
   const isAdminish = membership.role === 'owner' || membership.role === 'admin'
   const canInbox = can('inbox.manage')
   const canBookings = can('bookings.manage')
+  const canQueue = can('announcements.post') || can('social.publish')
   const badge = roleBadge[membership.role] ?? roleBadge.staff
 
   // What this person can do in the Hop Shop (drives the dashboard subtitle).
@@ -49,6 +51,7 @@ export default function StaffHome() {
   const canManageSettings = can('settings.manage')
   const canScan = can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update')
   const showTiles =
+    canQueue ||
     canInbox ||
     canBookings ||
     canScan ||
@@ -149,6 +152,15 @@ export default function StaffHome() {
                   : hopshopCaps.map((c) => c.description).join(' · ')
               }
               icon="bag"
+              tone="orange"
+            />
+          )}
+          {canQueue && (
+            <ActionCard
+              to="/staff/posts"
+              title={readyPosts > 0 ? `Post queue · ${readyPosts} ready` : 'Post queue'}
+              subtitle="Premade posts, released with one tap by whoever posts as OHRR"
+              icon="mail"
               tone="orange"
             />
           )}
@@ -313,6 +325,22 @@ function usePendingBookingCount(orgId: string | null): number {
     let alive = true
     supabase
       .rpc('count_pending_bookings', { p_org: orgId })
+      .then(({ data }) => alive && typeof data === 'number' && setN(data))
+    return () => {
+      alive = false
+    }
+  }, [orgId])
+  return n
+}
+
+// Approved posts whose day has come.
+function useReadyPostCount(orgId: string | null): number {
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    if (!orgId) return
+    let alive = true
+    supabase
+      .rpc('count_ready_posts', { p_org: orgId })
       .then(({ data }) => alive && typeof data === 'number' && setN(data))
     return () => {
       alive = false

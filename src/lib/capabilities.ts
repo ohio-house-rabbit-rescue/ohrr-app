@@ -25,6 +25,7 @@ export const CAPABILITIES = [
   'settings.manage',
   'inbox.manage',
   'bookings.manage',
+  'social.publish',
 ] as const
 
 export type Capability = (typeof CAPABILITIES)[number]
@@ -58,6 +59,7 @@ export const PERMISSION_CATALOG: PermissionMeta[] = [
   { key: 'settings.manage', area: 'Staff', description: 'Change app settings and turn test features on/off' },
   { key: 'inbox.manage', area: 'Inbox', description: 'Read and handle requests sent from the app and website' },
   { key: 'bookings.manage', area: 'Bookings', description: 'Set up bookable shifts & appointments, see rosters, confirm and check in' },
+  { key: 'social.publish', area: 'Content', description: 'Release queued social-media posts (the one person who posts as OHRR)' },
 ]
 
 // The preset → capabilities bundles, mirroring `permission_presets` in the seed.
