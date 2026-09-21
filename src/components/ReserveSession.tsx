@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { SESSION_SLOTS } from '../data/bunfestPages'
 import { Card, SectionLabel, btn } from './ui'
 import { Icon } from './icons'
+import { submitRequest } from '../lib/requests'
 
 const input =
   'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
@@ -14,11 +15,6 @@ const pill = (active: boolean) =>
       : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50',
   ].join(' ')
 
-function encode(data: Record<string, string>) {
-  return Object.keys(data)
-    .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(data[k])}`)
-    .join('&')
-}
 
 // In-app reservation for a BunFest service (Bunny Spa / Glamour Shots). No
 // payment needed up front — guests pay at the table; the team confirms the time.
@@ -43,11 +39,7 @@ export function ReserveSession({
     e.preventDefault()
     setStatus('submitting')
     try {
-      await fetch('/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: encode({ 'form-name': formName, service, time: slot, ...form }),
-      })
+      await submitRequest('reserve-session', { service, time: slot, ...form })
       setStatus('done')
     } catch {
       setStatus('error')
@@ -79,13 +71,9 @@ export function ReserveSession({
       <Card>
         <form
           name={formName}
-          method="POST"
-          data-netlify="true"
-          netlify-honeypot="bot-field"
           onSubmit={onSubmit}
           className="space-y-3.5"
         >
-          <input type="hidden" name="form-name" value={formName} />
           <input type="hidden" name="service" value={service} />
           <input type="hidden" name="time" value={slot} />
           <p className="hidden">

@@ -23,6 +23,7 @@ export const CAPABILITIES = [
   'staff.permissions.manage',
   'audit.view',
   'settings.manage',
+  'inbox.manage',
 ] as const
 
 export type Capability = (typeof CAPABILITIES)[number]
@@ -54,6 +55,7 @@ export const PERMISSION_CATALOG: PermissionMeta[] = [
   { key: 'staff.permissions.manage', area: 'Staff', description: 'Grant/revoke worker permissions & status' },
   { key: 'audit.view', area: 'Staff', description: 'View the activity log' },
   { key: 'settings.manage', area: 'Staff', description: 'Change app settings and turn test features on/off' },
+  { key: 'inbox.manage', area: 'Inbox', description: 'Read and handle requests sent from the app and website' },
 ]
 
 // The preset → capabilities bundles, mirroring `permission_presets` in the seed.
@@ -69,7 +71,8 @@ export const PRESETS: Record<string, Capability[]> = {
     'adoptions.listings.create',
     'adoptions.listings.edit',
     'adoptions.status.change',
+    'inbox.manage',
   ],
-  'Volunteer Lead': ['volunteers.shifts.manage', 'volunteers.signups.approve'],
+  'Volunteer Lead': ['volunteers.shifts.manage', 'volunteers.signups.approve', 'inbox.manage'],
   'Content Editor': ['content.education.edit', 'announcements.post', 'events.bunfest.manage'],
 }

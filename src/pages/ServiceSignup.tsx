@@ -2,15 +2,11 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Screen, Card, Badge, btn } from '../components/ui'
 import { Icon } from '../components/icons'
+import { submitRequest } from '../lib/requests'
 
 const input =
   'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
 
-function encode(data: Record<string, string>) {
-  return Object.keys(data)
-    .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(data[k])}`)
-    .join('&')
-}
 
 export default function ServiceSignup() {
   const [params] = useSearchParams()
@@ -29,11 +25,7 @@ export default function ServiceSignup() {
     e.preventDefault()
     setStatus('submitting')
     try {
-      await fetch('/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: encode({ 'form-name': 'service-signup', service, date, time, ...form }),
-      })
+      await submitRequest('service-signup', { service, date, time, ...form })
       setStatus('done')
     } catch {
       setStatus('error')
@@ -81,17 +73,11 @@ export default function ServiceSignup() {
       </div>
 
       <Card>
-        {/* name + data-netlify enable Netlify Forms; a matching hidden form in
-            index.html lets Netlify detect it at build time. */}
         <form
           name="service-signup"
-          method="POST"
-          data-netlify="true"
-          netlify-honeypot="bot-field"
           onSubmit={onSubmit}
           className="space-y-3"
         >
-          <input type="hidden" name="form-name" value="service-signup" />
           <p className="hidden">
             <label>
               Don’t fill this out: <input name="bot-field" />

@@ -4,15 +4,11 @@ import { Icon } from './icons'
 import { useFeatureFlag } from '../features/settings/useSetting'
 import { RAFFLE_TICKETS_FLAG } from '../features/settings/testFeatures'
 import { formatValue, rafflePriceLine, raffleTotalCents, type RafflePricing } from '../features/raffle/types'
+import { submitRequest } from '../lib/requests'
 
 const input =
   'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
 
-function encode(data: Record<string, string>) {
-  return Object.keys(data)
-    .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(data[k])}`)
-    .join('&')
-}
 
 function makeCode() {
   return `MWBF-${Math.floor(10000 + Math.random() * 90000)}`
@@ -51,17 +47,10 @@ function RaffleTicketsForm({ pricing }: { pricing: RafflePricing | null }) {
     setStatus('submitting')
     const codes = Array.from({ length: qty }, makeCode)
     try {
-      await fetch('/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: encode({
-          'form-name': 'raffle-request',
-          quantity: String(qty),
+      await submitRequest('raffle-request', { quantity: String(qty),
           total: totalLabel,
           tickets: codes.join(', '),
-          ...form,
-        }),
-      })
+          ...form })
       setTickets(codes)
       setStatus('done')
     } catch {
@@ -119,13 +108,9 @@ function RaffleTicketsForm({ pricing }: { pricing: RafflePricing | null }) {
       <Card>
         <form
           name="raffle-request"
-          method="POST"
-          data-netlify="true"
-          netlify-honeypot="bot-field"
           onSubmit={onSubmit}
           className="space-y-3.5"
         >
-          <input type="hidden" name="form-name" value="raffle-request" />
           <input type="hidden" name="quantity" value={qty} />
           <input type="hidden" name="total" value={totalLabel} />
           <p className="hidden">

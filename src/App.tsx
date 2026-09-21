@@ -67,6 +67,7 @@ import PartnerPerksPage from './features/sponsors/PartnerPerksPage'
 import StaffSponsors from './pages/StaffSponsors'
 import StaffSettings from './pages/StaffSettings'
 import StaffBunnyHelp from './pages/StaffBunnyHelp'
+import StaffInbox from './pages/StaffInbox'
 // My Bunny (local-first care companion) — lazy so it stays out of the main bundle
 const MyBunnyRoutes = lazy(() => import('./features/mybunny/routes'))
 // Scan an item (camera + tag printer) — lazy: the barcode reader is big
@@ -172,6 +173,7 @@ export default function App() {
           <Route path="team" element={<StaffTeam />} />
           <Route path="activity" element={<StaffActivity />} />
           <Route path="settings" element={<StaffSettings />} />
+          <Route path="inbox" element={<StaffInbox />} />
           <Route path="scan" element={<Suspense fallback={null}><ScanFlow /></Suspense>} />
           <Route path="items" element={<Suspense fallback={null}><ItemsList /></Suspense>} />
           <Route path="items/tags" element={<Suspense fallback={null}><PrintTags /></Suspense>} />

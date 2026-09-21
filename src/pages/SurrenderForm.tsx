@@ -4,15 +4,11 @@ import { intakeConfig, type IntakeType, type FormField } from '../data/surrender
 import { surrenderContact } from '../data/surrender'
 import { Screen, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
+import { submitRequest } from '../lib/requests'
 
 const inputClass =
   'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
 
-function encode(data: Record<string, string>) {
-  return Object.keys(data)
-    .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(data[k])}`)
-    .join('&')
-}
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
@@ -41,7 +37,6 @@ export default function SurrenderForm() {
     setStatus('submitting')
     // flatten values (arrays -> comma list) for the POST body
     const flat: Record<string, string> = {
-      'form-name': 'surrender-intake',
       type: cfg.title,
       signature,
       agreement: 'Agreed to relinquishment terms',
@@ -49,11 +44,7 @@ export default function SurrenderForm() {
     }
     for (const [k, v] of Object.entries(values)) flat[k] = Array.isArray(v) ? v.join(', ') : v
     try {
-      await fetch('/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: encode(flat),
-      })
+      await submitRequest('surrender-intake', flat)
       setStatus('done')
     } catch {
       setStatus('error')
@@ -98,18 +89,11 @@ export default function SurrenderForm() {
           doesn’t complete the surrender on its own.
         </p>
       </div>
-
-      {/* name + data-netlify enable Netlify Forms; a matching hidden form in
-          index.html lets Netlify detect it at build time. */}
       <form
         name="surrender-intake"
-        method="POST"
-        data-netlify="true"
-        netlify-honeypot="bot-field"
         onSubmit={onSubmit}
         className="space-y-5"
       >
-        <input type="hidden" name="form-name" value="surrender-intake" />
         <input type="hidden" name="type" value={cfg.title} />
         <p className="hidden">
           <label>

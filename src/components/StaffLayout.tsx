@@ -26,6 +26,7 @@ export default function StaffLayout() {
   // overflows or needs a scrolling tab strip, however many sections there are.
   const navItems = [
     { to: '/staff', label: 'Dashboard', end: true, show: true },
+    { to: '/staff/inbox', label: 'Inbox', show: can('inbox.manage') },
     {
       to: '/staff/scan',
       label: 'Scan an item',

@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { ActionCard, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
@@ -13,6 +15,8 @@ const roleBadge: Record<string, { label: string; tone: 'blue' | 'orange' | 'slat
 
 export default function StaffHome() {
   const { configured, loading, user, membership, can, capabilities } = useAuth()
+  // Hooks before any early return: the Inbox badge count (0 when not allowed).
+  const newCount = useNewRequestCount(membership && can('inbox.manage') ? membership.orgId : null)
 
   if (!configured) return <NotConfigured />
   if (loading) return <Spinner />
@@ -20,6 +24,7 @@ export default function StaffHome() {
   if (!membership) return <Navigate to="/staff/start" replace />
 
   const isAdminish = membership.role === 'owner' || membership.role === 'admin'
+  const canInbox = can('inbox.manage')
   const badge = roleBadge[membership.role] ?? roleBadge.staff
 
   // What this person can do in the Hop Shop (drives the dashboard subtitle).
@@ -42,6 +47,7 @@ export default function StaffHome() {
   const canManageSettings = can('settings.manage')
   const canScan = can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update')
   const showTiles =
+    canInbox ||
     canScan ||
     canSeeHopShop ||
     canManageAdopt ||
@@ -72,6 +78,28 @@ export default function StaffHome() {
 
       {showTiles ? (
         <div className="space-y-3">
+          {canInbox && (
+            <Link
+              to="/staff/inbox"
+              className="flex items-center gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+            >
+              <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-blue-50 text-brand-blue">
+                <Icon name="mail" size={22} />
+                {newCount > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-brand-orange px-1.5 text-xs font-black text-white">
+                    {newCount > 99 ? '99+' : newCount}
+                  </span>
+                )}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-display text-[15px] font-extrabold text-ink">Inbox</span>
+                <span className="mt-0.5 block text-sm text-slate-500">
+                  {newCount > 0 ? `${newCount} new request${newCount === 1 ? '' : 's'} waiting` : 'Appointments, sign-ups, surrenders & messages'}
+                </span>
+              </span>
+              <Icon name="chevron" size={18} className="shrink-0 text-slate-300" />
+            </Link>
+          )}
           {canScan && (
             <Link
               to="/staff/scan"
@@ -238,4 +266,20 @@ export default function StaffHome() {
       )}
     </Screen>
   )
+}
+
+// How many requests are waiting — refreshed each time the dashboard opens.
+function useNewRequestCount(orgId: string | null): number {
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    if (!orgId) return
+    let alive = true
+    supabase
+      .rpc('count_new_requests', { p_org: orgId })
+      .then(({ data }) => alive && typeof data === 'number' && setN(data))
+    return () => {
+      alive = false
+    }
+  }, [orgId])
+  return n
 }

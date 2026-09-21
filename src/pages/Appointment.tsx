@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ohrr } from '../data/ohrr'
 import { PageHeader, Screen, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
+import { submitRequest } from '../lib/requests'
 
 const input =
   'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
@@ -28,11 +29,6 @@ const pill = (active: boolean) =>
       : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50',
   ].join(' ')
 
-function encode(data: Record<string, string>) {
-  return Object.keys(data)
-    .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(data[k])}`)
-    .join('&')
-}
 
 // Local "today" (YYYY-MM-DD) so the date picker can't choose the past.
 function todayISO() {
@@ -105,17 +101,10 @@ export default function Appointment() {
     if (dateInvalid) return // must be a Saturday or Sunday
     setStatus('submitting')
     try {
-      await fetch('/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: encode({
-          'form-name': 'appointment-request',
-          reason,
+      await submitRequest('appointment-request', { reason,
           date: date ? formatVisitDate(date) : '',
           times: orderedSlots.join(', '),
-          ...form,
-        }),
-      })
+          ...form })
       setStatus('done')
     } catch {
       setStatus('error')
@@ -161,17 +150,11 @@ export default function Appointment() {
         </Card>
 
         <Card>
-          {/* name + data-netlify enable Netlify Forms; a matching hidden form in
-              index.html lets Netlify detect it at build time. */}
           <form
             name="appointment-request"
-            method="POST"
-            data-netlify="true"
-            netlify-honeypot="bot-field"
             onSubmit={onSubmit}
             className="space-y-4"
           >
-            <input type="hidden" name="form-name" value="appointment-request" />
             <input type="hidden" name="reason" value={reason} />
             <input type="hidden" name="times" value={orderedSlots.join(', ')} />
             <p className="hidden">

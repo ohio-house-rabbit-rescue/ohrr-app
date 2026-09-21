@@ -953,6 +953,31 @@ export type Database = {
         }
         Relationships: []
       }
+      requests: {
+        Row: {
+          id: string
+          org_id: string
+          kind: string
+          name: string | null
+          email: string | null
+          phone: string | null
+          subject: string | null
+          payload: Json
+          status: 'new' | 'in_progress' | 'done' | 'archived'
+          staff_notes: string | null
+          source: string | null
+          handled_by: string | null
+          handled_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: never
+        Update: {
+          status?: 'new' | 'in_progress' | 'done' | 'archived'
+          staff_notes?: string | null
+        }
+        Relationships: []
+      }
       hopshop_inventory: {
         Row: {
           product_id: string
@@ -1071,6 +1096,27 @@ export type Database = {
       delete_item_by_code: {
         Args: { p_org: string; p_code: string }
         Returns: undefined
+      }
+      // The Inbox (20260921100000_requests.sql)
+      submit_request: {
+        Args: {
+          p_kind: string
+          p_name: string | null
+          p_email: string | null
+          p_phone: string | null
+          p_subject: string
+          p_payload: Json
+          p_source?: string | null
+        }
+        Returns: string
+      }
+      set_request_status: {
+        Args: { p_id: string; p_status: string; p_notes?: string | null }
+        Returns: undefined
+      }
+      count_new_requests: {
+        Args: { p_org: string }
+        Returns: number
       }
     }
     Enums: {
