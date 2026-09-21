@@ -372,7 +372,7 @@ export type Database = {
           sort_order: number
           is_published: boolean
           /** 'care' (Learn) | 'give' | 'about' | 'adopt' — absent until 20260921120000_site_pages.sql runs */
-          section?: 'care' | 'give' | 'about' | 'adopt'
+          section?: 'care' | 'give' | 'about' | 'adopt' | 'volunteer'
           created_by: string | null
           created_at: string
           updated_at: string
@@ -386,7 +386,7 @@ export type Database = {
           summary?: string
           body?: string
           tip?: string | null
-          section?: 'care' | 'give' | 'about' | 'adopt'
+          section?: 'care' | 'give' | 'about' | 'adopt' | 'volunteer'
           sort_order?: number
           is_published?: boolean
           created_by?: string | null
@@ -402,7 +402,7 @@ export type Database = {
           summary?: string
           body?: string
           tip?: string | null
-          section?: 'care' | 'give' | 'about' | 'adopt'
+          section?: 'care' | 'give' | 'about' | 'adopt' | 'volunteer'
           sort_order?: number
           is_published?: boolean
           created_by?: string | null

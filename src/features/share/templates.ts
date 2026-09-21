@@ -113,10 +113,10 @@ export const EDUCATION_CARDS: EducationCard[] = [
     months: [1, 8, 9, 10],
     kicker: 'CAN’T ADOPT YET?',
     headline: 'Foster a rabbit.',
-    subline: 'A few weeks, everything supplied, and a bunny gets out of the center and into a home while they wait.',
+    subline: 'A few weeks in your home, OHRR behind you, and a bunny gets out of the center while they wait.',
     caption:
-      'Not ready to adopt? Fostering is the door in. A few weeks in your home, supplies and support from OHRR, and a rabbit recovers from surgery or learns to trust people somewhere quiet. Tell us you’re interested — it takes a minute. 🐰',
-    path: '/volunteer',
+      'Not ready to adopt? Fostering is the door in. A few weeks in your home, with OHRR arranging the vet care and a team member a message away, and a rabbit recovers from surgery or learns to trust people somewhere quiet. Tell us you’re interested — it takes a minute. 🐰',
+    path: '/info/foster-a-rabbit',
     accent: 'orange',
     source: 'OHRR fosters rabbits in team members’ and volunteers’ homes (org profile); Gen Z fostered the most pets 2020–22 (APPA).',
   },

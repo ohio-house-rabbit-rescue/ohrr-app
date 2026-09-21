@@ -23,6 +23,7 @@ const KIND: Record<string, { label: string; icon: IconName }> = {
   'reserve-session': { label: 'BunFest session', icon: 'clock' },
   'mailing-list': { label: 'Mailing list', icon: 'mail' },
   supporter: { label: 'New supporter', icon: 'heart' },
+  'foster-application': { label: 'Foster interest', icon: 'home' },
   'contact': { label: 'Message', icon: 'mail' },
   'adoption-application': { label: 'Adoption application', icon: 'heart' },
   'booking': { label: 'Booking', icon: 'calendar' },

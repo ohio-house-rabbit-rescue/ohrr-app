@@ -16,6 +16,7 @@ export type RequestKind =
   | 'mailing-list'
   | 'adoption-application'
   | 'supporter'
+  | 'foster-application'
 
 export interface RequestFields {
   name?: string
@@ -47,6 +48,8 @@ function summarize(kind: RequestKind, f: RequestFields): string {
       return 'Join the mailing list'
     case 'supporter':
       return 'Become a supporter'
+    case 'foster-application':
+      return pick('situation', 'length') || 'Foster interest'
     case 'adoption-application':
       return pick('rabbit', 'rabbitName') || 'Adoption application'
     default:

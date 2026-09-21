@@ -85,6 +85,35 @@ export default function Volunteer() {
           </div>
         )}
 
+        {/* Two doors the market data says matter most: fostering (students, renters,
+            young adults) and digital help (the skill OHRR's volunteer base is short of) */}
+        <div className="space-y-2.5">
+          <SectionLabel>Two more ways in</SectionLabel>
+          <Card className="space-y-2">
+            <h3 className="font-display text-base font-extrabold text-ink">Foster a rabbit</h3>
+            <p className="text-sm leading-relaxed text-slate-600">
+              A few weeks with a rabbit in your home while they recover or wait for a family. Renters and students welcome. The easiest first step there is.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Link to="/volunteer/foster" className={`${btn.primary} px-4 py-2`}>
+                I’m interested <Icon name="chevron" size={14} />
+              </Link>
+              <Link to="/info/foster-a-rabbit" className={`${btn.outline} px-4 py-2`}>
+                What it involves
+              </Link>
+            </div>
+          </Card>
+          <Card className="space-y-2">
+            <h3 className="font-display text-base font-extrabold text-ink">Help OHRR online</h3>
+            <p className="text-sm leading-relaxed text-slate-600">
+              Good with Instagram, TikTok or short video? An hour a week posting from the ready-made Share kit reaches the people the rescue is missing. Students: this counts as real experience.
+            </p>
+            <Link to={signupHref('Social media & digital content', 'DIGITAL')} className={`${btn.blue} px-4 py-2`}>
+              Count me in <Icon name="chevron" size={14} />
+            </Link>
+          </Card>
+        </div>
+
         {/* Other volunteer needs */}
         <div className="space-y-2.5">
           <SectionLabel>Other volunteer needs</SectionLabel>

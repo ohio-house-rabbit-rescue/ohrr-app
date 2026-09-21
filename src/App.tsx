@@ -17,6 +17,7 @@ import Services from './pages/Services'
 import AdoptionApplication from './pages/AdoptionApplication'
 import MailingList from './pages/MailingList'
 import BecomeSupporter from './pages/BecomeSupporter'
+import FosterForm from './pages/FosterForm'
 // Bookings — shifts & appointments (replaces SignUp.com links and the old appointment form)
 import BookPage from './features/bookings/pages/BookPage'
 import BookingCancel from './features/bookings/pages/BookingCancel'
@@ -115,6 +116,7 @@ export default function App() {
         <Route path="/info/:id" element={<LearnTopic />} />
         <Route path="/volunteer" element={<Volunteer />} />
         <Route path="/volunteer/signup" element={<VolunteerSignup />} />
+        <Route path="/volunteer/foster" element={<FosterForm />} />
         <Route path="/volunteer/:slug" element={<VolunteerWay />} />
         <Route path="/support" element={<Give />} />
         <Route path="/hop-shop" element={<HopShop />} />
