@@ -31,14 +31,9 @@ export function AdoptionStepsCard() {
               </Link>
             )}
             {i === 1 && (
-              <a
-                href={ohrr.links.application}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`${btn.primary} mt-2.5 px-4 py-2`}
-              >
-                Start the adoption application <Icon name="external" size={14} />
-              </a>
+              <Link to="/adopt/apply" className={`${btn.primary} mt-2.5 px-4 py-2`}>
+                Start the adoption application <Icon name="chevron" size={14} />
+              </Link>
             )}
           </div>
         </Card>

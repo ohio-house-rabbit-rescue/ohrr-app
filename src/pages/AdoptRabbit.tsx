@@ -134,17 +134,15 @@ export default function AdoptRabbit() {
           </Card>
         )}
 
-        {/* Apply — the one intentional hand-off to OHRR's real application */}
+        {/* Apply — OHRR's application, in-app (lands in the staff Inbox) */}
         <div className="space-y-2 pt-1">
-          <a
-            href={ohrr.links.application}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to={`/adopt/apply?rabbit=${encodeURIComponent(r.name)}`}
             className={`${btn.primary} w-full`}
           >
             Apply to adopt {r.name}
             <Icon name="chevron" size={16} />
-          </a>
+          </Link>
           <p className="text-center text-xs leading-relaxed text-slate-500">
             Adoptions are by appointment ·{' '}
             <a href={ohrr.phoneHref} className="font-semibold text-brand-blue">

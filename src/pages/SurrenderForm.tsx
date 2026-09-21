@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { intakeConfig, type IntakeType, type FormField } from '../data/surrenderForm'
+import { intakeConfig, type IntakeType } from '../data/surrenderForm'
+import { SchemaField, type Values } from '../components/SchemaField'
 import { surrenderContact } from '../data/surrender'
 import { Screen, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
@@ -11,8 +12,6 @@ const inputClass =
 
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
-
-type Values = Record<string, string | string[]>
 
 export default function SurrenderForm() {
   const [params] = useSearchParams()
@@ -109,7 +108,7 @@ export default function SurrenderForm() {
             </div>
             <Card className="space-y-3.5">
               {section.fields.map((f) => (
-                <Field key={f.name} f={f} values={values} setVal={setVal} toggle={toggle} />
+                <SchemaField key={f.name} f={f} values={values} setVal={setVal} toggle={toggle} />
               ))}
             </Card>
           </section>
@@ -190,112 +189,5 @@ export default function SurrenderForm() {
         .
       </p>
     </Screen>
-  )
-}
-
-function Field({
-  f,
-  values,
-  setVal,
-  toggle,
-}: {
-  f: FormField
-  values: Values
-  setVal: (name: string, v: string | string[]) => void
-  toggle: (name: string, opt: string) => void
-}) {
-  const val = values[f.name]
-
-  if (f.type === 'radio') {
-    return (
-      <div>
-        <span className="block text-sm font-semibold text-slate-700">
-          {f.label}
-          {f.required && <span className="text-brand-orange"> *</span>}
-        </span>
-        <div className="mt-1.5 flex flex-wrap gap-2">
-          {f.options!.map((o) => {
-            const active = val === o
-            return (
-              <button
-                key={o}
-                type="button"
-                onClick={() => setVal(f.name, active ? '' : o)}
-                className={[
-                  'rounded-full px-3 py-1.5 text-sm font-bold transition',
-                  active
-                    ? 'bg-brand-blue text-white shadow-sm'
-                    : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50',
-                ].join(' ')}
-              >
-                {o}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
-
-  if (f.type === 'checkboxes') {
-    const arr = Array.isArray(val) ? val : []
-    return (
-      <div>
-        <span className="block text-sm font-semibold text-slate-700">{f.label}</span>
-        <div className="mt-1.5 flex flex-wrap gap-2">
-          {f.options!.map((o) => {
-            const active = arr.includes(o)
-            return (
-              <button
-                key={o}
-                type="button"
-                onClick={() => toggle(f.name, o)}
-                className={[
-                  'rounded-full px-3 py-1.5 text-sm font-bold transition',
-                  active
-                    ? 'bg-brand-blue text-white shadow-sm'
-                    : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50',
-                ].join(' ')}
-              >
-                {o}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
-
-  if (f.type === 'textarea') {
-    return (
-      <label className="block text-sm font-semibold text-slate-700">
-        {f.label}
-        {f.required && <span className="text-brand-orange"> *</span>}
-        <textarea
-          name={f.name}
-          rows={3}
-          required={f.required}
-          value={(val as string) ?? ''}
-          onChange={(e) => setVal(f.name, e.target.value)}
-          className={inputClass}
-        />
-      </label>
-    )
-  }
-
-  return (
-    <label className="block text-sm font-semibold text-slate-700">
-      {f.label}
-      {f.required && <span className="text-brand-orange"> *</span>}
-      <input
-        type={f.type}
-        name={f.name}
-        required={f.required}
-        value={(val as string) ?? ''}
-        onChange={(e) => setVal(f.name, e.target.value)}
-        placeholder={f.placeholder}
-        className={inputClass}
-      />
-    </label>
   )
 }

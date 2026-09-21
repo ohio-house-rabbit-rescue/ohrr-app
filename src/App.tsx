@@ -14,6 +14,8 @@ import Tails from './pages/Tails'
 import TailDetail from './pages/TailDetail'
 import ShareTail from './pages/ShareTail'
 import Services from './pages/Services'
+import AdoptionApplication from './pages/AdoptionApplication'
+import MailingList from './pages/MailingList'
 // Bookings — shifts & appointments (replaces SignUp.com links and the old appointment form)
 import BookPage from './features/bookings/pages/BookPage'
 import BookingCancel from './features/bookings/pages/BookingCancel'
@@ -86,6 +88,8 @@ export default function App() {
         <Route path="/" element={<OhrrHome />} />
         <Route path="/adopt" element={<Adopt />} />
         <Route path="/adopt/how-it-works" element={<AdoptHowItWorks />} />
+        <Route path="/adopt/apply" element={<AdoptionApplication />} />
+        <Route path="/mailing-list" element={<MailingList />} />
         <Route path="/adopt/:id" element={<AdoptRabbit />} />
         <Route path="/events" element={<Events />} />
         <Route path="/vets" element={<Vets />} />

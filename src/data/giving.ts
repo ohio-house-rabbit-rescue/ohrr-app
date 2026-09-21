@@ -203,6 +203,6 @@ export const givingOptions: GivingOption[] = [
     title: 'Join the mailing list',
     description: 'Stay in the loop on rabbits, events, and BunFest news.',
     cta: 'Sign up',
-    url: 'https://www.ohiohouserabbitrescue.org/join-ohrr-mailing-list/',
+    to: '/mailing-list',
   },
 ]
