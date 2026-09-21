@@ -69,16 +69,17 @@ export const givingOptions: GivingOption[] = [
     id: 'wishlist',
     title: 'Amazon Wish List',
     description: 'Buy much-needed supplies and have them shipped straight to the rescue.',
-    cta: 'View the wish list',
-    to: '/info/wish-list',
+    // Opens Amazon itself (sponsor 2026-09-21: the rescue gets residuals from the visit).
+    cta: 'Open the Amazon Wish List',
+    url: 'https://www.amazon.com/hz/wishlist/ls/1C5PQRB5VI51L/ref=nav_wishlist_lists_1',
     details: [
       'Always needed: paper-based litter (CareFresh), Oxbow Western Timothy Hay and Oxbow adult timothy pellets, fleece blankets, ceramic pet bowls, cat-style litter pans, 28-quart clear storage tubs, non-slip bath mats, MidWest exercise pens, and cleaning supplies (Nature’s Miracle, OxiClean, paper towels, 30-gallon paper lawn bags). Bunny toys we love: Cottontail Cottages, Mini Maze Havens, willow baskets and balls, grass mats, and tunnels.',
       'You can find some of these items around town at stores like Petco, PetPeople, Target or even the Hop Shop at the Adoption Center!',
     ],
     links: [
       {
-        label: 'Open the Amazon list',
-        url: 'https://www.amazon.com/hz/wishlist/ls/1C5PQRB5VI51L/ref=nav_wishlist_lists_1',
+        label: 'The full list, and what to drop off',
+        url: '/info/wish-list',
       },
     ],
   },
