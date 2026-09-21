@@ -38,6 +38,14 @@
     OHRR's own pages; sender's name remembered on the phone; Open in Mail / Copy / Share.
   - `utm(path, campaign, medium)` — share-kit / print / email — so flyers and letters show up
     separately in Cloudflare analytics.
+  - **Breed guide — "What kind of bunny do I have?"** (`/learn/breeds`, `/learn/breeds/:slug`; website
+    the same) — the sponsor's 2026-06-17 request. `src/data/breeds.ts` (mirrored in the website): 24
+    breeds with ears / grown weight / coat / origin / "how to tell", every fact checked against the
+    breed's Wikipedia article (ARBA figures where given) — nothing invented; 24 freely licensed
+    Wikimedia Commons photos in `public/breeds/` (website `public/img/breeds/`), credits on
+    Settings (app) / foot of the guide (website). Three questions narrow the cards; "most rescue
+    rabbits are mixes" said first; My Bunny's breed field points to it. Static reference data,
+    not staff-editable (it is not OHRR content).
   - Cleanup: removed unused `learnLinks`, `surrenderForms`, `LinkCard`.
   - **Not built (money side, by sponsor decision):** Donate → payment page, in-app raffle-ticket or
     Hop Shop payment, donation receipts. Easter campaign scheduler still on hold.
@@ -676,13 +684,10 @@ strategy doc; not yet scheduled:
   candidate) to persist sign-ups, follows, and any registration. The Volunteer
   sign-ups (`volunteer-signup`) and Service sign-ups currently post to Netlify
   Forms; a real backend would let shifts/runs show true remaining capacity.
-- **Rabbit breed identifier / guide** *(sponsor request, 2026-06-17)* — a "what
-  kind of bunny do I have?" feature OHRR's site doesn't have: the official list of
-  rabbit breeds with a photo + short description of each. Research a good source
-  (Wikipedia / Wikimedia Commons, ARBA breed list) for accurate details + freely
-  licensed images. Scoped for later.
-- **Dead external-link code cleanup** — remove unused `ExternalCard` (`ui.tsx`),
-  `adoptLinks`/`learnLinks` (`ohrr.ts`), and stale `surrenderForms` URLs.
+- ~~**Rabbit breed identifier / guide** *(sponsor request, 2026-06-17)*~~ — **built 2026-09-21**
+  (`/learn/breeds`, see Current state).
+- ~~**Dead external-link code cleanup**~~ — done 2026-09-21 (`learnLinks`, `surrenderForms`,
+  `LinkCard` removed; `ExternalCard` is still used by Bunny Help and My Bunny).
 - **Amazon Wish List — deep links to items** *(sponsor request, later)* — instead of
   one link to the list, link directly to individual items (open in the Amazon app).
 - **Hop Shop inventory back end** *(sponsor request; needs backend)* — the public
