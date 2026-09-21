@@ -1,6 +1,7 @@
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { ActionCard, Badge, Card, Screen } from '../components/ui'
+import { Icon } from '../components/icons'
 import { Spinner, NotConfigured } from '../components/staffui'
 import { PERMISSION_CATALOG } from '../lib/capabilities'
 
@@ -39,7 +40,9 @@ export default function StaffHome() {
   const canManageTeam = can('staff.invite') || can('staff.permissions.manage')
   const canViewActivity = can('audit.view')
   const canManageSettings = can('settings.manage')
+  const canScan = can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update')
   const showTiles =
+    canScan ||
     canSeeHopShop ||
     canManageAdopt ||
     canPostAnnouncements ||
@@ -69,6 +72,24 @@ export default function StaffHome() {
 
       {showTiles ? (
         <div className="space-y-3">
+          {canScan && (
+            <Link
+              to="/staff/scan"
+              className="flex items-center gap-4 rounded-2xl bg-brand-orange p-4 text-white shadow-md transition hover:-translate-y-0.5 hover:bg-brand-orange-dark active:translate-y-0"
+            >
+              <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20">
+                <Icon name="scan" size={30} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-display text-xl font-black">Scan an item</span>
+                <span className="mt-0.5 block text-sm text-white/90">Silent Auction, raffle prizes & Hop Shop stock — point the camera at the tag</span>
+              </span>
+              <Icon name="chevron" size={20} className="shrink-0 text-white/80" />
+            </Link>
+          )}
+          {canScan && (
+            <ActionCard to="/staff/items" title="Scanned items" subtitle="Everything with a tag · print new tags" icon="printer" tone="orange" />
+          )}
           {canManageAdopt && (
             <ActionCard
               to="/staff/adopt"

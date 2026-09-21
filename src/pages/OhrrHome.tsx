@@ -11,6 +11,7 @@ import { Icon } from '../components/icons'
 import AnnouncementsBanner from '../components/AnnouncementsBanner'
 import PresentedBy from '../features/sponsors/PresentedBy'
 import MyBunnyHomeCard from '../features/mybunny/HomeCard'
+import HomeSearch from '../features/bunnyhelp/HomeSearch'
 
 // One top card, in the existing "big BunFest button" styling. The BunFest slide
 // keeps BunFest's own palette + logo and shows the live event date; any other
@@ -95,8 +96,12 @@ export default function OhrrHome() {
         <AnnouncementsBanner />
         <PresentedBy surface="home" />
 
-        {/* My Bunny first — the user's own rabbit is the daily reason to open the app */}
-        <MyBunnyHomeCard />
+        {/* My Bunny first — the user's own rabbit is the daily reason to open the app —
+            with Bunny Help right under it, one line: "my bunny is…" → OHRR's own guidance */}
+        <div className="space-y-3">
+          <MyBunnyHomeCard />
+          <HomeSearch />
+        </div>
 
         {/* Top cards — hero slides */}
         {slides.length > 0 && (

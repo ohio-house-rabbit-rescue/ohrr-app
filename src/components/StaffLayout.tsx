@@ -27,6 +27,16 @@ export default function StaffLayout() {
   const navItems = [
     { to: '/staff', label: 'Dashboard', end: true, show: true },
     {
+      to: '/staff/scan',
+      label: 'Scan an item',
+      show: can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update'),
+    },
+    {
+      to: '/staff/items',
+      label: 'Scanned items',
+      show: can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update'),
+    },
+    {
       to: '/staff/adopt',
       label: 'Adoptable rabbits',
       show:

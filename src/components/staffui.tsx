@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 
 // Shared form input styling, matching the public app's forms.
@@ -42,9 +42,12 @@ export function FormError({ children }: { children?: ReactNode }) {
 // enforces every action regardless of what the UI shows.
 export function RequireMembership() {
   const { configured, loading, user, membership } = useAuth()
+  const location = useLocation()
   if (!configured) return <NotConfigured />
   if (loading) return <Spinner />
-  if (!user) return <Navigate to="/staff/signin" replace />
+  // Remember where they were heading (a scanned tag's URL, say) so sign-in
+  // can send them straight back there.
+  if (!user) return <Navigate to="/staff/signin" replace state={{ from: location.pathname + location.search }} />
   if (!membership) return <Navigate to="/staff/start" replace />
   return <Outlet />
 }

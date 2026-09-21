@@ -827,6 +827,7 @@ export type Database = {
           price_cents: number
           sku: string | null
           is_active: boolean
+          photo_url: string | null
           created_by: string | null
           created_at: string
           updated_at: string
@@ -839,6 +840,7 @@ export type Database = {
           price_cents?: number
           sku?: string | null
           is_active?: boolean
+          photo_url?: string | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -851,6 +853,100 @@ export type Database = {
           price_cents?: number
           sku?: string | null
           is_active?: boolean
+          photo_url?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      // Ticket-raffle prizes — same shape as raffle_items minus the session
+      // (supabase/migrations/20260920100000_item_tags.sql).
+      raffle_prizes: {
+        Row: {
+          id: string
+          org_id: string
+          event_slug: string
+          title: string
+          description: string | null
+          donated_by: string | null
+          value_cents: number | null
+          photo_url: string | null
+          status: 'available' | 'drawn'
+          is_published: boolean
+          sort_order: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          event_slug?: string
+          title: string
+          description?: string | null
+          donated_by?: string | null
+          value_cents?: number | null
+          photo_url?: string | null
+          status?: 'available' | 'drawn'
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          event_slug?: string
+          title?: string
+          description?: string | null
+          donated_by?: string | null
+          value_cents?: number | null
+          photo_url?: string | null
+          status?: 'available' | 'drawn'
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      // The scan registry: one code → one auction item / raffle prize / product.
+      item_tags: {
+        Row: {
+          id: string
+          org_id: string
+          code: string
+          kind: 'auction' | 'raffle' | 'stock'
+          raffle_item_id: string | null
+          raffle_prize_id: string | null
+          product_id: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          code: string
+          kind: 'auction' | 'raffle' | 'stock'
+          raffle_item_id?: string | null
+          raffle_prize_id?: string | null
+          product_id?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          code?: string
+          kind?: 'auction' | 'raffle' | 'stock'
+          raffle_item_id?: string | null
+          raffle_prize_id?: string | null
+          product_id?: string | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -932,6 +1028,48 @@ export type Database = {
       }
       set_rabbit_status: {
         Args: { p_id: string; p_status: string }
+        Returns: undefined
+      }
+      // "Scan an item" (20260920100000_item_tags.sql). All return the uniform
+      // tagged-item JSON (src/features/scan/types.ts TaggedItem) or null.
+      item_by_code: {
+        Args: { p_org: string; p_code: string }
+        Returns: Json
+      }
+      list_tagged_items: {
+        Args: { p_org: string; p_kind?: string | null }
+        Returns: Json[]
+      }
+      save_scanned_item: {
+        Args: {
+          p_org: string
+          p_code: string
+          p_kind: string
+          p_title: string
+          p_description?: string | null
+          p_donated_by?: string | null
+          p_value_cents?: number | null
+          p_photo_url?: string | null
+          p_price_cents?: number | null
+          p_quantity?: number | null
+          p_session?: string | null
+        }
+        Returns: Json
+      }
+      adjust_stock_by_code: {
+        Args: { p_org: string; p_code: string; p_delta: number }
+        Returns: Json
+      }
+      set_item_status_by_code: {
+        Args: { p_org: string; p_code: string; p_status: string }
+        Returns: Json
+      }
+      set_item_published_by_code: {
+        Args: { p_org: string; p_code: string; p_published: boolean }
+        Returns: Json
+      }
+      delete_item_by_code: {
+        Args: { p_org: string; p_code: string }
         Returns: undefined
       }
     }

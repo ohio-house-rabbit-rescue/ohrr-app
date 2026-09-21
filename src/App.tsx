@@ -69,6 +69,11 @@ import StaffSettings from './pages/StaffSettings'
 import StaffBunnyHelp from './pages/StaffBunnyHelp'
 // My Bunny (local-first care companion) — lazy so it stays out of the main bundle
 const MyBunnyRoutes = lazy(() => import('./features/mybunny/routes'))
+// Scan an item (camera + tag printer) — lazy: the barcode reader is big
+const ScanFlow = lazy(() => import('./features/scan/pages/ScanFlow'))
+const ItemsList = lazy(() => import('./features/scan/pages/ItemsList'))
+const PrintTags = lazy(() => import('./features/scan/pages/PrintTags'))
+const TagLanding = lazy(() => import('./features/scan/pages/TagLanding'))
 
 export default function App() {
   return (
@@ -167,8 +172,14 @@ export default function App() {
           <Route path="team" element={<StaffTeam />} />
           <Route path="activity" element={<StaffActivity />} />
           <Route path="settings" element={<StaffSettings />} />
+          <Route path="scan" element={<Suspense fallback={null}><ScanFlow /></Suspense>} />
+          <Route path="items" element={<Suspense fallback={null}><ItemsList /></Suspense>} />
+          <Route path="items/tags" element={<Suspense fallback={null}><PrintTags /></Suspense>} />
         </Route>
       </Route>
+
+      {/* A printed OHRR tag's QR opens here → the scan flow (sign-in first if needed) */}
+      <Route path="/t/:code" element={<Suspense fallback={null}><TagLanding /></Suspense>} />
     </Routes>
   )
 }

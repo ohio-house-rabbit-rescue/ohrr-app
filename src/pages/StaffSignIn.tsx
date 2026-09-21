@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Card, Screen } from '../components/ui'
@@ -11,6 +11,9 @@ type Mode = 'signin' | 'signup' | 'forgot'
 export default function StaffSignIn() {
   const { configured, loading, user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as { from?: string } | null)?.from
+  const dest = from && from.startsWith('/staff') ? from : '/staff'
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -21,8 +24,8 @@ export default function StaffSignIn() {
 
   // Already signed in → let the dashboard route to the right place.
   useEffect(() => {
-    if (configured && !loading && user) navigate('/staff', { replace: true })
-  }, [configured, loading, user, navigate])
+    if (configured && !loading && user) navigate(dest, { replace: true })
+  }, [configured, loading, user, navigate, dest])
 
   if (!configured) return <NotConfigured />
   if (loading) return <Spinner />
@@ -52,7 +55,7 @@ export default function StaffSignIn() {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
       }
-      navigate('/staff', { replace: true })
+      navigate(dest, { replace: true })
     } catch (err) {
       setError(errMessage(err))
     } finally {

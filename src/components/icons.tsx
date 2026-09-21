@@ -35,6 +35,16 @@ export type IconName =
   | 'mic'
   | 'x'
   | 'device'
+  | 'scan'
+  | 'gavel'
+  | 'camera'
+  | 'check'
+  | 'plus'
+  | 'minus'
+  | 'keyboard'
+  | 'printer'
+  | 'trash'
+  | 'box'
 
 const paths: Record<IconName, ReactNode> = {
   home: <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />,
@@ -189,6 +199,68 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" />
       <line x1="10.5" y1="18" x2="13.5" y2="18" />
+    </>
+  ),
+  // Scan an item (the four corners of a viewfinder + a scan line).
+  scan: (
+    <>
+      <path d="M4 8V6a2 2 0 0 1 2-2h2" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v2" />
+      <path d="M20 16v2a2 2 0 0 1-2 2h-2" />
+      <path d="M8 20H6a2 2 0 0 1-2-2v-2" />
+      <path d="M7 12h10" />
+    </>
+  ),
+  // Silent Auction item (gavel).
+  gavel: (
+    <>
+      <path d="m14 13-7.5 7.5a1.4 1.4 0 0 1-2-2L12 11" />
+      <path d="m10 6 8 8" />
+      <path d="m13 3 8 8" />
+      <path d="m17 7-6 6" />
+      <path d="M3 21h9" />
+    </>
+  ),
+  camera: (
+    <>
+      <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7H8l1.2-2h5.6L16 7h2.5A1.5 1.5 0 0 1 20 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18z" />
+      <circle cx="12" cy="13" r="3.5" />
+    </>
+  ),
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  plus: (
+    <>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </>
+  ),
+  minus: <path d="M5 12h14" />,
+  keyboard: (
+    <>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10" />
+    </>
+  ),
+  printer: (
+    <>
+      <path d="M7 8V4h10v4" />
+      <rect x="4" y="8" width="16" height="8" rx="2" />
+      <path d="M7 14h10v6H7z" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M4 7h16" />
+      <path d="M9 7V4h6v3" />
+      <path d="M6 7l1 13h10l1-13" />
+    </>
+  ),
+  // Hop Shop stock (a box).
+  box: (
+    <>
+      <path d="M3.5 8 12 4l8.5 4v8L12 20l-8.5-4z" />
+      <path d="M3.5 8 12 12l8.5-4" />
+      <path d="M12 12v8" />
     </>
   ),
 }
