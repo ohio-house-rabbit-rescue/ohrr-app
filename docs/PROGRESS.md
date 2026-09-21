@@ -47,6 +47,9 @@
     rabbits are mixes" said first; My Bunny's breed field points to it. Static reference data,
     not staff-editable (it is not OHRR content).
   - Cleanup: removed unused `learnLinks`, `surrenderForms`, `LinkCard`.
+  - **Amazon Wish List opens Amazon** (sponsor: the rescue gets residuals from the visit) — Give
+    card on app + website, and the website Hop Shop "Donate supplies" link; the in-house
+    `/info/wish-list` item list stays as the secondary link.
   - **Not built (money side, by sponsor decision):** Donate → payment page, in-app raffle-ticket or
     Hop Shop payment, donation receipts. Easter campaign scheduler still on hold.
 
