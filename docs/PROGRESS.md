@@ -19,6 +19,43 @@
 
 ## Current state (at a glance)
 
+- **0.2.0 test build — Google Play internal testing + TestFlight (2026-09-21, latest).** Sponsor:
+  "build this for a Google and Apple test app version … offer testers the full features … on
+  the raffle let's put it together and see what we can do with a working version." **Paste
+  `APPLY-7-RAFFLE-TICKETS.sql`** (Drive root `PASTE-THIS-INTO-SUPABASE.sql` = APPLY-5 + 6 + 7).
+  - **Native gaps closed** (`src/native/share.ts`, `@capacitor/share` + `@capacitor/filesystem`):
+    inside the app the share sheet carries everything the app paints — Share kit / Post queue
+    images, Flyers, the tag sheet (`src/features/scan/tagSheet.ts`, Avery 5163 on a canvas), the
+    service letter (`src/features/bookings/letterImage.ts`), the My Bunny backup, Outreach text.
+    `src/features/share/share.ts` is native-aware (`sharePng` / `savePngAsync` / `shareText`);
+    `src/features/share/canvas.ts` holds the shared painter helpers. Print buttons become
+    "Print or share" in the app (iOS share sheet has AirPrint).
+  - **Raffle tickets, working version** (`20260921170000_raffle_tickets.sql`): `raffle_ticket_orders`,
+    `raffle_tickets` (one row per number, one sequence per event → `A-0001…`), `raffle_counters`;
+    public `reserve_raffle_tickets` (12/phone/hour) + `raffle_order_by_token`; ticket page
+    `/raffle/tickets/:token` with a QR the desk scans; **Staff → Raffle tickets**
+    (`src/features/raffle/tickets/pages/RaffleDesk.tsx`; website `Staff → Raffle tickets`): Desk
+    (scan / search, Mark paid, Void), Sell at the table (paid at once, same draw), Draw (random
+    among paid tickets for a prize from `raffle_prizes`, or record the bucket number; Undo).
+    The migration switches `raffle_tickets_enabled` ON. Amount due comes from
+    `auction_settings` pricing (`raffle_quote_cents`); nothing is charged.
+  - **Delete my account** (`delete_own_account()`, `src/components/DeleteAccount.tsx` on the staff
+    dashboard) — Apple 5.1.1(v); refuses the only active owner; clears every `auth.users`
+    reference in public tables (own rows deleted, shared content unattributed).
+  - **Version 0.2.0** / Android versionCode 2 / iOS build 2. Signed **`ohrr-0.2.0-vc2-release.aab`**
+    + `…-debug.apk` in Drive `Mobile builds/android/` (jarsigner verified).
+  - **iOS without a Mac:** `docs/github/ios-testflight.yml` — GitHub Actions macOS runner (free on
+    this public repo), automatic signing via an App Store Connect API key, uploads to TestFlight.
+    Must be copied to `.github/workflows/` — the automated push was refused (token lacks the
+    `workflow` scope): `gh auth refresh -h github.com -s workflow` as the OHRR login, or add the
+    file in the GitHub web UI. Needs OHRR's Apple Developer account + 4 secrets (see the file).
+  - `docs/HANDOFF.md` rewritten for 0.2.0; `scripts/make-handoff-docx.py` regenerates the Drive
+    docx (`OHRR Mobile Build Handoff.docx`).
+  - Sponsor side before testers: paste the SQL; Play Console (org) + Apple Developer (org, fee
+    waiver) accounts; privacy-policy sign-off; real rabbits / booking times / auction items;
+    tester email lists. Deferred by decision: payments, Easter scheduler, push notifications,
+    App Links / Universal Links (with the store release).
+
 - **"All but the money side" round — on `main` (2026-09-21, later).** Sponsor: keep building
   everything except payments; the money process attaches later. **Paste `APPLY-6-PUBLIC-SHOP.sql`**
   (Drive root `PASTE-THIS-INTO-SUPABASE.sql` = APPLY-5 + APPLY-6 until pasted).

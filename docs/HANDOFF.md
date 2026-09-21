@@ -61,7 +61,7 @@ This document is for whoever builds and installs the OHRR app on phones for inte
 
 ## 4a. iPhone without a Mac: GitHub Actions → TestFlight (recommended)
 
-The repo is public, so GitHub’s macOS runners are free. `.github/workflows/ios-testflight.yml` builds the app and uploads it to TestFlight; signing is automatic through an App Store Connect API key, so nobody handles certificates.
+The repo is public, so GitHub’s macOS runners are free. The workflow file is `docs/github/ios-testflight.yml`; it has to live at `.github/workflows/ios-testflight.yml` to run — GitHub refused the automated push of a workflow file (the push token lacks the `workflow` scope), so either the OHRR GitHub login runs `gh auth refresh -h github.com -s workflow` once and the file is pushed, or someone adds it in the GitHub web UI (Add file → Create new file → path `.github/workflows/ios-testflight.yml` → paste). It builds the app and uploads it to TestFlight; signing is automatic through an App Store Connect API key, so nobody handles certificates.
 
 1. OHRR needs an **Apple Developer Program** membership (organisation; nonprofit fee waiver — see section 9). Register the bundle id `org.ohiohouserabbitrescue.app` under Certificates, IDs & Profiles → Identifiers, then create the app in App Store Connect (iOS, name OHRR, SKU ohrr-app).
 2. App Store Connect → Users and Access → Integrations → **App Store Connect API** → Team keys → Generate (role App Manager). Download the `.p8` (only offered once) and note the Key ID and Issuer ID.
