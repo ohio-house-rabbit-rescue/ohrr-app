@@ -978,6 +978,131 @@ export type Database = {
         }
         Relationships: []
       }
+      // Bookings (20260921110000_bookings.sql)
+      booking_types: {
+        Row: {
+          id: string
+          org_id: string
+          slug: string
+          name: string
+          kind: 'shift' | 'appointment'
+          description: string | null
+          requirements: string | null
+          location: string | null
+          duration_min: number
+          capacity: number
+          max_party: number
+          min_lead_hours: number
+          max_per_month: number | null
+          confirm_mode: 'auto' | 'staff'
+          ask_reason: string | null
+          attest_text: string | null
+          is_published: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          slug: string
+          name: string
+          kind?: 'shift' | 'appointment'
+          description?: string | null
+          requirements?: string | null
+          location?: string | null
+          duration_min?: number
+          capacity?: number
+          max_party?: number
+          min_lead_hours?: number
+          max_per_month?: number | null
+          confirm_mode?: 'auto' | 'staff'
+          ask_reason?: string | null
+          attest_text?: string | null
+          is_published?: boolean
+          sort_order?: number
+        }
+        Update: {
+          slug?: string
+          name?: string
+          kind?: 'shift' | 'appointment'
+          description?: string | null
+          requirements?: string | null
+          location?: string | null
+          duration_min?: number
+          capacity?: number
+          max_party?: number
+          min_lead_hours?: number
+          max_per_month?: number | null
+          confirm_mode?: 'auto' | 'staff'
+          ask_reason?: string | null
+          attest_text?: string | null
+          is_published?: boolean
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      booking_slots: {
+        Row: {
+          id: string
+          org_id: string
+          type_id: string
+          starts_at: string
+          ends_at: string
+          capacity: number
+          note: string | null
+          is_open: boolean
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          type_id: string
+          starts_at: string
+          ends_at: string
+          capacity?: number
+          note?: string | null
+          is_open?: boolean
+          created_by?: string | null
+        }
+        Update: {
+          starts_at?: string
+          ends_at?: string
+          capacity?: number
+          note?: string | null
+          is_open?: boolean
+        }
+        Relationships: []
+      }
+      bookings: {
+        Row: {
+          id: string
+          org_id: string
+          slot_id: string
+          type_id: string
+          name: string
+          email: string
+          phone: string | null
+          party_size: number
+          answer: string | null
+          notes: string | null
+          attested: boolean
+          status: 'requested' | 'confirmed' | 'cancelled' | 'checked_in' | 'no_show'
+          cancel_token: string
+          source: string | null
+          confirmed_by: string | null
+          checked_in_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: never
+        Update: {
+          status?: 'requested' | 'confirmed' | 'cancelled' | 'checked_in' | 'no_show'
+          notes?: string | null
+        }
+        Relationships: []
+      }
       hopshop_inventory: {
         Row: {
           product_id: string
@@ -1115,6 +1240,78 @@ export type Database = {
         Returns: undefined
       }
       count_new_requests: {
+        Args: { p_org: string }
+        Returns: number
+      }
+      // Bookings (20260921110000_bookings.sql)
+      booking_slots_open: {
+        Args: { p_slug: string; p_from?: string; p_to?: string }
+        Returns: { slot_id: string; starts_at: string; ends_at: string; capacity: number; taken: number; note: string | null }[]
+      }
+      book_slot: {
+        Args: {
+          p_slot_id: string
+          p_name: string
+          p_email: string
+          p_phone: string | null
+          p_party?: number
+          p_answer?: string | null
+          p_notes?: string | null
+          p_attested?: boolean
+          p_source?: string | null
+        }
+        Returns: Json
+      }
+      booking_by_token: {
+        Args: { p_token: string }
+        Returns: Json
+      }
+      cancel_booking: {
+        Args: { p_token: string }
+        Returns: Json
+      }
+      generate_booking_slots: {
+        Args: {
+          p_type_id: string
+          p_from: string
+          p_to: string
+          p_weekdays: number[]
+          p_start: string
+          p_end: string
+          p_capacity?: number | null
+          p_note?: string | null
+        }
+        Returns: number
+      }
+      booking_roster: {
+        Args: { p_org: string; p_from: string; p_to: string }
+        Returns: {
+          booking_id: string
+          status: string
+          name: string
+          email: string
+          phone: string | null
+          party_size: number
+          answer: string | null
+          notes: string | null
+          attested: boolean
+          created_at: string
+          slot_id: string
+          starts_at: string
+          ends_at: string
+          capacity: number
+          type_id: string
+          type_name: string
+          type_slug: string
+          kind: string
+          confirm_mode: string
+        }[]
+      }
+      set_booking_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: undefined
+      }
+      count_pending_bookings: {
         Args: { p_org: string }
         Returns: number
       }

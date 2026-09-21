@@ -17,6 +17,7 @@ export default function StaffHome() {
   const { configured, loading, user, membership, can, capabilities } = useAuth()
   // Hooks before any early return: the Inbox badge count (0 when not allowed).
   const newCount = useNewRequestCount(membership && can('inbox.manage') ? membership.orgId : null)
+  const pendingCount = usePendingBookingCount(membership && can('bookings.manage') ? membership.orgId : null)
 
   if (!configured) return <NotConfigured />
   if (loading) return <Spinner />
@@ -25,6 +26,7 @@ export default function StaffHome() {
 
   const isAdminish = membership.role === 'owner' || membership.role === 'admin'
   const canInbox = can('inbox.manage')
+  const canBookings = can('bookings.manage')
   const badge = roleBadge[membership.role] ?? roleBadge.staff
 
   // What this person can do in the Hop Shop (drives the dashboard subtitle).
@@ -48,6 +50,7 @@ export default function StaffHome() {
   const canScan = can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update')
   const showTiles =
     canInbox ||
+    canBookings ||
     canScan ||
     canSeeHopShop ||
     canManageAdopt ||
@@ -99,6 +102,15 @@ export default function StaffHome() {
               </span>
               <Icon name="chevron" size={18} className="shrink-0 text-slate-300" />
             </Link>
+          )}
+          {canBookings && (
+            <ActionCard
+              to="/staff/bookings"
+              title={pendingCount > 0 ? `Bookings · ${pendingCount} to confirm` : 'Bookings'}
+              subtitle="Volunteer shifts & appointments: who’s coming, make times"
+              icon="calendar"
+              tone="blue"
+            />
           )}
           {canScan && (
             <Link
@@ -276,6 +288,22 @@ function useNewRequestCount(orgId: string | null): number {
     let alive = true
     supabase
       .rpc('count_new_requests', { p_org: orgId })
+      .then(({ data }) => alive && typeof data === 'number' && setN(data))
+    return () => {
+      alive = false
+    }
+  }, [orgId])
+  return n
+}
+
+// Appointments waiting for a staff confirmation.
+function usePendingBookingCount(orgId: string | null): number {
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    if (!orgId) return
+    let alive = true
+    supabase
+      .rpc('count_pending_bookings', { p_org: orgId })
       .then(({ data }) => alive && typeof data === 'number' && setN(data))
     return () => {
       alive = false

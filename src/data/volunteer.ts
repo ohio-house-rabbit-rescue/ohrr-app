@@ -10,7 +10,10 @@ export type VolunteerSlug = 'socialization' | 'buncare' | 'vet-transport' | 'fie
 
 export interface SignupAction {
   label: string
+  /** an outside link or mailto: (use `to` for an in-app page instead) */
   href: string
+  /** in-app route, e.g. the booking page for this shift */
+  to?: string
   /** shown under the button */
   note?: string
 }
@@ -57,7 +60,7 @@ export const volunteerWays: VolunteerWay[] = [
     ],
     location: 'OHRR Adoption Center',
     commitment: '1-hour shifts · no more than two per month',
-    signup: [{ label: 'Sign up for Bunny Socialization', href: 'http://signup.com/go/35ayZe' }],
+    signup: [{ label: 'Pick a socialization shift', href: '/book/bunny-socialization', to: '/book/bunny-socialization' }],
     notes: [
       `This opportunity is open to groups. If you’re interested in scheduling a group visit, please contact us at ${OHRR_CONTACT_EMAIL}.`,
     ],
@@ -81,8 +84,9 @@ export const volunteerWays: VolunteerWay[] = [
     commitment: '2 hours every two weeks · at least a year',
     signup: [
       {
-        label: 'Sign up for a Buncare shift',
-        href: 'http://signup.com/go/WuT2xR',
+        label: 'Pick a Buncare shift',
+        href: '/book/buncare-shift',
+        to: '/book/buncare-shift',
         note: 'Once you have successfully met the requirements. Please sign up at least two hours before your shift so that we can ensure someone is at the Adoption Center to let you in.',
       },
       {

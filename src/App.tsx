@@ -14,7 +14,10 @@ import Tails from './pages/Tails'
 import TailDetail from './pages/TailDetail'
 import ShareTail from './pages/ShareTail'
 import Services from './pages/Services'
-import ServiceSignup from './pages/ServiceSignup'
+// Bookings — shifts & appointments (replaces SignUp.com links and the old appointment form)
+import BookPage from './features/bookings/pages/BookPage'
+import BookingCancel from './features/bookings/pages/BookingCancel'
+import StaffBookings from './features/bookings/pages/StaffBookings'
 import Learn from './pages/Learn'
 import LearnTopic from './pages/LearnTopic'
 import Volunteer from './pages/Volunteer'
@@ -25,7 +28,6 @@ import Give from './pages/Give'
 import HopShop from './pages/HopShop'
 import Surrender from './pages/Surrender'
 import SurrenderForm from './pages/SurrenderForm'
-import Appointment from './pages/Appointment'
 import Settings from './pages/Settings'
 import Help from './pages/Help'
 import Search from './pages/Search'
@@ -94,7 +96,9 @@ export default function App() {
         <Route path="/tails/share" element={<ShareTail />} />
         <Route path="/tails/:id" element={<TailDetail />} />
         <Route path="/services" element={<Services />} />
-        <Route path="/services/signup" element={<ServiceSignup />} />
+        <Route path="/services/signup" element={<Navigate to="/services" replace />} />
+        <Route path="/book/cancel/:token" element={<BookingCancel />} />
+        <Route path="/book/:slug" element={<BookPage />} />
         <Route path="/learn" element={<Learn />} />
         <Route path="/learn/:id" element={<LearnTopic />} />
         <Route path="/volunteer" element={<Volunteer />} />
@@ -113,7 +117,7 @@ export default function App() {
           }
         />
         <Route path="/rescues/:id" element={<PartnerDetail base="/rescues" />} />
-        <Route path="/appointment" element={<Appointment />} />
+        <Route path="/appointment" element={<Navigate to="/book/adoption-visit" replace />} />
         <Route path="/surrender" element={<Surrender />} />
         <Route path="/surrender/form" element={<SurrenderForm />} />
         <Route path="/about" element={<About />} />
@@ -174,6 +178,7 @@ export default function App() {
           <Route path="activity" element={<StaffActivity />} />
           <Route path="settings" element={<StaffSettings />} />
           <Route path="inbox" element={<StaffInbox />} />
+          <Route path="bookings" element={<StaffBookings />} />
           <Route path="scan" element={<Suspense fallback={null}><ScanFlow /></Suspense>} />
           <Route path="items" element={<Suspense fallback={null}><ItemsList /></Suspense>} />
           <Route path="items/tags" element={<Suspense fallback={null}><PrintTags /></Suspense>} />

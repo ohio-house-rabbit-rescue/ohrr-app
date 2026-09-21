@@ -27,6 +27,7 @@ export default function StaffLayout() {
   const navItems = [
     { to: '/staff', label: 'Dashboard', end: true, show: true },
     { to: '/staff/inbox', label: 'Inbox', show: can('inbox.manage') },
+    { to: '/staff/bookings', label: 'Bookings', show: can('bookings.manage') },
     {
       to: '/staff/scan',
       label: 'Scan an item',

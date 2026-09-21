@@ -125,17 +125,23 @@ export default function VolunteerWay() {
         <SectionLabel>Sign me up!</SectionLabel>
         <Card className="space-y-3">
           {way.signup.map((s, i) => {
-            const external = !s.href.startsWith('mailto:')
+            const external = !s.to && !s.href.startsWith('mailto:')
             return (
               <div key={s.href}>
-                <a
-                  href={s.href}
-                  target={external ? '_blank' : undefined}
-                  rel="noopener noreferrer"
-                  className={`${i === 0 ? btn.primary : btn.outline} w-full`}
-                >
-                  {s.label} <Icon name={external ? 'external' : 'mail'} size={14} />
-                </a>
+                {s.to ? (
+                  <Link to={s.to} className={`${i === 0 ? btn.primary : btn.outline} w-full`}>
+                    {s.label} <Icon name="calendar" size={14} />
+                  </Link>
+                ) : (
+                  <a
+                    href={s.href}
+                    target={external ? '_blank' : undefined}
+                    rel="noopener noreferrer"
+                    className={`${i === 0 ? btn.primary : btn.outline} w-full`}
+                  >
+                    {s.label} <Icon name={external ? 'external' : 'mail'} size={14} />
+                  </a>
+                )}
                 {s.note && <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{s.note}</p>}
               </div>
             )
