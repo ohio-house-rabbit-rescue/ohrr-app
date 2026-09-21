@@ -19,6 +19,29 @@
 
 ## Current state (at a glance)
 
+- **"All but the money side" round — on `main` (2026-09-21, later).** Sponsor: keep building
+  everything except payments; the money process attaches later. **Paste `APPLY-6-PUBLIC-SHOP.sql`**
+  (Drive root `PASTE-THIS-INTO-SUPABASE.sql` = APPLY-5 + APPLY-6 until pasted).
+  - **Hop Shop shelf, public** (app `/hop-shop`, website `/hop-shop`): `hopshop_public_products()`
+    (read-only RPC for anon) — what staff scanned in, with photo, price and *Sold out*; "buy at the
+    counter" is the seam where in-app payment attaches later.
+  - **Raffle prizes, public** (app `/bunfest/p/raffle`, website `/bunfest/silent-auction` →
+    "Raffle prizes"): published `raffle_prizes` from Scan an item, photo / donor / value / *Drawn*;
+    tickets still sold at the table.
+  - **Flyers on the phone** (`/staff/flyers`): the four QR flyers painted on a canvas
+    (`src/features/share/flyers.ts`, US Letter @ 200 dpi) — Share (AirDrop / Messages to whoever
+    prints), Save image, Print. Same flyers as the website's Staff → Flyers.
+  - **Outreach letters** (`/staff/outreach`; website Staff → Outreach): six ready-to-send emails —
+    campus offices & student orgs (the OSU pilot door), vet clinics, pet/feed stores (before
+    Easter), schools/libraries/scouts (group visits), apartment communities (renters page), local
+    media/newsletters. `src/features/share/outreach.ts` (mirrored in the website); facts only from
+    OHRR's own pages; sender's name remembered on the phone; Open in Mail / Copy / Share.
+  - `utm(path, campaign, medium)` — share-kit / print / email — so flyers and letters show up
+    separately in Cloudflare analytics.
+  - Cleanup: removed unused `learnLinks`, `surrenderForms`, `LinkCard`.
+  - **Not built (money side, by sponsor decision):** Donate → payment page, in-app raffle-ticket or
+    Hop Shop payment, donation receipts. Easter campaign scheduler still on hold.
+
 - **Volunteer hours, service-hours letters, yearly impact page — on `main` (2026-09-21).**
   **Paste `APPLY-5-HOURS-IMPACT.sql`** (= Drive root `PASTE-THIS-INTO-SUPABASE.sql`).
   - Staff → Bookings → **Hours**: totals per person (checked-in shifts × hours + hours added
