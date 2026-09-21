@@ -51,7 +51,17 @@
     file in the GitHub web UI. Needs OHRR's Apple Developer account + 4 secrets (see the file).
   - `docs/HANDOFF.md` rewritten for 0.2.0; `scripts/make-handoff-docx.py` regenerates the Drive
     docx (`OHRR Mobile Build Handoff.docx`).
-  - Sponsor side before testers: paste the SQL; Play Console (org) + Apple Developer (org, fee
+  - **Submission readiness pass (later that day, app 2464ebf / website 8a19412):** privacy policy
+    rewritten for the current build (website `/privacy`; app Settings links to it); a second
+    switch "Raffle tickets inside the phone apps" (`raffle_tickets_native_enabled`, ON by default
+    via `useFeatureFlag(key, fallback)`) so the raffle can be hidden from the native builds alone
+    if Apple (5.3.3) or Play object; Adopt/Help sample-rabbit notes no longer mention Petfinder;
+    HANDOFF §8a = Data safety / App Privacy / content-rating answers + review notes; ten store
+    screenshots (1290×2796, headless Chrome) in Drive `Mobile builds/store-screenshots/`
+    (`make-screenshots.py` regenerates); AAB rebuilt. Briefing PDFs live in the Drive root
+    (`OHRR App and Website Briefing.pdf`, `Midwest BunFest - Sponsor Case.pdf`; sources in
+    `Research/`, `build-briefing.py`). SQL APPLY-5/6/7 confirmed pasted (verified via REST).
+  - Sponsor side before testers: Play Console (org) + Apple Developer (org, fee
     waiver) accounts; privacy-policy sign-off; real rabbits / booking times / auction items;
     tester email lists. Deferred by decision: payments, Easter scheduler, push notifications,
     App Links / Universal Links (with the store release).
