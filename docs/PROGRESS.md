@@ -19,6 +19,31 @@
 
 ## Current state (at a glance)
 
+- **Reach & education build — on `main` (2026-09-21).** Sponsor direction: OHRR is missing the
+  market (see `G:\Shared drives\07-OHRR App\Research\market-data-points.md` and *OHRR Users &
+  Growth Research.docx*); realign toward educating the right people and recruiting volunteers,
+  given a volunteer base short on digital-media skill. **Paste `APPLY-4-POSTS-REACH.sql`.**
+  - **Share kit** (`/staff/share`; website Staff → Posts): pick a rabbit / event / one of ten
+    education messages / custom → the app paints a branded 1080×1080 or 1080×1920 card (canvas,
+    OHRR mark, QR, UTM-tagged link) and writes the caption → **Share** (share sheet → Instagram /
+    Facebook / TikTok) or save image + copy caption. Education cards target families before
+    Easter, new owners after, renters/students, would-be fosters, rabbit owners who never adopted.
+  - **Post queue** (`/staff/posts`; `social_posts`; new cap `social.publish`): anyone with content
+    rights drafts (Share-kit card or phone photo + caption), picks platforms + a day, approves;
+    the one person with posting rights sees "N ready", taps Share, marks posted. Zero cost — no
+    social APIs, no scheduler.
+  - **Foster form** (`/volunteer/foster`, both surfaces → Inbox 'foster-application';
+    `src/data/fosterForm.ts` in both repos — OHRR should confirm the questions), website
+    `/volunteer/interest?role=` quick sign-up, Volunteer page doors **Foster a rabbit** and
+    **Help OHRR online** (recruits the digital volunteer).
+  - **Education pages** (`/info/is-a-rabbit-right-for-us`, `/info/rabbits-for-renters-and-students`,
+    `/info/foster-a-rabbit`; new `care_articles.section = 'volunteer'`).
+  - **Flyers** (website Staff → Flyers): four letter-size QR posters (owners, students/volunteers,
+    families before Easter, adopt), each with its own UTM link.
+  - Still to do from the research: Cloudflare Web Analytics (sponsor enables in the CF dashboard),
+    OSU pilot, Feb–Apr Easter campaign scheduling (hero slide + queue), volunteer hours log,
+    yearly impact page, Donate → real payment page.
+
 - **Outside-links audit → everything in-house except payments & third-party directories — on `main` (2026-09-20/21).**
   Sponsor asked where the app and website still "lead outside the current design"; the
   sweep found four kinds of hand-off and all four are now solved. **Migrations to paste
