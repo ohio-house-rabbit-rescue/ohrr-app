@@ -6,8 +6,8 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-17
-- **Repo:** https://github.com/chasingtheunicorn/ohrr-app
+- **Last updated:** 2026-09-21
+- **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
   Google Drive "OHRR App Design" folder holds the canonical *design* docs only).
@@ -18,6 +18,57 @@
 ---
 
 ## Current state (at a glance)
+
+- **Outside-links audit → everything in-house except payments & third-party directories — on `main` (2026-09-20/21).**
+  Sponsor asked where the app and website still "lead outside the current design"; the
+  sweep found four kinds of hand-off and all four are now solved. **Migrations to paste
+  (Drive → `OHRR App Design/APPLY-2-SCAN-ITEMS.sql` then `APPLY-3-INBOX-BOOKINGS-PAGES.sql`).**
+  - **Scan an item (`/staff/scan`, `/staff/items`, `/staff/items/tags`; website `/staff/items`).**
+    One QR/barcode scan → "What is it?" (Silent Auction / Raffle prize / Hop Shop stock) →
+    photo → name → two details → saved. Built for a person with impaired cognition: one
+    question per screen, 60 px buttons, plain words, Back always top-left, draft survives a
+    refresh. Scanning a known tag opens it with the one action that matters (mark won /
+    drawn, +1 / −1 stock, hide / show). Printed OHRR tags (Avery 5163, QR → `/t/CODE`) open
+    the item from any camera app; sign-in returns to the tag. `item_tags` registry → the
+    existing `raffle_items`, new `raffle_prizes`, or `hopshop_products` (+ `photo_url`).
+    Scanner = BarcodeDetector where present, ZXing (lazy) elsewhere — works in the Capacitor
+    WebView too. Retail barcodes get a best-effort name from Open (Pet) Food Facts (name
+    only, never their photo). Bucket `item-photos`.
+  - **Inbox (`/staff/inbox`, both surfaces; capability `inbox.manage`).** The seven Netlify-
+    Forms posts (appointment, bonding/clinic, surrender intake, volunteer sign-up, Happy
+    Tail, raffle-ticket test forms) were dead on Cloudflare. All forms now call
+    `submit_request()` (anon, insert-only, size-capped, 12/hour per address) → `requests`;
+    staff tap to call/email, see every answer, add notes, New → In progress → Done; website
+    Inbox exports CSV (mailing-list joins → the email service). Dashboard badge.
+  - **Bookings (`/book/:slug`, `/book/cancel/:token`, `/staff/bookings`; both surfaces;
+    capability `bookings.manage`).** Replaces SignUp.com (Bunny Socialization, Buncare) and
+    the appointment/bonding/clinic forms. `booking_types` (rules: length, people per time,
+    book-ahead hours, max per month, who confirms, a question, a box to tick) →
+    `booking_slots` made in bulk ("Sat & Sun, noon–4, one hour each") → `bookings` (no
+    account; private cancel token; shifts confirm instantly, appointments wait for staff).
+    Every rule is enforced in `book_slot()`. Confirmation: phone reminders in the native app,
+    .ics / Google Calendar on the web. Seeded: bunny-socialization (2/month, 4 per hour),
+    buncare-shift (2 h, attest orientation), adoption-visit (2 h, Sat/Sun, staff confirms),
+    bonding-session (staff confirms), vet-clinic (hidden until OHRR has dates). Nothing is
+    bookable until staff **Make times**. `/appointment` → `/book/adoption-visit`; Services
+    sample clinic dates removed; Appointment + ServiceSignup pages retired.
+  - **Forms in-house (both surfaces).** Adoption application (`/adopt/apply` — OHRR's 80-odd
+    questions verbatim from the live form, one section per screen on the phone, draft kept
+    on the device), surrender intakes (`/surrender/form?type=owner|good-samaritan`),
+    mailing list (`/mailing-list`), Become a Supporter (`/support/become-a-supporter`),
+    website Contact message form. All → Inbox. `SchemaField` / `SchemaForm` render the shared
+    schemas (`src/data/adoptionApplication.ts`, `surrenderForm.ts` — same file in both repos).
+  - **Old-site content (`/info/:slug`, both surfaces).** `care_articles.section`
+    (care | give | adopt | about); seeded Workplace Donations, Host a Fundraiser, Legacy
+    Fund, License plate, Kroger Rewards, Wish List, Online Affiliates, Bonding dates from
+    OHRR's own words; edited in **Care guides & pages**. OHRR's five PDFs (adoption,
+    admissions, surrender policies, Be the Voice, Capital Campaign pledge) are served from
+    the website's `/docs/`. Learn shows `section = 'care'` only.
+  - **Still outside, on purpose:** Donate (old-site donate page → payment), Bonfire shirt
+    stores, Amazon wish list, Kroger enrolment, BunFest tickets on midwestbunfest.org,
+    Petfinder/Adopt-a-Pet, vets / partners / vendors directories, Facebook/Instagram, HRS/CHRS.
+  - Also: one-line **"My bunny is…" Bunny Help search on Home** under the My Bunny strip.
+  - Shared icons gained scan, gavel, camera, check, plus, minus, keyboard, printer, trash, box.
 
 - **Native Android + iOS test builds (Capacitor 8) — on `main` (2026-09-17).** The same web
   build now ships inside `android/` and `ios/` (both committed) with app id
