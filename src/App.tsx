@@ -80,6 +80,8 @@ const ScanFlow = lazy(() => import('./features/scan/pages/ScanFlow'))
 const ItemsList = lazy(() => import('./features/scan/pages/ItemsList'))
 const PrintTags = lazy(() => import('./features/scan/pages/PrintTags'))
 const TagLanding = lazy(() => import('./features/scan/pages/TagLanding'))
+// Share kit — canvas + QR, lazy
+const StaffShare = lazy(() => import('./features/share/pages/StaffShare'))
 
 export default function App() {
   return (
@@ -188,6 +190,7 @@ export default function App() {
           <Route path="inbox" element={<StaffInbox />} />
           <Route path="bookings" element={<StaffBookings />} />
           <Route path="scan" element={<Suspense fallback={null}><ScanFlow /></Suspense>} />
+          <Route path="share" element={<Suspense fallback={null}><StaffShare /></Suspense>} />
           <Route path="items" element={<Suspense fallback={null}><ItemsList /></Suspense>} />
           <Route path="items/tags" element={<Suspense fallback={null}><PrintTags /></Suspense>} />
         </Route>

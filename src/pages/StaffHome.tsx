@@ -154,6 +154,15 @@ export default function StaffHome() {
           )}
           {canPostAnnouncements && (
             <ActionCard
+              to="/staff/share"
+              title="Share kit"
+              subtitle="Ready-made posts for Instagram, Facebook & TikTok — pick, tap Share"
+              icon="sparkles"
+              tone="orange"
+            />
+          )}
+          {canPostAnnouncements && (
+            <ActionCard
               to="/staff/announcements"
               title="Announcements"
               subtitle="Post notices that show on the app home"
