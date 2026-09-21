@@ -350,7 +350,7 @@ function Form({
             <SegTabs options={SEX_OPTIONS} value={sexOpt as SexOption} onChange={setSexOpt} wrap />
           </div>
 
-          <Field label="Breed" optional>
+          <Field label="Breed" optional hint="Not sure? Learn → What kind of bunny do I have? walks you through it.">
             <input
               className={mbInput}
               value={breed}

@@ -38,6 +38,8 @@ export default function Learn() {
           <Icon name="chevron" size={18} className="shrink-0 text-slate-300 transition group-hover:text-brand-orange" />
         </Link>
 
+        <ActionCard to="/learn/breeds" title="What kind of bunny do I have?" subtitle="Ears, size, coat → the breeds that fit. Most are a mix — and that’s fine" icon="search" tone="orange" />
+
         <div className="space-y-2.5">
           <SectionLabel>Articles on bunny care</SectionLabel>
           <div className="space-y-2.5">

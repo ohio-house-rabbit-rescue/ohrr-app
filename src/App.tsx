@@ -88,6 +88,8 @@ const TagLanding = lazy(() => import('./features/scan/pages/TagLanding'))
 const StaffShare = lazy(() => import('./features/share/pages/StaffShare'))
 const PostQueue = lazy(() => import('./features/share/pages/PostQueue'))
 const Flyers = lazy(() => import('./features/share/pages/Flyers'))
+const BreedGuide = lazy(() => import('./features/breeds/pages/BreedGuide'))
+const BreedDetail = lazy(() => import('./features/breeds/pages/BreedDetail'))
 const Outreach = lazy(() => import('./features/share/pages/Outreach'))
 const PostEditor = lazy(() => import('./features/share/pages/PostEditor'))
 
@@ -117,6 +119,8 @@ export default function App() {
         <Route path="/book/cancel/:token" element={<BookingCancel />} />
         <Route path="/book/:slug" element={<BookPage />} />
         <Route path="/learn" element={<Learn />} />
+        <Route path="/learn/breeds" element={<Suspense fallback={null}><BreedGuide /></Suspense>} />
+        <Route path="/learn/breeds/:slug" element={<Suspense fallback={null}><BreedDetail /></Suspense>} />
         <Route path="/learn/:id" element={<LearnTopic />} />
         {/* Give / About / Adopt pages brought in from the old site (same table, other sections) */}
         <Route path="/info/:id" element={<LearnTopic />} />

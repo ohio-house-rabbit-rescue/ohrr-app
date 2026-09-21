@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { PageHeader, Screen, Card, SectionLabel, ActionCard, btn } from '../components/ui'
 import { build } from '../data/version'
 import { PHOTO_CREDITS } from '../data/photos'
+import { BREED_PHOTO_CREDITS } from '../data/breeds'
 import { useProfile, saveProfile, clearProfile } from '../lib/profile'
 import { useAuth } from '../lib/auth'
 
@@ -156,11 +157,11 @@ export default function Settings() {
           <SectionLabel>Photo credits</SectionLabel>
           <Card className="space-y-2">
             <p className="text-xs leading-relaxed text-slate-500">
-              Sample bunny photos are freely-licensed images from Wikimedia Commons, shown until
-              OHRR’s own rabbit photos are connected. Thanks to the photographers:
+              Sample bunny photos and the breed-guide photos are freely-licensed images from Wikimedia
+              Commons. Thanks to the photographers:
             </p>
             <ul className="space-y-1.5 text-xs text-slate-500">
-              {PHOTO_CREDITS.map((c) => (
+              {[...PHOTO_CREDITS, ...BREED_PHOTO_CREDITS.map((c) => ({ ...c, licenseUrl: c.licenseUrl || c.source }))].map((c) => (
                 <li key={c.source} className="flex flex-wrap items-center gap-x-1.5">
                   <a
                     href={c.source}
