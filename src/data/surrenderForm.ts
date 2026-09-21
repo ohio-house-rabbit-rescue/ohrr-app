@@ -1,8 +1,9 @@
 // Field schema + legal agreement for the in-app rabbit intake form, mirroring
 // OHRR's official Owner Surrender & Relinquishment form and Good Samaritan
 // Rescue/Surrender & Relinquishment form
-// (ohiohouserabbitrescue.org/about-us/admissions/...). Submissions post to
-// Netlify Forms ("surrender-intake"); OHRR receives them by email.
+// (ohiohouserabbitrescue.org/about-us/admissions/...). Submissions land in the
+// staff Inbox as 'surrender-intake'. The app and the website carry the same
+// copy of this file — keep the two in sync.
 //
 // The owner agreement text is verbatim from OHRR's form. The Good Samaritan
 // agreement adapts the same policy to a finder who doesn't know the owner.
