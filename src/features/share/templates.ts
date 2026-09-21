@@ -42,10 +42,10 @@ export interface CardPost {
 export const SHARE_SITE = 'https://ohrr-website.pages.dev'
 export const SHARE_SITE_SHORT = 'ohrr-website.pages.dev'
 
-export function utm(path: string, campaign: string): string {
+export function utm(path: string, campaign: string, medium: 'share-kit' | 'print' | 'email' = 'share-kit'): string {
   const u = new URL(path, SHARE_SITE)
-  u.searchParams.set('utm_source', 'social')
-  u.searchParams.set('utm_medium', 'share-kit')
+  u.searchParams.set('utm_source', medium === 'share-kit' ? 'social' : medium === 'print' ? 'flyer' : 'outreach')
+  u.searchParams.set('utm_medium', medium)
   u.searchParams.set('utm_campaign', campaign)
   return u.toString()
 }

@@ -175,6 +175,24 @@ export default function StaffHome() {
           )}
           {canPostAnnouncements && (
             <ActionCard
+              to="/staff/flyers"
+              title="Flyers"
+              subtitle="QR posters for vets, campus boards and pet stores — share, save or print"
+              icon="printer"
+              tone="blue"
+            />
+          )}
+          {canPostAnnouncements && (
+            <ActionCard
+              to="/staff/outreach"
+              title="Outreach letters"
+              subtitle="Ready-to-send emails to campus offices, vets, stores, schools & media"
+              icon="mail"
+              tone="blue"
+            />
+          )}
+          {canPostAnnouncements && (
+            <ActionCard
               to="/staff/impact"
               title="Impact numbers"
               subtitle="The year in numbers for donors & sponsors — shown at /impact"

@@ -4,6 +4,7 @@ import { PageHeader, Screen, Card, Badge, SectionLabel, btn } from '../component
 import { ContactLinks } from '../components/ContactLinks'
 import { ReserveSession } from '../components/ReserveSession'
 import { RaffleTickets } from '../components/RaffleTickets'
+import { RafflePrizes } from '../features/raffle/RafflePrizes'
 import { useAuctionSettings } from '../features/raffle/useRaffleItems'
 import { Icon } from '../components/icons'
 
@@ -97,6 +98,8 @@ export default function BunfestPage() {
             services={p.reserve.services}
           />
         )}
+        {/* Prizes staff scanned in (published raffle_prizes) */}
+        {p.feature === 'raffle' && <RafflePrizes />}
         {/* Test feature — renders only while switched on in /staff/settings */}
         {p.feature === 'raffle' && <RaffleTickets pricing={auction} />}
 

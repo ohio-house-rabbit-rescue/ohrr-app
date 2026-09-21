@@ -87,6 +87,8 @@ const TagLanding = lazy(() => import('./features/scan/pages/TagLanding'))
 // Share kit — canvas + QR, lazy
 const StaffShare = lazy(() => import('./features/share/pages/StaffShare'))
 const PostQueue = lazy(() => import('./features/share/pages/PostQueue'))
+const Flyers = lazy(() => import('./features/share/pages/Flyers'))
+const Outreach = lazy(() => import('./features/share/pages/Outreach'))
 const PostEditor = lazy(() => import('./features/share/pages/PostEditor'))
 
 export default function App() {
@@ -202,6 +204,8 @@ export default function App() {
           <Route path="scan" element={<Suspense fallback={null}><ScanFlow /></Suspense>} />
           <Route path="share" element={<Suspense fallback={null}><StaffShare /></Suspense>} />
           <Route path="posts" element={<Suspense fallback={null}><PostQueue /></Suspense>} />
+          <Route path="flyers" element={<Suspense fallback={null}><Flyers /></Suspense>} />
+          <Route path="outreach" element={<Suspense fallback={null}><Outreach /></Suspense>} />
           <Route path="posts/:id" element={<Suspense fallback={null}><PostEditor /></Suspense>} />
           <Route path="items" element={<Suspense fallback={null}><ItemsList /></Suspense>} />
           <Route path="items/tags" element={<Suspense fallback={null}><PrintTags /></Suspense>} />

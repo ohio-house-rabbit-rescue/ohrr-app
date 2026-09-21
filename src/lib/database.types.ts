@@ -1469,6 +1469,11 @@ export type Database = {
         Args: { p_org: string; p_year: number }
         Returns: number
       }
+      // Public Hop Shop shelf (supabase/migrations/20260921160000_public_shop.sql)
+      hopshop_public_products: {
+        Args: Record<string, never>
+        Returns: { id: string; name: string; description: string | null; price_cents: number; photo_url: string | null; in_stock: boolean }[]
+      }
     }
     Enums: {
       membership_role: MembershipRole

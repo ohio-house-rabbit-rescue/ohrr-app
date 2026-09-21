@@ -11,15 +11,6 @@ export const surrenderContact = {
   phoneHref: 'tel:+16142638557',
 }
 
-// The two official relinquishment forms (interactive on OHRR's site — these are
-// the legal forms that must be completed and brought in on surrender day).
-export const surrenderForms = {
-  owner:
-    'https://www.ohiohouserabbitrescue.org/about-us/admissions/owner-surrender-and-relinquishment-form/',
-  goodSamaritan:
-    'https://www.ohiohouserabbitrescue.org/about-us/admissions/good-samaritian-rescuesurrender-and-relinquishment-form/',
-}
-
 export const surrenderIntro =
   'Life changes, and sometimes keeping a rabbit becomes hard. Before anything else, reach out — OHRR will offer support and information to help you keep your bunny if at all possible. If surrender really is the right step, here’s exactly how it works.'
 

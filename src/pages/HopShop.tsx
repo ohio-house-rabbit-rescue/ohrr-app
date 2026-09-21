@@ -52,24 +52,31 @@ export default function HopShop() {
           </p>
         </Card>
 
-        {/* Live inventory, when OHRR opens it to the public */}
+        {/* What staff have scanned onto the shelf (hopshop_public_products) */}
         {inStock.length > 0 && (
           <section className="space-y-2.5">
-            <SectionLabel>In the shop now</SectionLabel>
+            <SectionLabel>On the shelf now</SectionLabel>
+            <p className="px-1 text-xs text-slate-500">Buy at the Adoption Center counter. Counts change as things sell.</p>
             <div className="grid grid-cols-1 gap-3">
               {inStock.map((p) => (
-                <Card key={p.id} className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-display text-[15px] font-extrabold text-ink">{p.name}</h3>
-                    {p.description && (
-                      <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{p.description}</p>
-                    )}
-                  </div>
-                  {p.price_cents > 0 && (
-                    <span className="shrink-0 font-display text-lg font-black text-brand-blue">
-                      {money(p.price_cents)}
-                    </span>
+                <Card key={p.id} className={`flex items-start gap-3 ${p.in_stock ? '' : 'opacity-60'}`}>
+                  {p.photo_url ? (
+                    <img src={p.photo_url} alt="" loading="lazy" className="h-16 w-16 shrink-0 rounded-xl bg-slate-100 object-cover" />
+                  ) : (
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-brand-blue-50 text-brand-blue">
+                      <Icon name="bag" size={22} />
+                    </div>
                   )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-display text-[15px] font-extrabold text-ink">{p.name}</h3>
+                      {p.price_cents > 0 && (
+                        <span className="shrink-0 font-display text-lg font-black text-brand-blue">{money(p.price_cents)}</span>
+                      )}
+                    </div>
+                    {p.description && <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{p.description}</p>}
+                    {!p.in_stock && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">Sold out — ask at the counter</p>}
+                  </div>
                 </Card>
               ))}
             </div>

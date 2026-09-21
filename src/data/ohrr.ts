@@ -1,7 +1,6 @@
 // Ohio House Rabbit Rescue — org facts and the real links from their site
 // (https://www.ohiohouserabbitrescue.org), captured 2026-09-17. The app keeps
 // content in-app; these links are for the forms/sign-ups that live on the site.
-import type { IconName } from '../components/icons'
 
 export const ohrr = {
   name: 'Ohio House Rabbit Rescue',
@@ -63,13 +62,6 @@ export const ohrr = {
     houseRabbitSociety: 'http://www.rabbit.org',
     ohioWildlifeCenter: 'https://www.ohiowildlifecenter.org/wildlife-emergency/',
   },
-}
-
-export interface LinkCard {
-  title: string
-  description: string
-  url: string
-  icon: IconName
 }
 
 // Adoption requirements (from OHRR's Adoption Policy, revised January 31, 2022).
@@ -159,10 +151,3 @@ export const adoptionPolicy: PolicySection[] = [
   },
 ]
 
-// Rabbit-care learning links (still used by a few legacy cards).
-export const learnLinks: LinkCard[] = [
-  { title: 'Bunny Living Space', description: 'Indoor setups, free-range & bunny-proofing.', url: ohrr.links.living, icon: 'home' },
-  { title: 'Bunny Care Resources', description: 'Bonding, litter training, and more guides.', url: ohrr.links.resources, icon: 'book' },
-  { title: 'Rabbit-Savvy Vets', description: 'Find a vet experienced with rabbits.', url: ohrr.links.vets, icon: 'phone' },
-  { title: 'Caught a Stray Rabbit?', description: 'Tips for catching and helping strays.', url: ohrr.links.stray, icon: 'mappin' },
-]

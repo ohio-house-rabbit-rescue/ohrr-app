@@ -2,16 +2,13 @@ import { useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from './supabase'
 import type { Database } from './database.types'
 
-export type PublicProduct = Pick<
-  Database['public']['Tables']['hopshop_products']['Row'],
-  'id' | 'name' | 'description' | 'price_cents'
->
+export type PublicProduct = Database['public']['Functions']['hopshop_public_products']['Returns'][number]
 
-// Public hook: OHRR's ACTIVE Hop Shop products, if the table is readable to the
-// public. Today RLS limits hopshop_products to org members, so anonymous
-// visitors get an error/empty result — we swallow that silently and return []
-// so the screen falls back to the category list. If OHRR later opens a public
-// read policy, real stock appears here with no app change.
+// Public hook: what is on the Hop Shop shelf right now — active products with
+// photo, price and whether any are left — via the read-only RPC
+// `hopshop_public_products` (supabase/migrations/20260921160000_public_shop.sql).
+// Any error (function not pasted yet, offline) quietly resolves to [] so the
+// screen falls back to the category list.
 export function useHopShopProducts(): PublicProduct[] | null {
   const [items, setItems] = useState<PublicProduct[] | null>(null)
   useEffect(() => {
@@ -21,10 +18,7 @@ export function useHopShopProducts(): PublicProduct[] | null {
     }
     let active = true
     supabase
-      .from('hopshop_products')
-      .select('id, name, description, price_cents')
-      .eq('is_active', true)
-      .order('name', { ascending: true })
+      .rpc('hopshop_public_products')
       .then(({ data, error }) => {
         if (!active) return
         setItems(error ? [] : (data ?? []))
