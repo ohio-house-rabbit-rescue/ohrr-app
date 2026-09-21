@@ -144,3 +144,48 @@ export async function deleteSlot(id: string): Promise<void> {
   const { error } = await supabase.from('booking_slots').delete().eq('id', id)
   if (error) throw error
 }
+
+/* ------------------------------------------------------------ volunteer hours */
+
+export interface HoursSummaryRow {
+  email: string
+  name: string | null
+  total_hours: number
+  shifts: number
+  last_date: string
+}
+export interface HoursLine {
+  source: 'shift' | 'manual'
+  on_date: string
+  hours: number
+  activity: string
+  ref_id: string
+}
+
+export async function hoursSummary(orgId: string, from: string, to: string): Promise<HoursSummaryRow[]> {
+  const { data, error } = await supabase.rpc('volunteer_hours_summary', { p_org: orgId, p_from: from, p_to: to })
+  if (error) throw error
+  return ((data ?? []) as HoursSummaryRow[]).map((r) => ({ ...r, total_hours: Number(r.total_hours) }))
+}
+
+export async function hoursHistory(orgId: string, email: string, from: string, to: string): Promise<HoursLine[]> {
+  const { data, error } = await supabase.rpc('volunteer_history', { p_org: orgId, p_email: email, p_from: from, p_to: to })
+  if (error) throw error
+  return ((data ?? []) as HoursLine[]).map((r) => ({ ...r, hours: Number(r.hours) }))
+}
+
+export async function addHours(orgId: string, userId: string, e: { email: string; name: string; on_date: string; hours: number; activity: string }): Promise<void> {
+  const { error } = await supabase.from('volunteer_hours_entries').insert({ org_id: orgId, added_by: userId, ...e, email: e.email.trim().toLowerCase() })
+  if (error) throw error
+}
+
+export async function deleteHours(id: string): Promise<void> {
+  const { error } = await supabase.from('volunteer_hours_entries').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function hoursTotalForYear(orgId: string, year: number): Promise<number> {
+  const { data, error } = await supabase.rpc('volunteer_hours_total', { p_org: orgId, p_year: year })
+  if (error) throw error
+  return Number(data ?? 0)
+}

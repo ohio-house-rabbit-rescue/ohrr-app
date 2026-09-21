@@ -199,6 +199,13 @@ export const givingOptions: GivingOption[] = [
     to: '/bunfest',
   },
   {
+    id: 'impact',
+    title: 'See what your gift does',
+    description: 'Rabbits adopted, vet bills paid, volunteer hours — the year in numbers.',
+    cta: 'Our impact',
+    to: '/impact',
+  },
+  {
     id: 'mailing',
     title: 'Join the mailing list',
     description: 'Stay in the loop on rabbits, events, and BunFest news.',

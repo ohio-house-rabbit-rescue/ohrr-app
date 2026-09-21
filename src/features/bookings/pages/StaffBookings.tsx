@@ -19,8 +19,9 @@ import {
   type SlotRow,
 } from '../api'
 import { dayKey, durationLabel, fmtDay, fmtDayShort, fmtRange, type BookingStatus, type BookingType, type RosterRow } from '../types'
+import HoursTab from './HoursTab'
 
-type Tab = 'roster' | 'times' | 'setup'
+type Tab = 'roster' | 'times' | 'hours' | 'setup'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -57,6 +58,7 @@ export default function StaffBookings() {
           [
             ['roster', 'Who’s coming'],
             ['times', 'Make times'],
+            ['hours', 'Hours'],
             ['setup', 'Set up'],
           ] as [Tab, string][]
         ).map(([t, label]) => (
@@ -64,7 +66,7 @@ export default function StaffBookings() {
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`min-h-[44px] flex-1 rounded-full px-3 text-sm font-bold ${tab === t ? 'bg-brand-blue text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600'}`}
+            className={`min-h-[44px] flex-1 rounded-full px-2 text-[13px] font-bold ${tab === t ? 'bg-brand-blue text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600'}`}
           >
             {label}
           </button>
@@ -74,6 +76,7 @@ export default function StaffBookings() {
       {types === null && !error && <Spinner />}
       {types && tab === 'roster' && <Roster orgId={orgId} />}
       {types && tab === 'times' && <MakeTimes types={types} />}
+      {types && tab === 'hours' && <HoursTab />}
       {types && tab === 'setup' && <Setup orgId={orgId} types={types} onChanged={reloadTypes} />}
     </Screen>
   )

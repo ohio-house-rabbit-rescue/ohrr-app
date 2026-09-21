@@ -22,6 +22,9 @@ import FosterForm from './pages/FosterForm'
 import BookPage from './features/bookings/pages/BookPage'
 import BookingCancel from './features/bookings/pages/BookingCancel'
 import StaffBookings from './features/bookings/pages/StaffBookings'
+import ServiceLetter from './features/bookings/pages/ServiceLetter'
+import ImpactPage from './features/impact/pages/ImpactPage'
+import StaffImpact from './features/impact/pages/StaffImpact'
 import Learn from './pages/Learn'
 import LearnTopic from './pages/LearnTopic'
 import Volunteer from './pages/Volunteer'
@@ -96,6 +99,7 @@ export default function App() {
         <Route path="/adopt/how-it-works" element={<AdoptHowItWorks />} />
         <Route path="/adopt/apply" element={<AdoptionApplication />} />
         <Route path="/mailing-list" element={<MailingList />} />
+        <Route path="/impact" element={<ImpactPage />} />
         <Route path="/support/become-a-supporter" element={<BecomeSupporter />} />
         <Route path="/adopt/:id" element={<AdoptRabbit />} />
         <Route path="/events" element={<Events />} />
@@ -193,6 +197,8 @@ export default function App() {
           <Route path="settings" element={<StaffSettings />} />
           <Route path="inbox" element={<StaffInbox />} />
           <Route path="bookings" element={<StaffBookings />} />
+          <Route path="hours-letter" element={<ServiceLetter />} />
+          <Route path="impact" element={<StaffImpact />} />
           <Route path="scan" element={<Suspense fallback={null}><ScanFlow /></Suspense>} />
           <Route path="share" element={<Suspense fallback={null}><StaffShare /></Suspense>} />
           <Route path="posts" element={<Suspense fallback={null}><PostQueue /></Suspense>} />

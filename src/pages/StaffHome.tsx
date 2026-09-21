@@ -175,6 +175,15 @@ export default function StaffHome() {
           )}
           {canPostAnnouncements && (
             <ActionCard
+              to="/staff/impact"
+              title="Impact numbers"
+              subtitle="The year in numbers for donors & sponsors — shown at /impact"
+              icon="star"
+              tone="blue"
+            />
+          )}
+          {canPostAnnouncements && (
+            <ActionCard
               to="/staff/announcements"
               title="Announcements"
               subtitle="Post notices that show on the app home"

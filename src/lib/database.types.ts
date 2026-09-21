@@ -1156,6 +1156,85 @@ export type Database = {
         }
         Relationships: []
       }
+      // Volunteer hours + impact (20260921150000_hours_impact.sql)
+      volunteer_hours_entries: {
+        Row: {
+          id: string
+          org_id: string
+          email: string
+          name: string | null
+          on_date: string
+          hours: number
+          activity: string
+          added_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          email: string
+          name?: string | null
+          on_date: string
+          hours: number
+          activity: string
+          added_by?: string | null
+        }
+        Update: {
+          email?: string
+          name?: string | null
+          on_date?: string
+          hours?: number
+          activity?: string
+        }
+        Relationships: []
+      }
+      impact_years: {
+        Row: {
+          org_id: string
+          year: number
+          adopted: number | null
+          taken_in: number | null
+          spay_neuter: number | null
+          vet_care_cents: number | null
+          volunteer_hours: number | null
+          fosters: number | null
+          bunfest_attendance: number | null
+          highlights: string[]
+          note: string | null
+          is_published: boolean
+          updated_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          org_id: string
+          year: number
+          adopted?: number | null
+          taken_in?: number | null
+          spay_neuter?: number | null
+          vet_care_cents?: number | null
+          volunteer_hours?: number | null
+          fosters?: number | null
+          bunfest_attendance?: number | null
+          highlights?: string[]
+          note?: string | null
+          is_published?: boolean
+          updated_by?: string | null
+        }
+        Update: {
+          adopted?: number | null
+          taken_in?: number | null
+          spay_neuter?: number | null
+          vet_care_cents?: number | null
+          volunteer_hours?: number | null
+          fosters?: number | null
+          bunfest_attendance?: number | null
+          highlights?: string[]
+          note?: string | null
+          is_published?: boolean
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       hopshop_inventory: {
         Row: {
           product_id: string
@@ -1375,6 +1454,19 @@ export type Database = {
       }
       count_ready_posts: {
         Args: { p_org: string }
+        Returns: number
+      }
+      // Volunteer hours
+      volunteer_history: {
+        Args: { p_org: string; p_email: string; p_from: string; p_to: string }
+        Returns: { source: string; on_date: string; hours: number; activity: string; ref_id: string }[]
+      }
+      volunteer_hours_summary: {
+        Args: { p_org: string; p_from: string; p_to: string }
+        Returns: { email: string; name: string | null; total_hours: number; shifts: number; last_date: string }[]
+      }
+      volunteer_hours_total: {
+        Args: { p_org: string; p_year: number }
         Returns: number
       }
     }

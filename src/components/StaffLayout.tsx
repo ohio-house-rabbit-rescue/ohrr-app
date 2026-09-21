@@ -29,6 +29,7 @@ export default function StaffLayout() {
     { to: '/staff/inbox', label: 'Inbox', show: can('inbox.manage') },
     { to: '/staff/share', label: 'Share kit', show: can('announcements.post') },
     { to: '/staff/posts', label: 'Post queue', show: can('announcements.post') || can('social.publish') },
+    { to: '/staff/impact', label: 'Impact numbers', show: can('announcements.post') },
     { to: '/staff/bookings', label: 'Bookings', show: can('bookings.manage') },
     {
       to: '/staff/scan',
