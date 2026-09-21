@@ -16,6 +16,7 @@ import ShareTail from './pages/ShareTail'
 import Services from './pages/Services'
 import AdoptionApplication from './pages/AdoptionApplication'
 import MailingList from './pages/MailingList'
+import BecomeSupporter from './pages/BecomeSupporter'
 // Bookings — shifts & appointments (replaces SignUp.com links and the old appointment form)
 import BookPage from './features/bookings/pages/BookPage'
 import BookingCancel from './features/bookings/pages/BookingCancel'
@@ -90,6 +91,7 @@ export default function App() {
         <Route path="/adopt/how-it-works" element={<AdoptHowItWorks />} />
         <Route path="/adopt/apply" element={<AdoptionApplication />} />
         <Route path="/mailing-list" element={<MailingList />} />
+        <Route path="/support/become-a-supporter" element={<BecomeSupporter />} />
         <Route path="/adopt/:id" element={<AdoptRabbit />} />
         <Route path="/events" element={<Events />} />
         <Route path="/vets" element={<Vets />} />
@@ -105,6 +107,8 @@ export default function App() {
         <Route path="/book/:slug" element={<BookPage />} />
         <Route path="/learn" element={<Learn />} />
         <Route path="/learn/:id" element={<LearnTopic />} />
+        {/* Give / About / Adopt pages brought in from the old site (same table, other sections) */}
+        <Route path="/info/:id" element={<LearnTopic />} />
         <Route path="/volunteer" element={<Volunteer />} />
         <Route path="/volunteer/signup" element={<VolunteerSignup />} />
         <Route path="/volunteer/:slug" element={<VolunteerWay />} />

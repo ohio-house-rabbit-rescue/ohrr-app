@@ -49,7 +49,7 @@ export default function StaffLayout() {
     { to: '/staff/hopshop', label: 'Hop Shop', show: Boolean(membership) },
     { to: '/staff/announcements', label: 'Announcements', show: can('announcements.post') },
     { to: '/staff/volunteer', label: 'Volunteer opportunities', show: can('volunteers.shifts.manage') },
-    { to: '/staff/learn', label: 'Care guides', show: can('content.education.edit') },
+    { to: '/staff/learn', label: 'Care guides & pages', show: can('content.education.edit') },
     { to: '/staff/vets', label: 'Vet directory', show: can('content.education.edit') },
     { to: '/staff/events', label: 'Events', show: can('events.bunfest.manage') },
     { to: '/staff/raffle', label: 'Silent Auction', show: can('events.bunfest.manage') },

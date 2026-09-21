@@ -6,8 +6,9 @@ import { PageHeader, Screen, SectionLabel } from '../components/ui'
 import { Icon } from '../components/icons'
 
 function isExternal(url?: string) {
-  return Boolean(url && !url.startsWith('mailto:'))
+  return Boolean(url && /^https?:/.test(url))
 }
+const isInternal = (url?: string) => Boolean(url && url.startsWith('/'))
 
 function GivingCard({ g }: { g: GivingOption }) {
   const [open, setOpen] = useState(false)
@@ -42,17 +43,23 @@ function GivingCard({ g }: { g: GivingOption }) {
           ))}
           {g.links && g.links.length > 0 && (
             <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
-              {g.links.map((l) => (
-                <a
-                  key={l.url}
-                  href={l.url}
-                  target={isExternal(l.url) ? '_blank' : undefined}
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm font-bold text-brand-blue"
-                >
-                  {l.label} <Icon name={isExternal(l.url) ? 'external' : 'mail'} size={12} />
-                </a>
-              ))}
+              {g.links.map((l) =>
+                isInternal(l.url) ? (
+                  <Link key={l.url} to={l.url} className="inline-flex items-center gap-1 text-sm font-bold text-brand-blue">
+                    {l.label} <Icon name="chevron" size={12} />
+                  </Link>
+                ) : (
+                  <a
+                    key={l.url}
+                    href={l.url}
+                    target={isExternal(l.url) ? '_blank' : undefined}
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm font-bold text-brand-blue"
+                  >
+                    {l.label} <Icon name={isExternal(l.url) ? 'external' : 'mail'} size={12} />
+                  </a>
+                ),
+              )}
             </div>
           )}
         </div>

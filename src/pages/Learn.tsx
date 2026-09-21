@@ -7,7 +7,9 @@ import { Icon } from '../components/icons'
 import PresentedBy from '../features/sponsors/PresentedBy'
 
 export default function Learn() {
-  const live = useCareArticles()
+  const liveAll = useCareArticles()
+  // Only care guides here; Give/About/Adopt pages live at /info/<slug>.
+  const live = liveAll && liveAll.filter((a) => (a.section ?? 'care') === 'care')
   const articles = live && live.length > 0 ? live : fallbackArticles()
 
   return (

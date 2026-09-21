@@ -41,7 +41,7 @@ export const givingOptions: GivingOption[] = [
     description:
       'Give through your employer — supporters give via Chase, Battelle, IBM, Verizon, Nordstrom, Nationwide, and United Way — and ask whether your gift can be matched.',
     cta: 'Workplace giving',
-    url: 'https://www.ohiohouserabbitrescue.org/workplace-donations/',
+    to: '/info/workplace-giving',
     details: [
       'Many OHRR volunteers and supporters extend their impact for OHRR by giving thru their workplace. We have supporters who give through major Columbus employers such as Chase, Battelle, IBM, Verizon, Nordstrom, Nationwide, and via United Way. Sometimes, that gift (or one you make directly to OHRR) can be matched by your employer, multiplying the impact for the bunnies!',
       'One of OHRR’s long-time volunteers, Chris Baker, arranged for OHRR to be the charity of the month as a part of her employer’s (Nexeo Solutions) Great Place To Work group — Chris’ colleagues combined to donate $750 to OHRR.',
@@ -61,7 +61,7 @@ export const givingOptions: GivingOption[] = [
     links: [
       {
         label: 'OHRR’s Kroger how-to',
-        url: 'https://ohiohouserabbitrescue.org/link-ohrr-to-your-kroger-community-rewards/',
+        url: '/info/kroger-rewards',
       },
     ],
   },
@@ -70,7 +70,7 @@ export const givingOptions: GivingOption[] = [
     title: 'Amazon Wish List',
     description: 'Buy much-needed supplies and have them shipped straight to the rescue.',
     cta: 'View the wish list',
-    url: 'https://ohiohouserabbitrescue.org/support-ohrr/wishlist/',
+    to: '/info/wish-list',
     details: [
       'Always needed: paper-based litter (CareFresh), Oxbow Western Timothy Hay and Oxbow adult timothy pellets, fleece blankets, ceramic pet bowls, cat-style litter pans, 28-quart clear storage tubs, non-slip bath mats, MidWest exercise pens, and cleaning supplies (Nature’s Miracle, OxiClean, paper towels, 30-gallon paper lawn bags). Bunny toys we love: Cottontail Cottages, Mini Maze Havens, willow baskets and balls, grass mats, and tunnels.',
       'You can find some of these items around town at stores like Petco, PetPeople, Target or even the Hop Shop at the Adoption Center!',
@@ -113,7 +113,7 @@ export const givingOptions: GivingOption[] = [
     links: [
       {
         label: 'Full instructions & FAQ',
-        url: 'https://ohiohouserabbitrescue.org/drive-for-the-bunnies-get-your-ohrr-license-plate-today/',
+        url: '/info/license-plate',
       },
     ],
   },
@@ -123,7 +123,7 @@ export const givingOptions: GivingOption[] = [
     description:
       'It’s free — sign up and you’ll receive updates on OHRR’s progress and how you can help.',
     cta: 'Become a Supporter',
-    url: 'https://www.ohiohouserabbitrescue.org/support-ohrr/become-a-supporter/',
+    to: '/support/become-a-supporter',
   },
   {
     id: 'affiliates',
@@ -131,7 +131,7 @@ export const givingOptions: GivingOption[] = [
     description:
       'Shop through OHRR’s links and a portion comes back to the bunnies — Small Pet Select (code RES-OHRR gets new customers 15% off), Bunny Approved, ResQthreads, Kroger, and more.',
     cta: 'See all affiliates',
-    url: 'https://www.ohiohouserabbitrescue.org/support-ohrr/online-affiliates/',
+    to: '/info/online-affiliates',
     details: [
       'Small Pet Select: new customers receive 15% off their first qualified purchase through the OHRR link or the code RES-OHRR at checkout, and the rescue earns on both new and returning customer purchases.',
       'Also on the list: Bunny Approved, ResQthreads (enter through OHRR’s link), Pawlee’s Treat Co. (select OHRR at checkout), Binky Bunny, Cats Rabbits and More (donate a Cottontail Cottage to OHRR), Bissell Partners for Pets, Goodshop and Goodsearch, and Kroger Community Rewards.',
@@ -154,7 +154,7 @@ export const givingOptions: GivingOption[] = [
       'Thank you so much for your interest in helping Ohio House Rabbit Rescue! If you would like to help OHRR by hosting a fundraiser, please contact us at ohrrcontact@ohiohouserabbitrescue.org with your ideas. Some we’ve heard in the past: hosting a yard sale, bake sales, door-to-door sales, beer/wine tastings, coin drives, a benefit concert, sporting events, and wish-list drives.',
     ],
     links: [
-      { label: 'Host a Fundraiser page', url: 'https://www.ohiohouserabbitrescue.org/support-ohrr/host-a-fundraiser/' },
+      { label: 'Fundraiser ideas', url: '/info/host-a-fundraiser' },
     ],
   },
   {
@@ -163,7 +163,7 @@ export const givingOptions: GivingOption[] = [
     description:
       'Planned giving: name OHRR in your will, trust, IRA or life insurance — or give $1,000+ in a year — and become a Rescue Rabbit Guardian.',
     cta: 'About the Legacy Fund',
-    url: 'https://www.ohiohouserabbitrescue.org/ohrr-legacy-fund/',
+    to: '/info/legacy-fund',
     details: [
       'Thanks to you, we have been able to meet the annual expenses of caring for the bunnies (most notably the expense of vet care). To plan for the long-term financial health of our organization, we are building an OHRR Legacy Fund.',
       'Make OHRR a beneficiary in a will or trust, or your IRA: by inserting as little as one sentence into your will or trust, you can name OHRR as a beneficiary — and by including OHRR in your estate planning you automatically become a Rescue Rabbit Guardian. You can also give a Charitable Distribution or Required Minimum Distribution from your IRA, gifts of appreciated stock, bonds or mutual funds, or start, continue, or increase a monthly gift.',

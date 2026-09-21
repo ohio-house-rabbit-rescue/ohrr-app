@@ -107,7 +107,8 @@ export default function LearnTopic() {
   const articles = live && live.length > 0 ? live : fallbackArticles()
   const article = articles.find((a) => a.slug === id) ?? null
 
-  if (article) return <ArticleView article={article} all={articles} />
+  if (article)
+    return <ArticleView article={article} all={articles.filter((a) => (a.section ?? 'care') === (article.section ?? 'care'))} />
   if (live === null) {
     // Still loading — the slug may be a staff-written article.
     return (

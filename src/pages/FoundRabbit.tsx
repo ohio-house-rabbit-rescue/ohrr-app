@@ -141,11 +141,9 @@ export default function FoundRabbit() {
 
           <div className="grid grid-cols-1 gap-2.5">
             {admissions.forms.map((f) => (
-              <a
+              <Link
                 key={f.url}
-                href={f.url}
-                target="_blank"
-                rel="noopener noreferrer"
+                to={f.url}
                 className="group flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md"
               >
                 <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-blue-50 text-brand-blue">
@@ -155,8 +153,8 @@ export default function FoundRabbit() {
                   <span className="block font-display text-[15px] font-extrabold text-ink">{f.title}</span>
                   <span className="block text-xs text-slate-500">{f.text}</span>
                 </span>
-                <Icon name="external" size={16} className="shrink-0 text-slate-300" />
-              </a>
+                <Icon name="chevron" size={16} className="shrink-0 text-slate-300" />
+              </Link>
             ))}
           </div>
 

@@ -29,9 +29,9 @@ export const ohrr = {
     adopt: 'https://www.ohiohouserabbitrescue.org/adopt/',
     adoptable: 'https://www.ohiohouserabbitrescue.org/adopt/adoptable-bunnies/',
     application: 'https://www.ohiohouserabbitrescue.org/adopt/adoption-application/',
-    policy: 'https://www.ohrr.org/wp-content/uploads/2025/09/Adoption-Policy.pdf',
+    policy: 'https://ohrr-website.pages.dev/docs/OHRR-Adoption-Policy.pdf', // OHRR's PDF, hosted on the new site
     process: 'https://www.ohiohouserabbitrescue.org/adoption-process-for-ohrr/',
-    bunnyDates: 'https://www.ohiohouserabbitrescue.org/bunny_dates_at_ohrr/',
+    bunnyDates: '/info/bunny-dates', // in-app now
     petfinder: 'http://www.petfinder.com/pet-search?shelterid=OH975',
     adoptAPet:
       'http://www.adoptapet.com/animal-shelter-search?city_or_zip=43235&shelter_name=Ohio+House+Rabbit+Rescue&distance=50&adopts_out=all',
@@ -50,9 +50,8 @@ export const ohrr = {
     adoptionCenter: 'https://www.ohiohouserabbitrescue.org/about-us/627-2/',
     contact: 'https://www.ohiohouserabbitrescue.org/contact/',
     admissions: 'https://www.ohiohouserabbitrescue.org/about-us/admissions/',
-    admissionsPolicyPdf: 'https://ohiohouserabbitrescue.org/wp-content/uploads/2013/06/Admissions-Policy.pdf',
-    surrenderPolicyPdf:
-      'https://ohiohouserabbitrescue.org/wp-content/uploads/2013/06/GSOwnerSurrenderrelinquishmentPolicy.pdf',
+    admissionsPolicyPdf: 'https://ohrr-website.pages.dev/docs/OHRR-Admissions-Policy.pdf',
+    surrenderPolicyPdf: 'https://ohrr-website.pages.dev/docs/OHRR-Surrender-Relinquishment-Policy.pdf',
     goodSamaritanForm:
       'https://www.ohiohouserabbitrescue.org/about-us/admissions/good-samaritian-rescuesurrender-and-relinquishment-form/',
     ownerSurrenderForm:

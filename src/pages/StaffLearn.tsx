@@ -12,7 +12,16 @@ import {
   type CareArticle,
 } from '../lib/careContent'
 
+type Section = 'care' | 'give' | 'about' | 'adopt'
+const SECTIONS: { value: Section; label: string }[] = [
+  { value: 'care', label: 'Care guide (Learn)' },
+  { value: 'give', label: 'Give page' },
+  { value: 'adopt', label: 'Adopt page' },
+  { value: 'about', label: 'About page' },
+]
+
 interface Draft {
+  section: Section
   title: string
   icon: string
   summary: string
@@ -21,11 +30,12 @@ interface Draft {
   is_published: boolean
 }
 
-const emptyDraft: Draft = { title: '', icon: 'book', summary: '', body: '', tip: '', is_published: true }
+const emptyDraft: Draft = { section: 'care', title: '', icon: 'book', summary: '', body: '', tip: '', is_published: true }
 
 function draftFrom(a: CareArticle): Draft {
   return {
     title: a.title,
+    section: a.section ?? 'care',
     icon: a.icon,
     summary: a.summary,
     body: a.body,
@@ -67,6 +77,16 @@ function ArticleForm({
 
   return (
     <form onSubmit={submit} className="space-y-3">
+      <label className="block text-sm font-semibold text-slate-700">
+        Where it shows
+        <select className={staffInput} value={draft.section} onChange={(e) => setDraft((d) => ({ ...d, section: e.target.value as Section }))}>
+          {SECTIONS.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className="flex gap-3">
         <label className="block flex-1 text-sm font-semibold text-slate-700">
           Title
@@ -156,6 +176,7 @@ function ArticleCard({ item, onChanged }: { item: CareArticle; onChanged: () => 
     const { error } = await supabase
       .from('care_articles')
       .update({
+        ...(d.section !== 'care' || item.section ? { section: d.section } : {}),
         title: d.title.trim(),
         icon: d.icon,
         summary: d.summary.trim(),
@@ -212,7 +233,10 @@ function ArticleCard({ item, onChanged }: { item: CareArticle; onChanged: () => 
           <Icon name={asIconName(item.icon)} size={18} className="shrink-0 text-brand-blue" />
           <h3 className="min-w-0 font-display text-[15px] font-extrabold text-ink">{item.title}</h3>
         </div>
-        {item.is_published ? <Badge tone="blue">Live</Badge> : <Badge tone="slate">Draft</Badge>}
+        <span className="flex shrink-0 items-center gap-1">
+          {item.section && item.section !== 'care' && <Badge tone="orange">{item.section}</Badge>}
+          {item.is_published ? <Badge tone="blue">Live</Badge> : <Badge tone="slate">Draft</Badge>}
+        </span>
       </div>
       {item.summary && <p className="text-sm text-slate-600">{item.summary}</p>}
 
@@ -306,6 +330,7 @@ export default function StaffLearn() {
     const { error } = await supabase.from('care_articles').insert({
       org_id: orgId,
       slug: slugify(d.title),
+      ...(d.section !== 'care' ? { section: d.section } : {}),
       title: d.title.trim(),
       icon: d.icon,
       summary: d.summary.trim(),

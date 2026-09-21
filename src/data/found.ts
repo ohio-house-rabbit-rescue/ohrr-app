@@ -76,12 +76,12 @@ export const admissions = {
     {
       title: 'Good Samaritan Rescue/Surrender & Relinquishment application',
       text: 'If you need to surrender a rabbit that you have rescued.',
-      url: ohrr.links.goodSamaritanForm,
+      url: '/surrender/form?type=good-samaritan',
     },
     {
       title: 'Owner Surrender & Relinquishment application',
       text: 'If you need to surrender a rabbit that you own.',
-      url: ohrr.links.ownerSurrenderForm,
+      url: '/surrender/form?type=owner',
     },
   ],
 }

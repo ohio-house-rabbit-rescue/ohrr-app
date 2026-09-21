@@ -173,8 +173,8 @@ export default function StaffHome() {
           {canEditCare && (
             <ActionCard
               to="/staff/learn"
-              title="Care guides"
-              subtitle="Edit the Rabbit Care articles in Learn"
+              title="Care guides & pages"
+              subtitle="Rabbit Care articles in Learn, plus the Give / Adopt / About pages"
               icon="book"
               tone="blue"
             />
