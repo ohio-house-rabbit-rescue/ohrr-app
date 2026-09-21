@@ -6,6 +6,7 @@ import { ActionCard, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { Spinner, NotConfigured } from '../components/staffui'
 import { PERMISSION_CATALOG } from '../lib/capabilities'
+import { DeleteAccount } from '../components/DeleteAccount'
 
 const roleBadge: Record<string, { label: string; tone: 'blue' | 'orange' | 'slate' }> = {
   owner: { label: 'Owner', tone: 'blue' },
@@ -254,6 +255,15 @@ export default function StaffHome() {
               tone="orange"
             />
           )}
+          {canManageAuction && (
+            <ActionCard
+              to="/staff/raffle-tickets"
+              title="Raffle tickets"
+              subtitle="The raffle table: mark paid, sell at the table, draw winners"
+              icon="ticket"
+              tone="orange"
+            />
+          )}
           {canManageSponsors && (
             <ActionCard
               to="/staff/sponsors"
@@ -324,6 +334,8 @@ export default function StaffHome() {
           )}
         </div>
       )}
+
+      <DeleteAccount />
     </Screen>
   )
 }

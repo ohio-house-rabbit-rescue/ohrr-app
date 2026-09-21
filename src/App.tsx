@@ -89,6 +89,8 @@ const StaffShare = lazy(() => import('./features/share/pages/StaffShare'))
 const PostQueue = lazy(() => import('./features/share/pages/PostQueue'))
 const Flyers = lazy(() => import('./features/share/pages/Flyers'))
 const BreedGuide = lazy(() => import('./features/breeds/pages/BreedGuide'))
+const RaffleDesk = lazy(() => import('./features/raffle/tickets/pages/RaffleDesk'))
+const TicketPage = lazy(() => import('./features/raffle/tickets/pages/TicketPage'))
 const BreedDetail = lazy(() => import('./features/breeds/pages/BreedDetail'))
 const Outreach = lazy(() => import('./features/share/pages/Outreach'))
 const PostEditor = lazy(() => import('./features/share/pages/PostEditor'))
@@ -104,6 +106,7 @@ export default function App() {
         <Route path="/adopt/apply" element={<AdoptionApplication />} />
         <Route path="/mailing-list" element={<MailingList />} />
         <Route path="/impact" element={<ImpactPage />} />
+        <Route path="/raffle/tickets/:token" element={<Suspense fallback={null}><TicketPage /></Suspense>} />
         <Route path="/support/become-a-supporter" element={<BecomeSupporter />} />
         <Route path="/adopt/:id" element={<AdoptRabbit />} />
         <Route path="/events" element={<Events />} />
@@ -196,6 +199,7 @@ export default function App() {
           <Route path="vets" element={<StaffVets />} />
           <Route path="events" element={<StaffEvents />} />
           <Route path="raffle" element={<StaffRaffle />} />
+          <Route path="raffle-tickets" element={<Suspense fallback={null}><RaffleDesk /></Suspense>} />
           <Route path="sponsors" element={<StaffSponsors />} />
           <Route path="bunny-help" element={<StaffBunnyHelp />} />
           <Route path="team" element={<StaffTeam />} />

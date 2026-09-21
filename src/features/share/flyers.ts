@@ -6,6 +6,7 @@
 import QRCode from 'qrcode'
 import { ohrr } from '../../data/ohrr'
 import { BRAND_BLUE, BRAND_ORANGE } from './render'
+import { LETTER_H, LETTER_W, loadImage, roundRect, wrap } from './canvas'
 import { SHARE_SITE_SHORT, utm } from './templates'
 
 export interface Flyer {
@@ -71,43 +72,8 @@ export function flyerLink(f: Flyer): string {
   return utm(f.path, f.campaign, 'print')
 }
 
-// US Letter at 200 dpi — sharp on paper, ~1 MB as PNG, fine to share.
-export const FLYER_W = 1700
-export const FLYER_H = 2200
-
-function loadImage(url: string): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.onload = () => resolve(img)
-    img.onerror = () => resolve(null)
-    img.src = url
-  })
-}
-
-function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-  const words = text.split(/\s+/)
-  const lines: string[] = []
-  let line = ''
-  for (const w of words) {
-    const test = line ? `${line} ${w}` : w
-    if (ctx.measureText(test).width > maxWidth && line) {
-      lines.push(line)
-      line = w
-    } else line = test
-  }
-  if (line) lines.push(line)
-  return lines
-}
-
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.arcTo(x + w, y, x + w, y + h, r)
-  ctx.arcTo(x + w, y + h, x, y + h, r)
-  ctx.arcTo(x, y + h, x, y, r)
-  ctx.arcTo(x, y, x + w, y, r)
-  ctx.closePath()
-}
+export const FLYER_W = LETTER_W
+export const FLYER_H = LETTER_H
 
 export async function renderFlyer(canvas: HTMLCanvasElement, f: Flyer, logoUrl = '/ohrr-mark.png'): Promise<void> {
   canvas.width = FLYER_W

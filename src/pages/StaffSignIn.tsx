@@ -13,6 +13,7 @@ export default function StaffSignIn() {
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from
+  const notice = (location.state as { notice?: string } | null)?.notice
   const dest = from && from.startsWith('/staff') ? from : '/staff'
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
@@ -134,6 +135,7 @@ export default function StaffSignIn() {
     <Screen className="space-y-5">
       <div className="pt-2">
         <h1 className="font-display text-2xl font-black text-ink">{heading}</h1>
+        {notice && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{notice}</p>}
         <p className="mt-1 text-sm leading-relaxed text-slate-600">{sub}</p>
       </div>
 

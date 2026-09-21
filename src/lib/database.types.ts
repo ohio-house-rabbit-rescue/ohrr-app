@@ -864,6 +864,46 @@ export type Database = {
         }
         Relationships: []
       }
+      // Raffle tickets (supabase/migrations/20260921170000_raffle_tickets.sql).
+      // The app reads these through the RPCs below; the rows are typed for staff selects.
+      raffle_ticket_orders: {
+        Row: {
+          id: string
+          org_id: string
+          event_slug: string
+          name: string
+          phone: string | null
+          email: string | null
+          qty: number
+          amount_cents: number | null
+          status: 'reserved' | 'paid' | 'void'
+          source: 'app' | 'table'
+          claim_token: string
+          paid_at: string | null
+          paid_by: string | null
+          note: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: { org_id: string; event_slug: string; name: string; qty: number }
+        Update: { note?: string | null }
+        Relationships: []
+      }
+      raffle_tickets: {
+        Row: {
+          id: string
+          org_id: string
+          event_slug: string
+          order_id: string
+          ticket_no: number
+          prize_id: string | null
+          drawn_at: string | null
+          drawn_by: string | null
+        }
+        Insert: { org_id: string; event_slug: string; order_id: string; ticket_no: number }
+        Update: { prize_id?: string | null }
+        Relationships: []
+      }
       // Ticket-raffle prizes — same shape as raffle_items minus the session
       // (supabase/migrations/20260920100000_item_tags.sql).
       raffle_prizes: {
@@ -1469,6 +1509,24 @@ export type Database = {
         Args: { p_org: string; p_year: number }
         Returns: number
       }
+      // Raffle tickets (supabase/migrations/20260921170000_raffle_tickets.sql)
+      reserve_raffle_tickets: {
+        Args: { p_event: string; p_qty: number; p_name: string; p_phone: string; p_email?: string | null }
+        Returns: Json
+      }
+      raffle_order_by_token: { Args: { p_token: string }; Returns: Json }
+      sell_raffle_tickets_at_table: {
+        Args: { p_org: string; p_event: string; p_qty: number; p_name: string; p_phone?: string | null; p_amount_cents?: number | null }
+        Returns: Json
+      }
+      set_raffle_order_status: { Args: { p_id: string; p_status: 'reserved' | 'paid' | 'void' }; Returns: Json }
+      draw_raffle_ticket: { Args: { p_org: string; p_event: string; p_prize_id?: string | null }; Returns: Json }
+      record_bucket_draw: { Args: { p_org: string; p_event: string; p_ticket_no: number; p_prize_id?: string | null }; Returns: Json }
+      undo_raffle_draw: { Args: { p_ticket_id: string }; Returns: undefined }
+      raffle_desk: { Args: { p_org: string; p_event: string; p_query?: string | null }; Returns: Json }
+      raffle_winners: { Args: { p_org: string; p_event: string }; Returns: Json }
+      raffle_desk_summary: { Args: { p_org: string; p_event: string }; Returns: Json }
+      delete_own_account: { Args: Record<string, never>; Returns: undefined }
       // Public Hop Shop shelf (supabase/migrations/20260921160000_public_shop.sql)
       hopshop_public_products: {
         Args: Record<string, never>

@@ -10,6 +10,10 @@ import { Icon } from '../../../components/icons'
 import { Screen } from '../../../components/ui'
 import { newTagCode, shortCode, tagUrl } from '../codes'
 import { BigButton } from '../ScanUI'
+import { isNative } from '../../../native/platform'
+import { renderTagSheet } from '../tagSheet'
+import { canvasToBlob } from '../../share/render'
+import { savePngAsync } from '../../share/share'
 
 const PER_SHEET = 10
 
@@ -43,6 +47,28 @@ export default function PrintTags() {
   }, [codes])
 
   const ready = useMemo(() => codes.every((c) => qrs[c]), [codes, qrs])
+  const [sharing, setSharing] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+
+  // In the app there is no window.print(): paint each sheet and hand it to
+  // the share sheet (Print / AirPrint on iOS, Files, or send to whoever prints).
+  const shareSheets = async () => {
+    setSharing(true)
+    setNote(null)
+    try {
+      const canvas = document.createElement('canvas')
+      for (let s = 0; s < sheets; s++) {
+        await renderTagSheet(canvas, codes.slice(s * PER_SHEET, (s + 1) * PER_SHEET))
+        const out = await savePngAsync(await canvasToBlob(canvas), `ohrr-tags-sheet-${s + 1}.png`)
+        if (out === 'cancelled') break
+      }
+      setNote('Each sheet prints on one US-Letter page (choose “Print” or “Save to Files” in the share sheet).')
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : 'Could not make the sheet')
+    } finally {
+      setSharing(false)
+    }
+  }
 
   return (
     <>
@@ -83,14 +109,23 @@ export default function PrintTags() {
           </div>
         </div>
 
-        <BigButton onClick={() => window.print()} disabled={!ready} icon="printer">
-          Print {sheets * PER_SHEET} tags
-        </BigButton>
+        {isNative ? (
+          <BigButton onClick={() => void shareSheets()} disabled={!ready || sharing} icon="printer">
+            {sharing ? 'Making the sheet…' : `Print or share ${sheets * PER_SHEET} tags`}
+          </BigButton>
+        ) : (
+          <BigButton onClick={() => window.print()} disabled={!ready} icon="printer">
+            Print {sheets * PER_SHEET} tags
+          </BigButton>
+        )}
+        {note && <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">{note}</p>}
         <BigButton tone="plain" onClick={() => setCodes(makeCodes(sheets * PER_SHEET))}>
           New codes
         </BigButton>
         <p className="text-sm text-slate-500">
-          On a phone, Print offers “Save as PDF” too — send that to whoever has the printer. Each print makes a fresh set of codes, so printed sheets never repeat.
+          {isNative
+            ? 'The share sheet can print (AirPrint), save the sheet, or send it to whoever has the printer. Each print makes a fresh set of codes, so printed sheets never repeat.'
+            : 'On a phone, Print offers “Save as PDF” too — send that to whoever has the printer. Each print makes a fresh set of codes, so printed sheets never repeat.'}
         </p>
 
         {/* on-screen preview */}

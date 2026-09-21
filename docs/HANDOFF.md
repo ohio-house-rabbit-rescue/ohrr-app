@@ -1,6 +1,6 @@
 # OHRR Mobile Build Handoff
 
-> Android + iPhone internal test builds of the OHRR app · 2026-09-17
+> Android + iPhone internal test builds of the OHRR app · 2026-09-17, updated 2026-09-21 (0.2.0)
 
 > Same content as **OHRR Mobile Build Handoff.docx** in the Drive folder "07-OHRR App". Regenerate both from one source if you change it (see docs/PROGRESS.md, 2026-09-17).
 
@@ -9,9 +9,12 @@ This document is for whoever builds and installs the OHRR app on phones for inte
 ## 1. What was built
 
 - The OHRR web app (the same React app that runs at https://ohrr-app.pages.dev) is now wrapped in a native shell with Capacitor 8. One codebase: the web build keeps working unchanged, and the same build is copied into the Android and iOS projects.
-- App id / bundle id: `org.ohiohouserabbitrescue.app` · App name: OHRR · Version 0.1.0 (Android versionCode 1).
+- App id / bundle id: `org.ohiohouserabbitrescue.app` · App name: OHRR · Version **0.2.0** (Android versionCode 2; iOS build number = the GitHub Actions run number).
 - Inside the app (and only there) a few things behave natively: My Bunny “Take a photo” / “Choose from library” use the phone camera and photo picker; care reminders become phone notifications (“Remind me on this phone”, 9:00 AM on the due date); every link to another website — donate, merch, Petfinder, vet websites, the OHRR website — opens in the phone’s browser; the status bar is brand blue and there is a brand-blue splash screen with the OHRR mark; Android’s back button walks back through the app.
 - On the web nothing changed: file inputs, calendar (.ics) downloads and plain links stay as they were.
+- **0.2.0 (2026-09-21) — the full app for testers.** Everything built since 17 Sept (Scan an item, Inbox, Bookings, Share kit, Post queue, Flyers, Outreach letters, hours + service letters, impact page, breed guide, raffle tickets) is in the build. Inside the app, anything the app paints or prints goes out through the phone’s **share sheet** (the free @capacitor/share + @capacitor/filesystem plugins): Share-kit cards and Post-queue releases, flyers, the tag sheet (“Print or share”), the service-hours letter (“Print / share the letter”), the My Bunny backup. iOS’s share sheet includes **Print** (AirPrint); Android users pick Files/Drive/Messages or send it to whoever prints. The camera scanner uses the WebView camera (Capacitor asks for the permission the first time).
+- **Raffle tickets** are ON in this build (`raffle_tickets_enabled`): numbered tickets reserved in the app, paid at the raffle table, drawn from Staff → Raffle tickets. Modify during testing; nothing is charged.
+- **Delete my account** is at the bottom of the Staff dashboard (Apple requires it for apps with sign-up).
 
 ## 2. Where everything is
 
@@ -23,7 +26,7 @@ This document is for whoever builds and installs the OHRR app on phones for inte
 | Capacitor config | `capacitor.config.ts` (app id, name, splash / status-bar / notification settings) |
 | Native code the app uses | `src/native/` (platform.ts, camera.ts, notifications.ts, browser.ts, NativeBridge.tsx) |
 | Icon + splash sources | `resources/` (made from public/ohrr-mark.png by `scripts/make-native-assets.py`); generated into android/ and ios/ by `npm run cap:assets` |
-| Ready-made Android builds | G:\Shared drives\07-OHRR App\Mobile builds\android\ — ohrr-0.1.0-vc1-release.aab (for Play Console) and ohrr-0.1.0-vc1-debug.apk (sideload) |
+| Ready-made Android builds | G:\Shared drives\07-OHRR App\Mobile builds\android\ — **ohrr-0.2.0-vc2-release.aab** (for Play Console) and **ohrr-0.2.0-vc2-debug.apk** (sideload); the 0.1.0 files are the earlier build |
 | Android test signing key | G:\Shared drives\07-OHRR App\Mobile builds\keys\ohrr-test.keystore + README.txt (passwords). Never in the repo. |
 | iPhone builds | G:\Shared drives\07-OHRR App\Mobile builds\ios\ — empty until the Mac produces one (see section 4) |
 | This document | docs/HANDOFF.md in the repo, and G:\Shared drives\07-OHRR App\OHRR Mobile Build Handoff.docx |
@@ -56,7 +59,17 @@ This document is for whoever builds and installs the OHRR app on phones for inte
 - Node.js 22+ and git, as above.
 - The test keystore from the Drive keys folder (section 5).
 
-## 4. iPhone: build and run (on the Mac)
+## 4a. iPhone without a Mac: GitHub Actions → TestFlight (recommended)
+
+The repo is public, so GitHub’s macOS runners are free. `.github/workflows/ios-testflight.yml` builds the app and uploads it to TestFlight; signing is automatic through an App Store Connect API key, so nobody handles certificates.
+
+1. OHRR needs an **Apple Developer Program** membership (organisation; nonprofit fee waiver — see section 9). Register the bundle id `org.ohiohouserabbitrescue.app` under Certificates, IDs & Profiles → Identifiers, then create the app in App Store Connect (iOS, name OHRR, SKU ohrr-app).
+2. App Store Connect → Users and Access → Integrations → **App Store Connect API** → Team keys → Generate (role App Manager). Download the `.p8` (only offered once) and note the Key ID and Issuer ID.
+3. GitHub → ohio-house-rabbit-rescue/ohrr-app → Settings → Secrets and variables → Actions → add `APPLE_TEAM_ID`, `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_API_KEY_P8` (paste the whole .p8 file).
+4. GitHub → Actions → **iOS → TestFlight** → Run workflow. About 20 minutes later the build is in App Store Connect → TestFlight (processing takes another 10–30 min). Add internal testers there (up to 100 people with App Store Connect roles, no review), or an external group (up to 10,000; Apple reviews the first build).
+5. Every run uploads a new build number automatically. Re-run the workflow after each change on `main`.
+
+## 4b. iPhone on a Mac (manual alternative)
 
 1. Open Terminal and clone the repo: `git clone https://github.com/ohio-house-rabbit-rescue/ohrr-app.git` then `cd ohrr-app`.
 2. Install the JavaScript packages: `npm install`.
@@ -67,7 +80,7 @@ This document is for whoever builds and installs the OHRR app on phones for inte
 7. Plug in the iPhone, pick it in the device menu at the top (next to “App”), and press **Run** (▶). The first time, on the phone go to Settings → General → VPN & Device Management and trust your developer certificate, then run again.
 8. Try the test checklist in section 7 on the phone.
 9. **TestFlight (internal testers):** in Xcode pick **Any iOS Device (arm64)** as the destination, then **Product → Archive**. When the Organizer opens, click **Distribute App → TestFlight & App Store → Upload** and accept the defaults (Xcode manages signing; “Upload your app’s symbols” is fine). After Apple processes it (5–30 min) go to https://appstoreconnect.apple.com → the app → **TestFlight** → add testers under **Internal Testing** (up to 100 people with App Store Connect roles, no review needed). They install the TestFlight app and accept the invitation.
-10. Every new upload needs a higher **Build** number: App target → **General** → Identity → Build (1 → 2 → 3…). Version can stay 0.1.0 while testing.
+10. Every new upload needs a higher **Build** number: App target → **General** → Identity → Build (1 → 2 → 3…). Version can stay 0.2.0 while testing.
 
 ## 5. Android: build and share
 
@@ -99,7 +112,7 @@ If Gradle cannot find the SDK, create `android/local.properties` with one line, 
 
 1. Go to https://play.google.com/console with the existing Google Play account → **Create app** (name OHRR, App, Free). Fill only what it insists on for now.
 2. **Testing → Internal testing → Create new release**. Keep **Play App Signing** on (default) — Google then holds the real signing key and our test keystore becomes the upload key.
-3. Upload `ohrr-0.1.0-vc1-release.aab` (or your new .aab). Release name = 0.1.0 (1). **Save → Review release → Start rollout to Internal testing**.
+3. Upload `ohrr-0.2.0-vc2-release.aab` (or your new .aab). Release name = 0.2.0 (2). **Save → Review release → Start rollout to Internal testing**.
 4. **Testers** tab → create an email list of testers (up to 100) → save → copy the **opt-in link** and send it. Testers open it on their phone, accept, and install from the Play Store. Internal testing needs no review and updates appear within minutes.
 5. For each later upload raise `versionCode` in `android/app/build.gradle` (1 → 2 → 3…); Play rejects a bundle whose versionCode is not higher than the last.
 
@@ -126,16 +139,17 @@ The first bundle uploaded to a Play Console app ties that app to its signing key
 - Android back button goes back a screen; on Home it leaves the app.
 - Staff → Sign in works (Supabase is the live backend, same as the website).
 - Nothing is uploaded from My Bunny — it stays on the phone (same as the web).
+- **0.2.0 additions:** Staff → Scan an item → the camera opens (permission prompt the first time) and reads a printed OHRR tag or a retail barcode; Staff → Share kit → Share opens the share sheet with the image; Staff → Flyers → Share / Print; Staff → Scanned items → Print tags → “Print or share” hands the sheet to the share sheet (iOS: Print); Bookings → Hours → a person → Service letter → “Print / share the letter”; My Bunny → Back up opens the share sheet with the backup file (Restore reads it back); BunFest → Raffle → Get tickets → numbers + QR; Staff → Raffle tickets → Scan that QR → Mark paid; Draw → a winner; the person’s ticket page updates within 15 s.
 
 ## 8. Deliberately OFF or not available in these test builds
 
-- **Raffle ticket reservation** — a test feature behind the `raffle_tickets_enabled` app setting; it stays OFF (staff can toggle it at /staff/settings, but leave it off for testers).
-- **Live adoptable rabbits (Petfinder)** — the Petfinder proxy is not configured on Cloudflare, so the Adopt page shows the built-in sample rabbits, clearly labelled. Same on the web today.
-- **Sign-up / request forms** (service sign-up, volunteer sign-up, appointment, share a Happy Tail, surrender intake, BunFest spa/glamour reservation) post to Netlify Forms, which is not wired up on Cloudflare Pages — so on the web and in the app they show “received” without reaching anyone. A pre-existing gap from the Netlify → Cloudflare move; needs a Cloudflare form endpoint (or Supabase) before public release.
-- **My Bunny “Back up” to a file** is disabled inside the app (a browser-style file download cannot reach the Files app in the native shell). Restore from a file works. A share-sheet export is a later build (needs the free @capacitor/share + @capacitor/filesystem plugins).
-- **BunFest “Apple / iOS Calendar” (.ics)** is hidden inside the app for the same reason; the Google Calendar links remain.
+- **Payments** — nothing is charged anywhere (donations open OHRR’s own page in the browser; raffle tickets and Hop Shop are “pay at the table / counter”). The money process attaches later, by the sponsor’s decision.
+- **Live adoptable rabbits (Petfinder)** — the Adopt page shows staff-entered rabbits (Staff → Adoptable rabbits) or, when there are none, the built-in sample rabbits, clearly labelled. Petfinder is not connected, by the sponsor’s decision.
 - **Push notifications, in-app purchases, analytics** — none; nothing paid or third-party was added. Reminders are local notifications scheduled on the phone.
+- **Easter campaign scheduler** — on hold.
+- **QR tags and flyers open the website** when scanned with the phone’s own camera (not the app) — App Links / Universal Links come with the store release.
 - The app is portrait-only on phones (it is a phone-shaped design).
+- Everything else is ON, including the raffle-ticket test feature (staff can switch it off at /staff/settings).
 
 ## 9. Before a PUBLIC release (not needed for testing)
 

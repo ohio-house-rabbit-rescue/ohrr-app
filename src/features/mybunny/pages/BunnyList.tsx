@@ -324,11 +324,21 @@ function BackupRestore({
     setBusy(true)
     try {
       const text = await exportBackup()
-      downloadBlob(new Blob([text], { type: 'application/json' }), backupFilename())
-      setMsg({
-        tone: 'ok',
-        text: 'Backup file saved — photos and archived bunnies included. Keep it somewhere safe (Files, Drive, email to yourself).',
-      })
+      const blob = new Blob([text], { type: 'application/json' })
+      if (isNative) {
+        // No blob downloads in the WebView: hand the file to the share sheet (Files, Drive, Mail).
+        const { shareFileNative } = await import('../../../native/share')
+        const out = await shareFileNative(blob, backupFilename(), undefined, 'My Bunny backup')
+        if (out === 'shared') setMsg({ tone: 'ok', text: 'Backup sent to the share sheet — save it to Files or Drive, or mail it to yourself.' })
+      } else {
+        downloadBlob(blob, backupFilename())
+        setMsg({
+          tone: 'ok',
+          text: 'Backup file saved — photos and archived bunnies included. Keep it somewhere safe (Files, Drive, email to yourself).',
+        })
+      }
+    } catch (err) {
+      setMsg({ tone: 'err', text: err instanceof Error ? err.message : 'Couldn’t make the backup.' })
     } finally {
       setBusy(false)
     }
@@ -365,14 +375,12 @@ function BackupRestore({
           it to a new phone. Restoring adds anything from the backup that isn’t already here.
         </p>
         <div className="flex flex-wrap gap-2">
-          {/* A blob download can't be handed to Files inside the native WebView; a share-sheet
-              export is a later build (needs @capacitor/share + filesystem). Restore still works. */}
+          {/* In the app the backup goes out through the share sheet (src/native/share.ts). */}
           <button
             type="button"
             onClick={backup}
             className={`${btn.outline} disabled:opacity-60`}
-            disabled={total === 0 || busy || isNative}
-            title={isNative ? 'Not available in this test build yet' : undefined}
+            disabled={total === 0 || busy}
           >
             <MbIcon name="download" size={15} /> Back up
           </button>
@@ -396,11 +404,6 @@ function BackupRestore({
         {msg && (
           <p className={`text-sm font-semibold ${msg.tone === 'ok' ? 'text-emerald-600' : 'text-red-600'}`}>
             {msg.text}
-          </p>
-        )}
-        {isNative && (
-          <p className="text-xs leading-relaxed text-amber-700">
-            Backing up to a file isn’t in this test build yet; restoring from one is.
           </p>
         )}
         <p className="text-xs text-slate-400">

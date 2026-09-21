@@ -11,6 +11,10 @@ import { Icon } from '../../../components/icons'
 import { Spinner } from '../../../components/staffui'
 import { hoursHistory, type HoursLine } from '../api'
 import { fmtDate, fmtHours } from './HoursTab'
+import { isNative } from '../../../native/platform'
+import { renderLetter } from '../letterImage'
+import { canvasToBlob } from '../../share/render'
+import { savePngAsync } from '../../share/share'
 
 export default function ServiceLetter() {
   const { membership, user } = useAuth()
@@ -22,6 +26,7 @@ export default function ServiceLetter() {
   const to = params.get('to') ?? new Date().toISOString().slice(0, 10)
   const [lines, setLines] = useState<HoursLine[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
     if (!orgId || !email) return
@@ -32,6 +37,20 @@ export default function ServiceLetter() {
 
   const total = useMemo(() => (lines ?? []).reduce((s, l) => s + l.hours, 0), [lines])
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  // In the app there is no window.print(): paint the letter and share it.
+  const shareLetter = async () => {
+    if (!lines) return
+    setSharing(true)
+    try {
+      const canvas = document.createElement('canvas')
+      await renderLetter(canvas, { name, from, to, lines, total, today, signer: user?.email ?? undefined, fmtDate, fmtHours })
+      await savePngAsync(await canvasToBlob(canvas), `ohrr-service-hours-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`)
+    } catch (e) {
+      setError(errMessage(e))
+    } finally {
+      setSharing(false)
+    }
+  }
   const subject = encodeURIComponent(`Volunteer service hours — ${name}`)
   const body = encodeURIComponent(
     `To whom it may concern,\n\n${name} volunteered ${fmtHours(total)} hours with Ohio House Rabbit Rescue between ${fmtDate(from)} and ${fmtDate(to)}.\n\n${(lines ?? []).map((l) => `${fmtDate(l.on_date)} — ${l.activity} — ${fmtHours(l.hours)} h`).join('\n')}\n\nOhio House Rabbit Rescue, Inc. · ${ohrr.address} · ${ohrr.phone}\n`,
@@ -44,9 +63,15 @@ export default function ServiceLetter() {
           <Icon name="arrowLeft" size={20} /> Bookings
         </Link>
         <div className="mt-2 flex flex-wrap gap-2">
-          <button type="button" onClick={() => window.print()} className={btn.primary} disabled={!lines}>
-            <Icon name="printer" size={16} /> Print / save as PDF
-          </button>
+          {isNative ? (
+            <button type="button" onClick={() => void shareLetter()} className={btn.primary} disabled={!lines || sharing}>
+              <Icon name="printer" size={16} /> {sharing ? 'Making the letter…' : 'Print / share the letter'}
+            </button>
+          ) : (
+            <button type="button" onClick={() => window.print()} className={btn.primary} disabled={!lines}>
+              <Icon name="printer" size={16} /> Print / save as PDF
+            </button>
+          )}
           <a href={`mailto:${email}?subject=${subject}&body=${body}`} className={btn.outline}>
             <Icon name="mail" size={16} /> Email the text
           </a>

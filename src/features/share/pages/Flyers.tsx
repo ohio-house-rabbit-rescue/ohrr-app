@@ -7,7 +7,8 @@ import { Screen, Card, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { FLYERS, flyerLink, renderFlyer, type Flyer } from '../flyers'
 import { canvasToBlob } from '../render'
-import { canShareFiles, copyText, savePng, sharePng } from '../share'
+import { canShareFiles, copyText, savePngAsync, sharePng } from '../share'
+import { isNative } from '../../../native/platform'
 
 export default function Flyers() {
   const { can } = useAuth()
@@ -51,8 +52,8 @@ export default function Flyers() {
     const c = canvasRef.current
     if (!c) return
     try {
-      savePng(await canvasToBlob(c), filename)
-      setStatus('Flyer saved to your phone / downloads. Print it from Photos or send it to whoever has the printer.')
+      const out = await savePngAsync(await canvasToBlob(c), filename)
+      if (out !== 'cancelled') setStatus(isNative ? 'Use the share sheet to print, save to Photos, or send it to whoever has the printer.' : 'Flyer saved to your phone / downloads. Print it from Photos or send it to whoever has the printer.')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save')
     }
@@ -60,6 +61,11 @@ export default function Flyers() {
   const print = () => {
     const c = canvasRef.current
     if (!c) return
+    if (isNative) {
+      // No window.print() in the app: the share sheet has Print (AirPrint) on iOS.
+      void save()
+      return
+    }
     const w = window.open('', '_blank')
     if (!w) {
       setStatus('Pop-ups are blocked — use Save and print from Photos instead.')

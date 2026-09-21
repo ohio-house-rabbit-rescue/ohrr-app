@@ -8,7 +8,7 @@ import { Screen, Card, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { staffInput } from '../../../components/staffui'
 import { OUTREACH, fillLetter, mailtoFor, type OutreachLetter } from '../outreach'
-import { copyText } from '../share'
+import { copyText, shareText } from '../share'
 
 const SENDER_KEY = 'ohrr.outreach.sender'
 
@@ -67,14 +67,12 @@ export default function Outreach() {
   }
   const share = async () => {
     if (!filled) return
-    try {
-      if (typeof navigator.share === 'function') {
-        await navigator.share({ title: filled.subject, text: `${filled.subject}\n\n${filled.body}` })
-        setStatus('Sent to the share sheet.')
-      } else await copy()
-    } catch {
-      /* cancelled */
-    }
+    const out = await shareText(`${filled.subject}
+
+${filled.body}`, filled.subject)
+    if (out === 'shared') setStatus('Sent to the share sheet.')
+    else if (out === 'copied') setStatus('Copied — paste it into any email.')
+    else if (out === 'failed') setStatus('Could not share. Select the text and copy it.')
   }
 
   return (

@@ -16,8 +16,8 @@ export const RAFFLE_TICKETS_FLAG = 'raffle_tickets_enabled'
 export const TEST_FEATURES: TestFeature[] = [
   {
     key: RAFFLE_TICKETS_FLAG,
-    label: 'Raffle ticket reservation',
+    label: 'Raffle tickets in the app',
     description:
-      'Show the reserve-numbered-tickets form (pay at the raffle table) on the BunFest raffle page. Pricing comes from Silent Auction → Auction setup.',
+      'Show “Get raffle tickets” on the BunFest raffle page: numbered tickets held for the person, paid at the raffle table, drawn from Staff → Raffle tickets. Pricing comes from Silent Auction → Auction setup.',
   },
 ]
