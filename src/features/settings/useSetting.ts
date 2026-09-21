@@ -53,8 +53,8 @@ export function useSetting<T extends Json>(key: string, fallback: T): SettingSta
 }
 
 // Convenience for the common {"enabled": boolean} flag shape.
-export function useFeatureFlag(key: string): SettingState<boolean> {
-  const { value, loading } = useSetting<{ enabled?: boolean }>(key, { enabled: false })
+export function useFeatureFlag(key: string, fallback = false): SettingState<boolean> {
+  const { value, loading } = useSetting<{ enabled?: boolean }>(key, { enabled: fallback })
   return { value: value?.enabled === true, loading }
 }
 

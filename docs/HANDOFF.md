@@ -151,6 +151,33 @@ The first bundle uploaded to a Play Console app ties that app to its signing key
 - The app is portrait-only on phones (it is a phone-shaped design).
 - Everything else is ON, including the raffle-ticket test feature (staff can switch it off at /staff/settings).
 
+## 8a. Store forms — the answers (copy these in)
+
+Both consoles ask the same things. Every answer below matches what the code does (see the privacy policy at https://ohrr-website.pages.dev/privacy for the plain-English version).
+
+**Google Play → App content**
+- Privacy policy URL: `https://ohrr-website.pages.dev/privacy`
+- Ads: **No**, the app contains no ads.
+- App access: parts of the app are restricted (the staff area) → provide a test staff login for reviewers (create one via an invite code) — or say "the restricted area is for the charity's staff only; all public features work without sign-in".
+- Content rating (IARC): utility/reference app; no violence, sexual content, drugs; **gambling: No** — the app does not let people gamble or pay for raffle tickets; reservations are paid in person. (If the reviewer objects anyway, switch OFF "Raffle tickets inside the phone apps" in Staff → Settings.)
+- Target audience: **13 and over** (not designed for children).
+- News app: No. COVID-19 contact tracing: No. Government app: No. Financial features: **None**.
+- Data safety:
+  - Collects data: **Yes**. Types: **Name, Email address, Phone number** (personal info) — user-provided in forms, bookings and raffle reservations; **Photos** (user content) — only when staff photograph a donated item; **Other user-generated content** — what people type into a form.
+  - Shared with third parties: **No** (Supabase and Cloudflare are processors, not recipients).
+  - Purpose: **App functionality** only. Not used for advertising or analytics. **No tracking.**
+  - Optional or required: optional (a person chooses to submit a form or reservation).
+  - Encrypted in transit: **Yes** (HTTPS). Users can request deletion: **Yes** (email; staff delete their own account in the app).
+  - Not collected: location, device IDs, contacts, health & fitness, financial info, app activity/diagnostics via SDKs (none installed).
+- Permissions: CAMERA (My Bunny photos; staff tag/barcode scanning and item photos), POST_NOTIFICATIONS (local care reminders), SCHEDULE_EXACT_ALARM / RECEIVE_BOOT_COMPLETED (so a reminder fires at 9 AM and survives a reboot).
+
+**App Store Connect → App Privacy**
+- Data collected: **Contact Info** (Name, Email Address, Phone Number) and **User Content** (Photos or Videos — staff item photos; Other User Content — form text). Linked to the user: No (we do not tie it to an account; staff accounts hold only an email). Used for tracking: **No**. Purpose: App Functionality.
+- Everything else: **Data Not Collected**.
+- App Review notes: "Public features need no account. The Staff area is for the charity's staff; demo sign-in: <test staff email / password>. Raffle tickets are reserved in the app and paid for in person at the charity's event — no money is taken in the app; official rules are shown on the raffle page. Donations open the charity's own website in the browser."
+- Age rating: 4+ is likely (no objectionable content); answer the questionnaire honestly — no gambling, no unrestricted web access (external links open in Safari).
+- Guideline watch-outs: 5.1.1(v) account deletion — done (Staff dashboard); 3.1.1/3.2.2 donations outside the app — done; **5.3.2/5.3.3 raffles** — put OHRR's official raffle rules (and "Apple is not a sponsor") in Staff → Silent Auction → Auction setup → raffle details so they show on the raffle page, and if Review still objects switch OFF "Raffle tickets inside the phone apps" (Staff → Settings) and resubmit — no rebuild needed.
+
 ## 9. Before a PUBLIC release (not needed for testing)
 
 1. **Apple:** enrol Ohio House Rabbit Rescue as an *organisation* in the Apple Developer Program (needs a D-U-N-S number for the nonprofit, the legal entity name, and someone with authority to sign). Apply for the **nonprofit fee waiver** (US 501(c)(3) organisations can have the $99/year waived — in the enrolment flow, or via https://developer.apple.com/support/membership-fee-waiver/). Until then the bundle id can be used from a personal team for testing only.

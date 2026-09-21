@@ -4,7 +4,8 @@ import QRCode from 'qrcode'
 import { Card, SectionLabel, Badge, btn } from './ui'
 import { Icon } from './icons'
 import { useFeatureFlag } from '../features/settings/useSetting'
-import { RAFFLE_TICKETS_FLAG } from '../features/settings/testFeatures'
+import { RAFFLE_TICKETS_FLAG, RAFFLE_TICKETS_NATIVE_FLAG } from '../features/settings/testFeatures'
+import { isNative } from '../native/platform'
 import { formatValue, rafflePriceLine, raffleTotalCents, AUCTION_EVENT_SLUG, type RafflePricing } from '../features/raffle/types'
 import { reserveTickets, ticketLabel, ticketPageUrl, type RaffleOrder } from '../features/raffle/tickets/api'
 
@@ -21,7 +22,10 @@ const LAST_ORDER_KEY = 'ohrr.raffle.lastOrder'
 // happens at the table — nothing is charged in the app.
 export function RaffleTickets({ pricing }: { pricing: RafflePricing | null }) {
   const flag = useFeatureFlag(RAFFLE_TICKETS_FLAG)
+  // Inside the installed apps a second switch applies (ON unless staff turn it off).
+  const nativeFlag = useFeatureFlag(RAFFLE_TICKETS_NATIVE_FLAG, true)
   if (flag.loading || !flag.value) return null
+  if (isNative && (nativeFlag.loading || !nativeFlag.value)) return null
   return <RaffleTicketsForm pricing={pricing} />
 }
 

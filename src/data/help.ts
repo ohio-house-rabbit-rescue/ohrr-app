@@ -39,7 +39,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'Why do the rabbits say “sample”?',
-        a: 'The app shows sample rabbits until OHRR’s live listing feed is connected. Once it is, the real adoptable bunnies appear here automatically — no app update needed.',
+        a: 'The app shows sample rabbits until OHRR staff add the real adoptable bunnies from the staff screens. As soon as they do, the samples disappear — no app update needed.',
       },
       {
         q: 'What are OHRR’s hours?',

@@ -127,7 +127,7 @@ export default function StaffSettings() {
           ) : (
             <ul className="divide-y divide-slate-100">
               {TEST_FEATURES.map((f) => {
-                const on = isEnabled(values[f.key])
+                const on = values[f.key] === undefined ? Boolean(f.defaultOn) : isEnabled(values[f.key])
                 return (
                   <li key={f.key} className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
                     <div className="min-w-0">

@@ -55,8 +55,8 @@ export default function Adopt() {
       <Screen className="space-y-4">
         {source === 'sample' ? (
           <SampleNote>
-            These are sample rabbits. OHRR’s live adoptable bunnies will appear here automatically
-            once the Petfinder connection is switched on.
+            These are sample rabbits. OHRR’s real adoptable bunnies appear here as soon as staff add
+            them (Staff → Adoptable rabbits) — no app update needed.
           </SampleNote>
         ) : (
           <p className="flex items-center gap-1.5 px-1 text-xs font-semibold text-slate-400">

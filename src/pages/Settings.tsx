@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { PageHeader, Screen, Card, SectionLabel, ActionCard, btn } from '../components/ui'
+import { Icon } from '../components/icons'
 import { build } from '../data/version'
 import { PHOTO_CREDITS } from '../data/photos'
 import { BREED_PHOTO_CREDITS } from '../data/breeds'
@@ -217,6 +218,14 @@ export default function Settings() {
             OHRR App · Ohio House Rabbit Rescue. Built to support rescue, adoption, education, and
             Midwest BunFest.
           </p>
+          <a
+            href="https://ohrr-website.pages.dev/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-1 text-sm font-bold text-brand-blue"
+          >
+            Privacy policy <Icon name="external" size={12} />
+          </a>
         </section>
       </Screen>
     </>
