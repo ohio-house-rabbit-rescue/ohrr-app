@@ -19,6 +19,20 @@
 
 ## Current state (at a glance)
 
+- **Volunteer hours, service-hours letters, yearly impact page — on `main` (2026-09-21).**
+  **Paste `APPLY-5-HOURS-IMPACT.sql`** (= Drive root `PASTE-THIS-INTO-SUPABASE.sql`).
+  - Staff → Bookings → **Hours**: totals per person (checked-in shifts × hours + hours added
+    by hand for transport/events/orientation), line-by-line history, `/staff/hours-letter`
+    prints a signed service-hours letter on OHRR letterhead (or emails the text). Tables/RPCs:
+    `volunteer_hours_entries`, `volunteer_history`, `volunteer_hours_summary`,
+    `volunteer_hours_total`.
+  - **/impact** (app + website, printable) + Staff → **Impact numbers** (both): one row per year
+    in `impact_years` — adopted, taken in, spays/neuters, vet care $, volunteer hours (one tap
+    from recorded hours), foster homes, BunFest attendance, highlights, note; published per
+    year. Give page + website footer link to it.
+  - Heart icon replaced with a regular heart (both icon sets).
+  - Easter campaign scheduler: **on hold per sponsor** (2026-09-21).
+
 - **Reach & education build — on `main` (2026-09-21).** Sponsor direction: OHRR is missing the
   market (see `G:\Shared drives\07-OHRR App\Research\market-data-points.md` and *OHRR Users &
   Growth Research.docx*); realign toward educating the right people and recruiting volunteers,
