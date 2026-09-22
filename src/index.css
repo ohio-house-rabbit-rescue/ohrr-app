@@ -46,3 +46,18 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Number fields: type the number, don't nudge it.
+   The browser's tiny up/down arrows are a poor target on a phone and invite
+   mis-taps on prices and counts, so they're hidden everywhere. Screens that
+   genuinely want stepping (the Hop Shop stock count) draw their own big
+   − / + buttons beside the field. */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

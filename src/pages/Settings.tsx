@@ -184,24 +184,20 @@ export default function Settings() {
           </Card>
         </section>
 
-        {/* ---- Staff entry (discreet; staff find it here, public ignores it) ---- */}
-        <section className="space-y-2">
-          <SectionLabel>OHRR staff</SectionLabel>
-          <ActionCard
-            to="/staff"
-            title={membership ? 'Staff dashboard' : 'Staff sign-in'}
-            subtitle={
-              membership
-                ? 'Manage the Hop Shop, your team, and more'
-                : 'For OHRR staff & volunteers — sign in to manage the app'
-            }
-            icon="users"
-            tone="blue"
-          />
-          <p className="px-1 text-xs leading-relaxed text-slate-400">
-            Staff-only. Adopters and visitors don’t need an account here.
-          </p>
-        </section>
+        {/* Signed-in staff get a way back to their tools; a visitor sees
+             nothing about staff accounts in their own settings. */}
+        {membership && (
+          <section className="space-y-2">
+            <SectionLabel>OHRR staff</SectionLabel>
+            <ActionCard
+              to="/staff"
+              title="Staff dashboard"
+              subtitle="Your OHRR tools"
+              icon="users"
+              tone="blue"
+            />
+          </section>
+        )}
 
         {/* ---- About / version ---- */}
         <section className="space-y-2">

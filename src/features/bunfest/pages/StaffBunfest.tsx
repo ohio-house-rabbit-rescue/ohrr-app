@@ -28,10 +28,19 @@ import {
   SESSION_KINDS,
   type PartnerRow,
   type SessionRow,
+  deleteFeature,
+  type EventFacts,
+  FEATURE_ICONS,
+  listFeatures,
+  loadEventFacts,
+  saveEventFacts,
+  saveFeature,
+  type FeatureRow,
 } from '../api'
 
-type Tab = 'schedule' | 'vendors' | 'partners'
+type Tab = 'schedule' | 'vendors' | 'partners' | 'year'
 const TABS: [Tab, string][] = [
+  ['year', 'This year'],
   ['schedule', 'Schedule'],
   ['vendors', 'Vendors'],
   ['partners', 'Rescues'],
@@ -49,7 +58,13 @@ export default function StaffBunfest() {
   const orgId = membership?.orgId ?? ''
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const tab: Tab = pathname.endsWith('/vendors') ? 'vendors' : pathname.endsWith('/partners') ? 'partners' : 'schedule'
+  const tab: Tab = pathname.endsWith('/vendors')
+    ? 'vendors'
+    : pathname.endsWith('/partners')
+      ? 'partners'
+      : pathname.endsWith('/schedule')
+        ? 'schedule'
+        : 'year'
 
   return (
     <Screen className="space-y-4">
@@ -64,7 +79,7 @@ export default function StaffBunfest() {
           <button
             key={t}
             type="button"
-            onClick={() => navigate(t === 'schedule' ? '/staff/bunfest' : `/staff/bunfest/${t}`)}
+            onClick={() => navigate(t === 'year' ? '/staff/bunfest' : `/staff/bunfest/${t}`)}
             className={`min-h-[44px] flex-1 rounded-full px-2 text-[13px] font-bold ${
               tab === t ? 'bg-brand-blue text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600'
             }`}
@@ -73,6 +88,7 @@ export default function StaffBunfest() {
           </button>
         ))}
       </div>
+      {tab === 'year' && <ThisYearTab orgId={orgId} />}
       {tab === 'schedule' && <ScheduleTab orgId={orgId} />}
       {tab === 'vendors' && <VendorsTab orgId={orgId} />}
       {tab === 'partners' && <PartnersTab orgId={orgId} />}
@@ -771,5 +787,308 @@ function PartnerForm({ orgId, initial, onDone }: { orgId: string; initial: Partn
           ))}
       </div>
     </form>
+  )
+}
+
+/* ============================================================= this year */
+
+// The "at the festival" cards and the facts on Plan your visit. Both used to
+// be written into the app, so a new year needed a new build.
+function ThisYearTab({ orgId }: { orgId: string }) {
+  const thisYear = new Date().getFullYear()
+  const [year, setYear] = useState(thisYear)
+  const [rows, setRows] = useState<FeatureRow[] | null>(null)
+  const [editing, setEditing] = useState<string | 'new' | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    if (!orgId) return
+    try {
+      setRows(await listFeatures(orgId, year))
+    } catch (e) {
+      setError(errMessage(e))
+    }
+  }, [orgId, year])
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  return (
+    <div className="space-y-3">
+      <Card className="space-y-2">
+        <label className="block text-sm font-semibold text-slate-700">
+          Which year
+          <select className={staffInput} value={year} onChange={(e) => setYear(Number(e.target.value))}>
+            {[thisYear + 1, thisYear, thisYear - 1].map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="text-xs text-slate-600">
+          These are the cards under “At the festival” on the BunFest home screen. Leave a year empty and the app shows
+          the built-in list.
+        </p>
+      </Card>
+
+      <FormError>{error}</FormError>
+      {rows === null && !error && <Spinner />}
+
+      {rows?.map((r) =>
+        editing === r.id ? (
+          <Card key={r.id}>
+            <FeatureForm
+              orgId={orgId}
+              year={year}
+              initial={r}
+              onDone={async () => {
+                setEditing(null)
+                await load()
+              }}
+            />
+          </Card>
+        ) : (
+          <Card key={r.id}>
+            <div className="flex items-start gap-3">
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-display text-[15px] font-extrabold text-ink">{r.title}</span>
+                  {!r.is_published && <Badge tone="orange">Hidden</Badge>}
+                </span>
+                {r.blurb && <span className="block text-xs text-slate-500">{r.blurb}</span>}
+                <span className="block text-xs text-slate-400">
+                  {[r.icon ? `icon: ${r.icon}` : null, r.link_url].filter(Boolean).join(' · ') || 'No link'}
+                </span>
+              </span>
+              <button type="button" onClick={() => setEditing(r.id)} className="shrink-0 text-sm font-bold text-brand-blue">
+                Edit
+              </button>
+            </div>
+          </Card>
+        ),
+      )}
+
+      {editing === 'new' ? (
+        <Card>
+          <FeatureForm
+            orgId={orgId}
+            year={year}
+            initial={null}
+            onDone={async () => {
+              setEditing(null)
+              await load()
+            }}
+          />
+        </Card>
+      ) : (
+        <button type="button" onClick={() => setEditing('new')} className={`${btn.outline} w-full`}>
+          <Icon name="plus" size={16} /> Add a card
+        </button>
+      )}
+
+      <EventFactsCard orgId={orgId} />
+    </div>
+  )
+}
+
+function FeatureForm({
+  orgId,
+  year,
+  initial,
+  onDone,
+}: {
+  orgId: string
+  year: number
+  initial: FeatureRow | null
+  onDone: () => Promise<void>
+}) {
+  const [d, setD] = useState({
+    title: initial?.title ?? '',
+    blurb: initial?.blurb ?? '',
+    icon: initial?.icon ?? 'star',
+    link_url: initial?.link_url ?? '',
+    is_published: initial?.is_published ?? true,
+    sort_order: String(initial?.sort_order ?? 0),
+  })
+  const [busy, setBusy] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const txt = (k: keyof typeof d) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value })
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    setBusy(true)
+    setError(null)
+    try {
+      await saveFeature({
+        ...(initial ? { id: initial.id } : {}),
+        org_id: orgId,
+        year,
+        title: d.title.trim(),
+        blurb: d.blurb.trim() || null,
+        icon: d.icon.trim() || null,
+        link_url: d.link_url.trim() || null,
+        is_published: d.is_published,
+        sort_order: Number(d.sort_order) || 0,
+      })
+      await onDone()
+    } catch (err) {
+      setError(errMessage(err))
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      <label className="block text-sm font-semibold text-slate-700">
+        What it is
+        <input className={staffInput} required value={d.title} onChange={txt('title')} placeholder="Bunny Spa" />
+      </label>
+      <label className="block text-sm font-semibold text-slate-700">
+        One line about it
+        <input className={staffInput} value={d.blurb} onChange={txt('blurb')} placeholder="Nail trims and grooming for your rabbit." />
+      </label>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block text-sm font-semibold text-slate-700">
+          Picture on the card
+          <select className={staffInput} value={d.icon} onChange={txt('icon')}>
+            {FEATURE_ICONS.map((i) => (
+              <option key={i} value={i}>
+                {i}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-sm font-semibold text-slate-700">
+          Order
+          <input inputMode="numeric" className={staffInput} value={d.sort_order} onChange={(e) => setD({ ...d, sort_order: e.target.value.replace(/[^0-9]/g, '') })} />
+        </label>
+      </div>
+      <label className="block text-sm font-semibold text-slate-700">
+        Where it goes <span className="font-normal text-slate-400">(optional)</span>
+        <input className={staffInput} value={d.link_url} onChange={txt('link_url')} placeholder="/bunfest/schedule or https://…" />
+      </label>
+      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+        <input type="checkbox" className="h-5 w-5 rounded border-slate-300 text-brand-blue" checked={d.is_published} onChange={(e) => setD({ ...d, is_published: e.target.checked })} />
+        People can see this
+      </label>
+      <FormError>{error}</FormError>
+      <div className="flex gap-2">
+        <button type="submit" disabled={busy || !d.title.trim()} className={`${btn.primary} flex-1 disabled:opacity-60`}>
+          {busy ? 'Saving…' : 'Save'}
+        </button>
+        {initial &&
+          (confirmDelete ? (
+            <button
+              type="button"
+              onClick={() => deleteFeature(initial.id).then(onDone).catch((e) => setError(errMessage(e)))}
+              className="rounded-full bg-red-600 px-4 py-2.5 text-sm font-bold text-white"
+            >
+              Confirm delete
+            </button>
+          ) : (
+            <button type="button" onClick={() => setConfirmDelete(true)} className="rounded-full border border-red-200 px-4 py-2.5 text-sm font-bold text-red-600">
+              Delete
+            </button>
+          ))}
+      </div>
+    </form>
+  )
+}
+
+/** Admission, parking, the rabbit rule and this year's links. */
+function EventFactsCard({ orgId }: { orgId: string }) {
+  const [d, setD] = useState<EventFacts | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!orgId) return
+    loadEventFacts(orgId)
+      .then(setD)
+      .catch((e) => setError(errMessage(e)))
+  }, [orgId])
+
+  if (error && !d) return <FormError>{error}</FormError>
+  if (!d) return null
+  const txt = (k: keyof EventFacts) => (e: { target: { value: string } }) => {
+    setSaved(false)
+    setD({ ...d, [k]: e.target.value })
+  }
+
+  return (
+    <Card className="space-y-3">
+      <div>
+        <p className="font-display text-[15px] font-extrabold text-ink">Plan your visit</p>
+        <p className="text-xs text-slate-600">What the app tells visitors about getting in and getting there.</p>
+      </div>
+      <label className="block text-sm font-semibold text-slate-700">
+        Admission — one per line, “who = price”
+        <textarea
+          className={staffInput}
+          rows={3}
+          value={d.admission}
+          onChange={txt('admission')}
+          placeholder={'Adults = $10.00\nAges 5–12 = $5.00\nUnder 5 = Free'}
+        />
+      </label>
+      <label className="block text-sm font-semibold text-slate-700">
+        Note under the prices
+        <input className={staffInput} value={d.admission_note} onChange={txt('admission_note')} />
+      </label>
+      <label className="block text-sm font-semibold text-slate-700">
+        Parking
+        <input className={staffInput} value={d.parking} onChange={txt('parking')} />
+      </label>
+      <label className="block text-sm font-semibold text-slate-700">
+        The rabbit rule
+        <textarea className={staffInput} rows={2} value={d.rabbit_rule} onChange={txt('rabbit_rule')} />
+      </label>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="block text-sm font-semibold text-slate-700">
+          Tickets link
+          <input className={staffInput} value={d.tickets_url} onChange={txt('tickets_url')} />
+        </label>
+        <label className="block text-sm font-semibold text-slate-700">
+          Hotel link
+          <input className={staffInput} value={d.hotel_url} onChange={txt('hotel_url')} />
+        </label>
+        <label className="block text-sm font-semibold text-slate-700">
+          BunFest volunteer link
+          <input className={staffInput} value={d.volunteer_url} onChange={txt('volunteer_url')} />
+        </label>
+        <label className="block text-sm font-semibold text-slate-700">
+          Merch link
+          <input className={staffInput} value={d.merch_url} onChange={txt('merch_url')} />
+        </label>
+      </div>
+      <label className="block text-sm font-semibold text-slate-700">
+        Credit line
+        <input className={staffInput} value={d.logo_credit} onChange={txt('logo_credit')} placeholder="Logo design by …" />
+      </label>
+      <FormError>{error}</FormError>
+      {saved && <p className="text-sm font-bold text-green-700">Saved.</p>}
+      <button
+        type="button"
+        onClick={async () => {
+          setBusy(true)
+          setError(null)
+          try {
+            await saveEventFacts(orgId, d)
+            setSaved(true)
+          } catch (e) {
+            setError(errMessage(e))
+          } finally {
+            setBusy(false)
+          }
+        }}
+        disabled={busy}
+        className={`${btn.primary} w-full disabled:opacity-60`}
+      >
+        {busy ? 'Saving…' : 'Save these facts'}
+      </button>
+    </Card>
   )
 }

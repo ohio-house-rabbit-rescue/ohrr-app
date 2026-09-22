@@ -23,6 +23,10 @@ export interface EventItem {
   body?: string
   theme?: string
   url?: string
+  /** A photo or poster for the event (20260922140000_*.sql). */
+  imageUrl?: string
+  /** Per-year facts staff edit: admission, parking, links, the rabbit rule. */
+  info?: Record<string, unknown>
 }
 
 // The stable slug the BunFest sub-app looks up to keep its date/venue/theme live.

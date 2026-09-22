@@ -33,6 +33,8 @@ interface Draft {
   perk_code: string
   term_start: string // YYYY-MM-DD or ''
   term_end: string // YYYY-MM-DD or ''
+  /** Warn this many days before the term ends. */
+  remind_days: string
   is_active: boolean
   sort_order: string // '' = append to the end of its tier
 }
@@ -48,6 +50,7 @@ const emptyDraft: Draft = {
   perk_code: '',
   term_start: '',
   term_end: '',
+  remind_days: '21',
   is_active: true,
   sort_order: '',
 }
@@ -64,6 +67,7 @@ function draftFrom(s: SponsorRow): Draft {
     perk_code: s.perk_code ?? '',
     term_start: s.term_start ?? '',
     term_end: s.term_end ?? '',
+    remind_days: String(s.remind_days ?? 21),
     is_active: s.is_active,
     sort_order: String(s.sort_order),
   }
@@ -384,8 +388,21 @@ function SponsorForm({
           <input className={staffInput} type="date" value={draft.term_end} onChange={set('term_end')} />
         </label>
       </div>
+      {draft.term_end && (
+        <label className="block text-sm font-semibold text-slate-700">
+          Remind us this many days before it ends
+          <input
+            className={staffInput}
+            inputMode="numeric"
+            value={draft.remind_days}
+            onChange={(e) => setDraft((d) => ({ ...d, remind_days: e.target.value.replace(/[^0-9]/g, '') }))}
+            placeholder="21"
+          />
+        </label>
+      )}
       <p className="-mt-1 text-xs text-slate-400">
-        Optional. After the term end date the partner is hidden from the public automatically.
+        Optional. After the term end date the partner is hidden from the public automatically — and the staff dashboard
+        warns you before that happens, so a renewal can be asked for in time.
       </p>
 
       <div className="flex items-end gap-4">
@@ -442,6 +459,7 @@ function draftToPatch(d: Draft) {
     blurb: d.blurb.trim() || null,
     logo_url: d.logo_url.trim() || null,
     website: d.website.trim() || null,
+    remind_days: Math.min(180, Math.max(0, Number(d.remind_days) || 21)),
     perk_title: d.perk_title.trim() || null,
     perk_detail: d.perk_detail.trim() || null,
     perk_code: d.perk_code.trim() || null,

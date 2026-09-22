@@ -125,3 +125,105 @@ export async function saveVendorDetails(supplierId: string, d: VendorDetails): P
   })
   if (error) throw error
 }
+
+/* ---------------------------------------------------- this year's content */
+
+export type FeatureRow = Database['public']['Tables']['event_features']['Row']
+export type FeatureInput = Database['public']['Tables']['event_features']['Insert'] & { id?: string }
+
+/** The icons the app can draw on a festival card. */
+export const FEATURE_ICONS = [
+  'star', 'book', 'sparkles', 'camera', 'ticket', 'gift', 'heart', 'bag', 'users',
+  'calendar', 'mappin', 'clock', 'award', 'store', 'gavel', 'info',
+]
+
+export async function listFeatures(orgId: string, year: number): Promise<FeatureRow[]> {
+  const { data, error } = await supabase
+    .from('event_features')
+    .select('*')
+    .eq('org_id', orgId)
+    .eq('year', year)
+    .order('sort_order')
+  if (error) throw error
+  return data ?? []
+}
+
+export async function saveFeature(f: FeatureInput): Promise<FeatureRow> {
+  const { data, error } = await supabase.from('event_features').upsert(f, { onConflict: 'id' }).select('*').single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteFeature(id: string): Promise<void> {
+  const { error } = await supabase.from('event_features').delete().eq('id', id)
+  if (error) throw error
+}
+
+/** The facts on Plan your visit, as the staff form edits them (plain text). */
+export interface EventFacts {
+  eventId: string
+  /** "Adults = $10.00" per line */
+  admission: string
+  admission_note: string
+  parking: string
+  rabbit_rule: string
+  tickets_url: string
+  hotel_url: string
+  volunteer_url: string
+  merch_url: string
+  logo_credit: string
+}
+
+const str = (v: unknown): string => (typeof v === 'string' ? v : '')
+
+export async function loadEventFacts(orgId: string): Promise<EventFacts | null> {
+  const { data, error } = await supabase
+    .from('events')
+    .select('id, info')
+    .eq('org_id', orgId)
+    .like('slug', '%bunfest%')
+    .order('starts_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return null
+  const info = (data.info ?? {}) as Record<string, unknown>
+  const admission = Array.isArray(info.admission)
+    ? (info.admission as { who?: string; price?: string }[])
+        .map((a) => `${a?.who ?? ''} = ${a?.price ?? ''}`.trim())
+        .join('\n')
+    : ''
+  return {
+    eventId: data.id,
+    admission,
+    admission_note: str(info.admission_note),
+    parking: str(info.parking),
+    rabbit_rule: str(info.rabbit_rule),
+    tickets_url: str(info.tickets_url),
+    hotel_url: str(info.hotel_url),
+    volunteer_url: str(info.volunteer_url),
+    merch_url: str(info.merch_url),
+    logo_credit: str(info.logo_credit),
+  }
+}
+
+export async function saveEventFacts(_orgId: string, f: EventFacts): Promise<void> {
+  const admission = f.admission
+    .split('\n')
+    .map((line) => line.split('='))
+    .filter((parts) => parts.length >= 2 && parts[0].trim() && parts[1].trim())
+    .map((parts) => ({ who: parts[0].trim(), price: parts.slice(1).join('=').trim() }))
+  const info = {
+    admission,
+    admission_note: f.admission_note.trim(),
+    parking: f.parking.trim(),
+    rabbit_rule: f.rabbit_rule.trim(),
+    tickets_url: f.tickets_url.trim(),
+    hotel_url: f.hotel_url.trim(),
+    volunteer_url: f.volunteer_url.trim(),
+    merch_url: f.merch_url.trim(),
+    logo_credit: f.logo_credit.trim(),
+  }
+  const { error } = await supabase.from('events').update({ info }).eq('id', f.eventId)
+  if (error) throw error
+}

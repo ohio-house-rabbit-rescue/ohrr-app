@@ -3,6 +3,7 @@ import { useHappyTails } from '../features/tails/api'
 import { BunnyPhoto, StatusPill, FollowButton } from '../components/tailbits'
 import { Screen, Card, Badge, btn } from '../components/ui'
 import { Icon } from '../components/icons'
+import ShareButton, { appLink } from '../components/ShareButton'
 
 export default function TailDetail() {
   const { id } = useParams()
@@ -61,6 +62,20 @@ export default function TailDetail() {
         </div>
 
         <p className="text-sm leading-relaxed text-slate-700">{t.summary}</p>
+
+        <ShareButton
+          label={`Share ${t.bunny}’s story`}
+          filename={`ohrr-happy-tail-${t.bunny.toLowerCase().replace(/\s+/g, '-')}.png`}
+          caption={`${t.bunny}'s happy tail, from Ohio House Rabbit Rescue. ${t.summary}`}
+          card={{
+            kicker: 'Happy Tail',
+            title: t.bunny,
+            subtitle: [t.family && `With the ${t.family} family`, t.since].filter(Boolean).join(' · ') || t.summary,
+            photoUrl: t.photo,
+            link: appLink(`/tails/${t.id}`),
+            cta: 'Adopt · foster · give',
+          }}
+        />
 
         {/* Looking-for-a-home bunnies get a path straight to adoption */}
         {t.status === 'looking' && (

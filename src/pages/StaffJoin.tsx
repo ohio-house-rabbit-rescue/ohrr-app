@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Card, Screen } from '../components/ui'
@@ -9,7 +9,9 @@ import { NotConfigured, Spinner, FormError, staffInput } from '../components/sta
 export default function StaffJoin() {
   const { configured, loading, user, membership, refresh } = useAuth()
   const navigate = useNavigate()
-  const [code, setCode] = useState('')
+  const [params] = useSearchParams()
+  // A QR code or an emailed link carries ?code=… — nothing to type.
+  const [code, setCode] = useState(params.get('code') ?? '')
   const [status, setStatus] = useState<'idle' | 'submitting'>('idle')
   const [error, setError] = useState<string | null>(null)
 

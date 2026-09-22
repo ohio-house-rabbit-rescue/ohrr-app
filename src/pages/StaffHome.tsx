@@ -7,6 +7,7 @@ import { Icon } from '../components/icons'
 import { Spinner, NotConfigured } from '../components/staffui'
 import { PERMISSION_CATALOG } from '../lib/capabilities'
 import { DeleteAccount } from '../components/DeleteAccount'
+import ExpiringNotice from '../features/sponsors/ExpiringNotice'
 
 const roleBadge: Record<string, { label: string; tone: 'blue' | 'orange' | 'slate' }> = {
   owner: { label: 'Owner', tone: 'blue' },
@@ -82,6 +83,8 @@ export default function StaffHome() {
           Signed in as <strong>{user.email}</strong>
         </p>
       </div>
+
+      {canManageSponsors && <ExpiringNotice orgId={membership.orgId} />}
 
       {showTiles ? (
         <div className="space-y-3">
@@ -210,6 +213,15 @@ export default function StaffHome() {
               tone="orange"
             />
           )}
+          {(canManageVolunteer || canBookings) && (
+            <ActionCard
+              to="/staff/volunteers"
+              title="Volunteers"
+              subtitle="The roster, their hours, and each person's private hours link"
+              icon="users"
+              tone="blue"
+            />
+          )}
           {canManageVolunteer && (
             <ActionCard
               to="/staff/volunteer"
@@ -323,10 +335,19 @@ export default function StaffHome() {
           )}
           {canManageSettings && (
             <ActionCard
-              to="/staff/settings"
-              title="Settings"
-              subtitle="App settings & test features (on/off)"
+              to="/staff/features"
+              title="Features"
+              subtitle="Turn parts of the app on and off for everyone"
               icon="settings"
+              tone="blue"
+            />
+          )}
+          {canManageSettings && (
+            <ActionCard
+              to="/staff/details"
+              title="OHRR details"
+              subtitle="Hours, phone, address and a notice — shown everywhere"
+              icon="mappin"
               tone="blue"
             />
           )}

@@ -8,6 +8,7 @@ import { useBunnyPhoto } from '../photos'
 import { isNative } from '../../../native/platform'
 import { pickPhoto, type PhotoSource } from '../../../native/camera'
 import { cancelReminders } from '../../../native/notifications'
+import BreedInput from '../../../components/BreedInput'
 import {
   useMyBunny,
   findBunny,
@@ -350,14 +351,8 @@ function Form({
             <SegTabs options={SEX_OPTIONS} value={sexOpt as SexOption} onChange={setSexOpt} wrap />
           </div>
 
-          <Field label="Breed" optional hint="Not sure? Learn → What kind of bunny do I have? walks you through it.">
-            <input
-              className={mbInput}
-              value={breed}
-              onChange={(e) => setBreed(e.target.value)}
-              maxLength={60}
-              placeholder="e.g. Holland Lop, mixed, not sure"
-            />
+          <Field label="Breed" optional hint="Suggestions appear as you type — or type your own. Not sure? Learn → What kind of bunny do I have? walks you through it.">
+            <BreedInput className={mbInput} value={breed} onChange={setBreed} />
           </Field>
 
           <Field label="Spayed / neutered on" optional hint="Leave blank if not yet, or if you’re not sure of the date.">

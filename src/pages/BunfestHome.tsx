@@ -1,12 +1,16 @@
 import { Link } from 'react-router-dom'
-import { event, activities } from '../data/event'
+import { event } from '../data/event'
+import { useBunfestFeatures } from '../features/bunfest/thisYear'
 import { BUNFEST_HUB } from '../data/content'
 import { useBunfestEvent, eventDate, eventTime } from '../lib/events'
 import { Screen, SectionLabel, ActionCard, IconTile, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 import PresentedBy from '../features/sponsors/PresentedBy'
+import ShareButton, { appLink } from '../components/ShareButton'
 
 export default function BunfestHome() {
+  // This year's cards, from Staff → BunFest (bundled 2026 list until then)
+  const { features } = useBunfestFeatures()
   // Date / time / venue / theme from the shared BunFest event record (live
   // when staff have published it, else the bundled seed) — never stale.
   const bunfest = useBunfestEvent()
@@ -59,21 +63,57 @@ export default function BunfestHome() {
 
       <Screen className="space-y-6">
         <PresentedBy surface="bunfest" />
+
+        <ShareButton
+          className="block"
+          label="Share BunFest"
+          filename="midwest-bunfest.png"
+          caption={`Midwest BunFest — ${event.date}, ${event.venue.name}, ${event.venue.city}. A day of bunnies, education and vendors, presented by Ohio House Rabbit Rescue.`}
+          card={{
+            kicker: 'Presented by OHRR',
+            title: `Midwest BunFest ${event.edition}`,
+            subtitle: `${event.date} · ${event.timeLabel} · ${event.venue.name}, ${event.venue.city}`,
+            photoUrl: event.logo,
+            link: appLink('/bunfest'),
+            cta: 'Come and meet the bunnies',
+          }}
+        />
         {/* At the festival */}
         <div className="space-y-2.5">
           <SectionLabel>At the festival</SectionLabel>
           <div className="grid grid-cols-2 gap-2.5">
-            {activities.map((a) => (
-              <Link
-                key={a.title}
-                to={a.to}
-                className="rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <IconTile name={a.icon} tone="orange" />
-                <span className="mt-2 block font-display text-sm font-extrabold text-ink">{a.title}</span>
-                <span className="mt-0.5 block text-xs leading-snug text-slate-500">{a.text}</span>
-              </Link>
-            ))}
+            {features.map((a) => {
+              const inner = (
+                <>
+                  <IconTile name={a.icon} tone="orange" />
+                  <span className="mt-2 block font-display text-sm font-extrabold text-ink">{a.title}</span>
+                  {a.text && <span className="mt-0.5 block text-xs leading-snug text-slate-500">{a.text}</span>}
+                </>
+              )
+              const cls =
+                'rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md'
+              // A card with nowhere to go is still worth showing — it tells
+              // visitors what's on.
+              if (a.href) {
+                return (
+                  <a key={a.id} href={a.href} target="_blank" rel="noopener noreferrer" className={cls}>
+                    {inner}
+                  </a>
+                )
+              }
+              if (!a.to) {
+                return (
+                  <div key={a.id} className={cls.replace(' transition hover:-translate-y-0.5 hover:shadow-md', '')}>
+                    {inner}
+                  </div>
+                )
+              }
+              return (
+                <Link key={a.id} to={a.to} className={cls}>
+                  {inner}
+                </Link>
+              )
+            })}
           </div>
         </div>
 

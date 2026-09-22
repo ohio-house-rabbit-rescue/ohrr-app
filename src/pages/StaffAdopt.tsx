@@ -7,6 +7,7 @@ import { Spinner, FormError, staffInput } from '../components/staffui'
 import { isNative } from '../native/platform'
 import { pickPhoto } from '../native/camera'
 import type { Database } from '../lib/database.types'
+import BreedInput from '../components/BreedInput'
 
 type Rabbit = Database['public']['Tables']['rabbits']['Row']
 
@@ -288,7 +289,7 @@ function RabbitForm({
 
       <label className="block text-sm font-semibold text-slate-700">
         Breed
-        <input className={staffInput} value={draft.breed} onChange={set('breed')} />
+        <BreedInput className={staffInput} value={draft.breed} onChange={(v) => setDraft((d) => ({ ...d, breed: v }))} />
       </label>
 
       <PhotoUploader

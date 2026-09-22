@@ -4,6 +4,7 @@ import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { Spinner, FormError, staffInput } from '../components/staffui'
+import StaffImageField from '../components/StaffImageField'
 import { slugify } from '../lib/careContent'
 import { eventDate, eventTime, type EventRow } from '../lib/events'
 import { seedEvents } from '../data/events'
@@ -13,6 +14,7 @@ interface Draft {
   slug: string
   starts_local: string // datetime-local value
   ends_local: string
+  image_url: string
   venue: string
   address: string
   city: string
@@ -28,6 +30,7 @@ const emptyDraft: Draft = {
   slug: '',
   starts_local: '',
   ends_local: '',
+  image_url: '',
   venue: '',
   address: '',
   city: '',
@@ -58,6 +61,7 @@ function draftFrom(e: EventRow): Draft {
     slug: e.slug,
     starts_local: toLocalInput(e.starts_at),
     ends_local: toLocalInput(e.ends_at),
+    image_url: e.image_url ?? '',
     venue: e.venue ?? '',
     address: e.address ?? '',
     city: e.city ?? '',
@@ -77,6 +81,7 @@ function toRow(d: Draft) {
     slug: slugify(d.slug.trim() || d.title),
     starts_at: starts,
     ends_at: fromLocalInput(d.ends_local),
+    image_url: d.image_url.trim() || null,
     venue: d.venue.trim() || null,
     address: d.address.trim() || null,
     city: d.city.trim() || null,
@@ -90,17 +95,20 @@ function toRow(d: Draft) {
 
 function EventForm({
   initial,
+  userId,
   submitLabel,
   onSubmit,
   onCancel,
 }: {
   initial: Draft
+  userId: string
   submitLabel: string
   onSubmit: (d: Draft) => Promise<void>
   onCancel: () => void
 }) {
   const [draft, setDraft] = useState<Draft>(initial)
   const [busy, setBusy] = useState(false)
+  const [imageBusy, setImageBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const set =
     (k: keyof Draft) =>
@@ -135,6 +143,17 @@ function EventForm({
           <input className={staffInput} type="datetime-local" value={draft.ends_local} onChange={set('ends_local')} />
         </label>
       </div>
+      <p className="-mt-1 text-xs text-slate-500">
+        After it ends, the event moves itself to <strong>Past events</strong> — nothing to remember.
+      </p>
+      <StaffImageField
+        label="Picture"
+        hint="A photo or the event poster. Shown on the Events screen and the website."
+        value={draft.image_url}
+        userId={userId}
+        onChange={(url) => setDraft((d) => ({ ...d, image_url: url }))}
+        onBusyChange={setImageBusy}
+      />
       <label className="block text-sm font-semibold text-slate-700">
         Venue
         <input className={staffInput} value={draft.venue} onChange={set('venue')} placeholder="The Makoy" />
@@ -192,7 +211,7 @@ function EventForm({
       <FormError>{error}</FormError>
 
       <div className="flex gap-2">
-        <button type="submit" disabled={busy || draft.title.trim().length === 0} className={`${btn.primary} flex-1 disabled:opacity-60`}>
+        <button type="submit" disabled={busy || imageBusy || draft.title.trim().length === 0} className={`${btn.primary} flex-1 disabled:opacity-60`}>
           {busy ? 'Saving…' : submitLabel}
         </button>
         <button type="button" onClick={onCancel} disabled={busy} className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500 transition hover:bg-slate-50">
@@ -203,7 +222,7 @@ function EventForm({
   )
 }
 
-function EventCard({ item, onChanged }: { item: EventRow; onChanged: () => void }) {
+function EventCard({ item, userId, onChanged }: { item: EventRow; userId: string; onChanged: () => void }) {
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -239,7 +258,7 @@ function EventCard({ item, onChanged }: { item: EventRow; onChanged: () => void 
   if (editing) {
     return (
       <Card>
-        <EventForm initial={draftFrom(item)} submitLabel="Save changes" onSubmit={saveEdit} onCancel={() => setEditing(false)} />
+        <EventForm initial={draftFrom(item)} userId={userId} submitLabel="Save changes" onSubmit={saveEdit} onCancel={() => setEditing(false)} />
       </Card>
     )
   }
@@ -398,7 +417,7 @@ export default function StaffEvents() {
       {creating && (
         <Card>
           <p className="mb-3 font-display text-[15px] font-extrabold text-ink">New event</p>
-          <EventForm initial={emptyDraft} submitLabel="Add event" onSubmit={create} onCancel={() => setCreating(false)} />
+          <EventForm initial={emptyDraft} userId={userId} submitLabel="Add event" onSubmit={create} onCancel={() => setCreating(false)} />
         </Card>
       )}
 
@@ -419,7 +438,7 @@ export default function StaffEvents() {
       ) : (
         <div className="grid grid-cols-1 gap-3">
           {items.map((item) => (
-            <EventCard key={item.id} item={item} onChanged={load} />
+            <EventCard key={item.id} item={item} userId={userId} onChanged={load} />
           ))}
         </div>
       )}

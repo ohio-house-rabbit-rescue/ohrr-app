@@ -30,6 +30,11 @@ export type Database = {
           user_id: string
           role: MembershipRole
           status: MembershipStatus
+          // Team profile (supabase/migrations/20260922140000_volunteers_and_event_content.sql)
+          display_name: string | null
+          title: string | null
+          photo_url: string | null
+          show_on_about: boolean
           created_at: string
         }
         Insert: {
@@ -95,6 +100,12 @@ export type Database = {
           max_uses: number
           used_count: number
           expires_at: string | null
+          // Who it was meant for (20260922140000_*.sql)
+          invitee_name: string | null
+          invitee_email: string | null
+          invitee_phone: string | null
+          position_note: string | null
+          note: string | null
           created_by: string | null
           created_at: string
         }
@@ -109,6 +120,11 @@ export type Database = {
           max_uses?: number
           used_count?: number
           expires_at?: string | null
+          invitee_name?: string | null
+          invitee_email?: string | null
+          invitee_phone?: string | null
+          position_note?: string | null
+          note?: string | null
           created_by?: string | null
           created_at?: string
         }
@@ -123,6 +139,11 @@ export type Database = {
           max_uses?: number
           used_count?: number
           expires_at?: string | null
+          invitee_name?: string | null
+          invitee_email?: string | null
+          invitee_phone?: string | null
+          position_note?: string | null
+          note?: string | null
           created_by?: string | null
           created_at?: string
         }
@@ -325,6 +346,13 @@ export type Database = {
           when_text: string | null
           where_text: string | null
           spots: string | null
+          // How many can take it on (supabase/migrations/20260922140000_*.sql)
+          limit_kind: 'none' | 'people' | 'hours'
+          limit_people: number | null
+          limit_hours: number | null
+          filled_people: number
+          filled_hours: number
+          contact_email: string | null
           is_published: boolean
           sort_order: number
           created_by: string | null
@@ -340,6 +368,12 @@ export type Database = {
           when_text?: string | null
           where_text?: string | null
           spots?: string | null
+          limit_kind?: 'none' | 'people' | 'hours'
+          limit_people?: number | null
+          limit_hours?: number | null
+          filled_people?: number
+          filled_hours?: number
+          contact_email?: string | null
           is_published?: boolean
           sort_order?: number
           created_by?: string | null
@@ -355,6 +389,12 @@ export type Database = {
           when_text?: string | null
           where_text?: string | null
           spots?: string | null
+          limit_kind?: 'none' | 'people' | 'hours'
+          limit_people?: number | null
+          limit_hours?: number | null
+          filled_people?: number
+          filled_hours?: number
+          contact_email?: string | null
           is_published?: boolean
           sort_order?: number
           created_by?: string | null
@@ -562,6 +602,9 @@ export type Database = {
           summary: string | null
           body: string | null
           theme: string | null
+          // Picture + the per-year facts, out of the code (20260922140000_*.sql)
+          image_url: string | null
+          info: Json
           url: string | null
           is_published: boolean
           sort_order: number
@@ -582,6 +625,8 @@ export type Database = {
           summary?: string | null
           body?: string | null
           theme?: string | null
+          image_url?: string | null
+          info?: Json
           url?: string | null
           is_published?: boolean
           sort_order?: number
@@ -602,6 +647,8 @@ export type Database = {
           summary?: string | null
           body?: string | null
           theme?: string | null
+          image_url?: string | null
+          info?: Json
           url?: string | null
           is_published?: boolean
           sort_order?: number
@@ -746,6 +793,8 @@ export type Database = {
           perk_code: string | null
           term_start: string | null
           term_end: string | null
+          /** Warn staff this many days before term_end. */
+          remind_days: number
           is_active: boolean
           sort_order: number
           created_by: string | null
@@ -765,6 +814,7 @@ export type Database = {
           perk_code?: string | null
           term_start?: string | null
           term_end?: string | null
+          remind_days?: number
           is_active?: boolean
           sort_order?: number
           created_by?: string | null
@@ -784,6 +834,7 @@ export type Database = {
           perk_code?: string | null
           term_start?: string | null
           term_end?: string | null
+          remind_days?: number
           is_active?: boolean
           sort_order?: number
           created_by?: string | null
@@ -1086,6 +1137,94 @@ export type Database = {
           blurb?: string | null
           is_host?: boolean
           at_bunfest?: boolean
+          is_published?: boolean
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      // The volunteer roster (supabase/migrations/20260922140000_volunteers_and_event_content.sql)
+      volunteers: {
+        Row: {
+          id: string
+          org_id: string
+          name: string
+          email: string | null
+          phone: string | null
+          status: 'prospect' | 'active' | 'paused' | 'former'
+          roles: string[]
+          started_on: string | null
+          orientation_on: string | null
+          notes: string | null
+          photo_url: string | null
+          access_token: string
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          name: string
+          email?: string | null
+          phone?: string | null
+          status?: 'prospect' | 'active' | 'paused' | 'former'
+          roles?: string[]
+          started_on?: string | null
+          orientation_on?: string | null
+          notes?: string | null
+          photo_url?: string | null
+          created_by?: string | null
+        }
+        Update: {
+          name?: string
+          email?: string | null
+          phone?: string | null
+          status?: 'prospect' | 'active' | 'paused' | 'former'
+          roles?: string[]
+          started_on?: string | null
+          orientation_on?: string | null
+          notes?: string | null
+          photo_url?: string | null
+        }
+        Relationships: []
+      }
+      // The "at the festival" cards, per event and year
+      event_features: {
+        Row: {
+          id: string
+          org_id: string
+          event_slug: string
+          year: number
+          title: string
+          blurb: string | null
+          icon: string | null
+          link_url: string | null
+          is_published: boolean
+          sort_order: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          event_slug?: string
+          year?: number
+          title: string
+          blurb?: string | null
+          icon?: string | null
+          link_url?: string | null
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+        }
+        Update: {
+          event_slug?: string
+          year?: number
+          title?: string
+          blurb?: string | null
+          icon?: string | null
+          link_url?: string | null
           is_published?: boolean
           sort_order?: number
         }
@@ -1490,6 +1629,11 @@ export type Database = {
           on_date: string
           hours: number
           activity: string
+          // Whose, who said so, and whether staff confirmed it (20260922140000_*.sql)
+          volunteer_id: string | null
+          status: 'logged' | 'confirmed'
+          source: 'self' | 'staff' | 'checkin'
+          note: string | null
           added_by: string | null
           created_at: string
         }
@@ -1501,6 +1645,10 @@ export type Database = {
           on_date: string
           hours: number
           activity: string
+          volunteer_id?: string | null
+          status?: 'logged' | 'confirmed'
+          source?: 'self' | 'staff' | 'checkin'
+          note?: string | null
           added_by?: string | null
         }
         Update: {
@@ -1509,6 +1657,10 @@ export type Database = {
           on_date?: string
           hours?: number
           activity?: string
+          volunteer_id?: string | null
+          status?: 'logged' | 'confirmed'
+          source?: 'self' | 'staff' | 'checkin'
+          note?: string | null
         }
         Relationships: []
       }
@@ -1843,6 +1995,39 @@ export type Database = {
         Returns: Json
       }
       hopshop_reorder: { Args: { p_org: string }; Returns: Json }
+      // Volunteers, hours and event content (supabase/migrations/20260922140000_*.sql)
+      my_volunteer_record: { Args: { p_token: string }; Returns: Json }
+      log_my_hours: {
+        Args: { p_token: string; p_on_date: string; p_hours: number; p_activity: string; p_note?: string | null }
+        Returns: string
+      }
+      delete_my_hours: { Args: { p_token: string; p_entry: string }; Returns: undefined }
+      set_hours_status: { Args: { p_entry: string; p_status: 'logged' | 'confirmed' }; Returns: undefined }
+      link_volunteer_hours: { Args: { p_volunteer: string }; Returns: number }
+      sponsors_expiring: { Args: { p_org: string }; Returns: Json }
+      set_invite_details: {
+        Args: {
+          p_code: string
+          p_name?: string | null
+          p_email?: string | null
+          p_phone?: string | null
+          p_position?: string | null
+          p_note?: string | null
+        }
+        Returns: undefined
+      }
+      open_invites: { Args: { p_org: string }; Returns: Json }
+      revoke_invite: { Args: { p_code: string }; Returns: undefined }
+      save_member_profile: {
+        Args: {
+          p_membership: string
+          p_display_name?: string | null
+          p_title?: string | null
+          p_photo_url?: string | null
+          p_show_on_about?: boolean | null
+        }
+        Returns: undefined
+      }
       // BunFest content + Happy Tails (supabase/migrations/2026092212/13*.sql)
       bunfest_vendors_public: {
         Args: Record<string, never>

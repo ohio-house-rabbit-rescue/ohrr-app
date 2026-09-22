@@ -18,8 +18,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Bump versionCode for EVERY upload to Play (it must always increase);
         // versionName is what people see (keep it in step with package.json).
-        versionCode 5
-        versionName "0.2.3"
+        versionCode 6
+        versionName "0.3.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

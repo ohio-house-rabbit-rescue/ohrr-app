@@ -4,6 +4,17 @@ import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { Spinner, FormError, staffInput } from '../components/staffui'
+import QrCode from '../components/QrCode'
+import StaffAvatar from '../components/StaffAvatar'
+import StaffImageField from '../components/StaffImageField'
+import { shareText } from '../features/share/share'
+import { APP_URL } from '../features/mybunny/ics'
+
+/** The sign-up link a QR code carries: the join screen with the code in it. */
+function joinUrl(code: string): string {
+  const base = APP_URL.replace(/\/my-bunny\/?$/, '')
+  return code ? `${base}/staff/join?code=${encodeURIComponent(code)}` : `${base}/staff/join`
+}
 import {
   PERMISSION_CATALOG,
   PRESETS,
@@ -18,6 +29,11 @@ interface Member {
   email: string | null
   role: MembershipRole
   status: MembershipStatus
+  // Team profile — a photo is optional; a bunny stands in (20260922140000_*.sql)
+  display_name: string | null
+  title: string | null
+  photo_url: string | null
+  show_on_about: boolean
 }
 
 // Capabilities grouped by area, for the per-member toggle UI.
@@ -39,10 +55,12 @@ function InvitePanel({ orgId, onInvited }: { orgId: string; onInvited: () => voi
   const [role, setRole] = useState<MembershipRole>('staff')
   const [preset, setPreset] = useState<string>('Hop Shop Manager')
   const [customCaps, setCustomCaps] = useState<Set<Capability>>(new Set())
+  const [who, setWho] = useState({ name: '', email: '', phone: '', position: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [code, setCode] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const setWhoField = (k: keyof typeof who) => (e: { target: { value: string } }) => setWho({ ...who, [k]: e.target.value })
 
   const isCustom = preset === '__custom__'
 
@@ -70,7 +88,18 @@ function InvitePanel({ orgId, onInvited }: { orgId: string; onInvited: () => voi
         p_max_uses: 1,
       })
       if (error) throw error
-      setCode(data as string)
+      const newCode = data as string
+      // Remember who it was for, so a pending invite can be chased or re-sent.
+      if (who.name || who.email || who.phone || who.position) {
+        await supabase.rpc('set_invite_details', {
+          p_code: newCode,
+          p_name: who.name || null,
+          p_email: who.email || null,
+          p_phone: who.phone || null,
+          p_position: who.position || null,
+        })
+      }
+      setCode(newCode)
       onInvited()
     } catch (err) {
       setError(errMessage(err))
@@ -98,6 +127,31 @@ function InvitePanel({ orgId, onInvited }: { orgId: string; onInvited: () => voi
       </div>
 
       <form onSubmit={generate} className="space-y-3">
+        {/* Who it's for — so a pending invite isn't an anonymous code. */}
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+          <label className="block text-sm font-semibold text-slate-700">
+            Their name
+            <input className={staffInput} value={who.name} onChange={setWhoField('name')} placeholder="Bev" />
+          </label>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-semibold text-slate-700">
+              Email
+              <input className={staffInput} type="email" value={who.email} onChange={setWhoField('email')} />
+            </label>
+            <label className="block text-sm font-semibold text-slate-700">
+              Text / phone
+              <input className={staffInput} type="tel" value={who.phone} onChange={setWhoField('phone')} />
+            </label>
+          </div>
+          <label className="block text-sm font-semibold text-slate-700">
+            The position they asked about
+            <input className={staffInput} value={who.position} onChange={setWhoField('position')} placeholder="Hop Shop, Saturdays" />
+          </label>
+          <p className="text-xs text-slate-500">
+            Optional, but it means you can see who an unused invite belongs to — and send it to them in a tap.
+          </p>
+        </div>
+
         <div className="flex gap-3">
           <label className="block flex-1 text-sm font-semibold text-slate-700">
             Role
@@ -176,23 +230,59 @@ function InvitePanel({ orgId, onInvited }: { orgId: string; onInvited: () => voi
       </form>
 
       {code && (
-        <div className="rounded-xl border border-brand-blue/30 bg-brand-blue-50/60 p-3">
+        <div className="space-y-3 rounded-xl border border-brand-blue/30 bg-brand-blue-50/60 p-3">
           <p className="text-xs font-bold uppercase tracking-wide text-brand-blue">
-            Invite code — share with the worker
+            Invite {who.name ? `for ${who.name}` : '— share with the worker'}
           </p>
-          <div className="mt-1.5 flex items-center justify-between gap-2">
+
+          {/* Show the code to a phone camera — no typing, no transcription. */}
+          <div className="flex flex-col items-center gap-2">
+            <QrCode value={joinUrl(code)} size={188} alt="QR code to join the OHRR staff app" />
+            <p className="text-center text-xs text-slate-600">
+              Hold this up — their camera opens the sign-up with the code already in it.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2">
             <code className="font-mono text-lg font-black tracking-wider text-ink">{code}</code>
-            <button
-              type="button"
-              onClick={copy}
-              className="rounded-full bg-brand-blue px-3 py-1 text-xs font-bold text-white"
-            >
+            <button type="button" onClick={copy} className="rounded-full bg-brand-blue px-3 py-1.5 text-xs font-bold text-white">
               {copied ? 'Copied!' : 'Copy'}
             </button>
           </div>
-          <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
-            Single-use, expires in 14 days. The worker signs in, then enters this at{' '}
-            <span className="font-semibold">/staff/join</span>.
+
+          <div className="flex flex-wrap gap-2">
+            {who.email && (
+              <a
+                href={`mailto:${who.email}?subject=${encodeURIComponent('Your OHRR staff invite')}&body=${encodeURIComponent(
+                  `Hi${who.name ? ` ${who.name}` : ''},\n\nHere's your invite to the OHRR staff app${who.position ? ` for ${who.position}` : ''}. Open this link, create your sign-in, and you're in:\n\n${joinUrl(code)}\n\nOr enter the code ${code} at ${joinUrl('')}\n\nIt's single-use and expires in 14 days.\n\nOhio House Rabbit Rescue`,
+                )}`}
+                className="rounded-full bg-brand-blue px-3.5 py-2 text-xs font-bold text-white"
+              >
+                Email it
+              </a>
+            )}
+            {who.phone && (
+              <a
+                href={`sms:${who.phone.replace(/[^0-9+]/g, '')}?&body=${encodeURIComponent(
+                  `Your OHRR staff invite: ${joinUrl(code)} (code ${code})`,
+                )}`}
+                className="rounded-full bg-brand-blue px-3.5 py-2 text-xs font-bold text-white"
+              >
+                Text it
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => shareText(`Your OHRR staff invite: ${joinUrl(code)} (code ${code})`, 'OHRR staff invite')}
+              className="rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-600"
+            >
+              Share
+            </button>
+          </div>
+
+          <p className="text-xs leading-relaxed text-slate-500">
+            Single-use, expires in 14 days. They sign in (or create a sign-in) and the code joins them to the team with
+            the access you chose.
           </p>
         </div>
       )}
@@ -208,6 +298,7 @@ function MemberCard({
   canManage,
   onToggleCap,
   onToggleStatus,
+  onProfileSaved,
 }: {
   member: Member
   isSelf: boolean
@@ -215,9 +306,11 @@ function MemberCard({
   canManage: boolean
   onToggleCap: (memId: string, key: Capability, grant: boolean) => Promise<void>
   onToggleStatus: (member: Member) => Promise<void>
+  onProfileSaved: () => Promise<void>
 }) {
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [statusBusy, setStatusBusy] = useState(false)
+  const [editingProfile, setEditingProfile] = useState(false)
   const isAdminish = member.role === 'owner' || member.role === 'admin'
 
   const handleCap = async (key: Capability, grant: boolean) => {
@@ -235,18 +328,28 @@ function MemberCard({
   return (
     <Card className="space-y-2.5">
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="break-all font-display text-[15px] font-extrabold text-ink">
-              {member.email ?? 'Team member'}
-            </span>
-            {isSelf && <span className="shrink-0 text-xs font-bold text-slate-400">(you)</span>}
+        <div className="flex min-w-0 items-start gap-3">
+          <StaffAvatar name={member.display_name || member.email || 'Team member'} photoUrl={member.photo_url} size={52} />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="break-all font-display text-[15px] font-extrabold text-ink">
+                {member.display_name || member.email || 'Team member'}
+              </span>
+              {isSelf && <span className="shrink-0 text-xs font-bold text-slate-400">(you)</span>}
+            </div>
+            {member.title && <span className="block text-xs font-semibold text-slate-500">{member.title}</span>}
+            {member.display_name && member.email && (
+              <span className="block break-all text-xs text-slate-400">{member.email}</span>
+            )}
+            {!member.email && !member.display_name && (
+              <span className="font-mono text-[11px] text-slate-400">ID {member.user_id.slice(0, 8)}</span>
+            )}
+            {(isSelf || canManage) && (
+              <button type="button" onClick={() => setEditingProfile((v) => !v)} className="mt-1 text-xs font-bold text-brand-blue">
+                {editingProfile ? 'Close' : member.photo_url ? 'Edit photo & title' : 'Add a photo & title'}
+              </button>
+            )}
           </div>
-          {!member.email && (
-            <span className="font-mono text-[11px] text-slate-400">
-              ID {member.user_id.slice(0, 8)}
-            </span>
-          )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <Badge tone={isAdminish ? 'blue' : 'slate'}>
@@ -255,6 +358,16 @@ function MemberCard({
           {member.status === 'disabled' && <Badge tone="orange">Disabled</Badge>}
         </div>
       </div>
+
+      {editingProfile && (
+        <ProfileForm
+          member={member}
+          onDone={async () => {
+            setEditingProfile(false)
+            await onProfileSaved()
+          }}
+        />
+      )}
 
       {isAdminish ? (
         <p className="text-sm text-slate-500">Full access — holds every capability.</p>
@@ -328,10 +441,20 @@ export default function StaffTeam() {
     setError(null)
     // Prefer list_org_members() so members show by email. If that function hasn't
     // been applied to the DB yet, fall back to the memberships table (IDs only).
-    const [memRes, grantRes] = await Promise.all([
+    const [memRes, grantRes, profileRes] = await Promise.all([
       supabase.rpc('list_org_members', { p_org: orgId }),
       supabase.from('membership_permissions').select('membership_id, permission_key'),
+      // Photos and titles live on the memberships row; list_org_members()
+      // predates them, so they're read alongside and merged in.
+      supabase.from('memberships').select('id, display_name, title, photo_url, show_on_about').eq('org_id', orgId),
     ])
+    const profiles = new Map(
+      (profileRes.data ?? []).map((r) => [
+        r.id,
+        { display_name: r.display_name ?? null, title: r.title ?? null, photo_url: r.photo_url ?? null, show_on_about: Boolean(r.show_on_about) },
+      ]),
+    )
+    const blankProfile = { display_name: null, title: null, photo_url: null, show_on_about: false }
 
     let mem: Member[]
     if (!memRes.error && memRes.data) {
@@ -341,11 +464,12 @@ export default function StaffTeam() {
         email: r.email,
         role: r.role,
         status: r.status,
+        ...(profiles.get(r.membership_id) ?? blankProfile),
       }))
     } else {
       const fb = await supabase
         .from('memberships')
-        .select('id, user_id, role, status')
+        .select('id, user_id, role, status, display_name, title, photo_url, show_on_about')
         .eq('org_id', orgId)
         .order('created_at')
       if (fb.error) {
@@ -359,6 +483,10 @@ export default function StaffTeam() {
         email: null,
         role: r.role,
         status: r.status,
+        display_name: r.display_name ?? null,
+        title: r.title ?? null,
+        photo_url: r.photo_url ?? null,
+        show_on_about: Boolean(r.show_on_about),
       }))
     }
 
@@ -463,6 +591,7 @@ export default function StaffTeam() {
                 isSelf={m.user_id === user?.id}
                 grants={grantMap.get(m.id) ?? new Set()}
                 canManage={canManage}
+                onProfileSaved={load}
                 onToggleCap={toggleCap}
                 onToggleStatus={toggleStatus}
               />
@@ -476,5 +605,79 @@ export default function StaffTeam() {
         emails hasn’t been added yet — it’s a one-time setup step.)
       </p>
     </Screen>
+  )
+}
+
+/**
+ * A member's own picture and title. Optional by design — plenty of volunteers
+ * would rather not be photographed, and the team list draws a bunny instead.
+ * A member may always edit their own; staff.permissions.manage may edit anyone's.
+ */
+function ProfileForm({ member, onDone }: { member: Member; onDone: () => Promise<void> }) {
+  const { user } = useAuth()
+  const [d, setD] = useState({
+    display_name: member.display_name ?? '',
+    title: member.title ?? '',
+    photo_url: member.photo_url ?? '',
+    show_on_about: member.show_on_about,
+  })
+  const [busy, setBusy] = useState(false)
+  const [imageBusy, setImageBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const save = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      const { error } = await supabase.rpc('save_member_profile', {
+        p_membership: member.id,
+        p_display_name: d.display_name.trim() || null,
+        p_title: d.title.trim(),
+        p_photo_url: d.photo_url.trim(),
+        p_show_on_about: d.show_on_about,
+      })
+      if (error) throw error
+      await onDone()
+    } catch (e) {
+      setError(errMessage(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-brand-blue/20 bg-brand-blue-50/40 p-3">
+      <StaffImageField
+        label="Photo"
+        hint="Entirely optional — without one the team list shows a bunny with an excuse."
+        value={d.photo_url}
+        userId={user?.id ?? ''}
+        onChange={(url) => setD({ ...d, photo_url: url })}
+        onBusyChange={setImageBusy}
+      />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="block text-sm font-semibold text-slate-700">
+          Name to show
+          <input className={staffInput} value={d.display_name} onChange={(e) => setD({ ...d, display_name: e.target.value })} placeholder="Bev" />
+        </label>
+        <label className="block text-sm font-semibold text-slate-700">
+          What they do
+          <input className={staffInput} value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} placeholder="Adoption Coordinator" />
+        </label>
+      </div>
+      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+        <input
+          type="checkbox"
+          className="h-5 w-5 rounded border-slate-300 text-brand-blue"
+          checked={d.show_on_about}
+          onChange={(e) => setD({ ...d, show_on_about: e.target.checked })}
+        />
+        Show on the public About page
+      </label>
+      <FormError>{error}</FormError>
+      <button type="button" onClick={save} disabled={busy || imageBusy} className={`${btn.primary} w-full disabled:opacity-60`}>
+        {busy ? 'Saving…' : 'Save'}
+      </button>
+    </div>
   )
 }

@@ -6,6 +6,7 @@ import { ohrr } from '../data/ohrr'
 import { Screen, Card, Badge, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 import { RabbitPhoto } from '../components/RabbitPhoto'
+import ShareButton, { appLink } from '../components/ShareButton'
 
 export default function AdoptRabbit() {
   const { id } = useParams()
@@ -143,6 +144,20 @@ export default function AdoptRabbit() {
             Apply to adopt {r.name}
             <Icon name="chevron" size={16} />
           </Link>
+          <ShareButton
+            className="block text-center"
+            label={`Share ${r.name}`}
+            filename={`ohrr-${r.name.toLowerCase().replace(/\s+/g, '-')}.png`}
+            caption={`${r.name} is looking for a home through Ohio House Rabbit Rescue.${r.description ? ` ${r.description}` : ''}`}
+            card={{
+              kicker: 'Looking for a home',
+              title: `Meet ${r.name}`,
+              subtitle: [r.age, r.sex, r.breed].filter(Boolean).join(' · '),
+              photoUrl: r.photos?.[0] ?? r.photo,
+              link: appLink(`/adopt/${r.id}`),
+              cta: 'Adopt from OHRR',
+            }}
+          />
           <p className="text-center text-xs leading-relaxed text-slate-500">
             Adoptions are by appointment ·{' '}
             <a href={ohrr.phoneHref} className="font-semibold text-brand-blue">

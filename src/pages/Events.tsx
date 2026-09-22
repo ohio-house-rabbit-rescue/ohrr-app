@@ -21,6 +21,14 @@ function EventCard({ event: e, past = false }: { event: EventItem; past?: boolea
   const day = new Date(e.startsAt)
   return (
     <Card className={past ? 'opacity-75' : ''}>
+      {e.imageUrl && (
+        <img
+          src={e.imageUrl}
+          alt=""
+          loading="lazy"
+          className="mb-3 -mt-1 aspect-[16/9] w-full rounded-xl object-cover"
+        />
+      )}
       <div className="flex gap-3.5">
         {/* date tile */}
         <span className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-blue-50 leading-none text-brand-blue">

@@ -56,6 +56,7 @@ export default function StaffLayout() {
     { to: '/staff/hopshop', label: 'Hop Shop', show: Boolean(membership) },
     { to: '/staff/announcements', label: 'Announcements', show: can('announcements.post') },
     { to: '/staff/home-screen', label: 'Home screen cards', show: can('announcements.post') },
+    { to: '/staff/volunteers', label: 'Volunteers — roster & hours', show: can('volunteers.shifts.manage') || can('bookings.manage') },
     { to: '/staff/volunteer', label: 'Volunteer opportunities', show: can('volunteers.shifts.manage') },
     { to: '/staff/learn', label: 'Care guides & pages', show: can('content.education.edit') },
     { to: '/staff/vets', label: 'Vet directory', show: can('content.education.edit') },
@@ -72,7 +73,8 @@ export default function StaffLayout() {
       show: can('staff.invite') || can('staff.permissions.manage'),
     },
     { to: '/staff/activity', label: 'Activity', show: can('audit.view') },
-    { to: '/staff/settings', label: 'Settings', show: can('settings.manage') },
+    { to: '/staff/features', label: 'Features — turn things on & off', show: can('settings.manage') },
+    { to: '/staff/details', label: 'OHRR details — hours, phone, address', show: can('settings.manage') },
   ].filter((i) => i.show)
 
   // Which section are we in (for the menu button label)?

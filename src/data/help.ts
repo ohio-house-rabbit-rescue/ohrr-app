@@ -164,6 +164,11 @@ export const faqCategories: FaqCategory[] = [
         a: 'No. Saving BunFest sessions and following bunnies work without one. You can optionally add your email in Settings so OHRR can reach you.',
         link: { label: 'Settings', to: '/settings' },
       },
+      {
+        q: 'I volunteer at OHRR — where do I sign in?',
+        a: 'Staff and volunteers with an OHRR account sign in at the staff area. If you only want to see your volunteer hours, you don’t need an account at all — ask OHRR for your private hours link.',
+        link: { label: 'Staff sign-in', to: '/staff' },
+      },
     ],
   },
 ]

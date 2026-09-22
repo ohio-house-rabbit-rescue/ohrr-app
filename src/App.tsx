@@ -77,7 +77,8 @@ import StaffRaffle from './pages/StaffRaffle'
 import PartnersPage from './features/sponsors/PartnersPage'
 import PartnerPerksPage from './features/sponsors/PartnerPerksPage'
 import StaffSponsors from './pages/StaffSponsors'
-import StaffSettings from './pages/StaffSettings'
+import StaffFeatures from './pages/StaffFeatures'
+import StaffOrgDetails from './pages/StaffOrgDetails'
 import StaffBunnyHelp from './pages/StaffBunnyHelp'
 import StaffInbox from './pages/StaffInbox'
 // My Bunny (local-first care companion) — lazy so it stays out of the main bundle
@@ -98,6 +99,8 @@ const BreedDetail = lazy(() => import('./features/breeds/pages/BreedDetail'))
 const Outreach = lazy(() => import('./features/share/pages/Outreach'))
 const StaffBunfest = lazy(() => import('./features/bunfest/pages/StaffBunfest'))
 const StaffTails = lazy(() => import('./features/tails/pages/StaffTails'))
+const MyHours = lazy(() => import('./features/volunteers/pages/MyHours'))
+const StaffVolunteers = lazy(() => import('./features/volunteers/pages/StaffVolunteers'))
 const PostEditor = lazy(() => import('./features/share/pages/PostEditor'))
 
 export default function App() {
@@ -139,6 +142,8 @@ export default function App() {
         <Route path="/volunteer" element={<Volunteer />} />
         <Route path="/volunteer/signup" element={<VolunteerSignup />} />
         <Route path="/volunteer/foster" element={<FosterForm />} />
+        <Route path="/volunteer/hours" element={<Suspense fallback={null}><MyHours /></Suspense>} />
+        <Route path="/volunteer/hours/:token" element={<Suspense fallback={null}><MyHours /></Suspense>} />
         <Route path="/volunteer/:slug" element={<VolunteerWay />} />
         <Route path="/support" element={<Give />} />
         <Route path="/hop-shop" element={<HopShop />} />
@@ -212,6 +217,7 @@ export default function App() {
           <Route path="events" element={<StaffEvents />} />
           <Route path="bunfest" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
           <Route path="tails" element={<Suspense fallback={null}><StaffTails /></Suspense>} />
+          <Route path="volunteers" element={<Suspense fallback={null}><StaffVolunteers /></Suspense>} />
           <Route path="bunfest/vendors" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
           <Route path="bunfest/partners" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
           <Route path="raffle" element={<StaffRaffle />} />
@@ -220,7 +226,10 @@ export default function App() {
           <Route path="bunny-help" element={<StaffBunnyHelp />} />
           <Route path="team" element={<StaffTeam />} />
           <Route path="activity" element={<StaffActivity />} />
-          <Route path="settings" element={<StaffSettings />} />
+          <Route path="features" element={<StaffFeatures />} />
+          <Route path="details" element={<StaffOrgDetails />} />
+          {/* The old combined screen — anyone with it bookmarked lands on Features. */}
+          <Route path="settings" element={<Navigate to="/staff/features" replace />} />
           <Route path="inbox" element={<StaffInbox />} />
           <Route path="bookings" element={<StaffBookings />} />
           <Route path="hours-letter" element={<ServiceLetter />} />

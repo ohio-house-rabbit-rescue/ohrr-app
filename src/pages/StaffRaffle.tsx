@@ -4,7 +4,7 @@
 // holds the two session close times, an optional intro line, and the raffle
 // ticket pricing + details (the public raffle page shows those only when staff
 // have entered them; the ticket form itself is a test feature switched on in
-// /staff/settings). The public catalog shows the intro line only, never the times.
+// /staff/features). The public catalog shows the intro line only, never the times.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, errMessage } from '../lib/supabase'
@@ -790,7 +790,7 @@ function SetupPanel({
                 The in-app ticket reservation form is a test feature: it appears on the raffle
                 page only while switched on in{' '}
                 {canManageSettings ? (
-                  <Link to="/staff/settings" className="font-bold text-brand-blue hover:text-brand-blue-dark">
+                  <Link to="/staff/features" className="font-bold text-brand-blue hover:text-brand-blue-dark">
                     Settings
                   </Link>
                 ) : (

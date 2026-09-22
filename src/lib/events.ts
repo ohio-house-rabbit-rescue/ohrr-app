@@ -29,6 +29,8 @@ export function rowToEvent(r: EventRow): EventItem {
     body: r.body ?? undefined,
     theme: r.theme ?? undefined,
     url: r.url ?? undefined,
+    imageUrl: r.image_url ?? undefined,
+    info: (r.info as Record<string, unknown> | null) ?? undefined,
   }
 }
 

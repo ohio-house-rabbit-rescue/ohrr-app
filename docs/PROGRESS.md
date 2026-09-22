@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-22 (round 3)
+- **Last updated:** 2026-09-22 (round 4)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,51 @@
 ---
 
 ## Current state (at a glance)
+
+- **Volunteers, per-year event content, and the rest of the sponsor's list (2026-09-22,
+  0.3.0 · rev 6, latest).** **Paste `APPLY-12-VOLUNTEERS-AND-EVENT-CONTENT.sql`** (Drive root
+  `PASTE-THIS-INTO-SUPABASE.sql`), after APPLY-8 … 11 if those haven't been run.
+  - **A volunteer roster, and hours volunteers log themselves.** `volunteers` (contact, status,
+    roles, orientation date, notes) + `volunteers.access_token` — a private link and QR code,
+    handed over by staff, that opens **My volunteer hours** (`/volunteer/hours/:token`,
+    remembered on the device). Totals for today / this week / month / year / every year, a
+    branded card to share or hand to a school (`features/volunteers/hoursCard.ts`), and
+    self-logging through `log_my_hours()` which lands as **logged** for staff to confirm
+    (`set_hours_status`). **Staff → Volunteers** has the roster, each person's link + QR, and a
+    "To confirm" tab; `link_volunteer_hours()` attaches hours already recorded against an email.
+    Decision (sponsor): volunteers log, staff correct.
+  - **Opportunities limited by people or hours.** `volunteer_opportunities.limit_kind` +
+    `limit_people` / `limit_hours` / `filled_*`; the staff form asks which, the public card shows
+    "4 of 6 spots left" / "12 of 30 hours still needed" and flips to Full.
+  - **Events** take a picture (camera or file) and already move themselves to Past when their end
+    passes — the editor now says so, and shows the picture on the public card.
+  - **Numbers are typed, not nudged** — the browser's spinner arrows are hidden app-wide
+    (`index.css`); screens that want stepping (Hop Shop stock) keep their own big − / + buttons.
+  - **Sponsors** gain `remind_days` (default 21) and `sponsors_expiring()`; the staff dashboard
+    warns before a term lapses instead of a sponsor quietly vanishing.
+  - **Team photos, optional.** `memberships.photo_url` / `display_name` / `title` /
+    `show_on_about` via `save_member_profile()`; without a photo the app draws a bunny with an
+    excuse ("Mid-zoomies, no photo"), the same one for the same person every time
+    (`components/StaffAvatar.tsx`).
+  - **Invites** record who they're for (name, email, phone, the position asked about) and show a
+    **QR code** that opens `/staff/join?code=…`; Email it / Text it / Share are one tap.
+  - **Settings made sense of** (sponsor: "setting in the setting"): the staff screen splits into
+    **Features** (admin on/off switches, `features/settings/features.ts` — BunFest section,
+    raffle tickets, phone-app raffle, volunteer self-logging) and **OHRR details** (hours, phone,
+    address, notice). Staff sign-in leaves the *visitor's* Settings; it's in Help and at /staff.
+  - **BunFest content per year, not in code.** `event_features` (the "at the festival" cards) and
+    `events.info` (admission, parking, the rabbit rule, tickets / hotel / volunteer / merch links,
+    the logo credit) — edited under **Staff → BunFest → This year**, read by the BunFest home and
+    Plan your visit. Seeded from the published 2026 site, including this year's gaps: hotel and
+    BunFest-volunteer links, the merch store, the RHDV2 rule and the logo credit.
+  - **Share to social.** `features/share/socialCard.ts` paints a 1080² OHRR-branded card (mark,
+    photo, kicker, title, QR back to the app) and hands it to the share sheet;
+    `components/ShareButton.tsx` puts it on a rabbit, a Happy Tail and BunFest.
+  - **Breeds suggest and still accept anything** (`components/BreedInput.tsx`, the breed guide's
+    24 + "Mixed breed", "Not sure") on My Bunny and the adoptable-rabbit form.
+  - Verified: `tsc` + `build` clean in both repos; the social card rendered in the browser with a
+    real photo, QR and branding; public pages walked at phone width. Staff screens are
+    build-verified only, and APPLY-12 is not yet pasted.
 
 - **Revision stamp, staff Back, tidier Settings (2026-09-22, 0.2.3 · rev 5, latest).** Sponsor:
   "remove the photo credits … make it a single line at the very end that can open when selected",

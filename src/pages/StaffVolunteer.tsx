@@ -4,7 +4,7 @@ import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { Spinner, FormError, staffInput } from '../components/staffui'
-import { OPP_CATEGORIES, categoryLabel, type VolunteerOpp } from '../lib/volunteerOpps'
+import { LIMIT_KINDS, OPP_CATEGORIES, categoryLabel, remainingLabel, type VolunteerOpp } from '../lib/volunteerOpps'
 
 interface Draft {
   category: string
@@ -14,6 +14,13 @@ interface Draft {
   spots: string
   detail: string
   is_published: boolean
+  // How many can take it on: nothing, a headcount, or hours to cover.
+  limit_kind: 'none' | 'people' | 'hours'
+  limit_people: string
+  limit_hours: string
+  filled_people: string
+  filled_hours: string
+  contact_email: string
 }
 
 const emptyDraft: Draft = {
@@ -24,6 +31,12 @@ const emptyDraft: Draft = {
   spots: '',
   detail: '',
   is_published: true,
+  limit_kind: 'none',
+  limit_people: '',
+  limit_hours: '',
+  filled_people: '0',
+  filled_hours: '0',
+  contact_email: '',
 }
 
 function draftFrom(o: VolunteerOpp): Draft {
@@ -35,6 +48,24 @@ function draftFrom(o: VolunteerOpp): Draft {
     spots: o.spots ?? '',
     detail: o.detail ?? '',
     is_published: o.is_published,
+    limit_kind: o.limit_kind ?? 'none',
+    limit_people: o.limit_people == null ? '' : String(o.limit_people),
+    limit_hours: o.limit_hours == null ? '' : String(o.limit_hours),
+    filled_people: String(o.filled_people ?? 0),
+    filled_hours: String(o.filled_hours ?? 0),
+    contact_email: o.contact_email ?? '',
+  }
+}
+
+/** The columns the limit adds, shared by create and edit. */
+function limitFields(d: Draft) {
+  return {
+    limit_kind: d.limit_kind,
+    limit_people: d.limit_kind === 'people' && d.limit_people ? Number(d.limit_people) : null,
+    limit_hours: d.limit_kind === 'hours' && d.limit_hours ? Number(d.limit_hours) : null,
+    filled_people: Number(d.filled_people) || 0,
+    filled_hours: Number(d.filled_hours) || 0,
+    contact_email: d.contact_email.trim() || null,
   }
 }
 
@@ -110,13 +141,64 @@ function OppForm({
           />
         </label>
         <label className="block flex-1 text-sm font-semibold text-slate-700">
-          Spots / need
+          Note on the card <span className="font-normal text-slate-400">(optional)</span>
           <input
             className={staffInput}
             value={draft.spots}
             onChange={set('spots')}
-            placeholder="2 open"
+            placeholder="Bring water"
           />
+        </label>
+      </div>
+
+      {/* How much help this needs — a headcount, or hours to cover. */}
+      <div className="space-y-3 rounded-2xl border border-brand-blue/20 bg-brand-blue-50/40 p-3">
+        <label className="block text-sm font-semibold text-slate-700">
+          How is it limited?
+          <select
+            className={staffInput}
+            value={draft.limit_kind}
+            onChange={(e) => setDraft((d) => ({ ...d, limit_kind: e.target.value as Draft['limit_kind'] }))}
+          >
+            {LIMIT_KINDS.map((k) => (
+              <option key={k.value} value={k.value}>
+                {k.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {draft.limit_kind === 'people' && (
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-sm font-semibold text-slate-700">
+              People needed
+              <input inputMode="numeric" className={staffInput} value={draft.limit_people} onChange={set('limit_people')} placeholder="6" />
+            </label>
+            <label className="block text-sm font-semibold text-slate-700">
+              Already signed up
+              <input inputMode="numeric" className={staffInput} value={draft.filled_people} onChange={set('filled_people')} />
+            </label>
+          </div>
+        )}
+        {draft.limit_kind === 'hours' && (
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-sm font-semibold text-slate-700">
+              Hours to cover
+              <input inputMode="decimal" className={staffInput} value={draft.limit_hours} onChange={set('limit_hours')} placeholder="30" />
+            </label>
+            <label className="block text-sm font-semibold text-slate-700">
+              Covered so far
+              <input inputMode="decimal" className={staffInput} value={draft.filled_hours} onChange={set('filled_hours')} />
+            </label>
+          </div>
+        )}
+        {draft.limit_kind !== 'none' && (
+          <p className="text-xs text-slate-600">
+            The card shows what’s left and says “Full” when it’s covered — nobody has to remember to take it down.
+          </p>
+        )}
+        <label className="block text-sm font-semibold text-slate-700">
+          Who to ask <span className="font-normal text-slate-400">(optional)</span>
+          <input className={staffInput} type="email" value={draft.contact_email} onChange={set('contact_email')} placeholder="bev@…" />
         </label>
       </div>
       <label className="block text-sm font-semibold text-slate-700">
@@ -188,6 +270,7 @@ function OppCard({ item, onChanged }: { item: VolunteerOpp; onChanged: () => voi
         spots: d.spots.trim() || null,
         detail: d.detail.trim() || null,
         is_published: d.is_published,
+        ...limitFields(d),
       })
       .eq('id', item.id)
     if (error) throw error
@@ -239,6 +322,7 @@ function OppCard({ item, onChanged }: { item: VolunteerOpp; onChanged: () => voi
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-slate-600">
         <Badge tone="orange">{categoryLabel(item.category)}</Badge>
+        {remainingLabel(item) && <Badge tone="blue">{remainingLabel(item)}</Badge>}
         {item.when_text && <span>{item.when_text}</span>}
         {item.spots && <span className="font-semibold text-brand-orange">{item.spots}</span>}
       </div>
@@ -341,6 +425,7 @@ export default function StaffVolunteer() {
       spots: d.spots.trim() || null,
       detail: d.detail.trim() || null,
       is_published: d.is_published,
+      ...limitFields(d),
       created_by: userId,
     })
     if (error) throw error

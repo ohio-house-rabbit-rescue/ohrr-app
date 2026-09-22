@@ -100,7 +100,7 @@ export default function BunfestPage() {
         )}
         {/* Prizes staff scanned in (published raffle_prizes) */}
         {p.feature === 'raffle' && <RafflePrizes />}
-        {/* Test feature — renders only while switched on in /staff/settings */}
+        {/* Test feature — renders only while switched on in /staff/features */}
         {p.feature === 'raffle' && <RaffleTickets pricing={auction} />}
 
         {/* Email sign-up (e.g. toymaking) */}

@@ -1,11 +1,14 @@
 import { Link } from 'react-router-dom'
 import { event } from '../data/event'
+import { useEventInfo } from '../features/bunfest/thisYear'
 import { ohrr } from '../data/ohrr'
 import { useBunfestEvent, eventDate, eventTime, mapsUrl } from '../lib/events'
 import { PageHeader, Screen, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 
 export default function Visit() {
+  // Admission, parking and the links OHRR keeps up to date (Staff → BunFest)
+  const info = useEventInfo()
   const bunfest = useBunfestEvent()
   return (
     <>
@@ -62,14 +65,14 @@ export default function Visit() {
         <Card>
           <h3 className="font-display text-base font-extrabold text-ink">Admission</h3>
           <dl className="mt-3 space-y-1.5">
-            {event.admission.map((a) => (
+            {info.admission.map((a) => (
               <div key={a.who} className="flex items-center justify-between text-sm">
                 <dt className="text-slate-600">{a.who}</dt>
                 <dd className="font-bold text-ink">{a.price}</dd>
               </div>
             ))}
           </dl>
-          <p className="mt-2 text-xs text-slate-500">{event.admissionNote}</p>
+          <p className="mt-2 text-xs text-slate-500">{info.admissionNote}</p>
           <a
             href={event.links.tickets}
             target="_blank"
@@ -84,7 +87,7 @@ export default function Visit() {
         <Card>
           <h3 className="font-display text-base font-extrabold text-ink">Good to know</h3>
           <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-slate-600">
-            <li>{event.venue.parking}</li>
+            <li>{info.parking}</li>
             <li>Cash & cards accepted for vendors, the auction, and raffle.</li>
             <li>Bringing your rabbit? Read the Rabbit Attendance Agreement first.</li>
             <li>Comfortable shoes — it’s a full day of browsing and talks.</li>
@@ -99,7 +102,29 @@ export default function Visit() {
             <Link to="/bunfest/p/accommodations" className="inline-flex items-center gap-1 hover:text-brand-blue-dark">
               Accommodations <Icon name="chevron" size={13} />
             </Link>
+            {/* Links OHRR keeps current for the year (Staff → BunFest) */}
+            {info.hotelUrl && (
+              <a href={info.hotelUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-brand-blue-dark">
+                Hotel information <Icon name="external" size={12} />
+              </a>
+            )}
+            {info.volunteerUrl && (
+              <a href={info.volunteerUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-brand-blue-dark">
+                Volunteer at BunFest <Icon name="external" size={12} />
+              </a>
+            )}
+            {info.merchUrl && (
+              <a href={info.merchUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-brand-blue-dark">
+                BunFest merch <Icon name="external" size={12} />
+              </a>
+            )}
           </div>
+          {info.rabbitRule && (
+            <p className="mt-3 rounded-xl bg-brand-orange-50 px-3 py-2 text-xs leading-relaxed text-brand-orange-dark">
+              {info.rabbitRule}
+            </p>
+          )}
+          {info.logoCredit && <p className="mt-2 text-xs text-slate-400">{info.logoCredit}</p>}
         </Card>
 
         {/* Host */}

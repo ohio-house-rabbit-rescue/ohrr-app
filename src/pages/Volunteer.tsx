@@ -7,9 +7,10 @@ import {
   groupVisitNote,
   OHRR_CONTACT_EMAIL,
 } from '../data/volunteer'
-import { useVolunteerOpportunities } from '../lib/volunteerOpps'
+import { isFull, remainingLabel, useVolunteerOpportunities } from '../lib/volunteerOpps'
 import { PageHeader, Screen, SectionLabel, ActionCard, Card, btn } from '../components/ui'
 import MyBookingsCard from '../features/bookings/MyBookingsCard'
+import MyHoursCard from '../features/volunteers/MyHoursCard'
 import { Icon } from '../components/icons'
 import PresentedBy from '../features/sponsors/PresentedBy'
 
@@ -33,6 +34,7 @@ export default function Volunteer() {
       <Screen className="space-y-6">
         <PresentedBy surface="volunteer" />
         <MyBookingsCard />
+        <MyHoursCard />
         <p className="px-1 text-sm leading-relaxed text-slate-600">{volunteerIntro}</p>
 
         {/* The four real positions */}
@@ -73,13 +75,18 @@ export default function Volunteer() {
                       {o.where_text}
                     </p>
                   )}
-                  {o.spots && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-brand-orange">{o.spots}</p>}
+                  {remainingLabel(o) && (
+                    <p className={`mt-1 text-xs font-bold uppercase tracking-wide ${isFull(o) ? 'text-slate-400' : 'text-brand-orange'}`}>
+                      {remainingLabel(o)}
+                    </p>
+                  )}
+                  {o.spots && <p className="mt-1 text-xs font-semibold text-slate-500">{o.spots}</p>}
                   {o.detail && <p className="mt-2 text-sm leading-relaxed text-slate-600">{o.detail}</p>}
                   <Link
                     to={signupHref('Event & Fundraising Volunteer', 'EVENTS', o.title)}
-                    className={`${btn.blue} mt-3 w-full`}
+                    className={`${isFull(o) ? btn.outline : btn.blue} mt-3 w-full`}
                   >
-                    Sign up to help <Icon name="chevron" size={16} />
+                    {isFull(o) ? 'Ask to be on the list' : 'Sign up to help'} <Icon name="chevron" size={16} />
                   </Link>
                 </Card>
               ))}
