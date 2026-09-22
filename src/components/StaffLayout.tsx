@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { useAuth } from '../lib/auth'
 import { Icon } from './icons'
 import ScrollToTop from './ScrollToTop'
+import BackButton from './BackButton'
 
 function roleLabel(role: string | undefined) {
   if (role === 'owner') return 'Owner'
@@ -81,20 +82,23 @@ export default function StaffLayout() {
 
         {/* Top bar */}
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
-          <div className="flex items-center justify-between px-4 py-3">
-            <Link to="/staff" className="flex items-center gap-2" onClick={() => setMenuOpen(false)}>
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-blue text-white">
-                <Icon name="settings" size={17} />
-              </span>
-              <span className="leading-tight">
-                <span className="block font-display text-sm font-extrabold text-ink">OHRR Staff</span>
-                {membership && (
-                  <span className="block text-[11px] font-semibold text-slate-400">
-                    {roleLabel(membership.role)}
-                  </span>
-                )}
-              </span>
-            </Link>
+          <div className="flex items-center justify-between px-3 py-3">
+            <div className="flex min-w-0 items-center gap-1">
+              {pathname !== '/staff' && <BackButton always fallback="/staff" className="text-slate-600 hover:bg-slate-100" />}
+              <Link to="/staff" className="flex items-center gap-2 pl-1" onClick={() => setMenuOpen(false)}>
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-blue text-white">
+                  <Icon name="settings" size={20} />
+                </span>
+                <span className="leading-tight">
+                  <span className="block font-display text-sm font-extrabold text-ink">OHRR Staff</span>
+                  {membership && (
+                    <span className="block text-[11px] font-semibold text-slate-400">
+                      {roleLabel(membership.role)}
+                    </span>
+                  )}
+                </span>
+              </Link>
+            </div>
 
             <div className="flex items-center gap-2">
               {/* Always-available way back to the public app (kept signed in). */}

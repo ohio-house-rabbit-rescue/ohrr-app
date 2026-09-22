@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-21
+- **Last updated:** 2026-09-22
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,6 +19,53 @@
 
 ## Current state (at a glance)
 
+- **Tester-feedback round 1 (2026-09-22, latest).** Sponsor after using the build: the Home help
+  should *pose a question*; icons bigger; a Back button; "Find a time" empty; the Hop Shop needs
+  photo + code + supplier/reorder. **Paste `APPLY-8-BOOKING-SCHEDULE.sql` + `APPLY-9-HOPSHOP-SUPPLIERS.sql`**
+  (Drive root `PASTE-THIS-INTO-SUPABASE.sql` = both).
+  - **Bunny Help asks a question.** Home box is headed "Is something up with your bunny?", the
+    placeholder rotates real questions ("Did my bunny stop eating?" …) and three are tappable
+    chips (`src/features/bunnyhelp/HomeSearch.tsx`). `cleanQuery` strips question forms ("why is",
+    "did my bunny", "what can my bunny eat" → the diet alias) and the ranking puts an exact
+    title/alias phrase first, ahead of the urgency order; the red emergency banner only shows
+    when the *top* answer is an emergency. `scripts/check-help-questions.ts` (10 questions →
+    expected topic) runs with `npx tsx`.
+  - **Bigger icons:** IconTile 44→52 px (icon 22→28), quick-action tiles 38%→48% of the tile,
+    header actions 36→40 px (icon 22), tab bar icons 23→27 + 11 px labels, page-header icon
+    20→26, hero card icon 56→68.
+  - **Back button** (`src/components/BackButton.tsx`) in the OHRR, BunFest and Staff top bars on
+    every non-root screen: `navigate(-1)` when React Router's `history.state.idx > 0`, otherwise
+    up to the nearest tab root (deep links, printed tags, notifications never strand anyone).
+    On narrow phones the top-bar name yields to Back + mark + actions. Android hardware back was
+    already handled in `NativeBridge`.
+  - **Bookings fill themselves** (`20260922100000_booking_schedule.sql`): `booking_types.weekly`
+    (jsonb rules `{days,start,end,capacity,label}`) + `auto_weeks`; `fill_booking_slots(type,
+    force)` makes the next weeks of `booking_slots` (flagged `auto`), runs once a day from the
+    public `booking_slots_open` and immediately when staff save the schedule (force also prunes
+    future empty auto slots no rule makes any more). **Seeded with OHRR's real times read from
+    the SignUp.com sheets the live site links to:** Socialization Sat 1:30–2:30 + 2:30–3:30, Sun
+    1:30–2:30 (4 each); Buncare Mon–Fri 9–10 breakfast (2), Mon–Thu 4–6, Tue–Thu 5:30–7:30, Fri
+    11–1 + 2–4, Sat/Sun 10–12 + 3–5 (uncapped on SignUp.com → 6 here, editable); adoption
+    visits + bonding sessions on the published Sat/Sun 12–4. Staff → Bookings → Set up has the
+    **Every week** editor (day chips, from/to, people, label; "keep N weeks ready"); the public
+    Book page shows "Usual times". Website mirrors both (`src/lib/bookings.ts`, staff Bookings,
+    Book).
+  - **Hop Shop manager rebuilt** (`src/pages/HopShopManager.tsx` + `src/features/hopshop/api.ts`;
+    `20260922110000_hopshop_suppliers.sql`): tabs **Items / Reorder / Suppliers**
+    (`/staff/hopshop[/reorder|/suppliers]`). Item card = photo (native camera or file), name,
+    **code** ("Make one" → `OHRR-XXXXX` tag code, or type/scan a barcode; registered in
+    `item_tags` so scanning opens it), price, stock count, category, shelf, unit, description,
+    supplier + their item #, our cost, reorder point + qty, shelf visibility — all through
+    `save_product()`; `list_products_admin()` feeds the list (search, Low / on-order badges).
+    **Reorder** = `hopshop_reorder()` grouped by supplier with contact/account/how-to-order,
+    "Ordered" → on order, "Arrived" → adds to stock (`hopshop_set_order()`), "Email the order"
+    (mailto with the list) / Copy. **Suppliers** table: one list with two tick boxes —
+    *Supplier (we buy from them)* / *Vendor (sells at BunFest)* — contact, website, account #,
+    how we order, lead days, minimum, notes. Website mirror `Staff → Hop Shop`
+    (`src/pages/staff/HopShop.tsx`, `src/lib/hopshop.ts`, `src/lib/codes.ts`).
+  - Verified: both repos `tsc` + `build` clean; Home chips → results, Back on a deep page, Book
+    page in the browser preview. Staff screens not exercised live (no staff sign-in here) and
+    the SQL not yet pasted.
 - **0.2.0 test build — Google Play internal testing + TestFlight (2026-09-21, latest).** Sponsor:
   "build this for a Google and Apple test app version … offer testers the full features … on
   the raffle let's put it together and see what we can do with a working version." **Paste

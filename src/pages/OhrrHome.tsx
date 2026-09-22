@@ -47,7 +47,7 @@ function HeroCard({ slide }: { slide: HeroSlide }) {
             )
           ) : (
             <span aria-hidden="true" className="flex h-full items-center justify-center">
-              <Icon name={visual.icon} size={56} className="text-white/95 transition duration-300 group-hover:scale-[1.06]" />
+              <Icon name={visual.icon} size={68} className="text-white/95 transition duration-300 group-hover:scale-[1.06]" />
             </span>
           ))}
         {countdown && (
@@ -139,7 +139,7 @@ export default function OhrrHome() {
         {/* Visit mini-card */}
         <Card className="border-slate-200 bg-slate-50/80">
           <div className="flex items-center gap-2 text-sm text-slate-600">
-            <Icon name="clock" size={15} className="shrink-0 text-brand-blue" /> Hop Shop {ohrr.hoursShort} ·{' '}
+            <Icon name="clock" size={18} className="shrink-0 text-brand-blue" /> Hop Shop {ohrr.hoursShort} ·{' '}
             {ohrr.adoptionsNote.toLowerCase()}
           </div>
           <Link

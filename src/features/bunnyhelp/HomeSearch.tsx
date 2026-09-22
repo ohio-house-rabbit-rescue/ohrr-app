@@ -1,7 +1,8 @@
-// The "My bunny is…" box on the app's Home — one line, so it costs almost no
-// space above the fold, with the top matches appearing underneath as you type.
-// Enter (or "See all") opens the full Bunny Help page with the same words.
-import { useMemo, useState } from 'react'
+// The Bunny Help box on the app's Home. It poses the questions people actually
+// have — "Did my bunny stop eating?" — as a rotating prompt and three tappable
+// ones, with the top matches appearing underneath as you type. Enter (or "See
+// all") opens the full Bunny Help page with the same words.
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Icon } from '../../components/icons'
 import { useCareTopics } from './useTopics'
@@ -9,11 +10,29 @@ import { buildIndex, cleanQuery, hasEmergency, searchTopics } from './search'
 import { UrgencyChip } from './ui'
 import { topicHref } from './HelpSearch'
 
+// Real questions, each landing on one of OHRR's topics.
+const QUESTIONS = [
+  'Did my bunny stop eating?',
+  'Why is my bunny hiding?',
+  'Does my bunny have diarrhea?',
+  'Why is my bunny digging the carpet?',
+  'What can my bunny eat?',
+  'Why is my bunny peeing outside the box?',
+]
+const QUICK = QUESTIONS.slice(0, 3)
+
 export default function HomeSearch() {
   const { topics } = useCareTopics()
   const index = useMemo(() => buildIndex(topics), [topics])
   const [q, setQ] = useState('')
+  const [prompt, setPrompt] = useState(0)
   const navigate = useNavigate()
+  // Rotate the question in the empty box every few seconds.
+  useEffect(() => {
+    if (q) return
+    const id = window.setInterval(() => setPrompt((p) => (p + 1) % QUESTIONS.length), 3500)
+    return () => window.clearInterval(id)
+  }, [q])
   const cleaned = cleanQuery(q)
   const active = cleaned.length >= 2
   const results = useMemo(() => (active ? searchTopics(index, q, 3) : []), [index, q, active])
@@ -22,6 +41,7 @@ export default function HomeSearch() {
 
   return (
     <div className="space-y-2">
+      <p className="font-display text-[15px] font-extrabold text-ink">Is something up with your bunny?</p>
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -34,13 +54,27 @@ export default function HomeSearch() {
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="My bunny is… not eating · hiding · digging"
+          placeholder={QUESTIONS[prompt]}
           autoComplete="off"
           enterKeyHint="search"
-          aria-label="What is your bunny doing? Search Bunny Help"
-          className="w-full rounded-full border border-brand-blue/30 bg-brand-blue-50/50 py-2.5 pl-11 pr-4 text-[15px] text-ink outline-none transition placeholder:text-slate-500 focus:border-brand-blue focus:bg-white focus:ring-2 focus:ring-brand-blue/20"
+          aria-label="Ask about your bunny — search Bunny Help"
+          className="w-full rounded-full border border-brand-blue/30 bg-brand-blue-50/50 py-3 pl-11 pr-4 text-[15px] text-ink outline-none transition placeholder:text-slate-500 focus:border-brand-blue focus:bg-white focus:ring-2 focus:ring-brand-blue/20"
         />
       </form>
+      {!active && (
+        <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {QUICK.map((question) => (
+            <button
+              key={question}
+              type="button"
+              onClick={() => setQ(question)}
+              className="shrink-0 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-[13px] font-semibold text-slate-700 transition hover:border-brand-blue hover:text-brand-blue"
+            >
+              {question}
+            </button>
+          ))}
+        </div>
+      )}
 
       {active && (
         <div className={`overflow-hidden rounded-2xl border ${emergency ? 'border-red-200' : 'border-slate-200/80'} bg-white`}>

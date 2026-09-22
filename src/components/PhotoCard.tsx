@@ -74,7 +74,7 @@ export function IconPhotoTile({
         <Icon
           name={icon}
           size={64}
-          className={`${tile ? 'h-[38%] w-[38%]' : 'h-[34%] w-[34%]'} transition duration-300 group-hover:scale-[1.06]`}
+          className={`${tile ? 'h-[48%] w-[48%]' : 'h-[42%] w-[42%]'} transition duration-300 group-hover:scale-[1.06]`}
         />
       </span>
       <span className={`absolute inset-x-0 bottom-0 ${tile ? 'px-2.5 pb-2' : 'px-3 pb-2.5'}`}>

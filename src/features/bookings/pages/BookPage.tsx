@@ -13,7 +13,7 @@ import { isNative } from '../../../native/platform'
 import { ohrr } from '../../../data/ohrr'
 import { bookSlot, getBookingType, openSlots } from '../api'
 import { downloadBookingIcs, googleCalendarUrl, scheduleBookingReminders } from '../calendar'
-import { dayKey, durationLabel, fmtDay, fmtRange, fmtTime, type BookingReceipt, type BookingType, type OpenSlot } from '../types'
+import { dayKey, durationLabel, fmtDay, fmtRange, fmtTime, type BookingReceipt, type BookingType, type OpenSlot, fmtWeekly } from '../types'
 
 const input =
   'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-base text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
@@ -98,6 +98,11 @@ export default function BookPage() {
             <span className="font-bold text-ink">{durationLabel(type.duration_min)}</span>
             {type.location ? <> · {type.location}</> : null}
           </p>
+          {type.weekly.length > 0 && (
+            <p>
+              <span className="font-bold text-ink">Usual times:</span> {fmtWeekly(type.weekly).join(' · ')}
+            </p>
+          )}
           {type.max_per_month && (
             <p>
               Up to <strong>{type.max_per_month}</strong> per month per person.

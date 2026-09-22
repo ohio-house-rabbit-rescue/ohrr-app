@@ -146,10 +146,10 @@ export default function StaffHome() {
           {canSeeHopShop && (
             <ActionCard
               to="/staff/hopshop"
-              title="Hop Shop manager"
+              title="Hop Shop"
               subtitle={
                 isAdminish
-                  ? 'Add, edit & remove products; update stock'
+                  ? 'Items with photos & codes, stock counts, the reorder list, suppliers'
                   : hopshopCaps.map((c) => c.description).join(' · ')
               }
               icon="bag"

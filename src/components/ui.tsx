@@ -41,8 +41,8 @@ export function PageHeader({
     <div className="bg-gradient-to-b from-brand-blue to-brand-blue-dark px-5 pb-6 pt-5 text-white">
       <div className="flex items-center gap-3">
         {icon && (
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15">
-            <Icon name={icon} size={20} />
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
+            <Icon name={icon} size={26} />
           </span>
         )}
         <h1 className="font-display text-2xl font-extrabold tracking-tight">{title}</h1>
@@ -76,9 +76,9 @@ export function IconTile({
   }
   return (
     <span
-      className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${tones[tone]} ${className}`}
+      className={`inline-flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl ${tones[tone]} ${className}`}
     >
-      <Icon name={name} size={22} />
+      <Icon name={name} size={28} />
     </span>
   )
 }
@@ -107,7 +107,7 @@ export function ActionCard({
         <span className="block font-display text-[15px] font-extrabold text-ink">{title}</span>
         <span className="mt-0.5 block text-sm text-slate-500">{subtitle}</span>
       </span>
-      <Icon name="chevron" size={18} className="shrink-0 text-slate-300 transition group-hover:text-brand-orange" />
+      <Icon name="chevron" size={22} className="shrink-0 text-slate-300 transition group-hover:text-brand-orange" />
     </Link>
   )
 }

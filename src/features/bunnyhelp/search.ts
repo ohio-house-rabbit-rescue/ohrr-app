@@ -6,7 +6,8 @@
 // boundaries (exact, prefix-stem for ≥4 chars, one-edit typo for ≥5 chars) and
 // on whole alias phrases; a topic needs at least half the meaningful words to
 // count. fuse.js adds whole-phrase fuzziness but only near-exact hits count.
-// Results rank emergency → vet-today → watch → tip, then by match quality.
+// Results rank emergency → vet-today → watch → tip, then by match quality —
+// except that an exact title/alias phrase always comes first.
 import Fuse from 'fuse.js'
 import { URGENCY_RANK, type CareTopic } from './types.ts'
 
@@ -40,17 +41,26 @@ function escapeRegExp(s: string): string {
 
 /**
  * Normalise what people actually type: "My bunny is not eating!!" → "not eating",
- * and with a name, "Clover keeps hiding" → "hiding".
+ * "Did my bunny stop eating?" → "stop eating", "Why is Clover hiding?" → "hiding".
+ * Question words, "my bunny", and the little verbs between them all go; what is
+ * left is the symptom the topics are indexed on.
  */
 export function cleanQuery(raw: string, bunnyName?: string): string {
-  let q = raw.trim()
+  let q = raw.trim().replace(/[!?.]+$/g, '')
   const name = bunnyName?.trim()
-  if (name) q = q.replace(new RegExp(`^${escapeRegExp(name)}\\s+`, 'i'), '')
-  return q
-    .replace(/^(my\s+)?(bunny|rabbit|bun)\s+/i, '')
-    .replace(/^(is|has|keeps|won'?t|wont|isn'?t|is not|has been|seems|looks)\s+/i, '')
-    .replace(/[!?.]+$/g, '')
-    .trim()
+  const subject = name ? `(?:my\\s+)?(?:bunny|rabbit|bun|bunnies|rabbits|${escapeRegExp(name)})` : '(?:my\\s+)?(?:bunny|rabbit|bun|bunnies|rabbits)'
+  q = q
+    // "what can my bunny eat?" → the alias phrase the diet topics carry
+    .replace(new RegExp(`^what (can|could|should|may|do|does|will) ${subject}(?:['’]?s)?\\s+`, 'i'), 'what can bunny ')
+    // "why is", "what if", "is it normal that", "should I worry if", "help" …
+    .replace(/^(why|how come|what if|what should i do if|what do i do if|help|is it (bad|normal|ok(ay)?) (if|that|when)|should i (worry|be worried) (if|that|when))\s+/i, '')
+    // "is", "did", "has", "does", "can", "won't" … before the subject
+    .replace(/^(is|does|did|has|have|are|was|were|can|could|should|would|will|won'?t|isn'?t|doesn'?t|didn'?t|hasn'?t)\s+/i, '')
+    // "my bunny", "Clover", "my rabbit's"
+    .replace(new RegExp(`^${subject}(?:['’]?s)?\\s+`, 'i'), '')
+    // "is", "keeps", "seems", "has been" … after it
+    .replace(/^(is|has|keeps|won'?t|wont|isn'?t|is not|has been|seems|looks|still|just|suddenly)\s+/i, '')
+  return q.trim()
 }
 
 // Words that appear in almost every query and would make any topic "match".
@@ -169,13 +179,21 @@ export function searchTopics(index: TopicIndex, raw: string, limit = 6, bunnyNam
   }
 
   // 2) Whole-phrase fuzzy match (fuse.js) — only near-exact hits count, so
-  //    "sneezing" can never surface "Bleeding".
-  for (const h of index.fuse.search(q, { limit: limit * 2 })) {
-    if ((h.score ?? 1) <= 0.15) put(h.item, 0.3 + (h.score ?? 0))
+  //    "sneezing" can never surface "Bleeding". Skipped for very short queries:
+  //    "eat" sits inside "eating" and "breathing", which is noise, not a match.
+  if (q.length >= 4) {
+    for (const h of index.fuse.search(q, { limit: limit * 2 })) {
+      if ((h.score ?? 1) <= 0.15) put(h.item, 0.3 + (h.score ?? 0))
+    }
   }
 
   return [...best.values()]
     .sort((a, b) => {
+      // An exact title/alias phrase ("what can bunny eat") is the answer —
+      // it goes first even when an emergency topic shares a word.
+      const pa = a.score <= 0.01 ? 0 : 1
+      const pb = b.score <= 0.01 ? 0 : 1
+      if (pa !== pb) return pa - pb
       const ua = URGENCY_RANK[a.item.urgency]
       const ub = URGENCY_RANK[b.item.urgency]
       if (ua !== ub) return ua - ub
@@ -186,6 +204,7 @@ export function searchTopics(index: TopicIndex, raw: string, limit = 6, bunnyNam
     .map((h) => h.item)
 }
 
+/** The red banner: only when the best answer is an emergency topic. */
 export function hasEmergency(topics: CareTopic[]): boolean {
-  return topics.some((t) => t.urgency === 'emergency')
+  return topics[0]?.urgency === 'emergency'
 }

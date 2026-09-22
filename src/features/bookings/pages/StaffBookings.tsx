@@ -18,7 +18,19 @@ import {
   setSlotOpen,
   type SlotRow,
 } from '../api'
-import { dayKey, durationLabel, fmtDay, fmtDayShort, fmtRange, type BookingStatus, type BookingType, type RosterRow } from '../types'
+import {
+  dayKey,
+  durationLabel,
+  fmtDay,
+  fmtDayShort,
+  fmtRange,
+  fmtWeekly,
+  WEEKDAY_SHORT,
+  type BookingStatus,
+  type BookingType,
+  type RosterRow,
+  type WeeklyRule,
+} from '../types'
 import HoursTab from './HoursTab'
 
 type Tab = 'roster' | 'times' | 'hours' | 'setup'
@@ -302,6 +314,9 @@ function MakeTimes({ types }: { types: BookingType[] }) {
         </label>
         {type && (
           <p className="text-xs text-slate-500">
+            {type.weekly.length > 0
+              ? 'The weekly schedule (Set up) fills in its own times. Use this for extras — a special day, a one-off clinic.'
+              : 'Tip: give this a weekly schedule under Set up and the times make themselves.'}{' '}
             Each time is {durationLabel(type.duration_min)}; up to {type.capacity} {type.kind === 'shift' ? 'people' : 'booking'} per time unless you change it below.
           </p>
         )}
@@ -417,6 +432,8 @@ const emptyType = (orgId: string): Partial<BookingType> & { org_id: string; slug
   attest_text: '',
   is_published: true,
   sort_order: 100,
+  weekly: [],
+  auto_weeks: 8,
 })
 
 function Setup({ orgId, types, onChanged }: { orgId: string; types: BookingType[]; onChanged: () => Promise<void> }) {
@@ -437,6 +454,13 @@ function Setup({ orgId, types, onChanged }: { orgId: string; types: BookingType[
                 {t.max_per_month ? ` · max ${t.max_per_month}/month` : ''}
                 {t.confirm_mode === 'staff' ? ' · staff confirms' : ''} · /book/{t.slug}
               </span>
+              {t.weekly.length > 0 ? (
+                <span className="mt-1 block text-xs text-slate-600">
+                  <span className="font-bold text-brand-blue">Every week:</span> {fmtWeekly(t.weekly).join(' · ')}
+                </span>
+              ) : (
+                <span className="mt-1 block text-xs font-semibold text-brand-orange-dark">No weekly schedule — times only appear when made by hand.</span>
+              )}
             </span>
             <button type="button" onClick={() => setEditing(editing === t.id ? null : t.id)} className="text-sm font-bold text-brand-blue">
               {editing === t.id ? 'Close' : 'Edit'}
@@ -494,6 +518,10 @@ function TypeForm({ initial, onSaved }: { initial: Partial<BookingType> & { org_
         ask_reason: d.ask_reason || null,
         attest_text: d.attest_text || null,
         max_per_month: d.max_per_month || null,
+        auto_weeks: Math.min(26, Math.max(1, Number(d.auto_weeks) || 8)),
+        weekly: (d.weekly ?? [])
+          .filter((r) => r.days.length > 0 && r.start && r.end && r.end > r.start)
+          .map((r) => ({ days: r.days, start: r.start, end: r.end, capacity: r.capacity || null, label: r.label?.trim() || null })),
       })
       await onSaved()
     } catch (err) {
@@ -569,6 +597,11 @@ function TypeForm({ initial, onSaved }: { initial: Partial<BookingType> & { org_
         A box they must tick (optional)
         <input className={staffInput} value={d.attest_text ?? ''} onChange={txt('attest_text')} placeholder="I have completed the Buncare Orientation." />
       </label>
+      <WeeklyEditor rules={d.weekly ?? []} defaultCapacity={d.capacity ?? 1} onChange={(weekly) => setD({ ...d, weekly })} />
+      <label className="block text-sm font-semibold text-slate-700">
+        Keep this many weeks of times ready
+        <input inputMode="numeric" className={staffInput} value={d.auto_weeks ?? 8} onChange={num('auto_weeks')} />
+      </label>
       <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
         <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-brand-blue" checked={Boolean(d.is_published)} onChange={(e) => setD({ ...d, is_published: e.target.checked })} />
         People can see and book this
@@ -578,5 +611,88 @@ function TypeForm({ initial, onSaved }: { initial: Partial<BookingType> & { org_
         {busy ? 'Saving…' : 'Save'}
       </button>
     </form>
+  )
+}
+
+/* ======================================================== weekly schedule */
+
+// The standing schedule: one line per shift or appointment window. The
+// database keeps the next weeks filled from these, so nobody has to remember
+// to "make times" — and a removed line takes its future empty times with it.
+function WeeklyEditor({
+  rules,
+  defaultCapacity,
+  onChange,
+}: {
+  rules: WeeklyRule[]
+  defaultCapacity: number
+  onChange: (rules: WeeklyRule[]) => void
+}) {
+  const set = (i: number, patch: Partial<WeeklyRule>) => onChange(rules.map((r, j) => (j === i ? { ...r, ...patch } : r)))
+  const toggle = (i: number, day: number) => {
+    const days = rules[i].days.includes(day) ? rules[i].days.filter((x) => x !== day) : [...rules[i].days, day].sort()
+    set(i, { days })
+  }
+  return (
+    <div className="space-y-2 rounded-2xl border border-brand-blue/20 bg-brand-blue-50/40 p-3">
+      <p className="text-sm font-bold text-ink">Every week</p>
+      <p className="text-xs text-slate-600">
+        The times people can book, week after week. They appear by themselves{rules.length ? '.' : ' — add the first line.'}
+      </p>
+      {rules.map((r, i) => (
+        <div key={i} className="space-y-2 rounded-xl border border-slate-200 bg-white p-2.5">
+          <div className="flex flex-wrap gap-1">
+            {WEEKDAY_SHORT.map((label, day) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => toggle(i, day)}
+                className={`min-h-[36px] rounded-full px-2.5 text-xs font-bold ${r.days.includes(day) ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <label className="block text-xs font-semibold text-slate-600">
+              From
+              <input type="time" className={staffInput} value={r.start} onChange={(e) => set(i, { start: e.target.value })} required />
+            </label>
+            <label className="block text-xs font-semibold text-slate-600">
+              To
+              <input type="time" className={staffInput} value={r.end} onChange={(e) => set(i, { end: e.target.value })} required />
+            </label>
+            <label className="block text-xs font-semibold text-slate-600">
+              People
+              <input
+                inputMode="numeric"
+                className={staffInput}
+                value={r.capacity ?? ''}
+                placeholder={String(defaultCapacity)}
+                onChange={(e) => set(i, { capacity: e.target.value === '' ? null : Number(e.target.value.replace(/[^0-9]/g, '')) })}
+              />
+            </label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              className={`${staffInput} !mt-0 flex-1`}
+              value={r.label ?? ''}
+              placeholder="Name for this time (optional) — Breakfast shift"
+              onChange={(e) => set(i, { label: e.target.value })}
+            />
+            <button type="button" onClick={() => onChange(rules.filter((_, j) => j !== i))} className="text-red-600" aria-label="Remove this line">
+              <Icon name="trash" size={16} />
+            </button>
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange([...rules, { days: [6, 0], start: '12:00', end: '13:00', capacity: null, label: '' }])}
+        className={`${btn.outline} w-full`}
+      >
+        <Icon name="plus" size={16} /> Add a weekly time
+      </button>
+    </div>
   )
 }

@@ -17,10 +17,10 @@ export default function TabBar({ tabs }: { tabs: TabItem[] }) {
           {({ isActive }) => (
             <>
               <span className={isActive ? 'text-brand-blue' : 'text-slate-400'}>
-                <Icon name={t.icon} size={23} />
+                <Icon name={t.icon} size={27} />
               </span>
               <span
-                className={`text-[10px] font-bold ${isActive ? 'text-brand-blue' : 'text-slate-400'}`}
+                className={`text-[11px] font-bold ${isActive ? 'text-brand-blue' : 'text-slate-400'}`}
               >
                 {t.label}
               </span>

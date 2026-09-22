@@ -1,12 +1,13 @@
 // Supabase calls for bookings. Public calls need no sign-in; the staff ones
 // are gated on `bookings.manage` in the database.
 import { supabase } from '../../lib/supabase'
+import type { Json } from '../../lib/database.types'
 import type { BookingReceipt, BookingStatus, BookingType, OpenSlot, RosterRow } from './types'
 
 export async function getBookingType(slug: string): Promise<BookingType | null> {
   const { data, error } = await supabase.from('booking_types').select('*').eq('slug', slug).maybeSingle()
   if (error) throw error
-  return (data as BookingType | null) ?? null
+  return data ? asType(data as Record<string, unknown>) : null
 }
 
 export async function listBookingTypes(orgId?: string): Promise<BookingType[]> {
@@ -14,7 +15,20 @@ export async function listBookingTypes(orgId?: string): Promise<BookingType[]> {
   if (orgId) q = q.eq('org_id', orgId)
   const { data, error } = await q
   if (error) throw error
-  return (data ?? []) as BookingType[]
+  return (data ?? []).map(asType)
+}
+
+// Rows from before the weekly-schedule migration have no `weekly` column yet.
+function asType(row: Record<string, unknown>): BookingType {
+  const weekly = Array.isArray(row.weekly) ? (row.weekly as BookingType['weekly']) : []
+  return { ...(row as unknown as BookingType), weekly, auto_weeks: typeof row.auto_weeks === 'number' ? row.auto_weeks : 8 }
+}
+
+/** Fill the next weeks of times from the type's weekly schedule (staff; also prunes rules that were removed). */
+export async function fillSlots(typeId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('fill_booking_slots', { p_type_id: typeId, p_force: true })
+  if (error) throw error
+  return (data as number) ?? 0
 }
 
 export async function openSlots(slug: string, days = 60): Promise<OpenSlot[]> {
@@ -69,9 +83,15 @@ export async function cancelBooking(token: string): Promise<BookingReceipt | nul
 /* ------------------------------------------------------------ staff */
 
 export async function saveBookingType(t: Partial<BookingType> & { org_id: string; slug: string; name: string }): Promise<BookingType> {
-  const { data, error } = await supabase.from('booking_types').upsert(t, { onConflict: 'org_id,slug' }).select('*').single()
+  // `weekly` is jsonb in the database; drop the read-only columns before upserting.
+  const { weekly, ...rest } = t
+  const row = { ...rest, ...(weekly ? { weekly: weekly as unknown as Json } : {}) }
+  const { data, error } = await supabase.from('booking_types').upsert(row, { onConflict: 'org_id,slug' }).select('*').single()
   if (error) throw error
-  return data as BookingType
+  const saved = asType(data as Record<string, unknown>)
+  // Keep the next weeks of times in step with the schedule straight away.
+  if (weekly) await fillSlots(saved.id).catch(() => undefined)
+  return saved
 }
 
 export async function generateSlots(i: {

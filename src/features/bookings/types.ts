@@ -23,6 +23,48 @@ export interface BookingType {
   attest_text: string | null
   is_published: boolean
   sort_order: number
+  /** Standing weekly schedule; the database keeps `auto_weeks` weeks of times filled from it. */
+  weekly: WeeklyRule[]
+  auto_weeks: number
+}
+
+/** One line of a weekly schedule: "Sat + Sun, 1:30–2:30 pm, 4 people". `days`: 0 = Sunday. */
+export interface WeeklyRule {
+  days: number[]
+  /** "13:30" */
+  start: string
+  /** "14:30" */
+  end: string
+  capacity?: number | null
+  label?: string | null
+}
+
+export const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+/** "9:00 AM" from "09:00". */
+export function fmtClock(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  if (!Number.isFinite(h)) return hhmm
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const hour = h % 12 === 0 ? 12 : h % 12
+  return `${hour}:${String(m || 0).padStart(2, '0')} ${suffix}`
+}
+
+/** "Mon–Fri" / "Sat + Sun" / "Tue, Thu" for a rule's days. */
+export function fmtDays(days: number[]): string {
+  const d = [...new Set(days)].filter((x) => x >= 0 && x <= 6).sort((a, b) => a - b)
+  if (d.length === 0) return '—'
+  if (d.length === 7) return 'Every day'
+  const consecutive = d.every((x, i) => i === 0 || x === d[i - 1] + 1)
+  if (consecutive && d.length >= 3) return `${WEEKDAY_SHORT[d[0]]}–${WEEKDAY_SHORT[d[d.length - 1]]}`
+  return d.map((x) => WEEKDAY_SHORT[x]).join(d.length === 2 ? ' + ' : ', ')
+}
+
+/** One line per rule, for the Set up list and the public page. */
+export function fmtWeekly(rules: WeeklyRule[]): string[] {
+  return rules
+    .filter((r) => r && Array.isArray(r.days) && r.start && r.end)
+    .map((r) => `${fmtDays(r.days)} ${fmtClock(r.start)}–${fmtClock(r.end)}${r.label ? ` · ${r.label}` : ''}`)
 }
 
 export interface OpenSlot {

@@ -49,8 +49,8 @@ export default function HelpSearch({
           {bunnyName ? `${bunnyName} is…` : 'My bunny is…'}
         </span>
         <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">
-          Describe what you’re seeing — “not eating”, “chewing cords”, “peeing outside the box”. You’ll get
-          OHRR’s own guidance, never a diagnosis.
+          Ask it the way you’d ask a friend — “did my bunny stop eating?”, “why is she chewing cords?”, “is his poop
+          normal?”. You’ll get OHRR’s own guidance, never a diagnosis.
         </span>
         <span className="relative mt-2 block">
           <Icon name="search" size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -58,7 +58,7 @@ export default function HelpSearch({
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="not eating · digging the carpet · hiding"
+            placeholder="Did my bunny stop eating?"
             autoComplete="off"
             enterKeyHint="search"
             aria-label="What is your bunny doing?"

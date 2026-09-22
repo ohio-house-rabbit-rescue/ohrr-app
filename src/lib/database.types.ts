@@ -832,6 +832,17 @@ export type Database = {
           sku: string | null
           is_active: boolean
           photo_url: string | null
+          // Stock card (supabase/migrations/20260922110000_hopshop_suppliers.sql)
+          supplier_id: string | null
+          supplier_sku: string | null
+          cost_cents: number | null
+          unit: string | null
+          category: string | null
+          shelf: string | null
+          reorder_point: number | null
+          reorder_qty: number | null
+          on_order_qty: number
+          ordered_at: string | null
           created_by: string | null
           created_at: string
           updated_at: string
@@ -845,6 +856,16 @@ export type Database = {
           sku?: string | null
           is_active?: boolean
           photo_url?: string | null
+          supplier_id?: string | null
+          supplier_sku?: string | null
+          cost_cents?: number | null
+          unit?: string | null
+          category?: string | null
+          shelf?: string | null
+          reorder_point?: number | null
+          reorder_qty?: number | null
+          on_order_qty?: number
+          ordered_at?: string | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -858,9 +879,82 @@ export type Database = {
           sku?: string | null
           is_active?: boolean
           photo_url?: string | null
+          supplier_id?: string | null
+          supplier_sku?: string | null
+          cost_cents?: number | null
+          unit?: string | null
+          category?: string | null
+          shelf?: string | null
+          reorder_point?: number | null
+          reorder_qty?: number | null
+          on_order_qty?: number
+          ordered_at?: string | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      // Suppliers and BunFest vendors, one list (supabase/migrations/20260922110000_hopshop_suppliers.sql)
+      suppliers: {
+        Row: {
+          id: string
+          org_id: string
+          name: string
+          is_supplier: boolean
+          is_vendor: boolean
+          contact_name: string | null
+          email: string | null
+          phone: string | null
+          website: string | null
+          address: string | null
+          account_number: string | null
+          order_how: 'website' | 'email' | 'phone' | 'rep' | 'in_person' | null
+          order_notes: string | null
+          lead_days: number | null
+          min_order: string | null
+          notes: string | null
+          is_active: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          name: string
+          is_supplier?: boolean
+          is_vendor?: boolean
+          contact_name?: string | null
+          email?: string | null
+          phone?: string | null
+          website?: string | null
+          address?: string | null
+          account_number?: string | null
+          order_how?: 'website' | 'email' | 'phone' | 'rep' | 'in_person' | null
+          order_notes?: string | null
+          lead_days?: number | null
+          min_order?: string | null
+          notes?: string | null
+          is_active?: boolean
+          created_by?: string | null
+        }
+        Update: {
+          name?: string
+          is_supplier?: boolean
+          is_vendor?: boolean
+          contact_name?: string | null
+          email?: string | null
+          phone?: string | null
+          website?: string | null
+          address?: string | null
+          account_number?: string | null
+          order_how?: 'website' | 'email' | 'phone' | 'rep' | 'in_person' | null
+          order_notes?: string | null
+          lead_days?: number | null
+          min_order?: string | null
+          notes?: string | null
+          is_active?: boolean
         }
         Relationships: []
       }
@@ -1043,6 +1137,10 @@ export type Database = {
           attest_text: string | null
           is_published: boolean
           sort_order: number
+          // Weekly schedule (supabase/migrations/20260922100000_booking_schedule.sql)
+          weekly: Json
+          auto_weeks: number
+          slots_filled_on: string | null
           created_at: string
           updated_at: string
         }
@@ -1065,6 +1163,8 @@ export type Database = {
           attest_text?: string | null
           is_published?: boolean
           sort_order?: number
+          weekly?: Json
+          auto_weeks?: number
         }
         Update: {
           slug?: string
@@ -1083,6 +1183,8 @@ export type Database = {
           attest_text?: string | null
           is_published?: boolean
           sort_order?: number
+          weekly?: Json
+          auto_weeks?: number
         }
         Relationships: []
       }
@@ -1096,6 +1198,7 @@ export type Database = {
           capacity: number
           note: string | null
           is_open: boolean
+          auto: boolean
           created_by: string | null
           created_at: string
         }
@@ -1108,6 +1211,7 @@ export type Database = {
           capacity?: number
           note?: string | null
           is_open?: boolean
+          auto?: boolean
           created_by?: string | null
         }
         Update: {
@@ -1532,6 +1636,34 @@ export type Database = {
         Args: Record<string, never>
         Returns: { id: string; name: string; description: string | null; price_cents: number; photo_url: string | null; in_stock: boolean }[]
       }
+      // Weekly booking schedule (supabase/migrations/20260922100000_booking_schedule.sql)
+      fill_booking_slots: { Args: { p_type_id: string; p_force?: boolean }; Returns: number }
+      // Hop Shop stock cards, suppliers and the reorder list (supabase/migrations/20260922110000_hopshop_suppliers.sql)
+      list_products_admin: { Args: { p_org: string }; Returns: Json }
+      save_product: {
+        Args: {
+          p_org: string
+          p_id: string | null
+          p_name: string
+          p_price_cents: number
+          p_description?: string | null
+          p_sku?: string | null
+          p_photo_url?: string | null
+          p_is_active?: boolean
+          p_supplier_id?: string | null
+          p_supplier_sku?: string | null
+          p_cost_cents?: number | null
+          p_unit?: string | null
+          p_category?: string | null
+          p_shelf?: string | null
+          p_reorder_point?: number | null
+          p_reorder_qty?: number | null
+          p_quantity?: number | null
+        }
+        Returns: Json
+      }
+      hopshop_reorder: { Args: { p_org: string }; Returns: Json }
+      hopshop_set_order: { Args: { p_product_id: string; p_action: 'ordered' | 'received' | 'clear'; p_qty?: number | null }; Returns: Json }
     }
     Enums: {
       membership_role: MembershipRole

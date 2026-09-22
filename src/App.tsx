@@ -192,6 +192,8 @@ export default function App() {
         <Route path="join" element={<StaffJoin />} />
         <Route element={<RequireMembership />}>
           <Route path="hopshop" element={<HopShopManager />} />
+          <Route path="hopshop/reorder" element={<HopShopManager />} />
+          <Route path="hopshop/suppliers" element={<HopShopManager />} />
           <Route path="adopt" element={<StaffAdopt />} />
           <Route path="announcements" element={<StaffAnnouncements />} />
           <Route path="volunteer" element={<StaffVolunteer />} />

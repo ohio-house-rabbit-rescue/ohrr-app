@@ -8,17 +8,17 @@ export default function HeaderActions() {
   const { pathname, search } = useLocation()
   const from = encodeURIComponent(pathname + search)
   const cls =
-    'inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25'
+    'inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 transition hover:bg-white/25'
   return (
     <div className="flex shrink-0 items-center gap-1.5">
       <Link to={`/search?from=${from}`} aria-label="Search" className={cls}>
-        <Icon name="search" size={18} />
+        <Icon name="search" size={22} />
       </Link>
       <Link to={`/help?from=${from}`} aria-label="Help" className={cls}>
-        <Icon name="help" size={18} />
+        <Icon name="help" size={22} />
       </Link>
       <Link to="/settings" aria-label="Settings" className={cls}>
-        <Icon name="settings" size={18} />
+        <Icon name="settings" size={22} />
       </Link>
     </div>
   )
