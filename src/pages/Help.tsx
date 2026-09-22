@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { helpIntro, faqCategories, type FaqItem } from '../data/help'
 import { ohrr } from '../data/ohrr'
+import { telHref, useOrgProfile } from '../lib/orgProfile'
 import { PageHeader, Screen, Card, SectionLabel, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 
@@ -42,6 +43,7 @@ function FaqRow({ item }: { item: FaqItem }) {
 }
 
 export default function Help() {
+  const org = useOrgProfile()
   const [params] = useSearchParams()
   const from = params.get('from') ? decodeURIComponent(params.get('from')!) : '/'
   const [query, setQuery] = useState('')
@@ -74,7 +76,7 @@ export default function Help() {
             OHRR is run by volunteers and happy to help — reach out anytime.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <a href={ohrr.phoneHref} className={`${btn.primary} px-4 py-2`}>
+            <a href={telHref(org.phone)} className={`${btn.primary} px-4 py-2`}>
               <Icon name="phone" size={15} /> Call OHRR
             </a>
             <a href={`mailto:${ohrr.email}`} className={`${btn.outline} px-4 py-2`}>
@@ -82,7 +84,7 @@ export default function Help() {
             </a>
           </div>
           <p className="mt-2.5 text-xs text-slate-500">
-            {ohrr.phone} · {ohrr.hours}
+            {org.phone} · {org.hours}
           </p>
         </Card>
 

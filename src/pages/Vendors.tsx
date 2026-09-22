@@ -1,19 +1,18 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { vendors, vendorCategories } from '../data/vendors'
-import { boothForVendor, roomName } from '../data/floorplan'
+import { roomName } from '../data/floorplan'
+import { useBunfestVendors, vendorCategoriesOf } from '../features/bunfest/content'
 import { PageHeader, Screen, Badge, SampleNote, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
 
-const CATEGORIES = ['All', ...vendorCategories] as const
-type Filter = (typeof CATEGORIES)[number]
-
 export default function Vendors() {
-  const [category, setCategory] = useState<Filter>('All')
+  const [category, setCategory] = useState<string>('All')
+  const { items: vendors, source } = useBunfestVendors()
+  const categories = useMemo(() => ['All', ...vendorCategoriesOf(vendors)], [vendors])
 
   const list = useMemo(
     () => (category === 'All' ? vendors : vendors.filter((v) => v.category === category)),
-    [category],
+    [category, vendors],
   )
 
   return (
@@ -24,11 +23,13 @@ export default function Vendors() {
         subtitle={`${vendors.length} makers & shops with specialty rabbit goods.`}
       />
       <Screen className="space-y-4">
-        <SampleNote>
-          Showing the 2025 vendors. The 2026 roster is announced closer to the event, and the booth
-          locations shown are an estimate — OHRR sets the final layout.
-        </SampleNote>
-        <SegTabs options={CATEGORIES} value={category} onChange={setCategory} wrap />
+        {source === 'seed' && (
+          <SampleNote>
+            Showing the 2025 vendors. This year’s roster appears here as soon as OHRR adds it
+            (Staff → BunFest); the booth locations shown are an estimate.
+          </SampleNote>
+        )}
+        <SegTabs options={categories} value={category} onChange={setCategory} wrap />
         <div className="grid grid-cols-1 gap-3">
           {list.map((v) => (
             <Link
@@ -47,15 +48,13 @@ export default function Vendors() {
                 <span className="inline-flex items-center gap-1 text-sm font-bold text-brand-blue">
                   View details <Icon name="chevron" size={14} />
                 </span>
-                {(() => {
-                  const b = boothForVendor(v.id)
-                  return b ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400">
-                      <Icon name="mappin" size={12} className="text-slate-400" />
-                      {roomName(b.room).replace(' Room', '')} · {b.label}
-                    </span>
-                  ) : null
-                })()}
+                {v.room && (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400">
+                    <Icon name="mappin" size={13} className="text-slate-400" />
+                    {roomName(v.room).replace(' Room', '')}
+                    {v.booth ? ` · ${v.booth}` : ''}
+                  </span>
+                )}
               </div>
             </Link>
           ))}

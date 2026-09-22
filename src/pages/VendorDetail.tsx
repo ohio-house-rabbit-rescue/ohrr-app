@@ -1,14 +1,16 @@
 import { Link, useParams } from 'react-router-dom'
-import { vendors } from '../data/vendors'
-import { boothForVendor, roomName } from '../data/floorplan'
+import { useBunfestVendors } from '../features/bunfest/content'
+import { roomName } from '../data/floorplan'
 import { Screen, Card, Badge, SectionLabel, btn } from '../components/ui'
 import { ContactLinks } from '../components/ContactLinks'
 import { Icon } from '../components/icons'
 
 export default function VendorDetail() {
   const { id } = useParams()
+  const { items: vendors, loading } = useBunfestVendors()
   const vendor = vendors.find((v) => v.id === id)
 
+  if (!vendor && loading) return null
   if (!vendor) {
     return (
       <Screen className="space-y-4 text-center">
@@ -24,7 +26,6 @@ export default function VendorDetail() {
   }
 
   const v = vendor
-  const booth = boothForVendor(v.id)
   const related = vendors.filter((x) => x.id !== v.id && x.category === v.category).slice(0, 4)
 
   return (
@@ -48,23 +49,24 @@ export default function VendorDetail() {
         <p className="mt-2 text-sm leading-relaxed text-slate-700">{v.description}</p>
       </Card>
 
-      {booth && (
+      {v.room && (
         <Link
           to={`/bunfest/map?vendor=${v.id}`}
           className="flex items-center gap-3 rounded-2xl border border-brand-blue/25 bg-brand-blue-50/50 p-4 transition hover:bg-brand-blue-50"
         >
-          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-blue text-white">
-            <Icon name="mappin" size={20} />
+          <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-blue text-white">
+            <Icon name="mappin" size={24} />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block font-display text-sm font-extrabold text-ink">
-              {roomName(booth.room)} · Booth {booth.label}
+              {roomName(v.room)}
+              {v.booth ? ` · Booth ${v.booth}` : ''}
             </span>
             <span className="block text-xs text-slate-500">
-              {booth.tables === 2 ? 'Two 8-ft tables' : 'One 8-ft table'} · tap to see it on the map
+              {v.tables === 2 ? 'Two 8-ft tables' : 'One 8-ft table'} · tap to see it on the map
             </span>
           </span>
-          <Icon name="chevron" size={18} className="shrink-0 text-brand-blue" />
+          <Icon name="chevron" size={20} className="shrink-0 text-brand-blue" />
         </Link>
       )}
 

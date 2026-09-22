@@ -127,22 +127,29 @@ export interface PlacedBooth extends BoothAssignment {
   h: number
 }
 
-// Resolve every booth to an (x,y,w,h) inside its room's vendor grid.
-export function placedBooths(roomId: RoomId): PlacedBooth[] {
+// Resolve booths to (x,y,w,h) inside a room's vendor grid. `list` is the
+// assignment order — the bundled estimate, or what OHRR set on each vendor in
+// Staff → BunFest. `labels` overrides the computed "B3" with a real booth
+// number when one has been entered.
+export function placeBooths(
+  list: BoothAssignment[],
+  roomId: RoomId,
+  labels?: Record<string, string | undefined>,
+): PlacedBooth[] {
   const room = rooms.find((r) => r.id === roomId)!
   const g = room.grid
   const prefix = roomId === 'burgundy' ? 'B' : 'E'
   const pad = 2.5
   const cellW = g.w / g.cols
   const cellH = g.h / g.rows
-  return booths
+  return list
     .filter((b) => b.room === roomId)
     .map((b, i) => {
       const col = g.order === 'row' ? i % g.cols : Math.floor(i / g.rows)
       const row = g.order === 'row' ? Math.floor(i / g.cols) : i % g.rows
       return {
         ...b,
-        label: `${prefix}${i + 1}`,
+        label: labels?.[b.vendorId] || `${prefix}${i + 1}`,
         index: i,
         x: g.x + col * cellW + pad,
         y: g.y + row * cellH + pad,
@@ -150,6 +157,11 @@ export function placedBooths(roomId: RoomId): PlacedBooth[] {
         h: cellH - pad * 2,
       }
     })
+}
+
+/** The bundled 2025 estimate. */
+export function placedBooths(roomId: RoomId): PlacedBooth[] {
+  return placeBooths(booths, roomId)
 }
 
 export const allPlacedBooths: PlacedBooth[] = [...placedBooths('burgundy'), ...placedBooths('emerald')]

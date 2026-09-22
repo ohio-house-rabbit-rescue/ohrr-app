@@ -39,12 +39,15 @@ export default function AnnouncementsBanner() {
           className="rounded-2xl border border-brand-orange/30 bg-brand-orange-50/60 px-4 py-3"
         >
           <div className="flex items-start gap-2.5">
-            <Icon name="info" size={17} className="mt-0.5 shrink-0 text-brand-orange" />
-            <div className="min-w-0">
+            <Icon name="info" size={20} className="mt-0.5 shrink-0 text-brand-orange" />
+            <div className="min-w-0 flex-1">
               <p className="font-display text-sm font-extrabold text-ink">{a.title}</p>
               <p className="mt-0.5 whitespace-pre-line text-sm leading-relaxed text-slate-600">
                 {a.body}
               </p>
+              {a.image_url && (
+                <img src={a.image_url} alt="" loading="lazy" className="mt-2 max-h-56 w-full rounded-xl object-cover" />
+              )}
             </div>
           </div>
         </div>

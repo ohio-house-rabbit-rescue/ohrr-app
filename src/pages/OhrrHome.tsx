@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ohrr } from '../data/ohrr'
+import { useOrgProfile } from '../lib/orgProfile'
 import { event } from '../data/event'
 import { OHRR_HUB, OHRR_QUICK_ACTIONS } from '../data/content'
 import { slideVisual, appPath, type HeroSlide } from '../data/heroSlides'
@@ -11,6 +12,7 @@ import { Icon } from '../components/icons'
 import AnnouncementsBanner from '../components/AnnouncementsBanner'
 import PresentedBy from '../features/sponsors/PresentedBy'
 import MyBunnyHomeCard from '../features/mybunny/HomeCard'
+import MyBookingsCard from '../features/bookings/MyBookingsCard'
 import HomeSearch from '../features/bunnyhelp/HomeSearch'
 
 // One top card, in the existing "big BunFest button" styling. The BunFest slide
@@ -75,6 +77,8 @@ function HeroCard({ slide }: { slide: HeroSlide }) {
 }
 
 export default function OhrrHome() {
+  // Hours / phone / address staff can change (Staff → Settings → OHRR details)
+  const org = useOrgProfile()
   // Top cards: active hero slides (live from the shared hero_slides table when
   // present, else the bundled seed) — the BunFest slide first by sort order.
   const heroSlides = useHeroSlides('hero')
@@ -101,6 +105,8 @@ export default function OhrrHome() {
         <div className="space-y-3">
           <MyBunnyHomeCard />
           <HomeSearch />
+          {/* Shifts and appointments booked on this phone (hidden when there are none) */}
+          <MyBookingsCard compact />
         </div>
 
         {/* Top cards — hero slides */}
@@ -138,8 +144,13 @@ export default function OhrrHome() {
 
         {/* Visit mini-card */}
         <Card className="border-slate-200 bg-slate-50/80">
+          {org.notice && (
+            <p className="mb-2 rounded-xl bg-brand-orange-50 px-3 py-2 text-sm font-bold text-brand-orange-dark">
+              {org.notice}
+            </p>
+          )}
           <div className="flex items-center gap-2 text-sm text-slate-600">
-            <Icon name="clock" size={18} className="shrink-0 text-brand-blue" /> Hop Shop {ohrr.hoursShort} ·{' '}
+            <Icon name="clock" size={18} className="shrink-0 text-brand-blue" /> Hop Shop {org.hours_short} ·{' '}
             {ohrr.adoptionsNote.toLowerCase()}
           </div>
           <Link

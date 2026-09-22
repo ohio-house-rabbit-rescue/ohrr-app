@@ -1,4 +1,6 @@
-import { sponsors, type Sponsor } from '../data/sponsors'
+import { sponsors as seedSponsors, type Sponsor } from '../data/sponsors'
+import { useSponsors } from '../features/sponsors/hooks'
+import { tierLabel, type Sponsor as LiveSponsor } from '../features/sponsors/types'
 import { event } from '../data/event'
 import { PageHeader, Screen, Card, Badge, SampleNote, btn } from '../components/ui'
 import { ContactLinks } from '../components/ContactLinks'
@@ -27,7 +29,23 @@ function SponsorCard({ s }: { s: Sponsor }) {
   )
 }
 
+// A sponsor OHRR entered in Staff → Sponsors, in the shape this page draws.
+function fromLive(s: LiveSponsor): Sponsor {
+  return {
+    name: s.name,
+    type: tierLabel(s.tier) as Sponsor['type'],
+    blurb: s.blurb ?? '',
+    url: s.website,
+    lead: s.tier === 'presenting',
+  }
+}
+
 export default function Sponsors() {
+  // The sponsors table is the source; the bundled 2025 list is the fallback
+  // until OHRR has entered this year's (Staff → Sponsors).
+  const live = useSponsors()
+  const isLive = live !== null && live.length > 0
+  const sponsors = isLive ? live.map(fromLive) : seedSponsors
   const lead = sponsors.filter((s) => s.lead)
   const rest = sponsors.filter((s) => !s.lead)
 
@@ -39,15 +57,15 @@ export default function Sponsors() {
         subtitle="BunFest runs on the generosity of these sponsors and donors — reach them right here."
       />
       <Screen className="space-y-4">
-        <SampleNote>
-          Showing the 2025 sponsors. The 2026 roster is announced closer to the event.
-        </SampleNote>
+        {!isLive && (
+          <SampleNote>
+            Showing the 2025 sponsors. This year’s appear here as soon as OHRR adds them
+            (Staff → Sponsors) — no app update needed.
+          </SampleNote>
+        )}
 
         <div className="grid grid-cols-1 gap-3">
-          {lead.map((s) => (
-            <SponsorCard key={s.name} s={s} />
-          ))}
-          {rest.map((s) => (
+          {[...lead, ...rest].map((s) => (
             <SponsorCard key={s.name} s={s} />
           ))}
         </div>

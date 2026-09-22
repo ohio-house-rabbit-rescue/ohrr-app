@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { intakeConfig, type IntakeType } from '../data/surrenderForm'
 import { SchemaField, type Values } from '../components/SchemaField'
+import PhotoField from '../components/PhotoField'
+import { useFormDraft, DRAFT_NOTE } from '../lib/formDraft'
 import { surrenderContact } from '../data/surrender'
 import { Screen, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
@@ -18,7 +20,9 @@ export default function SurrenderForm() {
   const type: IntakeType = params.get('type') === 'good-samaritan' ? 'good-samaritan' : 'owner'
   const cfg = useMemo(() => intakeConfig(type), [type])
 
-  const [values, setValues] = useState<Values>({})
+  const [values, setValues, clearDraft, restored] = useFormDraft<Values>(`surrender-${type}`, {})
+  const [photoUrl, setPhotoUrl] = useState('')
+  const [photoBusy, setPhotoBusy] = useState(false)
   const [agreed, setAgreed] = useState(false)
   const [signature, setSignature] = useState('')
   const [signDate, setSignDate] = useState(todayISO())
@@ -42,8 +46,10 @@ export default function SurrenderForm() {
       agreementDate: signDate,
     }
     for (const [k, v] of Object.entries(values)) flat[k] = Array.isArray(v) ? v.join(', ') : v
+    if (photoUrl) flat.photo = photoUrl
     try {
       await submitRequest('surrender-intake', flat)
+      clearDraft()
       setStatus('done')
     } catch {
       setStatus('error')
@@ -94,6 +100,10 @@ export default function SurrenderForm() {
         className="space-y-5"
       >
         <input type="hidden" name="type" value={cfg.title} />
+        {restored && (
+          <p className="rounded-xl bg-brand-blue-50/70 px-3 py-2 text-xs font-semibold text-brand-blue">{DRAFT_NOTE}</p>
+        )}
+
         <p className="hidden">
           <label>
             Don’t fill this out: <input name="bot-field" />
@@ -113,6 +123,20 @@ export default function SurrenderForm() {
             </Card>
           </section>
         ))}
+
+        {/* A photo of the rabbit — the first thing intake wants to see */}
+        <section className="space-y-3">
+          <h2 className="font-display text-base font-extrabold text-ink">A photo</h2>
+          <Card>
+            <PhotoField
+              label="Photo of the rabbit"
+              hint="It helps OHRR judge age, breed and condition before the rabbit arrives."
+              value={photoUrl}
+              onChange={setPhotoUrl}
+              onBusyChange={setPhotoBusy}
+            />
+          </Card>
+        </section>
 
         {/* Relinquishment agreement */}
         <section className="space-y-3">

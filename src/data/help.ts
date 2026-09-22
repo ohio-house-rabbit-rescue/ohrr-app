@@ -146,9 +146,18 @@ export const faqCategories: FaqCategory[] = [
         a: 'Tap the “OHRR” tab at the bottom-left of the BunFest screens — it returns you to the main OHRR app.',
       },
       {
+        q: 'How do I go back a screen?',
+        a: 'Tap the back arrow at the top-left. On any screen but a main tab it takes you back the way you came; on Android the phone’s own back button does the same. The row of tabs along the bottom always jumps straight to a section.',
+      },
+      {
         q: 'What do the icons at the top do?',
-        a: 'The magnifying glass searches the whole app (type or tap the mic to speak), the question mark opens this Help, and the gear opens Settings.',
+        a: 'The magnifying glass searches the whole app (type or tap the mic to speak), the question mark opens this Help, and the gear opens Settings. The back arrow on its left returns to the previous screen.',
         link: { label: 'Search the app', to: '/search' },
+      },
+      {
+        q: 'The words are too small — can I make them bigger?',
+        a: 'Yes. Settings → Text size has Normal, Large and Extra large; it makes everything in the app bigger, not just the words, and stays set on your phone.',
+        link: { label: 'Open Settings', to: '/settings' },
       },
       {
         q: 'Do I need an account?',

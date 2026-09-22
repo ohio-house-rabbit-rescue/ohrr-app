@@ -4,7 +4,11 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './lib/auth'
 import NativeBridge from './native/NativeBridge'
+import { applyTextSize } from './lib/textSize'
 import './index.css'
+
+// The reader's text-size choice, before anything renders.
+applyTextSize()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

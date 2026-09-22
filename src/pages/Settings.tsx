@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { PageHeader, Screen, Card, SectionLabel, ActionCard, btn } from '../components/ui'
+import { TEXT_SIZES, setTextSize, useTextSize } from '../lib/textSize'
 import { Icon } from '../components/icons'
 import { build } from '../data/version'
 import { PHOTO_CREDITS } from '../data/photos'
@@ -36,6 +37,7 @@ const inputClass =
 export default function Settings() {
   const profile = useProfile()
   const { membership } = useAuth()
+  const textSize = useTextSize()
   const [email, setEmail] = useState(profile?.email ?? '')
   const [name, setName] = useState(profile?.name ?? '')
   const [justSaved, setJustSaved] = useState(false)
@@ -130,6 +132,35 @@ export default function Settings() {
               stays on your device. A secure database to save this and sync it across devices is
               coming.
             </p>
+          </Card>
+        </section>
+
+        {/* ---- Text size ---- */}
+        <section className="space-y-2">
+          <SectionLabel>Text size</SectionLabel>
+          <Card className="space-y-2">
+            <p className="text-sm text-slate-600">
+              Make everything in the app bigger — the words, the buttons and the spaces between them.
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {TEXT_SIZES.map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setTextSize(t.value)}
+                  aria-pressed={textSize === t.value}
+                  className={`min-h-[52px] rounded-2xl border px-2 font-bold transition ${
+                    textSize === t.value
+                      ? 'border-brand-blue bg-brand-blue text-white shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-600'
+                  }`}
+                  style={{ fontSize: `${t.scale * 0.9}rem` }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-slate-400">Applies everywhere in the app, and stays set on this device.</p>
           </Card>
         </section>
 

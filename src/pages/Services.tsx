@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { bonding, clinicInfo } from '../data/services'
 import { PageHeader, Screen, Card, SectionLabel, btn } from '../components/ui'
+import MyBookingsCard from '../features/bookings/MyBookingsCard'
 import { Icon } from '../components/icons'
 
 export default function Services() {
@@ -12,6 +13,8 @@ export default function Services() {
         subtitle="Bonding sessions and mobile vet-clinic days for your rabbit — book a time and bring your bunny in."
       />
       <Screen className="space-y-6">
+        <MyBookingsCard />
+
         {/* Bonding */}
         <section className="space-y-2.5">
           <SectionLabel>Bonding</SectionLabel>

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { partners, REGIONS, US_STATES } from '../data/partners'
-import { PageHeader, Screen, Badge, SegTabs } from '../components/ui'
+import { REGIONS, US_STATES } from '../data/partners'
+import { useRescuePartners } from '../features/bunfest/content'
+import { PageHeader, Screen, Badge, SampleNote, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
 
 function initials(name: string) {
@@ -15,11 +16,6 @@ function initials(name: string) {
     .toUpperCase()
 }
 
-// Regions actually present in the data, in display order.
-const presentRegions = REGIONS.filter((r) => partners.some((p) => p.region === r))
-const REGION_TABS = ['All', ...presentRegions] as const
-type RegionTab = (typeof REGION_TABS)[number]
-
 export default function Partners({
   base = '/bunfest/partners',
   title = 'Rescue Partners',
@@ -30,7 +26,14 @@ export default function Partners({
   subtitle?: string
 }) {
   const [query, setQuery] = useState('')
-  const [region, setRegion] = useState<RegionTab>('All')
+  const [region, setRegion] = useState<string>('All')
+  const { items: partners, source } = useRescuePartners()
+
+  // Only the regions actually present, in display order.
+  const regionTabs = useMemo(
+    () => ['All', ...REGIONS.filter((r) => partners.some((p) => p.region === r))],
+    [partners],
+  )
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -40,7 +43,7 @@ export default function Partners({
       const hay = `${p.name} ${p.location} ${p.city ?? ''} ${p.state ?? ''} ${stateName} ${p.region ?? ''}`.toLowerCase()
       return inRegion && (!q || hay.includes(q))
     })
-  }, [query, region])
+  }, [query, region, partners])
 
   return (
     <>
@@ -70,7 +73,13 @@ export default function Partners({
         </div>
 
         {/* Filter by region */}
-        <SegTabs options={REGION_TABS} value={region} onChange={setRegion} wrap />
+        <SegTabs options={regionTabs} value={region} onChange={setRegion} wrap />
+        {source === 'seed' && (
+          <SampleNote>
+            This directory is the one OHRR researched in 2026. Staff keep it current under
+            Staff → BunFest → Rescue partners.
+          </SampleNote>
+        )}
 
         {list.length === 0 ? (
           <p className="px-1 pt-2 text-sm text-slate-500">

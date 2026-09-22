@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-22
+- **Last updated:** 2026-09-22 (round 2)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,52 @@
 ---
 
 ## Current state (at a glance)
+
+- **Audit round: consumer + staff (2026-09-22, latest).** Sponsor asked for an audit of
+  "like issues" on both sides and approved every finding. **Paste `APPLY-10-BUNFEST-CONTENT.sql`
+  + `APPLY-11-TAILS-UPLOADS-PROFILE.sql`** (Drive root `PASTE-THIS-INTO-SUPABASE.sql` = both).
+  - **Consumer — a booking you can find again.** OHRR sends no confirmation email, so a booked
+    shift lived only on the confirmation screen. `src/features/bookings/mine.ts` keeps every
+    booking made on this device (localStorage, pruned a day after it ends, refreshed by token so
+    a staff confirmation shows) and `MyBookingsCard` puts it on Home, Volunteer and Services;
+    cancelling by the private link forgets it. The website privacy policy's claim about a
+    "confirmation email" was corrected.
+  - **Consumer — two dead ends opened up.** `/found/report` is a real report form (photo, where,
+    condition, contained, contact → Inbox `found-rabbit`), linked first from Found a rabbit; a
+    booking type with no published times now offers `NotifyMe` ("Tell me when there's a time" →
+    Inbox `notify-me`) instead of "This isn't open for booking right now."
+  - **Consumer — photos and drafts on the forms.** `public-uploads` bucket (anon may add, nobody
+    but staff may change or delete; 8 MB, images only) + `lib/publicUpload.ts` +
+    `components/PhotoField.tsx`: Happy Tails asks for a photo instead of "a shared photo link",
+    and the surrender intake takes one. `lib/formDraft.ts` (`useFormDraft`) keeps the surrender,
+    foster and Happy Tail forms as you type, with a "picked up where you left off" line.
+  - **Consumer — reach and read.** `SegTabs` chips are 44 px (Adopt, Vets, Tails, Schedule,
+    Vendors); Settings → **Text size** (Normal / Large / Extra large, `lib/textSize.ts`, applied
+    to the root font size before first paint); My Bunny's help box asks the question like Home's;
+    Help & FAQ covers the Back button and Text size; `components/PageTitle.tsx` gives every route
+    its own browser-tab / shared-link title (they all read "Midwest BunFest · OHRR" before).
+  - **Staff — BunFest content is no longer code.** `bunfest_sessions` (per year, copy last year's),
+    `rescue_partners`, and `suppliers.vendor_*` (category, blurb, room, booth, tables, published)
+    behind `bunfest_vendors_public()`; **Staff → BunFest** (`features/bunfest/pages/StaffBunfest.tsx`,
+    website `Staff → BunFest`) has Schedule / Vendors / Rescues. Schedule, Vendors, VendorDetail,
+    the event map (live booths and colours, `placeBooths()`), Partners and PartnerDetail read live
+    with the 2025 seed as fallback; the BunFest **Sponsors** page now reads the `sponsors` table it
+    had been ignoring.
+  - **Staff — Happy Tails can be published.** `happy_tails` + `publish_happy_tail()`; the Inbox
+    shows a pre-filled "Publish as a Happy Tail" panel on a story (and renders any photo a form
+    sent), `Staff → Happy Tails` edits them afterwards, and `/tails` + `/tails/:id` read live.
+  - **Staff — parity and reach.** Home-screen cards (`hero_slides`) are now editable on the phone
+    (`StaffHomeScreen.tsx`), announcements take a picture on the phone (the column existed since
+    September) and show it on Home; adoptable-rabbit photos use the native camera; the booking
+    roster has "Email everyone" (BCC) and a CSV export, and the Inbox exports too; OHRR's hours,
+    phone, address and a holiday notice moved from constants into `app_settings.org_profile`
+    (Staff → Settings → OHRR details, read by `lib/orgProfile.ts` on Home, About, Hop Shop, Help
+    and the website's Contact); Scanned items opens on auction + raffle and points at Hop Shop
+    for stock, so two screens no longer list the same thing.
+  - Verified: both repos `tsc` + `build` clean; every touched public page walked in the browser at
+    phone width (found-rabbit form, no-dates booking, text size, chips, titles, seed fallbacks with
+    the new tables still absent — the REST 404s prove the fallback path). Staff screens are
+    build-verified only (no staff sign-in here), and the SQL is not yet pasted.
 
 - **Tester-feedback round 1 (2026-09-22, latest).** Sponsor after using the build: the Home help
   should *pose a question*; icons bigger; a Back button; "Find a time" empty; the Hop Shop needs

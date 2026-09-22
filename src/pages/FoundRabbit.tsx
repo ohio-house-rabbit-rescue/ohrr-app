@@ -36,15 +36,18 @@ export default function FoundRabbit() {
               </li>
             ))}
           </ul>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <a
-              href={`mailto:${foundContacts.chrsHelpLine}?subject=Stray%20domestic%20rabbit%20report`}
-              className={`${btn.primary} px-4 py-2`}
-            >
-              <Icon name="mail" size={15} /> Email the CHRS Help Line
-            </a>
+          <Link to="/found/report" className={`${btn.primary} mt-3 w-full`}>
+            <Icon name="camera" size={17} /> Report it here — with a photo
+          </Link>
+          <div className="mt-2 flex flex-wrap gap-2">
             <a href={foundContacts.ohrrPhoneHref} className={`${btn.outline} px-4 py-2`}>
               <Icon name="phone" size={15} /> Call OHRR
+            </a>
+            <a
+              href={`mailto:${foundContacts.chrsHelpLine}?subject=Stray%20domestic%20rabbit%20report`}
+              className={`${btn.outline} px-4 py-2`}
+            >
+              <Icon name="mail" size={15} /> CHRS Help Line
             </a>
           </div>
           <p className="mt-2.5 break-all text-xs text-slate-500">

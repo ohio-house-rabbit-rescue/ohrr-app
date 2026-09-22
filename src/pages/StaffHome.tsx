@@ -246,6 +246,33 @@ export default function StaffHome() {
               tone="orange"
             />
           )}
+          {canManageEvents && (
+            <ActionCard
+              to="/staff/bunfest"
+              title="BunFest content"
+              subtitle="The education schedule, vendors & booths, rescue partners"
+              icon="star"
+              tone="orange"
+            />
+          )}
+          {canPostAnnouncements && (
+            <ActionCard
+              to="/staff/home-screen"
+              title="Home screen"
+              subtitle="The big cards the app opens on (and the website's home page)"
+              icon="home"
+              tone="blue"
+            />
+          )}
+          {(canEditCare || canInbox) && (
+            <ActionCard
+              to="/staff/tails"
+              title="Happy Tails"
+              subtitle="Publish and edit adopters’ stories"
+              icon="sparkles"
+              tone="blue"
+            />
+          )}
           {canManageAuction && (
             <ActionCard
               to="/staff/raffle"

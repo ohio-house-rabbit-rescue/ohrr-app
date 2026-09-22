@@ -4,6 +4,7 @@ import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { Spinner, FormError, staffInput } from '../components/staffui'
+import StaffImageField from '../components/StaffImageField'
 import type { Database } from '../lib/database.types'
 
 type Announcement = Database['public']['Tables']['announcements']['Row']
@@ -11,10 +12,11 @@ type Announcement = Database['public']['Tables']['announcements']['Row']
 interface Draft {
   title: string
   body: string
+  image_url: string
   is_published: boolean
 }
 
-const emptyDraft: Draft = { title: '', body: '', is_published: true }
+const emptyDraft: Draft = { title: '', body: '', image_url: '', is_published: true }
 
 function fmtDate(iso: string): string {
   try {
@@ -31,17 +33,20 @@ function fmtDate(iso: string): string {
 
 function AnnouncementForm({
   initial,
+  userId,
   submitLabel,
   onSubmit,
   onCancel,
 }: {
   initial: Draft
+  userId: string
   submitLabel: string
   onSubmit: (d: Draft) => Promise<void>
   onCancel: () => void
 }) {
   const [draft, setDraft] = useState<Draft>(initial)
   const [busy, setBusy] = useState(false)
+  const [imageBusy, setImageBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const submit = async (e: { preventDefault(): void }) => {
@@ -79,10 +84,18 @@ function AnnouncementForm({
           placeholder="What do visitors need to know?"
         />
       </label>
+      <StaffImageField
+        label="A picture"
+        hint="Shown with the notice on the app's home screen and the website."
+        value={draft.image_url}
+        userId={userId}
+        onChange={(url) => setDraft((d) => ({ ...d, image_url: url }))}
+        onBusyChange={setImageBusy}
+      />
       <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
         <input
           type="checkbox"
-          className="h-4 w-4 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30"
+          className="h-5 w-5 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30"
           checked={draft.is_published}
           onChange={(e) => setDraft((d) => ({ ...d, is_published: e.target.checked }))}
         />
@@ -94,7 +107,7 @@ function AnnouncementForm({
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={busy || draft.title.trim().length === 0 || draft.body.trim().length === 0}
+          disabled={busy || imageBusy || draft.title.trim().length === 0 || draft.body.trim().length === 0}
           className={`${btn.primary} flex-1 disabled:opacity-60`}
         >
           {busy ? 'Saving…' : submitLabel}
@@ -114,9 +127,11 @@ function AnnouncementForm({
 
 function AnnouncementCard({
   item,
+  userId,
   onChanged,
 }: {
   item: Announcement
+  userId: string
   onChanged: () => void
 }) {
   const [editing, setEditing] = useState(false)
@@ -127,7 +142,7 @@ function AnnouncementCard({
   const saveEdit = async (d: Draft) => {
     const { error } = await supabase
       .from('announcements')
-      .update({ title: d.title.trim(), body: d.body.trim(), is_published: d.is_published })
+      .update({ title: d.title.trim(), body: d.body.trim(), image_url: d.image_url.trim() || null, is_published: d.is_published })
       .eq('id', item.id)
     if (error) throw error
     setEditing(false)
@@ -163,7 +178,8 @@ function AnnouncementCard({
     return (
       <Card>
         <AnnouncementForm
-          initial={{ title: item.title, body: item.body, is_published: item.is_published }}
+          initial={{ title: item.title, body: item.body, image_url: item.image_url ?? '', is_published: item.is_published }}
+          userId={userId}
           submitLabel="Save changes"
           onSubmit={saveEdit}
           onCancel={() => setEditing(false)}
@@ -274,6 +290,7 @@ export default function StaffAnnouncements() {
       org_id: orgId,
       title: d.title.trim(),
       body: d.body.trim(),
+      image_url: d.image_url.trim() || null,
       is_published: d.is_published,
       created_by: userId,
     })
@@ -321,6 +338,7 @@ export default function StaffAnnouncements() {
           <p className="mb-3 font-display text-[15px] font-extrabold text-ink">New announcement</p>
           <AnnouncementForm
             initial={emptyDraft}
+            userId={userId}
             submitLabel="Post announcement"
             onSubmit={create}
             onCancel={() => setCreating(false)}
@@ -341,7 +359,7 @@ export default function StaffAnnouncements() {
       ) : (
         <div className="grid grid-cols-1 gap-3">
           {items.map((item) => (
-            <AnnouncementCard key={item.id} item={item} onChanged={load} />
+            <AnnouncementCard key={item.id} item={item} userId={userId} onChanged={load} />
           ))}
         </div>
       )}

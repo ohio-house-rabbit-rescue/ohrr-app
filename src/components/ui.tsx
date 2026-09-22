@@ -194,7 +194,8 @@ export function SegTabs<T extends string>({
             type="button"
             onClick={() => onChange(o)}
             className={[
-              'whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold transition',
+              // 44px minimum: these are the app's most-tapped controls.
+              'inline-flex min-h-[44px] items-center whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition',
               active
                 ? 'bg-brand-blue text-white shadow-sm'
                 : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50',

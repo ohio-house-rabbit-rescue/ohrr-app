@@ -167,6 +167,8 @@ export type Database = {
           org_id: string
           title: string
           body: string
+          // supabase/migrations/20260917160000_announcements_image.sql
+          image_url: string | null
           is_published: boolean
           created_by: string | null
           created_at: string
@@ -177,6 +179,7 @@ export type Database = {
           org_id: string
           title: string
           body: string
+          image_url?: string | null
           is_published?: boolean
           created_by?: string | null
           created_at?: string
@@ -187,6 +190,7 @@ export type Database = {
           org_id?: string
           title?: string
           body?: string
+          image_url?: string | null
           is_published?: boolean
           created_by?: string | null
           created_at?: string
@@ -915,6 +919,14 @@ export type Database = {
           min_order: string | null
           notes: string | null
           is_active: boolean
+          // The BunFest booth (supabase/migrations/20260922120000_bunfest_content.sql)
+          vendor_category: string | null
+          vendor_blurb: string | null
+          vendor_booth: string | null
+          vendor_room: 'burgundy' | 'emerald' | null
+          vendor_tables: number
+          vendor_published: boolean
+          vendor_sort: number
           created_by: string | null
           created_at: string
           updated_at: string
@@ -937,6 +949,13 @@ export type Database = {
           min_order?: string | null
           notes?: string | null
           is_active?: boolean
+          vendor_category?: string | null
+          vendor_blurb?: string | null
+          vendor_booth?: string | null
+          vendor_room?: 'burgundy' | 'emerald' | null
+          vendor_tables?: number
+          vendor_published?: boolean
+          vendor_sort?: number
           created_by?: string | null
         }
         Update: {
@@ -955,6 +974,167 @@ export type Database = {
           min_order?: string | null
           notes?: string | null
           is_active?: boolean
+          vendor_category?: string | null
+          vendor_blurb?: string | null
+          vendor_booth?: string | null
+          vendor_room?: 'burgundy' | 'emerald' | null
+          vendor_tables?: number
+          vendor_published?: boolean
+          vendor_sort?: number
+        }
+        Relationships: []
+      }
+      // Midwest BunFest content staff edit (supabase/migrations/20260922120000_bunfest_content.sql)
+      bunfest_sessions: {
+        Row: {
+          id: string
+          org_id: string
+          year: number
+          start_time: string
+          end_time: string | null
+          title: string
+          presenter: string | null
+          description: string | null
+          room: string | null
+          kind: 'session' | 'break' | 'activity'
+          is_published: boolean
+          sort_order: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          year?: number
+          start_time: string
+          end_time?: string | null
+          title: string
+          presenter?: string | null
+          description?: string | null
+          room?: string | null
+          kind?: 'session' | 'break' | 'activity'
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+        }
+        Update: {
+          year?: number
+          start_time?: string
+          end_time?: string | null
+          title?: string
+          presenter?: string | null
+          description?: string | null
+          room?: string | null
+          kind?: 'session' | 'break' | 'activity'
+          is_published?: boolean
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      rescue_partners: {
+        Row: {
+          id: string
+          org_id: string
+          name: string
+          location: string | null
+          city: string | null
+          state: string | null
+          region: 'Midwest' | 'Northeast' | 'South' | 'West' | null
+          phone: string | null
+          email: string | null
+          address: string | null
+          website: string | null
+          blurb: string | null
+          is_host: boolean
+          at_bunfest: boolean
+          is_published: boolean
+          sort_order: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          name: string
+          location?: string | null
+          city?: string | null
+          state?: string | null
+          region?: 'Midwest' | 'Northeast' | 'South' | 'West' | null
+          phone?: string | null
+          email?: string | null
+          address?: string | null
+          website?: string | null
+          blurb?: string | null
+          is_host?: boolean
+          at_bunfest?: boolean
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+        }
+        Update: {
+          name?: string
+          location?: string | null
+          city?: string | null
+          state?: string | null
+          region?: 'Midwest' | 'Northeast' | 'South' | 'West' | null
+          phone?: string | null
+          email?: string | null
+          address?: string | null
+          website?: string | null
+          blurb?: string | null
+          is_host?: boolean
+          at_bunfest?: boolean
+          is_published?: boolean
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      // Published adoption stories (supabase/migrations/20260922130000_tails_uploads_profile.sql)
+      happy_tails: {
+        Row: {
+          id: string
+          org_id: string
+          bunny: string
+          family: string | null
+          status: 'looking' | 'just-adopted' | 'settling-in' | 'going-strong' | 'forever-loved'
+          since: string | null
+          summary: string
+          story: string | null
+          photo_url: string | null
+          is_published: boolean
+          sort_order: number
+          request_id: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          bunny: string
+          family?: string | null
+          status?: 'looking' | 'just-adopted' | 'settling-in' | 'going-strong' | 'forever-loved'
+          since?: string | null
+          summary: string
+          story?: string | null
+          photo_url?: string | null
+          is_published?: boolean
+          sort_order?: number
+          request_id?: string | null
+          created_by?: string | null
+        }
+        Update: {
+          bunny?: string
+          family?: string | null
+          status?: 'looking' | 'just-adopted' | 'settling-in' | 'going-strong' | 'forever-loved'
+          since?: string | null
+          summary?: string
+          story?: string | null
+          photo_url?: string | null
+          is_published?: boolean
+          sort_order?: number
         }
         Relationships: []
       }
@@ -1663,6 +1843,46 @@ export type Database = {
         Returns: Json
       }
       hopshop_reorder: { Args: { p_org: string }; Returns: Json }
+      // BunFest content + Happy Tails (supabase/migrations/2026092212/13*.sql)
+      bunfest_vendors_public: {
+        Args: Record<string, never>
+        Returns: {
+          id: string
+          name: string
+          category: string | null
+          blurb: string | null
+          website: string | null
+          booth: string | null
+          room: 'burgundy' | 'emerald' | null
+          tables: number
+        }[]
+      }
+      save_vendor_details: {
+        Args: {
+          p_id: string
+          p_category?: string | null
+          p_blurb?: string | null
+          p_booth?: string | null
+          p_room?: string | null
+          p_tables?: number
+          p_published?: boolean
+          p_sort?: number
+        }
+        Returns: undefined
+      }
+      publish_happy_tail: {
+        Args: {
+          p_request_id: string
+          p_bunny: string
+          p_summary: string
+          p_family?: string | null
+          p_status?: string
+          p_since?: string | null
+          p_story?: string | null
+          p_photo_url?: string | null
+        }
+        Returns: string
+      }
       hopshop_set_order: { Args: { p_product_id: string; p_action: 'ordered' | 'received' | 'clear'; p_qty?: number | null }; Returns: Json }
     }
     Enums: {

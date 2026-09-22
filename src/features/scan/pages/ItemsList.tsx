@@ -11,14 +11,15 @@ import { listItems } from '../api'
 import { BigButton, ErrorBox } from '../ScanUI'
 import { ITEM_KINDS, KIND_META, formatMoney, statusLabel, type ItemKind, type TaggedItem } from '../types'
 
-type Filter = 'all' | ItemKind
+type Filter = 'all' | 'event' | ItemKind
 
 export default function ItemsList() {
   const { membership } = useAuth()
   const orgId = membership?.orgId ?? ''
   const [items, setItems] = useState<TaggedItem[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<Filter>('all')
+  // Opens on the event items; stock is the Hop Shop's screen.
+  const [filter, setFilter] = useState<Filter>('event')
   const [q, setQ] = useState('')
 
   useEffect(() => {
@@ -36,16 +37,17 @@ export default function ItemsList() {
     const needle = q.trim().toLowerCase()
     return (items ?? []).filter(
       (i) =>
-        (filter === 'all' || i.kind === filter) &&
+        (filter === 'all' || (filter === 'event' ? i.kind !== 'stock' : i.kind === filter)) &&
         (!needle || i.title.toLowerCase().includes(needle) || i.code.toLowerCase().includes(needle) || (i.donated_by ?? '').toLowerCase().includes(needle)),
     )
   }, [items, filter, q])
 
   const counts = useMemo(() => {
-    const c: Record<Filter, number> = { all: 0, auction: 0, raffle: 0, stock: 0 }
+    const c: Record<Filter, number> = { all: 0, event: 0, auction: 0, raffle: 0, stock: 0 }
     for (const i of items ?? []) {
       c.all++
       c[i.kind]++
+      if (i.kind !== 'stock') c.event++
     }
     return c
   }, [items])
@@ -54,7 +56,13 @@ export default function ItemsList() {
     <Screen className="space-y-4">
       <div className="pt-1">
         <h1 className="font-display text-2xl font-black text-ink">Scanned items</h1>
-        <p className="mt-1 text-sm text-slate-600">Every item with a tag. Tap one to update it.</p>
+        <p className="mt-1 text-sm text-slate-600">
+          Auction lots and raffle prizes with a tag — tap one to update it. Shop stock lives in{' '}
+          <Link to="/staff/hopshop" className="font-bold text-brand-blue">
+            Hop Shop
+          </Link>
+          , with its supplier and reorder details.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -67,9 +75,10 @@ export default function ItemsList() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {(['all', ...ITEM_KINDS] as Filter[]).map((f) => {
+        {(['event', ...ITEM_KINDS, 'all'] as Filter[]).map((f) => {
           const active = f === filter
-          const label = f === 'all' ? 'All' : KIND_META[f].label.replace('Hop Shop ', '')
+          const label =
+            f === 'all' ? 'Everything' : f === 'event' ? 'Auction & raffle' : KIND_META[f].label.replace('Hop Shop ', '')
           return (
             <button
               key={f}

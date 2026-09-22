@@ -12,6 +12,18 @@ import { errMessage, isSupabaseConfigured } from '../../../lib/supabase'
 import { isNative } from '../../../native/platform'
 import { ohrr } from '../../../data/ohrr'
 import { bookSlot, getBookingType, openSlots } from '../api'
+import { rememberBooking } from '../mine'
+import NotifyMe from '../NotifyMe'
+
+// Friendly names for the things OHRR hasn't published times for yet, so the
+// "no dates" screen can say what it's about.
+const NOT_OPEN_YET: Record<string, string> = {
+  'vet-clinic': 'Mobile vet clinic',
+  'bonding-session': 'Bunny bonding sessions',
+  'adoption-visit': 'Adoption appointments',
+  'bunny-socialization': 'Bunny Socialization shifts',
+  'buncare-shift': 'Buncare shifts',
+}
 import { downloadBookingIcs, googleCalendarUrl, scheduleBookingReminders } from '../calendar'
 import { dayKey, durationLabel, fmtDay, fmtRange, fmtTime, type BookingReceipt, type BookingType, type OpenSlot, fmtWeekly } from '../types'
 
@@ -61,20 +73,24 @@ export default function BookPage() {
 
   if (type === undefined) return <Spinner />
   if (type === null) {
+    // Nothing published under this slug yet (the vet clinic waits for confirmed
+    // dates). Take an interest instead of ending the journey here.
+    const name = NOT_OPEN_YET[slug] ?? 'these'
     return (
       <>
-        <PageHeader icon="calendar" title="Booking" />
-        <Screen>
+        <PageHeader icon="calendar" title={NOT_OPEN_YET[slug] ?? 'Booking'} />
+        <Screen className="space-y-4">
           <Card className="space-y-2 text-sm text-slate-600">
-            <p className="font-bold text-ink">This isn’t open for booking right now.</p>
+            <p className="font-bold text-ink">No dates are up yet.</p>
             <p>
-              Email{' '}
+              OHRR sets {name.toLowerCase()} dates a few weeks ahead. Ask to be told when they go up, or email{' '}
               <a href={`mailto:${ohrr.email}`} className="font-semibold text-brand-blue">
                 {ohrr.email}
-              </a>{' '}
-              and OHRR will help.
+              </a>
+              .
             </p>
           </Card>
+          <NotifyMe what={slug} label={name} />
         </Screen>
       </>
     )
@@ -298,6 +314,12 @@ function Confirmation({ receipt, type }: { receipt: BookingReceipt; type: Bookin
   const confirmed = receipt.status === 'confirmed'
   const cancelHref = `/book/cancel/${receipt.cancel_token}`
 
+  // Keep it on this phone: OHRR sends no confirmation email, so this is the
+  // only lasting record of the time, the place and the private cancel link.
+  useEffect(() => {
+    rememberBooking(receipt, type)
+  }, [receipt, type])
+
   return (
     <>
       <PageHeader icon="calendar" title={confirmed ? 'You’re booked!' : 'Request sent'} />
@@ -353,11 +375,15 @@ function Confirmation({ receipt, type }: { receipt: BookingReceipt; type: Bookin
 
         <Card className="space-y-2 text-sm text-slate-600">
           <p>
+            <span className="font-bold text-ink">Saved on this phone.</span> You’ll find this booking — and the link
+            below — on the app’s Home screen until it’s over.
+          </p>
+          <p>
             Can’t make it?{' '}
             <Link to={cancelHref} className="font-bold text-brand-blue">
               Cancel this booking
             </Link>{' '}
-            — this link is private to you, so bookmark it.
+            — this link is private to you.
           </p>
           {type.kind === 'shift' && <p>Please book at least {type.min_lead_hours} hours ahead so someone is there to let you in.</p>}
         </Card>

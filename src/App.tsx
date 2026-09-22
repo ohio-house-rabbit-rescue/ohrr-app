@@ -10,6 +10,8 @@ import AdoptRabbit from './pages/AdoptRabbit'
 import Events from './pages/Events'
 import Vets from './pages/Vets'
 import FoundRabbit from './pages/FoundRabbit'
+import FoundReport from './pages/FoundReport'
+import PageTitle from './components/PageTitle'
 import Tails from './pages/Tails'
 import TailDetail from './pages/TailDetail'
 import ShareTail from './pages/ShareTail'
@@ -64,6 +66,7 @@ import HopShopManager from './pages/HopShopManager'
 import StaffTeam from './pages/StaffTeam'
 import StaffActivity from './pages/StaffActivity'
 import StaffAnnouncements from './pages/StaffAnnouncements'
+import StaffHomeScreen from './pages/StaffHomeScreen'
 import StaffVolunteer from './pages/StaffVolunteer'
 import StaffLearn from './pages/StaffLearn'
 import StaffAdopt from './pages/StaffAdopt'
@@ -93,11 +96,16 @@ const RaffleDesk = lazy(() => import('./features/raffle/tickets/pages/RaffleDesk
 const TicketPage = lazy(() => import('./features/raffle/tickets/pages/TicketPage'))
 const BreedDetail = lazy(() => import('./features/breeds/pages/BreedDetail'))
 const Outreach = lazy(() => import('./features/share/pages/Outreach'))
+const StaffBunfest = lazy(() => import('./features/bunfest/pages/StaffBunfest'))
+const StaffTails = lazy(() => import('./features/tails/pages/StaffTails'))
 const PostEditor = lazy(() => import('./features/share/pages/PostEditor'))
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      {/* The browser tab / shared-link title for the current screen */}
+      <PageTitle />
+      <Routes>
       {/* OHRR host app */}
       <Route element={<OhrrLayout />}>
         <Route path="/" element={<OhrrHome />} />
@@ -112,6 +120,7 @@ export default function App() {
         <Route path="/events" element={<Events />} />
         <Route path="/vets" element={<Vets />} />
         <Route path="/found" element={<FoundRabbit />} />
+        <Route path="/found/report" element={<FoundReport />} />
         {/* The shared hero/featured slides (website + app) link to /give */}
         <Route path="/give" element={<Navigate to="/support" replace />} />
         <Route path="/tails" element={<Tails />} />
@@ -196,10 +205,15 @@ export default function App() {
           <Route path="hopshop/suppliers" element={<HopShopManager />} />
           <Route path="adopt" element={<StaffAdopt />} />
           <Route path="announcements" element={<StaffAnnouncements />} />
+          <Route path="home-screen" element={<StaffHomeScreen />} />
           <Route path="volunteer" element={<StaffVolunteer />} />
           <Route path="learn" element={<StaffLearn />} />
           <Route path="vets" element={<StaffVets />} />
           <Route path="events" element={<StaffEvents />} />
+          <Route path="bunfest" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
+          <Route path="tails" element={<Suspense fallback={null}><StaffTails /></Suspense>} />
+          <Route path="bunfest/vendors" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
+          <Route path="bunfest/partners" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
           <Route path="raffle" element={<StaffRaffle />} />
           <Route path="raffle-tickets" element={<Suspense fallback={null}><RaffleDesk /></Suspense>} />
           <Route path="sponsors" element={<StaffSponsors />} />
@@ -224,6 +238,7 @@ export default function App() {
 
       {/* A printed OHRR tag's QR opens here → the scan flow (sign-in first if needed) */}
       <Route path="/t/:code" element={<Suspense fallback={null}><TagLanding /></Suspense>} />
-    </Routes>
+      </Routes>
+    </>
   )
 }

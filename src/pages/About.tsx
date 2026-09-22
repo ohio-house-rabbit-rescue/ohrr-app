@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ohrr } from '../data/ohrr'
+import { telHref, useOrgProfile } from '../lib/orgProfile'
 import {
   mission,
   vision,
@@ -29,6 +30,7 @@ function Row({
 }
 
 export default function About() {
+  const org = useOrgProfile()
   return (
     <>
       <PageHeader
@@ -57,12 +59,12 @@ export default function About() {
           </Row>
           <Row icon="clock">
             <span className="font-semibold text-ink">Hop Shop hours:</span>{' '}
-            <span className="text-slate-600">{ohrr.hopShopHours}</span>
+            <span className="text-slate-600">{org.hopshop_hours}</span>
             <p className="text-xs text-slate-500">{ohrr.adoptionsNote}</p>
           </Row>
           <Row icon="phone">
-            <a href={ohrr.phoneHref} className="font-semibold text-brand-blue">
-              {ohrr.phone}
+            <a href={telHref(org.phone)} className="font-semibold text-brand-blue">
+              {org.phone}
             </a>
           </Row>
           <Row icon="mail">

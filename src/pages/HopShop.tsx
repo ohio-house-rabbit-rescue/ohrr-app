@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { hopShopIntro, hopShopProducts, hopShopPurchaseNote } from '../data/hopshop'
 import { ohrr } from '../data/ohrr'
+import { telHref, useOrgProfile } from '../lib/orgProfile'
 import { useHopShopProducts, money } from '../lib/hopshopPublic'
 import { mapsUrl } from '../lib/events'
 import { PageHeader, Screen, Card, SectionLabel } from '../components/ui'
@@ -8,6 +9,7 @@ import { Icon } from '../components/icons'
 import PresentedBy from '../features/sponsors/PresentedBy'
 
 export default function HopShop() {
+  const org = useOrgProfile()
   const live = useHopShopProducts()
   const inStock = live ?? []
 
@@ -27,7 +29,7 @@ export default function HopShop() {
           <div className="flex items-center gap-2 text-sm">
             <Icon name="clock" size={15} className="shrink-0 text-brand-blue" />
             <span className="font-semibold text-ink">Hop Shop hours:</span>
-            <span className="text-slate-600">{ohrr.hopShopHours}</span>
+            <span className="text-slate-600">{org.hopshop_hours}</span>
           </div>
           <div className="mt-2.5 flex items-start gap-2 text-sm">
             <Icon name="mappin" size={15} className="mt-0.5 shrink-0 text-brand-blue" />

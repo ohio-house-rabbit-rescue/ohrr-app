@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Screen, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
+import PhotoField from '../components/PhotoField'
 import { ohrr } from '../data/ohrr'
 import { submitRequest } from '../lib/requests'
+import { useFormDraft, DRAFT_NOTE } from '../lib/formDraft'
 
 const input =
   'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
@@ -11,7 +13,15 @@ const input =
 
 export default function ShareTail() {
   const [status, setStatus] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle')
-  const [form, setForm] = useState({ name: '', email: '', bunny: '', since: '', story: '', photoUrl: '' })
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const [form, setForm, clearDraft, restored] = useFormDraft('happy-tail', {
+    name: '',
+    email: '',
+    bunny: '',
+    since: '',
+    story: '',
+    photoUrl: '',
+  })
 
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -20,7 +30,8 @@ export default function ShareTail() {
     e.preventDefault()
     setStatus('submitting')
     try {
-      await submitRequest('happy-tail', { ...form })
+      await submitRequest('happy-tail', { ...form, photo: form.photoUrl })
+      clearDraft()
       setStatus('done')
     } catch {
       setStatus('error')
@@ -117,19 +128,18 @@ export default function ShareTail() {
               onChange={set('story')}
             />
           </label>
-          <label className="block text-sm font-semibold text-slate-700">
-            Link to a photo <span className="font-normal text-slate-400">(optional)</span>
-            <input
-              className={input}
-              name="photoUrl"
-              placeholder="A shared photo link, if you have one"
-              value={form.photoUrl}
-              onChange={set('photoUrl')}
-            />
-          </label>
+          {restored && (
+            <p className="rounded-xl bg-brand-blue-50/70 px-3 py-2 text-xs font-semibold text-brand-blue">{DRAFT_NOTE}</p>
+          )}
+          <PhotoField
+            label="A photo of your bunny"
+            hint="This is the picture OHRR would publish with your story."
+            value={form.photoUrl}
+            onChange={(url) => setForm((f) => ({ ...f, photoUrl: url }))}
+            onBusyChange={setPhotoBusy}
+          />
           <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-500">
-            Have photos to share? Submit your story and OHRR will reply so you can send them by
-            email.
+            OHRR reads every story before it goes on the Happy Tails page.
           </p>
 
           {status === 'error' && (

@@ -4,18 +4,27 @@ import {
   rooms,
   zones,
   entrances,
-  placedBooths,
-  boothForVendor,
-  vendorById,
+  placeBooths,
   roomName,
   CATEGORY_COLOR,
   type RoomId,
   type FloorZone,
   type PlacedBooth,
 } from '../data/floorplan'
-import { vendorCategories } from '../data/vendors'
+import { useBunfestVendors, vendorCategoriesOf, type BunfestVendor } from '../features/bunfest/content'
 import { PageHeader, Screen, Card, SampleNote, Badge, btn } from '../components/ui'
 import { Icon } from '../components/icons'
+
+// The bundled categories keep their colours; anything OHRR adds gets a stable
+// one from the same palette, so the map and the legend always agree.
+const EXTRA_COLORS = ['#0669ac', '#e0950f', '#2f9e7f', '#9b6cc4', '#d9663d', '#4b7bb5', '#b5710c']
+function colorFor(category: string): string {
+  const known = CATEGORY_COLOR[category as keyof typeof CATEGORY_COLOR]
+  if (known) return known
+  let h = 0
+  for (const ch of category) h = (h * 31 + ch.charCodeAt(0)) % 997
+  return EXTRA_COLORS[h % EXTRA_COLORS.length]
+}
 
 const ZONE_STYLE: Record<FloorZone['kind'], { fill: string; text: string }> = {
   stage: { fill: '#334155', text: '#ffffff' },
@@ -64,16 +73,19 @@ function Zone({ z }: { z: FloorZone }) {
 
 function RoomPlan({
   roomId,
+  booths,
+  byId,
   selected,
   onSelect,
 }: {
   roomId: RoomId
+  booths: PlacedBooth[]
+  byId: Map<string, BunfestVendor>
   selected?: string
   onSelect: (vendorId: string) => void
 }) {
   const room = rooms.find((r) => r.id === roomId)!
   const roomZones = zones.filter((z) => z.room === roomId)
-  const booths = placedBooths(roomId)
   const ent = entrances.find((e) => e.room === roomId)
 
   return (
@@ -126,8 +138,8 @@ function RoomPlan({
 
       {/* booths */}
       {booths.map((b) => {
-        const vendor = vendorById(b.vendorId)
-        const color = vendor ? CATEGORY_COLOR[vendor.category as keyof typeof CATEGORY_COLOR] : '#94a3b8'
+        const vendor = byId.get(b.vendorId)
+        const color = vendor ? colorFor(vendor.category) : '#94a3b8'
         const isSel = selected === b.vendorId
         return (
           <g key={b.label} onClick={() => onSelect(b.vendorId)} style={{ cursor: 'pointer' }}>
@@ -165,6 +177,14 @@ export default function EventMap() {
   const [params, setParams] = useSearchParams()
   const initial = params.get('vendor') ?? undefined
   const [selected, setSelected] = useState<string | undefined>(initial)
+  const { items: vendors, assignments, source } = useBunfestVendors()
+  const byId = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors])
+  // A booth number OHRR typed wins over the computed "B3".
+  const labels = useMemo(
+    () => Object.fromEntries(vendors.map((v) => [v.id, v.booth])) as Record<string, string | undefined>,
+    [vendors],
+  )
+  const categories = useMemo(() => vendorCategoriesOf(vendors), [vendors])
 
   const select = (vendorId: string) => {
     setSelected(vendorId)
@@ -173,18 +193,13 @@ export default function EventMap() {
     setParams(next, { replace: true })
   }
 
-  const selVendor = selected ? vendorById(selected) : undefined
-  const selBooth = selected ? boothForVendor(selected) : undefined
-
   // Vendor list grouped by room, in booth order.
   const byRoom = useMemo(
-    () =>
-      rooms.map((r) => ({
-        room: r,
-        booths: placedBooths(r.id) as PlacedBooth[],
-      })),
-    [],
+    () => rooms.map((r) => ({ room: r, booths: placeBooths(assignments, r.id, labels) })),
+    [assignments, labels],
   )
+  const selVendor = selected ? byId.get(selected) : undefined
+  const selBooth = selected ? byRoom.flatMap((r) => r.booths).find((b) => b.vendorId === selected) : undefined
 
   return (
     <>
@@ -195,8 +210,10 @@ export default function EventMap() {
       />
       <Screen className="space-y-5">
         <SampleNote>
-          The room layout follows BunFest’s 2025 map. Individual booth numbers &amp; table counts are
-          an estimate to show how the floor comes together — OHRR sets final vendor placements.
+          The room layout follows BunFest’s 2025 map.{' '}
+          {source === 'seed'
+            ? 'Booth numbers and table counts are an estimate to show how the floor comes together — OHRR sets the final placements under Staff → BunFest.'
+            : 'Booths are where OHRR has placed this year’s vendors; the rooms themselves follow the published map.'}
         </SampleNote>
 
         {/* Selected vendor detail */}
@@ -209,7 +226,7 @@ export default function EventMap() {
               </div>
               <span
                 className="shrink-0 rounded-lg px-2.5 py-1 font-display text-sm font-black text-white"
-                style={{ background: CATEGORY_COLOR[selVendor.category as keyof typeof CATEGORY_COLOR] }}
+                style={{ background: colorFor(selVendor.category) }}
               >
                 {selBooth.label}
               </span>
@@ -253,7 +270,13 @@ export default function EventMap() {
               </span>
             </div>
             <Card className="p-2">
-              <RoomPlan roomId={r.id} selected={selected} onSelect={select} />
+              <RoomPlan
+                roomId={r.id}
+                booths={byRoom.find((x) => x.room.id === r.id)?.booths ?? []}
+                byId={byId}
+                selected={selected}
+                onSelect={select}
+              />
             </Card>
           </div>
         ))}
@@ -264,9 +287,9 @@ export default function EventMap() {
             Vendor categories
           </h3>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
-            {vendorCategories.map((c) => (
+            {categories.map((c) => (
               <span key={c} className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600">
-                <span className="h-3 w-3 rounded-sm" style={{ background: CATEGORY_COLOR[c] }} />
+                <span className="h-3 w-3 rounded-sm" style={{ background: colorFor(c) }} />
                 {c}
               </span>
             ))}
@@ -284,7 +307,7 @@ export default function EventMap() {
             </h3>
             <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
               {booths.map((b) => {
-                const v = vendorById(b.vendorId)
+                const v = byId.get(b.vendorId)
                 if (!v) return null
                 const isSel = selected === b.vendorId
                 return (
@@ -298,7 +321,7 @@ export default function EventMap() {
                   >
                     <span
                       className="inline-flex h-7 w-9 shrink-0 items-center justify-center rounded-md font-display text-xs font-black text-white"
-                      style={{ background: CATEGORY_COLOR[v.category as keyof typeof CATEGORY_COLOR] }}
+                      style={{ background: colorFor(v.category) }}
                     >
                       {b.label}
                     </span>

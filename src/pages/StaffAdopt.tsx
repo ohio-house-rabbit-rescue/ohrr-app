@@ -4,6 +4,8 @@ import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { Spinner, FormError, staffInput } from '../components/staffui'
+import { isNative } from '../native/platform'
+import { pickPhoto } from '../native/camera'
 import type { Database } from '../lib/database.types'
 
 type Rabbit = Database['public']['Tables']['rabbits']['Row']
@@ -91,6 +93,25 @@ function PhotoUploader({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Inside the app, "Take a photo" opens the camera itself — a plain file
+  // input opens a file browser on Android, which is no use standing in front
+  // of a rabbit.
+  const takePhoto = async () => {
+    setError(null)
+    try {
+      const dataUrl = await pickPhoto('camera')
+      if (!dataUrl) return
+      setBusy(true)
+      const blob = await (await fetch(dataUrl)).blob()
+      const file = new File([blob], `rabbit-${Date.now()}.jpg`, { type: 'image/jpeg' })
+      onChange([...photos, await uploadPhoto(file, userId)])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : errMessage(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const onFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return
     setBusy(true)
@@ -143,22 +164,34 @@ function PhotoUploader({
           ))}
         </div>
       )}
-      <label
-        className={`mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-2 text-sm font-bold text-brand-blue hover:bg-slate-50 ${
-          busy ? 'opacity-60' : ''
-        }`}
-      >
-        <Icon name="heart" size={15} />
-        {busy ? 'Uploading…' : photos.length ? 'Add more photos' : 'Upload photos'}
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          disabled={busy}
-          className="hidden"
-          onChange={(e) => onFiles(e.target.files)}
-        />
-      </label>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {isNative && (
+          <button
+            type="button"
+            onClick={() => void takePhoto()}
+            disabled={busy}
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-brand-blue px-4 text-sm font-bold text-white disabled:opacity-60"
+          >
+            <Icon name="camera" size={17} /> {busy ? 'Uploading…' : 'Take a photo'}
+          </button>
+        )}
+        <label
+          className={`inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-4 text-sm font-bold text-brand-blue hover:bg-slate-50 ${
+            busy ? 'opacity-60' : ''
+          }`}
+        >
+          <Icon name="camera" size={17} />
+          {busy && !isNative ? 'Uploading…' : photos.length ? 'Add from photos' : isNative ? 'Choose from photos' : 'Upload photos'}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            disabled={busy}
+            className="hidden"
+            onChange={(e) => onFiles(e.target.files)}
+          />
+        </label>
+      </div>
       <FormError>{error}</FormError>
     </div>
   )

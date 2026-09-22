@@ -46,7 +46,7 @@ export default function HelpSearch({
     <Card className="space-y-3">
       <label className="block">
         <span className="font-display text-[16px] font-extrabold text-ink">
-          {bunnyName ? `${bunnyName} is…` : 'My bunny is…'}
+          {bunnyName ? `Is something up with ${bunnyName}?` : 'Is something up with your bunny?'}
         </span>
         <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">
           Ask it the way you’d ask a friend — “did my bunny stop eating?”, “why is she chewing cords?”, “is his poop

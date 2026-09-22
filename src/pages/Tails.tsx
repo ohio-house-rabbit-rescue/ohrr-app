@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { tails, type Tail } from '../data/tails'
+import { type Tail } from '../data/tails'
+import { useHappyTails } from '../features/tails/api'
 import { useFollowing } from '../lib/follow'
 import { BunnyPhoto, StatusPill, FollowButton } from '../components/tailbits'
 import { PageHeader, Screen, Card, Badge, SampleNote, SegTabs } from '../components/ui'
@@ -13,6 +14,7 @@ type Filter = (typeof FILTERS)[number]
 export default function Tails() {
   const [filter, setFilter] = useState<Filter>('All')
   const following = useFollowing()
+  const { items: tails, source } = useHappyTails()
 
   const list = useMemo(() => {
     switch (filter) {
@@ -25,7 +27,7 @@ export default function Tails() {
       default:
         return tails
     }
-  }, [filter, following])
+  }, [filter, following, tails])
 
   return (
     <>
@@ -36,10 +38,12 @@ export default function Tails() {
       />
       <Screen className="space-y-4">
         <PresentedBy surface="happy-tails" />
-        <SampleNote>
-          These are sample stories. Real Happy Tails from OHRR adopters will appear here — adopted
-          from OHRR? Share yours below.
-        </SampleNote>
+        {source === 'seed' && (
+          <SampleNote>
+            These are sample stories. Real Happy Tails appear here as soon as OHRR publishes one —
+            adopted from OHRR? Share yours below.
+          </SampleNote>
+        )}
 
         <SegTabs options={FILTERS} value={filter} onChange={setFilter} />
 

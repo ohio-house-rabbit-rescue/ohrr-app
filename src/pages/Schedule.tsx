@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { sessions } from '../data/sessions'
+import { useBunfestSessions } from '../features/bunfest/content'
 import { event } from '../data/event'
 import { PageHeader, Screen, Card, SampleNote, SegTabs, btn } from '../components/ui'
 import { Icon } from '../components/icons'
@@ -18,6 +18,7 @@ export default function Schedule() {
   const [filter, setFilter] = useState<Filter>('All')
   const [calOpen, setCalOpen] = useState(false)
   const saved = useSavedSessions()
+  const { items: sessions, source } = useBunfestSessions()
 
   const sorted = [...sessions].sort((a, b) => toMin(a.start) - toMin(b.start))
   const savedTalks = sorted.filter((s) => !s.isBreak && saved.has(s.id))
@@ -31,9 +32,12 @@ export default function Schedule() {
         subtitle={`Education sessions · ${event.timeLabel}`}
       />
       <Screen className="space-y-3">
-        <SampleNote>
-          Showing the 2025 sessions. The 2026 program is announced closer to the event.
-        </SampleNote>
+        {source === 'seed' && (
+          <SampleNote>
+            Showing the 2025 sessions. This year’s program appears here as soon as OHRR adds it
+            (Staff → BunFest) — no app update needed.
+          </SampleNote>
+        )}
 
         <div className="flex items-center justify-between gap-3">
           <SegTabs options={FILTERS} value={filter} onChange={setFilter} />

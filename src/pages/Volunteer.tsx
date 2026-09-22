@@ -9,6 +9,7 @@ import {
 } from '../data/volunteer'
 import { useVolunteerOpportunities } from '../lib/volunteerOpps'
 import { PageHeader, Screen, SectionLabel, ActionCard, Card, btn } from '../components/ui'
+import MyBookingsCard from '../features/bookings/MyBookingsCard'
 import { Icon } from '../components/icons'
 import PresentedBy from '../features/sponsors/PresentedBy'
 
@@ -31,6 +32,7 @@ export default function Volunteer() {
       />
       <Screen className="space-y-6">
         <PresentedBy surface="volunteer" />
+        <MyBookingsCard />
         <p className="px-1 text-sm leading-relaxed text-slate-600">{volunteerIntro}</p>
 
         {/* The four real positions */}

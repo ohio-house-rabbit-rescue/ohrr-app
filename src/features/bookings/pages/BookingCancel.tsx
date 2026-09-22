@@ -5,6 +5,7 @@ import { PageHeader, Screen, Card, btn } from '../../../components/ui'
 import { Spinner } from '../../../components/staffui'
 import { errMessage } from '../../../lib/supabase'
 import { bookingByToken, cancelBooking } from '../api'
+import { forgetBooking } from '../mine'
 import { fmtDay, fmtRange, statusLabel, type BookingReceipt } from '../types'
 
 export default function BookingCancel() {
@@ -28,6 +29,7 @@ export default function BookingCancel() {
     setBusy(true)
     try {
       setB(await cancelBooking(token))
+      forgetBooking(token)
     } catch (e) {
       setError(errMessage(e))
     } finally {

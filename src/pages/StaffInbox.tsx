@@ -3,12 +3,16 @@
 // sign-ups, Happy Tails, mailing-list joins, …). New first; tap one to see
 // every answer, call or email them in one tap, add a note, mark it done.
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { supabase, errMessage } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
-import { Screen, Card, Badge } from '../components/ui'
+import { Screen, Card, Badge, btn } from '../components/ui'
 import { Icon, type IconName } from '../components/icons'
 import { Spinner, FormError, staffInput } from '../components/staffui'
+import { exportCsv, toCsv } from '../lib/exportFile'
+import { publishHappyTail } from '../features/tails/api'
+import { TAIL_STATUS, type TailStatus } from '../data/tails'
 
 type Row = Database['public']['Tables']['requests']['Row']
 type Status = Row['status']
@@ -24,6 +28,8 @@ const KIND: Record<string, { label: string; icon: IconName }> = {
   'mailing-list': { label: 'Mailing list', icon: 'mail' },
   supporter: { label: 'New supporter', icon: 'heart' },
   'foster-application': { label: 'Foster interest', icon: 'home' },
+  'found-rabbit': { label: 'Found rabbit', icon: 'mappin' },
+  'notify-me': { label: 'Tell me when', icon: 'clock' },
   'contact': { label: 'Message', icon: 'mail' },
   'adoption-application': { label: 'Adoption application', icon: 'heart' },
   'booking': { label: 'Booking', icon: 'calendar' },
@@ -124,6 +130,35 @@ export default function StaffInbox() {
         ))}
       </div>
 
+      {shown.length > 0 && (
+        <button
+          type="button"
+          onClick={() =>
+            exportCsv(
+              `ohrr-inbox-${filter}-${new Date().toISOString().slice(0, 10)}.csv`,
+              toCsv(
+                ['Received', 'Kind', 'Name', 'Email', 'Phone', 'Subject', 'Status', 'Details', 'Staff notes'],
+                shown.map((r) => [
+                  new Date(r.created_at).toLocaleString(),
+                  kindMeta(r.kind).label,
+                  r.name ?? '',
+                  r.email ?? '',
+                  r.phone ?? '',
+                  r.subject ?? '',
+                  r.status,
+                  Object.entries((r.payload ?? {}) as Record<string, string>)
+                    .map(([k, v]) => `${labelOf(k)}: ${v}`)
+                    .join(' | '),
+                  r.staff_notes ?? '',
+                ]),
+              ),
+            )
+          }
+          className={`${btn.outline} w-full`}
+        >
+          <Icon name="mail" size={16} /> Export these {shown.length} (CSV)
+        </button>
+      )}
       <FormError>{error}</FormError>
       {rows === null && !error && <Spinner />}
       {rows && shown.length === 0 && (
@@ -183,6 +218,7 @@ export default function StaffInbox() {
                         <Field key={key} label={labelOf(key)} value={value} />
                       ))}
                     </dl>
+                    {r.kind === 'happy-tail' && <PublishTail row={r} payload={payload} onPublished={() => void setStatus(r, 'done')} />}
                     <Notes row={r} onSave={(n) => setStatus(r, r.status, n)} />
                     <div className="grid grid-cols-2 gap-2">
                       {r.status !== 'done' ? (
@@ -219,7 +255,25 @@ export default function StaffInbox() {
   )
 }
 
+function isPhoto(value: string): boolean {
+  return /^https?:\/\/\S+\.(jpe?g|png|webp|heic)(\?|$)/i.test(value.trim())
+}
+
 function Field({ label, value }: { label: string; value: string }) {
+  // A photo sent with the form (found rabbit, surrender, Happy Tail) is worth
+  // seeing, not reading as a URL.
+  if (isPhoto(value)) {
+    return (
+      <div className="px-3.5 py-2">
+        <dt className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-400">{label}</dt>
+        <dd>
+          <a href={value} target="_blank" rel="noopener noreferrer">
+            <img src={value} alt={label} className="max-h-64 w-full rounded-xl object-cover" loading="lazy" />
+          </a>
+        </dd>
+      </div>
+    )
+  }
   const isLong = value.length > 80 || value.includes('\n')
   return (
     <div className={`px-3.5 py-2 ${isLong ? '' : 'flex items-baseline gap-3'}`}>
@@ -242,5 +296,126 @@ function Notes({ row, onSave }: { row: Row; onSave: (notes: string) => Promise<v
         </button>
       )}
     </label>
+  )
+}
+
+/**
+ * Inbox → Happy Tails. Pre-filled from what the adopter sent, because the whole
+ * point is one tap: before this, a story could arrive and never reach the page.
+ */
+function PublishTail({
+  row,
+  payload,
+  onPublished,
+}: {
+  row: Row
+  payload: Record<string, string>
+  onPublished: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [d, setD] = useState({
+    bunny: payload.bunny ?? '',
+    family: row.name ? `${row.name.split(' ').slice(-1)[0]} family` : '',
+    status: 'going-strong' as TailStatus,
+    since: payload.since ?? '',
+    summary: (payload.story ?? '').slice(0, 140),
+    story: payload.story ?? '',
+    photoUrl: payload.photo ?? payload.photoUrl ?? '',
+  })
+  const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const txt = (k: keyof typeof d) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value })
+
+  if (done) {
+    return (
+      <p className="rounded-2xl border border-green-200 bg-green-50/70 px-3.5 py-2.5 text-sm font-bold text-green-800">
+        Published to Happy Tails.{' '}
+        <Link to="/staff/tails" className="underline">
+          Edit it
+        </Link>
+      </p>
+    )
+  }
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className={`${btn.outline} w-full`}>
+        <Icon name="sparkles" size={16} /> Publish as a Happy Tail
+      </button>
+    )
+  }
+
+  const publish = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await publishHappyTail({
+        requestId: row.id,
+        bunny: d.bunny.trim(),
+        summary: d.summary.trim() || d.story.slice(0, 140),
+        family: d.family.trim() || undefined,
+        status: d.status,
+        since: d.since.trim() || undefined,
+        story: d.story.trim() || undefined,
+        photoUrl: d.photoUrl.trim() || undefined,
+      })
+      setDone(true)
+      onPublished()
+    } catch (e) {
+      setError(errMessage(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-brand-blue/25 bg-brand-blue-50/40 p-3">
+      <p className="font-display text-[15px] font-extrabold text-ink">Publish as a Happy Tail</p>
+      {d.photoUrl && <img src={d.photoUrl} alt="" className="max-h-48 w-full rounded-xl object-cover" />}
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block text-sm font-semibold text-slate-700">
+          Bunny
+          <input className={staffInput} value={d.bunny} onChange={txt('bunny')} />
+        </label>
+        <label className="block text-sm font-semibold text-slate-700">
+          Family
+          <input className={staffInput} value={d.family} onChange={txt('family')} placeholder="Patel family" />
+        </label>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block text-sm font-semibold text-slate-700">
+          How they’re doing
+          <select className={staffInput} value={d.status} onChange={txt('status')}>
+            {Object.entries(TAIL_STATUS).map(([value, meta]) => (
+              <option key={value} value={value}>
+                {meta.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-sm font-semibold text-slate-700">
+          Since
+          <input className={staffInput} value={d.since} onChange={txt('since')} placeholder="Adopted Mar 2025" />
+        </label>
+      </div>
+      <label className="block text-sm font-semibold text-slate-700">
+        One-line summary (on the card)
+        <input className={staffInput} value={d.summary} onChange={txt('summary')} maxLength={160} />
+      </label>
+      <label className="block text-sm font-semibold text-slate-700">
+        The story
+        <textarea className={staffInput} rows={4} value={d.story} onChange={txt('story')} />
+      </label>
+      <FormError>{error}</FormError>
+      <div className="flex gap-2">
+        <button type="button" onClick={publish} disabled={busy || !d.bunny.trim()} className={`${btn.primary} flex-1 disabled:opacity-60`}>
+          {busy ? 'Publishing…' : 'Publish'}
+        </button>
+        <button type="button" onClick={() => setOpen(false)} className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500">
+          Not yet
+        </button>
+      </div>
+    </div>
   )
 }

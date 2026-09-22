@@ -7,11 +7,12 @@ import { ohrr } from '../data/ohrr'
 import { Screen, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 import { SchemaField, inputClass, type Values } from '../components/SchemaField'
+import { useFormDraft, DRAFT_NOTE } from '../lib/formDraft'
 import { submitRequest } from '../lib/requests'
 
 export default function FosterForm() {
   const [step, setStep] = useState(0)
-  const [values, setValues] = useState<Values>({})
+  const [values, setValues, clearDraft, restored] = useFormDraft<Values>('foster', {})
   const [agreed, setAgreed] = useState(false)
   const [signature, setSignature] = useState('')
   const [status, setStatus] = useState<'idle' | 'submitting' | 'done'>('idle')
@@ -49,6 +50,7 @@ export default function FosterForm() {
     flat.signature = signature.trim()
     try {
       await submitRequest('foster-application', flat)
+      clearDraft()
       setStatus('done')
       window.scrollTo({ top: 0 })
     } catch (e) {
@@ -88,6 +90,9 @@ export default function FosterForm() {
       <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
         <div className="h-full rounded-full bg-brand-orange transition-all" style={{ width: `${((step + 1) / total) * 100}%` }} />
       </div>
+      {restored && step === 0 && (
+        <p className="rounded-xl bg-brand-blue-50/70 px-3 py-2 text-xs font-semibold text-brand-blue">{DRAFT_NOTE}</p>
+      )}
       {step === 0 && (
         <div>
           <p className="text-xs font-extrabold uppercase tracking-wider text-brand-blue">Foster a rabbit</p>

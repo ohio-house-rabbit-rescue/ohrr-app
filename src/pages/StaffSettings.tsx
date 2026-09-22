@@ -11,6 +11,9 @@ import { Badge, Card, Screen, SectionLabel } from '../components/ui'
 import { Spinner, FormError } from '../components/staffui'
 import { fetchSettings, setSetting } from '../features/settings/useSetting'
 import { TEST_FEATURES, RAFFLE_TICKETS_FLAG } from '../features/settings/testFeatures'
+import { ORG_PROFILE_FALLBACK, ORG_PROFILE_KEY, type OrgProfile } from '../lib/orgProfile'
+import { staffInput } from '../components/staffui'
+import { btn } from '../components/ui'
 import type { Json } from '../lib/database.types'
 
 function isEnabled(value: Json | undefined): boolean {
@@ -114,6 +117,8 @@ export default function StaffSettings() {
         </p>
       </div>
 
+      <OrgDetails orgId={orgId} userId={user?.id ?? null} values={values} onSaved={load} />
+
       <section className="space-y-2.5">
         <SectionLabel>Test features</SectionLabel>
         <Card className="space-y-4">
@@ -166,5 +171,110 @@ export default function StaffSettings() {
         </Card>
       </section>
     </Screen>
+  )
+}
+
+/**
+ * Hours, phone, address and a holiday notice — the details that appear across
+ * the app and the website. They used to be constants in the code, so a closure
+ * or a new number needed a new build. Blank means "use the built-in value".
+ */
+function OrgDetails({
+  orgId,
+  userId,
+  values,
+  onSaved,
+}: {
+  orgId: string
+  userId: string | null
+  values: Record<string, Json>
+  onSaved: () => Promise<void>
+}) {
+  const stored = (values[ORG_PROFILE_KEY] ?? {}) as Partial<OrgProfile>
+  const [d, setD] = useState<OrgProfile>(ORG_PROFILE_FALLBACK)
+  const [busy, setBusy] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fill the form once the settings have loaded.
+  useEffect(() => {
+    setD({
+      hours: stored.hours ?? ORG_PROFILE_FALLBACK.hours,
+      hours_short: stored.hours_short ?? ORG_PROFILE_FALLBACK.hours_short,
+      hopshop_hours: stored.hopshop_hours ?? ORG_PROFILE_FALLBACK.hopshop_hours,
+      notice: stored.notice ?? '',
+      phone: stored.phone ?? ORG_PROFILE_FALLBACK.phone,
+      email: stored.email ?? ORG_PROFILE_FALLBACK.email,
+      address: stored.address ?? ORG_PROFILE_FALLBACK.address,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values])
+
+  const txt = (k: keyof OrgProfile) => (e: { target: { value: string } }) => {
+    setSaved(false)
+    setD({ ...d, [k]: e.target.value })
+  }
+
+  const save = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await setSetting(ORG_PROFILE_KEY, { ...d } as unknown as Json, { orgId, userId })
+      setSaved(true)
+      await onSaved()
+    } catch (e) {
+      setError(errMessage(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="space-y-2.5">
+      <SectionLabel>OHRR details</SectionLabel>
+      <Card className="space-y-3">
+        <p className="text-xs leading-relaxed text-slate-500">
+          Shown wherever the app and the website mention the rescue’s hours, phone or address. Everyone sees the change
+          the next time they open the app.
+        </p>
+        <label className="block text-sm font-semibold text-slate-700">
+          Notice (leave empty for none)
+          <input className={staffInput} value={d.notice} onChange={txt('notice')} placeholder="Closed Sun 25 Oct — we’re all at BunFest!" />
+        </label>
+        <label className="block text-sm font-semibold text-slate-700">
+          Hours, in full
+          <input className={staffInput} value={d.hours} onChange={txt('hours')} />
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block text-sm font-semibold text-slate-700">
+            Hours, short
+            <input className={staffInput} value={d.hours_short} onChange={txt('hours_short')} />
+          </label>
+          <label className="block text-sm font-semibold text-slate-700">
+            Hop Shop hours
+            <input className={staffInput} value={d.hopshop_hours} onChange={txt('hopshop_hours')} />
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block text-sm font-semibold text-slate-700">
+            Phone
+            <input className={staffInput} type="tel" value={d.phone} onChange={txt('phone')} />
+          </label>
+          <label className="block text-sm font-semibold text-slate-700">
+            Email
+            <input className={staffInput} type="email" value={d.email} onChange={txt('email')} />
+          </label>
+        </div>
+        <label className="block text-sm font-semibold text-slate-700">
+          Address
+          <input className={staffInput} value={d.address} onChange={txt('address')} />
+        </label>
+        <FormError>{error}</FormError>
+        {saved && <p className="text-sm font-bold text-green-700">Saved.</p>}
+        <button type="button" onClick={save} disabled={busy} className={`${btn.primary} w-full disabled:opacity-60`}>
+          {busy ? 'Saving…' : 'Save OHRR details'}
+        </button>
+      </Card>
+    </section>
   )
 }

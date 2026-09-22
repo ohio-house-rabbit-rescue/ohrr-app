@@ -1,13 +1,15 @@
 import { Link, useParams } from 'react-router-dom'
-import { tails } from '../data/tails'
+import { useHappyTails } from '../features/tails/api'
 import { BunnyPhoto, StatusPill, FollowButton } from '../components/tailbits'
 import { Screen, Card, Badge, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 
 export default function TailDetail() {
   const { id } = useParams()
+  const { items: tails, loading } = useHappyTails()
   const tail = tails.find((t) => t.id === id)
 
+  if (!tail && loading) return null
   if (!tail) {
     return (
       <Screen className="space-y-4 text-center">

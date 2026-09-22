@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { partners } from '../data/partners'
+import { useRescuePartners } from '../features/bunfest/content'
 import { Screen, Card, Badge, SectionLabel, SampleNote, btn } from '../components/ui'
 import { ContactLinks } from '../components/ContactLinks'
 import { Icon } from '../components/icons'
@@ -17,8 +17,10 @@ function initials(name: string) {
 
 export default function PartnerDetail({ base = '/bunfest/partners' }: { base?: string }) {
   const { id } = useParams()
+  const { items: partners, loading } = useRescuePartners()
   const partner = partners.find((p) => p.id === id)
 
+  if (!partner && loading) return null
   if (!partner) {
     return (
       <Screen className="space-y-4 text-center">
