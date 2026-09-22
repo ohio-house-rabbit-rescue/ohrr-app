@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { bunfestPageById } from '../data/bunfestPages'
+import { useBunfestPage } from '../features/bunfest/pages'
 import { PageHeader, Screen, Card, Badge, SectionLabel, btn } from '../components/ui'
 import { ContactLinks } from '../components/ContactLinks'
 import { ReserveSession } from '../components/ReserveSession'
@@ -10,10 +10,21 @@ import { Icon } from '../components/icons'
 
 export default function BunfestPage() {
   const { id } = useParams()
-  const page = bunfestPageById(id)
+  // This year's copy, prices and times — edited in Staff → BunFest → Pages.
+  const { page, loading } = useBunfestPage(id)
   // Raffle page only: staff-entered raffle details + ticket pricing (auction_settings).
   const auction = useAuctionSettings(page?.feature === 'raffle')
   const raffleDetails = auction?.raffle_details?.trim() || null
+
+  if (!page && loading) {
+    return (
+      <Screen className="space-y-3">
+        <div className="mt-6 h-6 w-2/3 animate-pulse rounded-lg bg-slate-100" />
+        <div className="h-24 animate-pulse rounded-2xl bg-slate-100" />
+        <div className="h-24 animate-pulse rounded-2xl bg-slate-100" />
+      </Screen>
+    )
+  }
 
   if (!page) {
     return (

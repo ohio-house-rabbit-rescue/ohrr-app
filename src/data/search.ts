@@ -51,6 +51,12 @@ const screens: { title: string; subtitle: string; to: string; extra?: string }[]
   { title: 'Rescue Partners', subtitle: 'BunFest', to: '/bunfest/partners' },
   { title: 'Sponsors', subtitle: 'BunFest', to: '/bunfest/sponsors' },
   { title: 'Plan Your Visit', subtitle: 'BunFest', to: '/bunfest/visit', extra: 'tickets parking admission' },
+  { title: 'Volunteer at BunFest', subtitle: 'BunFest', to: '/bunfest/p/volunteer', extra: 'help shift lanyard free admission glamour shots hop shop registration raffle' },
+  { title: 'Bunny Spa', subtitle: 'BunFest', to: '/bunfest/p/spa', extra: 'nail trim grooming gland cleaning' },
+  { title: 'Glamour Shots', subtitle: 'BunFest', to: '/bunfest/p/glamour', extra: 'photos photographer pictures' },
+  { title: 'Raffle & Silent Auction', subtitle: 'BunFest', to: '/bunfest/p/raffle', extra: 'tickets prizes bidding buy it now' },
+  { title: 'Chillaxabun Lounge', subtitle: 'BunFest', to: '/bunfest/p/lounge', extra: 'quiet pen rest hay water' },
+  { title: 'Accommodations', subtitle: 'BunFest', to: '/bunfest/p/accommodations', extra: 'hotel embassy suites dublin room block group rate' },
   {
     title: 'OHRR staff sign-in',
     subtitle: 'For staff & volunteers',

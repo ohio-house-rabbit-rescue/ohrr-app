@@ -978,6 +978,8 @@ export type Database = {
           vendor_tables: number
           vendor_published: boolean
           vendor_sort: number
+          /** The years this company had a BunFest table; empty means not tagged yet. */
+          vendor_years: number[]
           created_by: string | null
           created_at: string
           updated_at: string
@@ -1007,6 +1009,7 @@ export type Database = {
           vendor_tables?: number
           vendor_published?: boolean
           vendor_sort?: number
+          vendor_years?: number[]
           created_by?: string | null
         }
         Update: {
@@ -1032,6 +1035,7 @@ export type Database = {
           vendor_tables?: number
           vendor_published?: boolean
           vendor_sort?: number
+          vendor_years?: number[]
         }
         Relationships: []
       }
@@ -1047,6 +1051,8 @@ export type Database = {
           presenter: string | null
           description: string | null
           room: string | null
+          /** The festival runs parallel tracks ("Education Sessions", "Special Interest Sessions"). */
+          track: string
           kind: 'session' | 'break' | 'activity'
           is_published: boolean
           sort_order: number
@@ -1064,6 +1070,7 @@ export type Database = {
           presenter?: string | null
           description?: string | null
           room?: string | null
+          track?: string
           kind?: 'session' | 'break' | 'activity'
           is_published?: boolean
           sort_order?: number
@@ -1077,6 +1084,7 @@ export type Database = {
           presenter?: string | null
           description?: string | null
           room?: string | null
+          track?: string
           kind?: 'session' | 'break' | 'activity'
           is_published?: boolean
           sort_order?: number
@@ -1099,6 +1107,8 @@ export type Database = {
           blurb: string | null
           is_host: boolean
           at_bunfest: boolean
+          /** The years this rescue was a BunFest partner; empty means not tagged yet. */
+          bunfest_years: number[]
           is_published: boolean
           sort_order: number
           created_by: string | null
@@ -1120,6 +1130,7 @@ export type Database = {
           blurb?: string | null
           is_host?: boolean
           at_bunfest?: boolean
+          bunfest_years?: number[]
           is_published?: boolean
           sort_order?: number
           created_by?: string | null
@@ -1137,6 +1148,7 @@ export type Database = {
           blurb?: string | null
           is_host?: boolean
           at_bunfest?: boolean
+          bunfest_years?: number[]
           is_published?: boolean
           sort_order?: number
         }
@@ -1189,6 +1201,78 @@ export type Database = {
         Relationships: []
       }
       // The "at the festival" cards, per event and year
+      // The BunFest activity pages (Bunny Spa, Glamour Shots, the host hotel …),
+      // one set per year — supabase/migrations/20260922150000_bunfest_this_year.sql.
+      bunfest_pages: {
+        Row: {
+          id: string
+          org_id: string
+          event_slug: string
+          year: number
+          slug: string
+          title: string
+          subtitle: string | null
+          icon: string | null
+          sponsor_note: string | null
+          chips: string[]
+          note: string | null
+          sections: unknown
+          feature: 'reserve' | 'raffle' | null
+          reserve: unknown
+          email_signup: string | null
+          contact: unknown
+          related_label: string | null
+          related: unknown
+          is_published: boolean
+          sort_order: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          event_slug?: string
+          year?: number
+          slug: string
+          title: string
+          subtitle?: string | null
+          icon?: string | null
+          sponsor_note?: string | null
+          chips?: string[]
+          note?: string | null
+          sections?: unknown
+          feature?: 'reserve' | 'raffle' | null
+          reserve?: unknown
+          email_signup?: string | null
+          contact?: unknown
+          related_label?: string | null
+          related?: unknown
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+        }
+        Update: {
+          year?: number
+          slug?: string
+          title?: string
+          subtitle?: string | null
+          icon?: string | null
+          sponsor_note?: string | null
+          chips?: string[]
+          note?: string | null
+          sections?: unknown
+          feature?: 'reserve' | 'raffle' | null
+          reserve?: unknown
+          email_signup?: string | null
+          contact?: unknown
+          related_label?: string | null
+          related?: unknown
+          is_published?: boolean
+          sort_order?: number
+        }
+        Relationships: []
+      }
       event_features: {
         Row: {
           id: string
@@ -2030,7 +2114,7 @@ export type Database = {
       }
       // BunFest content + Happy Tails (supabase/migrations/2026092212/13*.sql)
       bunfest_vendors_public: {
-        Args: Record<string, never>
+        Args: { p_year?: number | null }
         Returns: {
           id: string
           name: string
@@ -2040,7 +2124,18 @@ export type Database = {
           booth: string | null
           room: 'burgundy' | 'emerald' | null
           tables: number
+          years: number[]
         }[]
+      }
+      start_bunfest_year: {
+        Args: { p_org: string; p_from: number; p_to: number }
+        Returns: {
+          sessions: number
+          features: number
+          pages: number
+          vendors: number
+          partners: number
+        }
       }
       save_vendor_details: {
         Args: {
@@ -2052,6 +2147,7 @@ export type Database = {
           p_tables?: number
           p_published?: boolean
           p_sort?: number
+          p_years?: number[] | null
         }
         Returns: undefined
       }

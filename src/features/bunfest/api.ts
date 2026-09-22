@@ -110,6 +110,8 @@ export interface VendorDetails {
   tables: number
   published: boolean
   sort: number
+  /** The years this company had a table — the public list shows one year. */
+  years: number[]
 }
 
 export async function saveVendorDetails(supplierId: string, d: VendorDetails): Promise<void> {
@@ -122,6 +124,7 @@ export async function saveVendorDetails(supplierId: string, d: VendorDetails): P
     p_tables: d.tables,
     p_published: d.published,
     p_sort: d.sort,
+    p_years: d.years,
   })
   if (error) throw error
 }
@@ -226,4 +229,99 @@ export async function saveEventFacts(_orgId: string, f: EventFacts): Promise<voi
   }
   const { error } = await supabase.from('events').update({ info }).eq('id', f.eventId)
   if (error) throw error
+}
+
+/* ------------------------------------------------- the activity pages */
+
+export type PageRow = Database['public']['Tables']['bunfest_pages']['Row']
+export type PageInput = Database['public']['Tables']['bunfest_pages']['Insert'] & { id?: string }
+
+/**
+ * A section as the staff form edits it. The page renders a heading with either
+ * a paragraph or a bulleted list, so that is all the form asks for — one
+ * bullet per line.
+ */
+export interface PageSection {
+  heading: string
+  body: string
+  list: string
+}
+
+export function sectionsToForm(v: unknown): PageSection[] {
+  if (!Array.isArray(v)) return []
+  return v
+    .filter((s): s is Record<string, unknown> => !!s && typeof s === 'object')
+    .map((s) => ({
+      heading: typeof s.heading === 'string' ? s.heading : '',
+      body: typeof s.body === 'string' ? s.body : '',
+      list: Array.isArray(s.list) ? s.list.filter((i): i is string => typeof i === 'string').join('\n') : '',
+    }))
+}
+
+export function sectionsFromForm(sections: PageSection[], keepSlots: unknown): unknown[] {
+  // The raffle page has one section that also shows the staff-entered raffle
+  // details; keep that marker attached to the section it was on.
+  const slots = Array.isArray(keepSlots)
+    ? keepSlots.map((s) => (s && typeof s === 'object' ? (s as Record<string, unknown>).slot : undefined))
+    : []
+  return sections
+    .map((s, i) => {
+      const list = s.list.split('\n').map((l) => l.trim()).filter(Boolean)
+      const out: Record<string, unknown> = {}
+      if (s.heading.trim()) out.heading = s.heading.trim()
+      if (s.body.trim()) out.body = s.body.trim()
+      if (list.length > 0) out.list = list
+      if (slots[i]) out.slot = slots[i]
+      return out
+    })
+    .filter((s) => Object.keys(s).length > 0)
+}
+
+export async function listPages(orgId: string, year: number): Promise<PageRow[]> {
+  const { data, error } = await supabase
+    .from('bunfest_pages')
+    .select('*')
+    .eq('org_id', orgId)
+    .eq('year', year)
+    .order('sort_order')
+  if (error) throw error
+  return data ?? []
+}
+
+export async function pageYears(orgId: string): Promise<number[]> {
+  const { data, error } = await supabase.from('bunfest_pages').select('year').eq('org_id', orgId)
+  if (error) throw error
+  return [...new Set((data ?? []).map((r) => r.year))].sort((a, b) => b - a)
+}
+
+export async function savePage(p: PageInput): Promise<PageRow> {
+  const { data, error } = await supabase.from('bunfest_pages').upsert(p, { onConflict: 'id' }).select('*').single()
+  if (error) throw error
+  return data
+}
+
+export async function deletePage(id: string): Promise<void> {
+  const { error } = await supabase.from('bunfest_pages').delete().eq('id', id)
+  if (error) throw error
+}
+
+/* ------------------------------------------------- starting a new year */
+
+export interface YearCopy {
+  sessions: number
+  features: number
+  pages: number
+  vendors: number
+  partners: number
+}
+
+/**
+ * Copy a whole year of BunFest content into a new one — the programme, the
+ * festival cards, every activity page, and the vendor and rescue rosters.
+ * Anything already entered for the target year is left alone.
+ */
+export async function startBunfestYear(orgId: string, from: number, to: number): Promise<YearCopy> {
+  const { data, error } = await supabase.rpc('start_bunfest_year', { p_org: orgId, p_from: from, p_to: to })
+  if (error) throw error
+  return (data ?? { sessions: 0, features: 0, pages: 0, vendors: 0, partners: 0 }) as YearCopy
 }

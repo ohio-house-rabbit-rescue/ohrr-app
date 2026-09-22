@@ -9,6 +9,7 @@
 // had. `source` tells a page which it is looking at.
 import { useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { useBunfestEvent } from '../../lib/events'
 import type { Database } from '../../lib/database.types'
 import { sessions as seedSessions, type Session } from '../../data/sessions'
 import { partners as seedPartners, type Partner } from '../../data/partners'
@@ -51,6 +52,7 @@ function rowToSession(r: SessionRow): Session {
     title: r.title,
     presenter: [r.presenter, r.room].filter(Boolean).join(' · '),
     description: r.description ?? '',
+    track: r.track || undefined,
     isBreak: r.kind === 'break',
   }
 }
@@ -102,13 +104,17 @@ export function useBunfestSessions(): Live<Session> {
 
 /** The rescue directory. `bunfestOnly` keeps it to this year's BunFest partners. */
 export function useRescuePartners(bunfestOnly = false): Live<Partner> {
+  const bunfest = useBunfestEvent()
+  const year = new Date(bunfest.startsAt).getFullYear()
   const [state, setState] = useState<Live<Partner>>({ items: seedPartners, source: 'seed', loading: isSupabaseConfigured })
   useEffect(() => {
     if (!isSupabaseConfigured) return
     let active = true
-    let q = supabase.from('rescue_partners').select('*').eq('is_published', true)
-    if (bunfestOnly) q = q.eq('at_bunfest', true)
-    q.order('sort_order', { ascending: true })
+    supabase
+      .from('rescue_partners')
+      .select('*')
+      .eq('is_published', true)
+      .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
       .then(({ data, error }) => {
         if (!active) return
@@ -116,12 +122,24 @@ export function useRescuePartners(bunfestOnly = false): Live<Partner> {
           setState({ items: seedPartners, source: 'seed', loading: false })
           return
         }
-        setState({ items: data.map(rowToPartner), source: 'live', loading: false })
+        // `bunfest_years` holds the years a rescue came. A row nobody has
+        // tagged by year yet falls back to the older at_bunfest flag, so the
+        // list doesn't empty out between the migration and the first edit.
+        const rows = bunfestOnly
+          ? data.filter((r) =>
+              r.bunfest_years.length > 0 ? r.bunfest_years.includes(year) : r.at_bunfest,
+            )
+          : data
+        if (rows.length === 0) {
+          setState({ items: seedPartners, source: 'seed', loading: false })
+          return
+        }
+        setState({ items: rows.map(rowToPartner), source: 'live', loading: false })
       })
     return () => {
       active = false
     }
-  }, [bunfestOnly])
+  }, [bunfestOnly, year])
   return state
 }
 
@@ -155,11 +173,13 @@ const seedResult: VendorsResult = {
 }
 
 export function useBunfestVendors(): VendorsResult {
+  const bunfest = useBunfestEvent()
+  const year = new Date(bunfest.startsAt).getFullYear()
   const [state, setState] = useState<VendorsResult>({ ...seedResult, loading: isSupabaseConfigured })
   useEffect(() => {
     if (!isSupabaseConfigured) return
     let active = true
-    supabase.rpc('bunfest_vendors_public').then(({ data, error }) => {
+    supabase.rpc('bunfest_vendors_public', { p_year: year }).then(({ data, error }) => {
       if (!active) return
       const rows = Array.isArray(data) ? data : []
       if (error || rows.length === 0) {
@@ -186,7 +206,7 @@ export function useBunfestVendors(): VendorsResult {
     return () => {
       active = false
     }
-  }, [])
+  }, [year])
   return state
 }
 

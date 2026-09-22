@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useBunfestSessions } from '../features/bunfest/content'
 import { event } from '../data/event'
+import type { Session } from '../data/sessions'
 import { PageHeader, Screen, Card, SampleNote, SegTabs, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 import { useSavedSessions, toggleSavedSession } from '../lib/savedSessions'
@@ -11,18 +12,45 @@ const toMin = (t: string) => {
   return h * 60 + m
 }
 
-const FILTERS = ['All', 'Saved'] as const
-type Filter = (typeof FILTERS)[number]
+const SAVED = 'Saved'
+const ALL = 'All'
+
+/** "Special Interest Sessions" is too long for a tab on a phone. */
+const shortTrack = (t: string) => t.replace(/\s*Sessions$/i, '')
 
 export default function Schedule() {
-  const [filter, setFilter] = useState<Filter>('All')
   const [calOpen, setCalOpen] = useState(false)
   const saved = useSavedSessions()
   const { items: sessions, source } = useBunfestSessions()
 
-  const sorted = [...sessions].sort((a, b) => toMin(a.start) - toMin(b.start))
+  const sorted = useMemo(
+    () => [...sessions].sort((a, b) => toMin(a.start) - toMin(b.start)),
+    [sessions],
+  )
+
+  // BunFest runs more than one track at a time. When it does, the tracks are
+  // the tabs — showing both in one timeline made talks look like clashes.
+  const tracks = useMemo(() => {
+    const seen: string[] = []
+    for (const s of sorted) if (s.track && !seen.includes(s.track)) seen.push(s.track)
+    return seen
+  }, [sorted])
+
+  const tabs = useMemo(
+    () => (tracks.length > 1 ? [...tracks.map(shortTrack), SAVED] : [ALL, SAVED]),
+    [tracks],
+  )
+  const [tab, setTab] = useState<string>(tabs[0])
+  // The programme can arrive after the first render and change the tabs.
+  const current = tabs.includes(tab) ? tab : tabs[0]
+
   const savedTalks = sorted.filter((s) => !s.isBreak && saved.has(s.id))
-  const list = filter === 'Saved' ? savedTalks : sorted
+  const list =
+    current === SAVED
+      ? savedTalks
+      : current === ALL
+        ? sorted
+        : sorted.filter((s) => s.track && shortTrack(s.track) === current)
 
   return (
     <>
@@ -34,13 +62,13 @@ export default function Schedule() {
       <Screen className="space-y-3">
         {source === 'seed' && (
           <SampleNote>
-            Showing the 2025 sessions. This year’s program appears here as soon as OHRR adds it
-            (Staff → BunFest) — no app update needed.
+            This year’s programme appears here as soon as OHRR adds it (Staff → BunFest) — no app
+            update needed.
           </SampleNote>
         )}
 
         <div className="flex items-center justify-between gap-3">
-          <SegTabs options={FILTERS} value={filter} onChange={setFilter} />
+          <SegTabs options={tabs} value={current} onChange={setTab} />
           {savedTalks.length > 0 && (
             <button
               type="button"
@@ -53,7 +81,7 @@ export default function Schedule() {
           )}
         </div>
 
-        {filter === 'Saved' && savedTalks.length === 0 ? (
+        {current === SAVED && savedTalks.length === 0 ? (
           <Card className="text-center">
             <p className="font-display text-base font-extrabold text-ink">No saved sessions yet</p>
             <p className="mt-1 text-sm leading-relaxed text-slate-500">
@@ -64,14 +92,7 @@ export default function Schedule() {
         ) : (
           list.map((s) =>
             s.isBreak ? (
-              <div
-                key={s.id}
-                className="flex items-center gap-3 px-1 py-1 text-xs font-bold uppercase tracking-wider text-slate-400"
-              >
-                <span className="h-px flex-1 bg-slate-200" />
-                {s.time} · Break
-                <span className="h-px flex-1 bg-slate-200" />
-              </div>
+              <BreakRow key={s.id} session={s} />
             ) : (
               <Card key={s.id}>
                 <div className="flex items-start justify-between gap-3">
@@ -80,6 +101,12 @@ export default function Schedule() {
                 </div>
                 <h3 className="mt-1 font-display text-base font-extrabold text-ink">{s.title}</h3>
                 <p className="mt-0.5 text-xs font-semibold text-brand-blue">{s.presenter}</p>
+                {/* On the Saved tab the two tracks are mixed together, so say which. */}
+                {current === SAVED && tracks.length > 1 && s.track && (
+                  <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    {shortTrack(s.track)}
+                  </p>
+                )}
                 <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.description}</p>
               </Card>
             ),
@@ -89,6 +116,16 @@ export default function Schedule() {
 
       {calOpen && <CalendarSheet sessions={savedTalks} onClose={() => setCalOpen(false)} />}
     </>
+  )
+}
+
+function BreakRow({ session }: { session: Session }) {
+  return (
+    <div className="flex items-center gap-3 px-1 py-1 text-xs font-bold uppercase tracking-wider text-slate-400">
+      <span className="h-px flex-1 bg-slate-200" />
+      {session.time} · Break
+      <span className="h-px flex-1 bg-slate-200" />
+    </div>
   )
 }
 

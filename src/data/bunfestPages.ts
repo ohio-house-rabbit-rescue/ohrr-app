@@ -1,7 +1,12 @@
 // Midwest BunFest activity & visit info brought in-app as native content, so the
 // festival is its own entity in the app (no more linking out to
-// midwestbunfest.org for these). Content transcribed from the BunFest site
-// 2026-06-18; ticket *purchase* stays external (payment).
+// midwestbunfest.org for these). Ticket *purchase* stays external (payment).
+//
+// This is the bundled fallback. The live copy — prices, times, whether advance
+// booking is open — comes from `bunfest_pages` for the year being shown and is
+// edited in Staff → BunFest → Pages (features/bunfest/pages.ts). Keep this in
+// step with the current year so the app still reads correctly offline.
+// Transcribed from midwestbunfest.org on 2026-09-22.
 import type { IconName } from '../components/icons'
 
 export interface InfoSection {
@@ -64,16 +69,18 @@ export const bunfestPages: BunfestPage[] = [
         list: ['Nail trims', 'Light grooming', 'Gland cleaning'],
       },
       {
-        heading: 'Reserve a time below',
-        body: 'Pick a window that works and the team will confirm it — or just hop by the Bunny Spa when you arrive (day-of slots are first-come). You pay at the table. After the spa, swing by Glamour Shots. All proceeds benefit OHRR.',
+        heading: 'Prices',
+        list: [
+          '$12.00 — individual services',
+          '$20.00 — full spa package (nail clipping, gland cleaning and light grooming)',
+        ],
+      },
+      {
+        heading: 'Sign up on the day',
+        body: 'Advance scheduling has closed for this year. There are still day-of appointments: hop by the Bunny Spa as soon as you arrive to sign up in person. They go first-come, first-served and fill up quickly. You pay at the table, and all proceeds benefit OHRR.',
       },
     ],
     note: RHDV2_NOTE,
-    feature: 'reserve',
-    reserve: {
-      formName: 'spa-reservation',
-      services: ['Nail trims', 'Light grooming', 'Gland cleaning', 'Full spa package'],
-    },
     relatedLabel: 'Pairs well with',
     related: [{ label: 'Glamour Shots', to: '/bunfest/p/glamour' }],
   },
@@ -88,35 +95,37 @@ export const bunfestPages: BunfestPage[] = [
       {
         heading: 'How it works',
         list: [
-          '10-minute sessions; arrive 5–10 minutes early to check in',
-          'Bring your own props, or choose from available themes',
-          'Single rabbits or bonded groups welcome',
-          'You take home a thumb drive with every photo from your session',
+          'Two photo booths run all day so every bunny who wants a photo can have one',
+          '10-minute sessions; arrive 5–10 minutes early to check in and settle your bunny',
+          'Bring your own props, or choose from the wide variety of props and themes available',
+          'Single bunnies or bonded pairs, trios, quartets — all welcome',
+          '$20 flat rate, and you take home a thumb drive with every photo from the session',
         ],
       },
       {
-        heading: 'Reserve a time below',
-        body: 'Request a session window and the team will confirm it — or arrive early on the day, as Glamour Shots fills up quickly. You pay at the table. All proceeds support OHRR’s adoption center, education, and foster rabbits.',
+        heading: 'Sign up on the day',
+        body: 'Advance scheduling has closed for this year. Glamour Shots fills up quickly, so hop by as soon as you arrive to sign up in person — day-of appointments are first-come, first-served. Proceeds help OHRR save abandoned, abused and unwanted bunnies in central Ohio.',
       },
     ],
     note: RHDV2_NOTE,
-    feature: 'reserve',
-    reserve: { formName: 'glamour-reservation' },
+    relatedLabel: 'Pairs well with',
+    related: [{ label: 'Bunny Spa', to: '/bunfest/p/spa' }],
   },
   {
     id: 'raffle',
     title: 'Raffle & Silent Auction',
     subtitle: 'Bid and win — proceeds support Ohio House Rabbit Rescue.',
     icon: 'ticket',
+    chips: ['Raffle tickets $1 each, 6 for $5'],
     sections: [
       {
-        heading: 'Silent Auction',
-        body: 'Midwest BunFest features a silent auction. Preview the items that will be available — donated by our partners and community — in the Silent Auction catalog. Session details are posted with each item.',
+        heading: 'Raffle',
+        body: 'There is one raffle session this year. Ticket sales begin at 10:00 and the drawing is at 12:30. Tickets are $1 each, or 6 for $5. Write your name and phone number on each ticket and drop them in the buckets for the prizes you want — any number of tickets in any bucket. Winners are announced after the 12:30 draw.',
+        slot: 'raffle-details',
       },
       {
-        heading: 'Raffle',
-        body: 'Midwest BunFest also features a raffle. Details for 2026 will be posted here as the event gets closer.',
-        slot: 'raffle-details',
+        heading: 'Silent Auction',
+        body: 'Bid early and often on bunny toys and treats, jewelry, gift baskets and more. There are two sessions: the first set of items runs 10:00 – 12:15, and a new set 1:00 – 3:15. As always you can “buy it now” to be sure of your favorite treasure.',
       },
     ],
     feature: 'raffle',
@@ -128,17 +137,51 @@ export const bunfestPages: BunfestPage[] = [
     title: 'Toymaking Workshop',
     subtitle: 'Build an enrichment toy and playmat to take home for your bunny.',
     icon: 'gift',
+    sponsor: 'Run by Buttercup’s Bunny Boutique',
+    chips: ['Sign-up details to come'],
     sections: [
       {
-        heading: 'What it is',
-        body: 'A DIY toy and playmat kit comes with a variety of shapes and sizes of materials for crafting different toy and playmat designs. Facilitated by Buttercup’s Bunny Boutique.',
+        heading: 'It’s back for 2026',
+        body: 'The DIY Toymaking Workshop by Buttercup’s Bunny Boutique returns this year. Sign-up details are still to come — check back closer to the festival.',
       },
       {
-        heading: 'How to join',
-        body: 'Space is limited and details are shared on sign-up — email to reserve your spot.',
+        heading: 'What you get',
+        body: 'Buttercup’s Bunny Boutique guides you in building your own custom playmat, with the tips and tricks and any questions answered. The DIY toy and playmat kit comes with shapes and sizes of materials for crafting a range of toys and playmat designs, and there are extras to take home for continued fun.',
+      },
+      {
+        heading: 'Where the money goes',
+        body: 'Buttercup’s Bunny Boutique donates all proceeds to Ohio House Rabbit Rescue.',
       },
     ],
-    emailSignup: 'contact@ohiohouserabbitrescue.org',
+  },
+  {
+    id: 'volunteer',
+    title: 'Volunteer at BunFest',
+    subtitle: 'An event this size runs on volunteers — come and be part of the team.',
+    icon: 'users',
+    chips: ['Free admission', 'Free BunFest lanyard', 'Shifts of at least 3 hours'],
+    sections: [
+      {
+        heading: 'What you get',
+        body: 'Volunteers receive free admission to the event and a free Midwest BunFest lanyard. We ask for a shift of at least three hours between 10am and 4pm — the rest of the day is yours to enjoy BunFest for as long as you like.',
+      },
+      {
+        heading: 'Where help is needed',
+        list: [
+          'Glamour Shots — check people in for their appointment, help the photographer with the bunnies, choose props and costumes, load pictures onto a jump drive',
+          'Hop Shop — stocking merchandise, answering questions, checkout',
+          'Registration / Check-in — selling tickets, distributing wristbands, handing out programs, general information and directions',
+          'Silent Auction / Raffle — selling raffle tickets, watching over the auction items, helping with purchases',
+        ],
+      },
+      { heading: 'Time slots', list: ['10:00 AM – 1:00 PM', '1:00 PM – 4:00 PM'] },
+      {
+        heading: 'Who we’re looking for',
+        body: 'People who love bunnies. You can choose an area with minimal or with plenty of hands-on contact with the rabbits. We need volunteers who are friendly, enthusiastic and happy to work as part of a team. A few roles suit someone with leadership or event-planning experience, but most need nothing more than an interest in helping out.',
+      },
+    ],
+    relatedLabel: 'Also',
+    related: [{ label: 'Other ways to volunteer with OHRR', to: '/volunteer' }],
   },
   {
     id: 'lounge',
@@ -225,16 +268,24 @@ export const bunfestPages: BunfestPage[] = [
       {
         heading: 'Group rate',
         list: [
-          '$134 / night (plus tax) for a king or double-bed suite',
+          '$134 per night plus applicable taxes, for a king suite or a suite with two double beds',
+          'Group name: 2026 MidwestBunfest',
           'Group code: MWF',
-          'Bunny guests welcome — $35 refundable deposit',
-          'Book by September 25 — the reduced rate isn’t available after that, and rooms can sell out',
+          'Bringing your bunny? A refundable $35 pet deposit applies for the stay, returned after hotel staff check the room',
+          'The block closes Friday, September 25 — after that the reduced rate is gone and rooms may sell out',
         ],
       },
+      {
+        heading: 'Booking',
+        body: 'Use the group booking link below to land directly in the Midwest BunFest room block and get the group rate, or call central reservations on 1-800-220-9219.',
+      },
     ],
+    chips: ['$134 / night group rate', 'Book by September 25'],
     contact: {
       address: '5100 Upper Metro Pl, Dublin, OH 43017',
       phone: '1-800-220-9219',
+      url: 'https://www.hilton.com/en/attend-my-event/midwestbunfest2026-mwf/',
+      urlLabel: 'Book the group rate',
     },
   },
 ]
