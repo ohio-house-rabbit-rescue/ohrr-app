@@ -19,6 +19,16 @@
 
 ## Current state (at a glance)
 
+- **Drive tidied (2026-09-22).** The sponsor could not tell which files still needed them, so the
+  Drive now answers that by itself. **`OHRR App Design/RUN-THIS-IN-SUPABASE.sql`** is the single
+  file to paste — APPLY-8 … 12 concatenated in order, idempotent, with a plain-English header;
+  verified against the live database that none of those five had been applied. Everything else
+  moved out of the way: `OHRR App Design/Supabase history/` (the five pieces + every applied
+  migration + the old root paste file) and `OHRR App Design/Older design notes/` (the early
+  research, the duplicate progress log). `Mobile builds/android/Older builds/` holds every build
+  before 0.3.0-vc6. New `OHRR App Design/00-WHAT-IS-IN-HERE.md` explains the folder in four lines;
+  both START-HERE files now point at the one SQL file.
+
 - **Volunteers, per-year event content, and the rest of the sponsor's list (2026-09-22,
   0.3.0 · rev 6, latest).** **Paste `APPLY-12-VOLUNTEERS-AND-EVENT-CONTENT.sql`** (Drive root
   `PASTE-THIS-INTO-SUPABASE.sql`), after APPLY-8 … 11 if those haven't been run.
