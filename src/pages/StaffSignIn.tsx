@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth'
 import { btn, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { NotConfigured, Spinner, FormError, staffInput } from '../components/staffui'
+import { authOrigin } from '../lib/appUrl'
 
 type Mode = 'signin' | 'signup' | 'forgot'
 
@@ -37,8 +38,10 @@ export default function StaffSignIn() {
     setStatus('submitting')
     try {
       if (mode === 'forgot') {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/staff/reset`,
+        // Always point the email at the real app — someone who opened the old
+        // netlify.app mirror would otherwise be sent back to it.
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${authOrigin()}/staff/reset`,
         })
         if (error) throw error
         setResetSent(true)
@@ -100,8 +103,21 @@ export default function StaffSignIn() {
         <h1 className="font-display text-xl font-extrabold text-ink">Check your email</h1>
         <p className="text-sm leading-relaxed text-slate-600">
           If an account exists for <strong>{email}</strong>, we sent a link to reset your password.
-          Open it to choose a new one.
         </p>
+        <ul className="mx-auto max-w-sm space-y-1.5 text-left text-sm text-slate-600">
+          <li className="flex gap-2">
+            <span className="text-brand-orange">•</span> Open it on <strong>this device</strong> if
+            you can — that's where the new password gets set.
+          </li>
+          <li className="flex gap-2">
+            <span className="text-brand-orange">•</span> It works <strong>once</strong>, and expires
+            after about an hour.
+          </li>
+          <li className="flex gap-2">
+            <span className="text-brand-orange">•</span> Nothing after a few minutes? Check spam —
+            it comes from Supabase on OHRR's behalf.
+          </li>
+        </ul>
         <button
           type="button"
           onClick={() => {
