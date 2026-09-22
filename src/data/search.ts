@@ -51,6 +51,18 @@ const screens: { title: string; subtitle: string; to: string; extra?: string }[]
   { title: 'Rescue Partners', subtitle: 'BunFest', to: '/bunfest/partners' },
   { title: 'Sponsors', subtitle: 'BunFest', to: '/bunfest/sponsors' },
   { title: 'Plan Your Visit', subtitle: 'BunFest', to: '/bunfest/visit', extra: 'tickets parking admission' },
+  {
+    title: 'OHRR staff sign-in',
+    subtitle: 'For staff & volunteers',
+    to: '/staff',
+    extra: 'staff sign in login log in admin dashboard volunteer hours inbox hop shop manager team',
+  },
+  {
+    title: 'My volunteer hours',
+    subtitle: 'Your own record',
+    to: '/volunteer/hours',
+    extra: 'hours service letter volunteering log time',
+  },
 ]
 
 export const searchIndex: SearchItem[] = [
