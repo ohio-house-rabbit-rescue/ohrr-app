@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-22 (round 2)
+- **Last updated:** 2026-09-22 (round 3)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,30 @@
 ---
 
 ## Current state (at a glance)
+
+- **Revision stamp, staff Back, tidier Settings (2026-09-22, 0.2.3 · rev 5, latest).** Sponsor:
+  "remove the photo credits … make it a single line at the very end that can open when selected",
+  "show revision numbers for tracking", "in the staff section there is no back button", and
+  "I'm looking on the web for the updates and not seeing any of them."
+  - **Where the updates are:** the live app is **https://ohrr-app.pages.dev** (Cloudflare Pages,
+    auto-deploys from `main`). **https://ohrr-app.netlify.app is a stale mirror** from before the
+    Cloudflare move — it still serves a build from weeks ago (its `<title>` is the old one), which
+    is why none of the new work appeared. Nobody here has Netlify credentials, so it can only be
+    fixed from OHRR's Netlify login: either reconnect the site to the repo (netlify.toml is still
+    in the tree, so a build would work) or delete it so it stops showing old content.
+  - **Revision numbers.** `package.json` gains `"revision"`, injected as `__APP_REVISION__`
+    (`src/data/version.ts` → `build.revision`, `buildLabel` = "v0.2.3 · rev 5"). It matches the
+    Android versionCode / iOS build number, so one number identifies a release everywhere. Shown
+    in Settings → About (with Version, Build and Updated) and at the foot of every staff screen,
+    on the phone and the website (`ohrr-website` gained the same `revision` + `src/lib/version.ts`).
+    Also fixed: the commit was injected from Netlify's `COMMIT_REF`, so it had read "dev" since the
+    move — it now reads `CF_PAGES_COMMIT_SHA`, then `COMMIT_REF`, then local git HEAD.
+  - **Staff Back.** The staff header's back control is now labelled **Back** (a work screen reads
+    better with the word), the "App" button lost its competing arrow, and `BackButton` takes an
+    optional `label`. It was added yesterday and is live on pages.dev — it was missing from what
+    the sponsor was looking at because that was the Netlify mirror.
+  - **Settings.** Photo credits moved out of a full section into one line at the very end, opened
+    on tap (`<details>`); the licences require the credit to be available, not prominent.
 
 - **Audit round: consumer + staff (2026-09-22, latest).** Sponsor asked for an audit of
   "like issues" on both sides and approved every finding. **Paste `APPLY-10-BUNFEST-CONTENT.sql`

@@ -4,6 +4,7 @@ import { useAuth } from '../lib/auth'
 import { Icon } from './icons'
 import ScrollToTop from './ScrollToTop'
 import BackButton from './BackButton'
+import { buildLabel } from '../data/version'
 
 function roleLabel(role: string | undefined) {
   if (role === 'owner') return 'Owner'
@@ -86,14 +87,21 @@ export default function StaffLayout() {
         {/* Top bar */}
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
           <div className="flex items-center justify-between px-3 py-3">
-            <div className="flex min-w-0 items-center gap-1">
-              {pathname !== '/staff' && <BackButton always fallback="/staff" className="text-slate-600 hover:bg-slate-100" />}
-              <Link to="/staff" className="flex items-center gap-2 pl-1" onClick={() => setMenuOpen(false)}>
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-blue text-white">
+            <div className="flex min-w-0 items-center gap-2">
+              {pathname !== '/staff' ? (
+                <BackButton
+                  always
+                  fallback="/staff"
+                  label="Back"
+                  className="border border-slate-200 bg-white px-3 text-slate-700 hover:bg-slate-50"
+                />
+              ) : null}
+              <Link to="/staff" className="flex min-w-0 items-center gap-2" onClick={() => setMenuOpen(false)}>
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-blue text-white">
                   <Icon name="settings" size={20} />
                 </span>
-                <span className="leading-tight">
-                  <span className="block font-display text-sm font-extrabold text-ink">OHRR Staff</span>
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate font-display text-sm font-extrabold text-ink">OHRR Staff</span>
                   {membership && (
                     <span className="block text-[11px] font-semibold text-slate-400">
                       {roleLabel(membership.role)}
@@ -110,7 +118,7 @@ export default function StaffLayout() {
                 onClick={() => setMenuOpen(false)}
                 className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-50"
               >
-                <Icon name="arrowLeft" size={13} /> App
+                <Icon name="home" size={13} /> App
               </Link>
               {user && (
                 <button
@@ -184,6 +192,11 @@ export default function StaffLayout() {
         <main className="flex-1 pb-16">
           <Outlet />
         </main>
+
+        {/* Which update this is — so a volunteer can report "rev 5" and mean it. */}
+        <p className="px-4 pb-4 text-center text-[11px] text-slate-400">
+          OHRR staff tools · {buildLabel}
+        </p>
       </div>
     </div>
   )

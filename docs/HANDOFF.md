@@ -1,6 +1,6 @@
 # OHRR Mobile Build Handoff
 
-> Android + iPhone internal test builds of the OHRR app · 2026-09-17, updated 2026-09-22 (0.2.2)
+> Android + iPhone internal test builds of the OHRR app · 2026-09-17, updated 2026-09-22 (0.2.3)
 
 > Same content as **OHRR Mobile Build Handoff.docx** in the Drive folder "07-OHRR App". Regenerate both from one source if you change it (see docs/PROGRESS.md, 2026-09-17).
 
@@ -9,9 +9,10 @@ This document is for whoever builds and installs the OHRR app on phones for inte
 ## 1. What was built
 
 - The OHRR web app (the same React app that runs at https://ohrr-app.pages.dev) is now wrapped in a native shell with Capacitor 8. One codebase: the web build keeps working unchanged, and the same build is copied into the Android and iOS projects.
-- App id / bundle id: `org.ohiohouserabbitrescue.app` · App name: OHRR · Version **0.2.2** (Android versionCode 4; iOS build number = the GitHub Actions run number).
+- App id / bundle id: `org.ohiohouserabbitrescue.app` · App name: OHRR · Version **0.2.3 · rev 5** (Android versionCode 5; the iOS build number matches the revision). Settings → About shows the revision; the staff screens show it at the foot of every page.
 - Inside the app (and only there) a few things behave natively: My Bunny “Take a photo” / “Choose from library” use the phone camera and photo picker; care reminders become phone notifications (“Remind me on this phone”, 9:00 AM on the due date); every link to another website — donate, merch, Petfinder, vet websites, the OHRR website — opens in the phone’s browser; the status bar is brand blue and there is a brand-blue splash screen with the OHRR mark; Android’s back button walks back through the app.
 - On the web nothing changed: file inputs, calendar (.ics) downloads and plain links stay as they were.
+- **0.2.3 (2026-09-22) — revision stamp + staff Back.** Every build now carries a revision number (package.json `revision`, matching the Android versionCode) shown in Settings → About and at the foot of every staff screen, so a tester can say "rev 5" and mean it; the staff header has a labelled **Back**; photo credits collapsed to one line at the end of Settings.
 - **0.2.2 (2026-09-22) — audit round.** Bookings kept on the phone, a found-rabbit report with a photo, photos and saved drafts on the long forms, a text-size setting, and staff screens for the BunFest schedule / vendors / rescue partners, Happy Tails, the home-screen cards and OHRR's hours. Needs `PASTE-THIS-INTO-SUPABASE.sql` (Drive root) run once.
 - **0.2.1 (2026-09-22) — tester feedback round 1.** Bunny Help on Home asks a question, bigger icons, a Back button on every screen, booking times that fill themselves from a weekly schedule, and the Hop Shop manager with photos, codes, suppliers and a reorder list. Needs `PASTE-THIS-INTO-SUPABASE.sql` (Drive root) run once.
 - **0.2.0 (2026-09-21) — the full app for testers.** Everything built since 17 Sept (Scan an item, Inbox, Bookings, Share kit, Post queue, Flyers, Outreach letters, hours + service letters, impact page, breed guide, raffle tickets) is in the build. Inside the app, anything the app paints or prints goes out through the phone’s **share sheet** (the free @capacitor/share + @capacitor/filesystem plugins): Share-kit cards and Post-queue releases, flyers, the tag sheet (“Print or share”), the service-hours letter (“Print / share the letter”), the My Bunny backup. iOS’s share sheet includes **Print** (AirPrint); Android users pick Files/Drive/Messages or send it to whoever prints. The camera scanner uses the WebView camera (Capacitor asks for the permission the first time).
@@ -28,7 +29,7 @@ This document is for whoever builds and installs the OHRR app on phones for inte
 | Capacitor config | `capacitor.config.ts` (app id, name, splash / status-bar / notification settings) |
 | Native code the app uses | `src/native/` (platform.ts, camera.ts, notifications.ts, browser.ts, NativeBridge.tsx) |
 | Icon + splash sources | `resources/` (made from public/ohrr-mark.png by `scripts/make-native-assets.py`); generated into android/ and ios/ by `npm run cap:assets` |
-| Ready-made Android builds | G:\Shared drives\07-OHRR App\Mobile builds\android\ — **ohrr-0.2.2-vc4-release.aab** (for Play Console) and **ohrr-0.2.2-vc4-debug.apk** (sideload); the 0.2.1 / 0.2.0 / 0.1.0 files are the earlier builds |
+| Ready-made Android builds | G:\Shared drives\07-OHRR App\Mobile builds\android\ — **ohrr-0.2.3-vc5-release.aab** (for Play Console) and **ohrr-0.2.3-vc5-debug.apk** (sideload); the earlier 0.2.x / 0.1.0 files are previous builds |
 | Android test signing key | G:\Shared drives\07-OHRR App\Mobile builds\keys\ohrr-test.keystore + README.txt (passwords). Never in the repo. |
 | iPhone builds | G:\Shared drives\07-OHRR App\Mobile builds\ios\ — empty until the Mac produces one (see section 4) |
 | This document | docs/HANDOFF.md in the repo, and G:\Shared drives\07-OHRR App\OHRR Mobile Build Handoff.docx |

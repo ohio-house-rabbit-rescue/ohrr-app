@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { PageHeader, Screen, Card, SectionLabel, ActionCard, btn } from '../components/ui'
 import { TEXT_SIZES, setTextSize, useTextSize } from '../lib/textSize'
 import { Icon } from '../components/icons'
-import { build } from '../data/version'
+import { build, buildLabel } from '../data/version'
 import { PHOTO_CREDITS } from '../data/photos'
 import { BREED_PHOTO_CREDITS } from '../data/breeds'
 import { useProfile, saveProfile, clearProfile } from '../lib/profile'
@@ -184,40 +184,6 @@ export default function Settings() {
           </Card>
         </section>
 
-        {/* ---- Photo credits (honors the sample-image licenses) ---- */}
-        <section className="space-y-2">
-          <SectionLabel>Photo credits</SectionLabel>
-          <Card className="space-y-2">
-            <p className="text-xs leading-relaxed text-slate-500">
-              Sample bunny photos and the breed-guide photos are freely-licensed images from Wikimedia
-              Commons. Thanks to the photographers:
-            </p>
-            <ul className="space-y-1.5 text-xs text-slate-500">
-              {[...PHOTO_CREDITS, ...BREED_PHOTO_CREDITS.map((c) => ({ ...c, licenseUrl: c.licenseUrl || c.source }))].map((c) => (
-                <li key={c.source} className="flex flex-wrap items-center gap-x-1.5">
-                  <a
-                    href={c.source}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold text-brand-blue underline"
-                  >
-                    {c.author}
-                  </a>
-                  <span className="text-slate-400">·</span>
-                  <a
-                    href={c.licenseUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-slate-400 underline"
-                  >
-                    {c.license}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        </section>
-
         {/* ---- Staff entry (discreet; staff find it here, public ignores it) ---- */}
         <section className="space-y-2">
           <SectionLabel>OHRR staff</SectionLabel>
@@ -241,10 +207,14 @@ export default function Settings() {
         <section className="space-y-2">
           <SectionLabel>About this app</SectionLabel>
           <Card className="divide-y divide-slate-100">
+            <Row label="Revision" value={`rev ${build.revision}`} />
             <Row label="Version" value={`v${build.version}`} />
             <Row label="Build" value={build.commitShort} />
             <Row label="Updated" value={fmtDate(build.builtAt)} />
           </Card>
+          <p className="px-1 text-xs text-slate-400">
+            Telling OHRR “{buildLabel}” says exactly which update you’re on.
+          </p>
           <p className="px-1 text-xs text-slate-400">
             OHRR App · Ohio House Rabbit Rescue. Built to support rescue, adoption, education, and
             Midwest BunFest.
@@ -258,6 +228,34 @@ export default function Settings() {
             Privacy policy <Icon name="external" size={12} />
           </a>
         </section>
+
+        {/* ---- Photo credits: one line, opened when someone wants them.
+             The licences require the credit to be available, not prominent. ---- */}
+        <details className="group rounded-2xl border border-slate-200/80 bg-white">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3.5 text-sm font-semibold text-slate-600">
+            Photo credits
+            <Icon name="chevron" size={18} className="shrink-0 text-slate-300 transition group-open:rotate-90" />
+          </summary>
+          <div className="space-y-2 border-t border-slate-100 px-4 py-3">
+            <p className="text-xs leading-relaxed text-slate-500">
+              Sample bunny photos and the breed-guide photos are freely-licensed images from Wikimedia Commons. Thanks
+              to the photographers:
+            </p>
+            <ul className="space-y-1.5 text-xs text-slate-500">
+              {[...PHOTO_CREDITS, ...BREED_PHOTO_CREDITS.map((c) => ({ ...c, licenseUrl: c.licenseUrl || c.source }))].map((c) => (
+                <li key={c.source} className="flex flex-wrap items-center gap-x-1.5">
+                  <a href={c.source} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-blue underline">
+                    {c.author}
+                  </a>
+                  <span className="text-slate-400">·</span>
+                  <a href={c.licenseUrl} target="_blank" rel="noopener noreferrer" className="text-slate-400 underline">
+                    {c.license}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </details>
       </Screen>
     </>
   )

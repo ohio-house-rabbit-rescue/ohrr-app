@@ -39,12 +39,15 @@ export default function BackButton({
   className = '',
   always = false,
   fallback,
+  label,
 }: {
   className?: string
   /** Show even on a tab root (the staff area has its own roots). */
   always?: boolean
   /** Where to go when there is no history — default: the nearest tab root. */
   fallback?: string
+  /** Show the word too (the staff screens do — it reads as a control, not an icon). */
+  label?: string
 }) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
@@ -58,9 +61,12 @@ export default function BackButton({
       type="button"
       onClick={onClick}
       aria-label="Back"
-      className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition ${className}`}
+      className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full text-sm font-bold transition ${
+        label ? '' : 'w-10'
+      } ${className}`}
     >
-      <Icon name="arrowLeft" size={24} />
+      <Icon name="arrowLeft" size={22} />
+      {label}
     </button>
   )
 }
