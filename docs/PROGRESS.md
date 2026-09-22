@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-22 (round 4)
+- **Last updated:** 2026-09-22 (round 5)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,46 @@
 ---
 
 ## Current state (at a glance)
+
+- **Midwest BunFest 2026, and the last of the hard-coded content (2026-09-22,
+  0.3.0 · rev 6, latest).** **Paste `RUN-THIS-IN-SUPABASE.sql`** (Drive →
+  OHRR App Design). A review of the published 2026 site against the app found the
+  rest of the festival still bundled or in code, and some of it now wrong.
+  - **The activity pages are per year.** `bunfest_pages` replaces
+    `src/data/bunfestPages.ts` — the Bunny Spa, Glamour Shots, the raffle, the
+    Chillaxabun Lounge, the toymaking workshop, Bringing Your Bunny, the
+    attendance agreement, the host hotel and (new) **Volunteer at BunFest**. The
+    page renderer already took its content as data, so it only had to be pointed
+    at the table; the bundled copy stays as the offline fallback. Edited under
+    **Staff → BunFest → Pages**, on a phone or a laptop.
+  - **Two tracks.** `bunfest_sessions.track` — the festival runs *Education
+    Sessions* and *Special Interest Sessions* side by side, and one timeline made
+    them look like clashes. The schedule now has a tab per track; the staff form
+    suggests the two names and accepts a new one.
+  - **Rosters by year.** `suppliers.vendor_years` and
+    `rescue_partners.bunfest_years` — "at BunFest" was a single yes/no, so putting
+    this year's roster up meant deleting the record of last year's. Both forms
+    tick years now.
+  - **`start_bunfest_year()`** copies a whole year forward — programme, festival
+    cards, every page and both rosters — so next year starts from last year
+    rather than a blank screen. Nothing already in the new year is touched.
+  - **This year, typed in.** Both 2026 tracks (11 talks), nine activity pages,
+    the 18 rescue partners, the 27 vendors and the 12 sponsors, transcribed from
+    midwestbunfest.org on 2026-09-22.
+  - **Three things the app had wrong, corrected.** Advance booking for the Bunny
+    Spa and Glamour Shots has closed for 2026 — the app was still offering to
+    take requests, so those pages now give the day-of, first-come guidance OHRR
+    publishes, with a staff switch to reopen requests another year. The hotel link
+    pointed at a page that doesn't exist (`/hotel-information.html`; it is
+    `/accommodations.html`) and the merch link went to the Bonfire store's front
+    door rather than this year's collection.
+  - **Two bugs found on the way.** `/staff/bunfest/schedule` had no route, so the
+    one screen the year's programme is typed into landed on Not found. The "at the
+    festival" cards were seeded without links, so tapping one did nothing.
+  - Verified: `tsc` + `build` clean in both repos; the two migrations validated
+    for SQL and JSON before release; the schedule's track tabs, the new Volunteer
+    page and the rewritten Spa, Raffle and Accommodations pages walked at phone
+    width. Staff screens are build-verified only.
 
 - **Drive tidied (2026-09-22).** The sponsor could not tell which files still needed them, so the
   Drive now answers that by itself. **`OHRR App Design/RUN-THIS-IN-SUPABASE.sql`** is the single
