@@ -19,6 +19,14 @@
 
 ## Current state (at a glance)
 
+- **Letter signer + a name fix (2026-09-23).** Update 17 in `RUN-THIS-IN-SUPABASE.sql`
+  (waiting to be run): OHRR named Bev as the signer, so hours letters are signed by
+  **Beverly May, Founding Director and Shelter Manager** (her title on OHRR's site),
+  with OHRR's EIN **27-0830606** (GuideStar / Charity Navigator). Only blanks are
+  filled. **Karen Winstead** — an Ohio State professor, per OSU's English department
+  — was "Winsted" on the 2026 bonding talk; fixed live (with 17) and in
+  `src/data/sessions.ts`.
+
 - **Volunteer calls — ask, share, sign up, check in, thank (2026-09-23, latest).**
   Database: update 16, **applied 2026-09-23** together with 15 and checked live
   (every function answers; the staff-only reads return nothing to signed-out
