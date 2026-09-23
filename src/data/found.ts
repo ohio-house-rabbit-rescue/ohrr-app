@@ -8,8 +8,6 @@ import { CHRS_HELP_LINE_EMAIL } from './volunteer'
 export const foundContacts = {
   chrsHelpLine: CHRS_HELP_LINE_EMAIL,
   ohrrEmail: ohrr.email,
-  ohrrPhone: ohrr.phone,
-  ohrrPhoneHref: ohrr.phoneHref,
   facebookGroup: 'Columbus Rabbit Field Rescue',
 }
 

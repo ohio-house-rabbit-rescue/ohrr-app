@@ -128,7 +128,7 @@ export default function VolunteerSignup() {
 
           {status === 'error' && (
             <p className="text-sm font-semibold text-red-600">
-              Something went wrong — please try again, or call OHRR at 614-263-8557.
+              Something went wrong — please try again, or email OHRR at ohrrcontact@ohiohouserabbitrescue.org.
             </p>
           )}
 

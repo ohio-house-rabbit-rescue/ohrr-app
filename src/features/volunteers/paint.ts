@@ -42,7 +42,7 @@ function letterhead(ctx: CanvasRenderingContext2D, org: OrgHead, logo: HTMLImage
   ctx.fillText(org.name, PAD + 135, y + 50)
   ctx.fillStyle = '#475569'
   ctx.font = '500 26px "Open Sans"'
-  ctx.fillText([org.address, org.phone, org.email].filter(Boolean).join(' · '), PAD + 135, y + 92)
+  ctx.fillText([org.address, org.email].filter(Boolean).join(' · '), PAD + 135, y + 92)
   y += 130
   ctx.fillStyle = BRAND_BLUE
   ctx.fillRect(PAD, y, INNER, 6)

@@ -40,8 +40,8 @@ export default function FoundRabbit() {
             <Icon name="camera" size={17} /> Report it here — with a photo
           </Link>
           <div className="mt-2 flex flex-wrap gap-2">
-            <a href={foundContacts.ohrrPhoneHref} className={`${btn.outline} px-4 py-2`}>
-              <Icon name="phone" size={15} /> Call OHRR
+            <a href={`mailto:${foundContacts.ohrrEmail}?subject=Stray%20domestic%20rabbit`} className={`${btn.outline} px-4 py-2`}>
+              <Icon name="mail" size={15} /> Email OHRR
             </a>
             <a
               href={`mailto:${foundContacts.chrsHelpLine}?subject=Stray%20domestic%20rabbit%20report`}
@@ -51,7 +51,7 @@ export default function FoundRabbit() {
             </a>
           </div>
           <p className="mt-2.5 break-all text-xs text-slate-500">
-            {foundContacts.chrsHelpLine} · OHRR {foundContacts.ohrrPhone} ·{' '}
+            {foundContacts.chrsHelpLine} ·{' '}
             <a href={`mailto:${foundContacts.ohrrEmail}`} className="font-semibold text-brand-blue">
               {foundContacts.ohrrEmail}
             </a>
@@ -135,9 +135,6 @@ export default function FoundRabbit() {
             <div className="flex flex-wrap gap-2 pt-1">
               <a href={`mailto:${ohrr.email}?subject=Rabbit%20surrender%20inquiry`} className={`${btn.blue} px-4 py-2`}>
                 <Icon name="mail" size={15} /> Email OHRR
-              </a>
-              <a href={ohrr.phoneHref} className={`${btn.outline} px-4 py-2`}>
-                <Icon name="phone" size={15} /> {ohrr.phone}
               </a>
             </div>
           </Card>

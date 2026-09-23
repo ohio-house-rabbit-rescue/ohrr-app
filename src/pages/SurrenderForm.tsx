@@ -192,7 +192,7 @@ export default function SurrenderForm() {
 
         {status === 'error' && (
           <p className="text-sm font-semibold text-red-600">
-            Something went wrong — please try again, or call OHRR at {surrenderContact.phone}.
+            Something went wrong — please try again, or email OHRR at {surrenderContact.email}.
           </p>
         )}
 
@@ -206,7 +206,7 @@ export default function SurrenderForm() {
       </form>
 
       <p className="px-1 text-center text-xs leading-relaxed text-slate-400">
-        Questions? Call {surrenderContact.phone} or email{' '}
+        Questions? Email{' '}
         <a href={`mailto:${surrenderContact.email}`} className="font-semibold text-brand-blue underline">
           {surrenderContact.email}
         </a>

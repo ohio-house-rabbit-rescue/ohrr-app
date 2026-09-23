@@ -12,8 +12,8 @@ import { Icon } from '../components/icons'
 import { inputClass } from '../components/SchemaField'
 import PhotoField from '../components/PhotoField'
 import { submitRequest } from '../lib/requests'
-import { foundContacts } from '../data/found'
-import { ohrr } from '../data/ohrr'
+import { foundContacts, wildOrDomestic } from '../data/found'
+import { EMERGENCY_VET } from '../features/mybunny/links'
 
 const CONDITION = [
   'Looks well — moving around normally',
@@ -74,13 +74,10 @@ export default function FoundReport() {
             </span>
             <p className="font-display text-lg font-extrabold text-ink">Thank you, {form.name || 'friend'}.</p>
             <p className="text-sm leading-relaxed text-slate-600">
-              OHRR has your report and will be in touch. <strong>If the rabbit is hurt, or in danger right now</strong>,
-              please also call — a phone call is faster than any form.
+              OHRR has your report and will be in touch. OHRR is run by volunteers, so it may take a little while —
+              the CHRS Help Line can help with strays too.
             </p>
             <div className="flex flex-wrap justify-center gap-2">
-              <a href={ohrr.phoneHref} className={`${btn.primary} px-4 py-2`}>
-                <Icon name="phone" size={15} /> Call OHRR
-              </a>
               <a href={`mailto:${foundContacts.chrsHelpLine}`} className={`${btn.outline} px-4 py-2`}>
                 <Icon name="mail" size={15} /> CHRS Help Line
               </a>
@@ -114,9 +111,13 @@ export default function FoundReport() {
       <Screen className="space-y-4">
         <Card className="border-brand-orange/30 bg-brand-orange-50/60 text-sm text-slate-700">
           <p>
-            <strong>Hurt, or in danger right now?</strong> Call instead —{' '}
-            <a href={ohrr.phoneHref} className="font-bold text-brand-blue">
-              {ohrr.phone}
+            <strong>Hurt?</strong> OHRR is run by volunteers and can’t respond to emergencies. An injured rabbit needs a vet —{' '}
+            <a href={EMERGENCY_VET.phoneHref} className="font-bold text-brand-blue">
+              {EMERGENCY_VET.name}
+            </a>{' '}
+            sees exotic pets 24/7. A wild rabbit? Contact the{' '}
+            <a href={wildOrDomestic.wildUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-brand-blue">
+              Ohio Wildlife Center
             </a>
             .
           </p>

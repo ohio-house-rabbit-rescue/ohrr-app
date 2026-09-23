@@ -144,7 +144,7 @@ export default function ShareTail() {
 
           {status === 'error' && (
             <p className="text-sm font-semibold text-red-600">
-              Something went wrong — please try again, or email OHRR at {ohrr.phone}.
+              Something went wrong — please try again, or email OHRR at {ohrr.email}.
             </p>
           )}
 

@@ -23,7 +23,7 @@ export interface OutreachLetter {
 
 const SIGN = `{{sender}}
 Ohio House Rabbit Rescue (volunteer)
-${ohrr.address} · ${ohrr.phone}
+${ohrr.address}
 ${OHRR_CONTACT_EMAIL}
 ${SHARE_SITE}`
 

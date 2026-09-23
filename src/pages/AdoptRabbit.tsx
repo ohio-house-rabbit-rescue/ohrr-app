@@ -160,8 +160,8 @@ export default function AdoptRabbit() {
           />
           <p className="text-center text-xs leading-relaxed text-slate-500">
             Adoptions are by appointment ·{' '}
-            <a href={ohrr.phoneHref} className="font-semibold text-brand-blue">
-              {ohrr.phone}
+            <a href={`mailto:${ohrr.email}`} className="break-all font-semibold text-brand-blue">
+              {ohrr.email}
             </a>
           </p>
         </div>

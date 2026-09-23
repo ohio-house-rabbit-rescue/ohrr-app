@@ -131,13 +131,13 @@ export function buildLetter(i: LetterInput): Letter {
   const org = i.org.name
   const about = `${org} is a nonprofit organization${i.org.ein ? ` (EIN ${i.org.ein})` : ''} in Columbus, Ohio, that rescues abandoned rabbits, finds them homes through an adoption center just for rabbits, and teaches the public how to care for them.`
   const recorded = 'Each hour listed was recorded on the day it was given.'
-  const contact = `Please contact me at ${i.org.phone} or ${i.org.email} if you need anything further.`
+  const contact = `Please contact me at ${i.org.email} if you need anything further.`
   const signer = {
     name: i.org.signerName.trim(),
     title: i.org.signerTitle.trim(),
     missing: !i.org.signerName.trim(),
   }
-  const footer = [org, i.org.address, i.org.phone, i.org.email].filter(Boolean).join(' · ')
+  const footer = [org, i.org.address, i.org.email].filter(Boolean).join(' · ')
   const who = (d.recipient ?? '').trim()
 
   switch (i.kind) {

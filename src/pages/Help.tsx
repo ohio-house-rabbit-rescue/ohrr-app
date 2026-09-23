@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { helpIntro, faqCategories, type FaqItem } from '../data/help'
 import { ohrr } from '../data/ohrr'
-import { telHref, useOrgProfile } from '../lib/orgProfile'
+import { useOrgProfile } from '../lib/orgProfile'
 import { PageHeader, Screen, Card, SectionLabel, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 
@@ -73,18 +73,16 @@ export default function Help() {
         <Card className="border-brand-orange/25 bg-brand-orange-50/50">
           <h2 className="font-display text-base font-extrabold text-ink">Still need a hand?</h2>
           <p className="mt-1 text-sm leading-relaxed text-slate-600">
-            OHRR is run by volunteers and happy to help — reach out anytime.
+            OHRR is run entirely by volunteers and happy to help. Email is the way to reach them — someone will reply as
+            soon as they can.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <a href={telHref(org.phone)} className={`${btn.primary} px-4 py-2`}>
-              <Icon name="phone" size={15} /> Call OHRR
-            </a>
-            <a href={`mailto:${ohrr.email}`} className={`${btn.outline} px-4 py-2`}>
+            <a href={`mailto:${ohrr.email}`} className={`${btn.primary} px-4 py-2`}>
               <Icon name="mail" size={15} /> Email OHRR
             </a>
           </div>
-          <p className="mt-2.5 text-xs text-slate-500">
-            {org.phone} · {org.hours}
+          <p className="mt-2.5 break-all text-xs text-slate-500">
+            {ohrr.email} · Hop Shop {org.hours}
           </p>
         </Card>
 

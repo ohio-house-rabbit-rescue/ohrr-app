@@ -195,5 +195,5 @@ export async function renderFlyer(canvas: HTMLCanvasElement, f: Flyer, logoUrl =
   ctx.font = `500 40px "${body}"`
   ctx.fillText(ohrr.address, pad, fy)
   fy += 56
-  ctx.fillText(ohrr.phone, pad, fy)
+  ctx.fillText(ohrr.email, pad, fy)
 }

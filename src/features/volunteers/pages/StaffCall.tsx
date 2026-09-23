@@ -348,7 +348,7 @@ function ShareTab({ call, org }: { call: Call; org: OrgBits }) {
         closing: 'With thanks,',
         signer: { name: org.signerName, title: org.signerTitle },
         qr: { url: msg.link, caption: msg.link.replace(/^https:\/\//, '') },
-        footer: [org.name, org.address, org.phone, org.email].join(' · '),
+        footer: [org.name, org.address, org.email].filter(Boolean).join(' · '),
         org,
       })
       await sharePng(await canvasToBlob(canvas), `ohrr-volunteers-${call.slug}-letter.png`, `Volunteers needed — ${call.title}`)

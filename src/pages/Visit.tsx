@@ -140,9 +140,9 @@ export default function Visit() {
               <span className="text-slate-600">{ohrr.address}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Icon name="phone" size={15} className="shrink-0 text-brand-blue" />
-              <a href={ohrr.phoneHref} className="font-semibold text-brand-blue">
-                {ohrr.phone}
+              <Icon name="mail" size={15} className="shrink-0 text-brand-blue" />
+              <a href={`mailto:${ohrr.email}`} className="break-all font-semibold text-brand-blue">
+                {ohrr.email}
               </a>
             </div>
           </dl>

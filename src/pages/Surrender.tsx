@@ -24,10 +24,7 @@ export default function Surrender() {
         <Card className="border-brand-blue/20 bg-brand-blue-50/50">
           <p className="text-sm leading-relaxed text-slate-700">{surrenderIntro}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <a href={surrenderContact.phoneHref} className={`${btn.blue} px-4 py-2`}>
-              <Icon name="phone" size={15} /> Call OHRR
-            </a>
-            <a href={`mailto:${surrenderContact.email}`} className={`${btn.outline} px-4 py-2`}>
+            <a href={`mailto:${surrenderContact.email}?subject=Rabbit%20surrender%20inquiry`} className={`${btn.blue} px-4 py-2`}>
               <Icon name="mail" size={15} /> Email OHRR
             </a>
           </div>
@@ -134,13 +131,8 @@ export default function Surrender() {
         {/* Contact */}
         <Card>
           <h3 className="font-display text-base font-extrabold text-ink">Questions?</h3>
+          <p className="mt-1 text-sm leading-relaxed text-slate-600">OHRR is run entirely by volunteers, so email is the way to reach them — someone will reply as soon as they can.</p>
           <dl className="mt-2 space-y-2 text-sm">
-            <div className="flex items-center gap-2">
-              <Icon name="phone" size={15} className="shrink-0 text-brand-blue" />
-              <a href={surrenderContact.phoneHref} className="font-semibold text-brand-blue">
-                {surrenderContact.phone}
-              </a>
-            </div>
             <div className="flex items-center gap-2">
               <Icon name="mail" size={15} className="shrink-0 text-brand-blue" />
               <a

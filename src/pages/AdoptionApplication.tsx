@@ -210,7 +210,7 @@ export default function AdoptionApplication() {
       )}
 
       <p className="px-1 text-center text-xs leading-relaxed text-slate-400">
-        Questions? Call {ohrr.phone} or email{' '}
+        Questions? Email{' '}
         <a href={`mailto:${ohrr.email}`} className="font-semibold text-brand-blue underline">
           {ohrr.email}
         </a>

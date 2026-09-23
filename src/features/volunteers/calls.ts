@@ -261,7 +261,7 @@ export interface Message {
 
 function signature(org: OrgBits): string {
   const who = [org.signerName, org.signerTitle].filter(Boolean).join(', ')
-  return [who, org.name, `${org.address} · ${org.phone}`, org.email].filter(Boolean).join('\n')
+  return [who, org.name, org.address, org.email].filter(Boolean).join('\n')
 }
 
 /** The message for one medium. `{{org}}` in emails is the group's name. */
@@ -387,7 +387,7 @@ export function outreach(c: Call, medium: Medium, org: OrgBits): Message {
           '',
           HOURS_PROMISE,
           '',
-          `To sign up, scan the code on this letter or visit ${bare}. You can also call us on ${org.phone}.`,
+          `To sign up, scan the code on this letter or visit ${bare}. Questions? Email us at ${org.email}.`,
           '',
           'Thank you for reading this, and for everything your group does for our community.',
         ),

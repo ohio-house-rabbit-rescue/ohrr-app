@@ -5,10 +5,10 @@
 // (linked from ohiohouserabbitrescue.org/about-us/admissions). The supportive
 // framing matches the app's "let's help you keep your bunny first" approach.
 
+// Email only: OHRR is run by a small team of volunteers and email is how
+// they work (OHRR's own surrender policy says to email to check for space).
 export const surrenderContact = {
   email: 'ohrrcontact@ohiohouserabbitrescue.org',
-  phone: '614-263-8557',
-  phoneHref: 'tel:+16142638557',
 }
 
 export const surrenderIntro =
@@ -17,7 +17,7 @@ export const surrenderIntro =
 export const surrenderSteps: { title: string; text: string }[] = [
   {
     title: 'Contact OHRR first to check space',
-    text: 'OHRR is a restricted-admissions rescue, and only a very limited amount of space is set aside for owner surrenders. Email or call before bringing a rabbit in so they can tell you whether there’s room.',
+    text: 'OHRR is a restricted-admissions rescue, and only a very limited amount of space is set aside for owner surrenders. Email before bringing a rabbit in so they can tell you whether there’s room.',
   },
   {
     title: 'Let OHRR try to help you keep your rabbit',

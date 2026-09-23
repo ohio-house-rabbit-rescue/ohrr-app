@@ -46,7 +46,6 @@ export const partners: Partner[] = [
     city: 'Columbus',
     state: 'OH',
     region: 'Midwest',
-    phone: '614-263-8557',
     email: 'ohrrcontact@ohiohouserabbitrescue.org',
     address: '5485 N. High Street, Columbus, OH 43214',
     url: 'https://www.ohiohouserabbitrescue.org/',

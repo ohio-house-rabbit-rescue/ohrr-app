@@ -291,7 +291,7 @@ export default function ServiceLetter() {
             <div>
               <p className="font-display text-xl font-black text-brand-blue">{org.name}</p>
               <p className="text-sm text-slate-600">
-                {[org.address, org.phone, org.email].filter(Boolean).join(' · ')}
+                {[org.address, org.email].filter(Boolean).join(' · ')}
               </p>
             </div>
           </div>

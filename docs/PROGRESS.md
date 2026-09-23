@@ -19,8 +19,20 @@
 
 ## Current state (at a glance)
 
+- **Email, not the phone (2026-09-23, latest).** OHRR: the phone isn't for emergencies,
+  email is the primary way in, and everything runs on a very limited team of volunteers.
+  OHRR's own site shows its number only in the page footer; the app and website now do
+  the same (website footer, app About page) and point everywhere else to email —
+  surrender, found a rabbit, help, adopt, BunFest host card, letters, thank-yous,
+  outreach, flyers. "Hurt? Call" became: OHRR can't respond to emergencies — MedVet
+  Hilliard for an injured rabbit, the Ohio Wildlife Center for a wild one. Update 19
+  (one line, waiting) takes the phone off OHRR's BunFest rescue-partner entry. Updates
+  17 and 18 were **applied 2026-09-23** and checked live (Beverly May signs letters,
+  EIN on file, Winstead spelling; every Counter function answers and refuses the
+  signed-out).
+
 - **The Counter — store operations and the BunFest door (2026-09-23, latest).** Update
-  18 in `RUN-THIS-IN-SUPABASE.sql` (with 17; waiting to be run). Sponsor: add new
+  18 (applied 2026-09-23). Sponsor: add new
   items from a phone first, SKU/barcode second; a separate staff area for store
   operations and taking tickets at BunFest; don't overwhelm the staff. Decisions
   (2026-09-23): a Counter volunteer role — yes; selling in the app lowers stock,
