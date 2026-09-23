@@ -1,42 +1,50 @@
-// This year's BunFest floor from the database: the table layout OHRR set up
-// and who sits at each table. Until a layout exists the map draws the default
-// one, and until tables are assigned it says so rather than inventing places.
+// This year's BunFest floor from the database: the venue OHRR designed and who
+// sits at each table. Until a venue is saved for 2026 the map draws the
+// bundled starting design; for any other year with no venue it says the plan
+// isn't out yet rather than showing last year's building.
 import { useEffect, useMemo, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
 import { useBunfestEvent } from '../../lib/events'
 import {
-  DEFAULT_ROWS,
+  MAKOY_2026,
   buildBlocks,
-  numberRows,
+  parseVenue,
+  placeTables,
   roomOfTable,
   tablesOf,
   type Block,
-  type FloorRow,
   type HolderKind,
-  type NumberedRow,
-  type RoomId,
+  type PlacedTable,
   type TableAssignment,
+  type Venue,
 } from './floor'
 
 export interface FloorState {
   year: number
-  rows: NumberedRow[]
+  /** Null when there is no plan for this year yet. */
+  venue: Venue | null
+  tables: PlacedTable[]
   assignments: TableAssignment[]
   blocks: Block[]
-  /** False until OHRR has set this year's rows up. */
-  hasLayout: boolean
+  /** True once OHRR has saved a venue for this year. */
+  saved: boolean
   loading: boolean
   /** A stand's tables and the room they're in. */
-  placeOf: (kind: HolderKind, id: string) => { numbers: number[]; room: RoomId | null }
+  placeOf: (kind: HolderKind, id: string) => { numbers: number[]; roomName: string | null }
+}
+
+/** The bundled start, only for the year it describes. */
+export function fallbackVenue(year: number): Venue | null {
+  return year === 2026 ? MAKOY_2026 : null
 }
 
 export function useBunfestFloor(): FloorState {
   const bunfest = useBunfestEvent()
   const year = new Date(bunfest.startsAt).getFullYear()
-  const [raw, setRaw] = useState<{ rows: FloorRow[]; assignments: TableAssignment[]; hasLayout: boolean; loading: boolean }>({
-    rows: DEFAULT_ROWS,
+  const [raw, setRaw] = useState<{ venue: Venue | null; assignments: TableAssignment[]; saved: boolean; loading: boolean }>({
+    venue: fallbackVenue(year),
     assignments: [],
-    hasLayout: false,
+    saved: false,
     loading: isSupabaseConfigured,
   })
 
@@ -44,11 +52,11 @@ export function useBunfestFloor(): FloorState {
     if (!isSupabaseConfigured) return
     let active = true
     Promise.all([
-      supabase.from('bunfest_floor_rows').select('room, sort_order, tables').eq('year', year),
+      supabase.from('bunfest_venues').select('layout').eq('year', year).maybeSingle(),
       supabase.rpc('bunfest_tables_public', { p_year: year }),
-    ]).then(([rowsRes, tablesRes]) => {
+    ]).then(([venueRes, tablesRes]) => {
       if (!active) return
-      const rows = (rowsRes.data ?? []).map((r) => ({ room: r.room, sort: r.sort_order, tables: r.tables }))
+      const saved = venueRes.data ? parseVenue(venueRes.data.layout) : null
       const assignments: TableAssignment[] = (Array.isArray(tablesRes.data) ? tablesRes.data : []).map((t) => ({
         table: t.table_no,
         kind: t.kind,
@@ -56,12 +64,7 @@ export function useBunfestFloor(): FloorState {
         name: t.name,
         category: t.category,
       }))
-      setRaw({
-        rows: rows.length > 0 ? rows : DEFAULT_ROWS,
-        assignments,
-        hasLayout: rows.length > 0,
-        loading: false,
-      })
+      setRaw({ venue: saved ?? fallbackVenue(year), assignments, saved: !!saved, loading: false })
     })
     return () => {
       active = false
@@ -69,17 +72,19 @@ export function useBunfestFloor(): FloorState {
   }, [year])
 
   return useMemo(() => {
-    const rows = numberRows(raw.rows)
+    const tables = raw.venue ? placeTables(raw.venue) : []
     return {
       year,
-      rows,
+      venue: raw.venue,
+      tables,
       assignments: raw.assignments,
-      blocks: buildBlocks(rows, raw.assignments),
-      hasLayout: raw.hasLayout,
+      blocks: buildBlocks(tables, raw.assignments),
+      saved: raw.saved,
       loading: raw.loading,
       placeOf: (kind, id) => {
         const numbers = tablesOf(raw.assignments, kind, id)
-        return { numbers, room: numbers.length > 0 ? roomOfTable(rows, numbers[0]) : null }
+        const roomId = numbers.length > 0 ? roomOfTable(tables, numbers[0]) : null
+        return { numbers, roomName: raw.venue?.rooms.find((r) => r.id === roomId)?.name ?? null }
       },
     }
   }, [raw, year])

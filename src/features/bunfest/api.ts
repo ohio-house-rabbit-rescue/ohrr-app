@@ -315,6 +315,9 @@ export interface YearCopy {
   pages: number
   vendors: number
   partners: number
+  /** 1 when the venue design came across. */
+  venue?: number
+  tables?: number
 }
 
 /**
@@ -330,28 +333,34 @@ export async function startBunfestYear(orgId: string, from: number, to: number):
 
 /* ---------------------------------------------------- the floor plan */
 
-export type FloorRowRecord = Database['public']['Tables']['bunfest_floor_rows']['Row']
 export type TableRecord = Database['public']['Tables']['bunfest_tables']['Row']
 
-export async function listFloorRows(orgId: string, year: number): Promise<FloorRowRecord[]> {
+/** A year's venue as saved, or null if nobody has designed one yet. */
+export async function loadVenue(orgId: string, year: number): Promise<{ name: string; layout: unknown } | null> {
   const { data, error } = await supabase
-    .from('bunfest_floor_rows')
-    .select('*')
+    .from('bunfest_venues')
+    .select('name, layout')
     .eq('org_id', orgId)
     .eq('year', year)
-    .order('room')
-    .order('sort_order')
+    .maybeSingle()
   if (error) throw error
-  return data ?? []
+  return data ? { name: data.name ?? '', layout: data.layout } : null
 }
 
-/** The whole layout at once: tables per row, top to bottom, for each room. */
-export async function saveFloor(orgId: string, year: number, burgundy: number[], emerald: number[]): Promise<void> {
-  const { error } = await supabase.rpc('save_bunfest_floor', {
+/** Years that have a venue, newest first — to start a new year from one. */
+export async function venueYears(orgId: string): Promise<number[]> {
+  const { data, error } = await supabase.from('bunfest_venues').select('year').eq('org_id', orgId)
+  if (error) throw error
+  return (data ?? []).map((r) => r.year).sort((a, b) => b - a)
+}
+
+/** Save the whole design at once. */
+export async function saveVenue(orgId: string, year: number, name: string, layout: unknown): Promise<void> {
+  const { error } = await supabase.rpc('save_bunfest_venue', {
     p_org: orgId,
     p_year: year,
-    p_burgundy: burgundy,
-    p_emerald: emerald,
+    p_name: name || null,
+    p_layout: layout,
   })
   if (error) throw error
 }

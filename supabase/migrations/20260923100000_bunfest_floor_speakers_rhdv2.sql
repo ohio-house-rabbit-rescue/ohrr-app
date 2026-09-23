@@ -4,9 +4,14 @@
 -- Three things the BunFest website needs that the database didn't have yet,
 -- each of which improves the app the same day:
 --
---   bunfest_floor_rows   the tables in each room, per year, as rows. Tables
---                        are numbered 1, 2, 3 … through the Burgundy Room and
---                        on into the Emerald Room, left to right, row by row.
+--   bunfest_venues       the venue, designed per year: its rooms (each a size
+--                        in feet), the rows of tables in them (where each row
+--                        starts, which way it runs, how many tables, which
+--                        side customers face, walkways), the fixed areas
+--                        (stage, spa, restrooms …) and the doors. Next year's
+--                        venue may be somewhere else entirely, so none of it
+--                        is code. Tables number 1, 2, 3 … room by room, row
+--                        by row.
 --   bunfest_tables       who sits at which table that year. One row per
 --                        table, so a table can't be given to two people, and
 --                        a vendor with tables 7 and 8 side by side shows as
@@ -16,9 +21,11 @@
 --   vets.gives_rhdv2     which practices give the RHDV2 vaccine — the question
 --                        BunFest's own rabbit rule sends people off to answer.
 --
--- The published 2026 map shows the vendor areas as single blocks with no table
--- numbers, so the layout seeded here is a STARTING POINT sized to this year's
--- roster, not OHRR's real one. Staff change the rows to match the room.
+-- The published 2026 map isn't to scale and shows the vendor areas as single
+-- blocks with no table numbers, so the venue seeded here is a STARTING POINT:
+-- The Makoy's two rooms as the map draws them, room sizes estimated from its
+-- proportions (96 × 64 ft), and realistic rows sized to this year's roster
+-- (59 tables). Staff change all of it in Staff → BunFest → Floor plan.
 -- No table assignments are seeded: none are published.
 --
 -- Speaker bios are transcribed from midwestbunfest.org/presenter-bios.html
@@ -28,32 +35,49 @@
 -- =============================================================
 
 -- -------------------------------------------------------------
--- 1. The layout: rows of tables in each room, per year
+-- 1. The venue, per year
+--
+-- One document per year, edited as a whole in the designer and saved in one
+-- go. Its shape (features/bunfest/floor.ts, `Venue`):
+--   { version: 1, name, rooms: [ { id, name, width, depth, note,
+--       runs:  [ { id, x, y, across, tables, length, depth,
+--                  walkEvery, walkWidth, front } ],
+--       areas: [ { id, label, kind, x, y, w, h } ],
+--       doors: [ { id, label, wall, at, width } ] } ] }
 -- -------------------------------------------------------------
-create table if not exists bunfest_floor_rows (
+create table if not exists bunfest_venues (
   id          uuid primary key default gen_random_uuid(),
   org_id      uuid not null references organizations(id) on delete cascade,
   year        int  not null check (year between 2000 and 2100),
-  room        text not null check (room in ('burgundy', 'emerald')),
-  sort_order  int  not null default 0,
-  tables      int  not null check (tables between 1 and 20),
+  name        text,
+  layout      jsonb not null default '{"version": 1, "rooms": []}'::jsonb,
+  updated_by  uuid references auth.users(id),
   created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
+  updated_at  timestamptz not null default now(),
+  unique (org_id, year)
 );
-create index if not exists idx_bunfest_floor_rows on bunfest_floor_rows(org_id, year, room, sort_order);
-drop trigger if exists trg_bunfest_floor_rows_updated on bunfest_floor_rows;
-create trigger trg_bunfest_floor_rows_updated before update on bunfest_floor_rows
+drop trigger if exists trg_bunfest_venues_updated on bunfest_venues;
+create trigger trg_bunfest_venues_updated before update on bunfest_venues
   for each row execute function set_updated_at();
 
-alter table bunfest_floor_rows enable row level security;
-drop policy if exists bunfest_floor_rows_public_select on bunfest_floor_rows;
-create policy bunfest_floor_rows_public_select on bunfest_floor_rows for select using (true);
-drop policy if exists bunfest_floor_rows_staff_all on bunfest_floor_rows;
-create policy bunfest_floor_rows_staff_all on bunfest_floor_rows for all
+alter table bunfest_venues enable row level security;
+drop policy if exists bunfest_venues_public_select on bunfest_venues;
+create policy bunfest_venues_public_select on bunfest_venues for select using (true);
+drop policy if exists bunfest_venues_staff_all on bunfest_venues;
+create policy bunfest_venues_staff_all on bunfest_venues for all
   using (has_permission(org_id, 'events.bunfest.manage'))
   with check (has_permission(org_id, 'events.bunfest.manage'));
-grant select on bunfest_floor_rows to anon, authenticated;
-grant insert, update, delete on bunfest_floor_rows to authenticated;
+grant select on bunfest_venues to anon, authenticated;
+grant insert, update, delete on bunfest_venues to authenticated;
+
+-- How many tables a venue has — the numbers run 1 to this.
+create or replace function bunfest_venue_tables(p_layout jsonb)
+returns int language sql immutable as $$
+  select coalesce(sum(greatest(0, (run ->> 'tables')::int)), 0)::int
+    from jsonb_array_elements(coalesce(p_layout -> 'rooms', '[]'::jsonb)) as room,
+         jsonb_array_elements(coalesce(room -> 'runs', '[]'::jsonb)) as run;
+$$;
+grant execute on function bunfest_venue_tables(jsonb) to anon, authenticated;
 
 -- -------------------------------------------------------------
 -- 2. Who sits where, per year
@@ -127,13 +151,14 @@ begin
     raise exception 'Choose who the tables are for';
   end if;
 
-  select coalesce(sum(tables), 0) into v_max
-    from bunfest_floor_rows where org_id = p_org and year = p_year;
+  select bunfest_venue_tables(layout) into v_max
+    from bunfest_venues where org_id = p_org and year = p_year;
+  v_max := coalesce(v_max, 0);
 
   foreach v_no in array coalesce(p_tables, '{}'::int[]) loop
     if v_no < 1 or v_no > v_max then
       if v_max = 0 then
-        raise exception 'There are no tables on the % floor plan yet — add the rows first', p_year;
+        raise exception 'The % venue has no tables yet — design the floor plan first', p_year;
       end if;
       raise exception 'There is no table % — this year''s tables run 1 to %', v_no, v_max;
     end if;
@@ -165,27 +190,37 @@ begin
 end $$;
 grant execute on function set_bunfest_tables(uuid, int, int[], uuid, uuid, text) to authenticated;
 
--- Replace a year's layout in one go: the number of tables in each row, top to
--- bottom, per room. All or nothing, and it refuses to shrink the floor out
--- from under a table someone already has.
-create or replace function save_bunfest_floor(
-  p_org uuid, p_year int, p_burgundy int[], p_emerald int[]
+-- Save a year's venue in one go. Checks what a bad paste or an old app could
+-- get wrong (rooms need a size, a row holds 1–40 tables) and refuses to shrink
+-- the venue out from under a table someone already has — the designer shows
+-- everything else as warnings, because a row through a wall might be meant.
+create or replace function save_bunfest_venue(
+  p_org uuid, p_year int, p_name text, p_layout jsonb
 ) returns void language plpgsql security definer set search_path = public as $$
 declare
   v_total int;
   v_no    int;
   v_who   text;
-  n       int;
-  i       int;
+  v_room  jsonb;
+  v_run   jsonb;
 begin
   if not has_permission(p_org, 'events.bunfest.manage') then raise exception 'Not allowed'; end if;
+  if jsonb_typeof(p_layout -> 'rooms') is distinct from 'array' then
+    raise exception 'That venue has no rooms';
+  end if;
 
-  foreach n in array coalesce(p_burgundy, '{}'::int[]) || coalesce(p_emerald, '{}'::int[]) loop
-    if n < 1 or n > 20 then raise exception 'A row holds between 1 and 20 tables'; end if;
+  for v_room in select * from jsonb_array_elements(p_layout -> 'rooms') loop
+    if coalesce((v_room ->> 'width')::numeric, 0) < 5 or coalesce((v_room ->> 'depth')::numeric, 0) < 5 then
+      raise exception '% needs a size of at least 5 × 5 ft', coalesce(nullif(v_room ->> 'name', ''), 'A room');
+    end if;
+    for v_run in select * from jsonb_array_elements(coalesce(v_room -> 'runs', '[]'::jsonb)) loop
+      if coalesce((v_run ->> 'tables')::int, 0) not between 1 and 40 then
+        raise exception 'A row holds between 1 and 40 tables (%)', coalesce(nullif(v_room ->> 'name', ''), 'a room');
+      end if;
+    end loop;
   end loop;
 
-  select coalesce(sum(x), 0) into v_total
-    from unnest(coalesce(p_burgundy, '{}'::int[]) || coalesce(p_emerald, '{}'::int[])) as x;
+  v_total := bunfest_venue_tables(p_layout);
 
   select t.table_no, coalesce(s.name, r.name, t.label) into v_no, v_who
     from bunfest_tables t
@@ -195,23 +230,15 @@ begin
    order by t.table_no desc
    limit 1;
   if found then
-    raise exception 'Table % belongs to % — that layout only has % tables. Move them first.', v_no, coalesce(v_who, 'someone'), v_total;
+    raise exception 'Table % belongs to % — this design only has % tables. Move them first.', v_no, coalesce(v_who, 'someone'), v_total;
   end if;
 
-  delete from bunfest_floor_rows where org_id = p_org and year = p_year;
-
-  i := 0;
-  foreach n in array coalesce(p_burgundy, '{}'::int[]) loop
-    i := i + 1;
-    insert into bunfest_floor_rows (org_id, year, room, sort_order, tables) values (p_org, p_year, 'burgundy', i * 10, n);
-  end loop;
-  i := 0;
-  foreach n in array coalesce(p_emerald, '{}'::int[]) loop
-    i := i + 1;
-    insert into bunfest_floor_rows (org_id, year, room, sort_order, tables) values (p_org, p_year, 'emerald', i * 10, n);
-  end loop;
+  insert into bunfest_venues (org_id, year, name, layout, updated_by)
+  values (p_org, p_year, nullif(btrim(coalesce(p_name, '')), ''), p_layout, auth.uid())
+  on conflict (org_id, year) do update
+    set name = excluded.name, layout = excluded.layout, updated_by = excluded.updated_by;
 end $$;
-grant execute on function save_bunfest_floor(uuid, int, int[], int[]) to authenticated;
+grant execute on function save_bunfest_venue(uuid, int, text, jsonb) to authenticated;
 
 -- -------------------------------------------------------------
 -- 3. The speakers
@@ -318,11 +345,12 @@ begin
    where org_id = p_org and p_from = any (bunfest_years) and not (p_to = any (bunfest_years));
   get diagnostics n_partners = row_count;
 
-  -- The layout, only into a year that has none yet.
-  if not exists (select 1 from bunfest_floor_rows where org_id = p_org and year = p_to) then
-    insert into bunfest_floor_rows (org_id, year, room, sort_order, tables)
-    select org_id, p_to, room, sort_order, tables
-      from bunfest_floor_rows where org_id = p_org and year = p_from;
+  -- The venue and last year's table plan, only into a year that has no venue
+  -- yet. A new venue next year? Copy, then redesign — or start blank.
+  if not exists (select 1 from bunfest_venues where org_id = p_org and year = p_to) then
+    insert into bunfest_venues (org_id, year, name, layout, updated_by)
+    select org_id, p_to, name, layout, auth.uid()
+      from bunfest_venues where org_id = p_org and year = p_from;
     get diagnostics n_rows = row_count;
 
     insert into bunfest_tables (org_id, year, table_no, supplier_id, partner_id, label, created_by)
@@ -334,7 +362,7 @@ begin
 
   return jsonb_build_object('sessions', n_sessions, 'features', n_features, 'pages', n_pages,
                             'vendors', n_vendors, 'partners', n_partners,
-                            'floor_rows', n_rows, 'tables', n_tables);
+                            'venue', n_rows, 'tables', n_tables);
 end $$;
 grant execute on function start_bunfest_year(uuid, int, int) to authenticated;
 
@@ -351,15 +379,13 @@ begin
     return;
   end if;
 
-  -- A starting layout sized to this year's roster (27 vendors, 18 rescues,
-  -- some sponsors): Burgundy 4 rows of 6 (tables 1–24), Emerald 5 rows of 7
-  -- (25–59). OHRR changes it to match the room.
-  if not exists (select 1 from bunfest_floor_rows where org_id = v_org and year = 2026) then
-    insert into bunfest_floor_rows (org_id, year, room, sort_order, tables)
-    select v_org, 2026, 'burgundy', g * 10, 6 from generate_series(1, 4) as g
-    union all
-    select v_org, 2026, 'emerald', g * 10, 7 from generate_series(1, 5) as g;
-  end if;
+  -- The starting venue: The Makoy's two rooms as the published map draws
+  -- them (sizes estimated), with rows for this year's roster — Burgundy 24
+  -- tables (1–24), Emerald 35 (25–59). The same design is bundled in the app
+  -- (features/bunfest/floor.ts, MAKOY_2026).
+  insert into bunfest_venues (org_id, year, name, layout)
+  values (v_org, 2026, 'The Makoy', '{"version": 1, "name": "The Makoy", "rooms": [{"id": "burgundy", "name": "Burgundy Room", "width": 96, "depth": 64, "note": "", "areas": [{"id": "ba1", "label": "Chillaxabun Lounge", "kind": "service", "x": 2.5, "y": 2.5, "w": 21.5, "h": 13.5}, {"id": "ba2", "label": "Women’s Room", "kind": "restroom", "x": 2.5, "y": 40.5, "w": 21.5, "h": 9.5}, {"id": "ba3", "label": "Men’s Room", "kind": "restroom", "x": 2.5, "y": 52.0, "w": 21.5, "h": 9.5}, {"id": "ba4", "label": "Glamour Shots", "kind": "service", "x": 26.0, "y": 2.5, "w": 28.5, "h": 11.0}, {"id": "ba5", "label": "Bunny Spa", "kind": "service", "x": 26.0, "y": 15.0, "w": 28.5, "h": 11.0}, {"id": "ba6", "label": "Sitting Area", "kind": "seating", "x": 26.0, "y": 28.0, "w": 28.5, "h": 16.5}, {"id": "ba7", "label": "Special Interest Sessions", "kind": "amenity", "x": 26.0, "y": 52.0, "w": 46.0, "h": 9.5}, {"id": "ba8", "label": "Stage", "kind": "stage", "x": 56.0, "y": 2.5, "w": 18.0, "h": 10.5}, {"id": "ba9", "label": "Bunny Painting", "kind": "service", "x": 75.5, "y": 2.5, "w": 18.5, "h": 10.5}], "runs": [{"id": "br1", "x": 59, "y": 15, "across": true, "tables": 4, "length": 8, "depth": 2.5, "walkEvery": 0, "walkWidth": 6, "front": "bottom"}, {"id": "br2", "x": 59, "y": 23.5, "across": true, "tables": 4, "length": 8, "depth": 2.5, "walkEvery": 0, "walkWidth": 6, "front": "top"}, {"id": "br3", "x": 59, "y": 26, "across": true, "tables": 4, "length": 8, "depth": 2.5, "walkEvery": 0, "walkWidth": 6, "front": "bottom"}, {"id": "br4", "x": 59, "y": 34.5, "across": true, "tables": 4, "length": 8, "depth": 2.5, "walkEvery": 0, "walkWidth": 6, "front": "top"}, {"id": "br5", "x": 59, "y": 37, "across": true, "tables": 4, "length": 8, "depth": 2.5, "walkEvery": 0, "walkWidth": 6, "front": "bottom"}, {"id": "br6", "x": 59, "y": 45.5, "across": true, "tables": 4, "length": 8, "depth": 2.5, "walkEvery": 0, "walkWidth": 6, "front": "top"}], "doors": [{"id": "bd1", "label": "Entrance", "wall": "left", "at": 29, "width": 6}]}, {"id": "emerald", "name": "Emerald Room", "width": 96, "depth": 64, "note": "Stairs up to the education sessions", "areas": [{"id": "ea1", "label": "Food & Drink Sales", "kind": "service", "x": 2.5, "y": 2.5, "w": 29.5, "h": 11.5}, {"id": "ea2", "label": "OHRR Table", "kind": "amenity", "x": 34.0, "y": 2.5, "w": 21.5, "h": 11.5}, {"id": "ea3", "label": "Stairs to Education", "kind": "amenity", "x": 72.5, "y": 2.5, "w": 21.5, "h": 13.0}, {"id": "ea4", "label": "OHRR Hop Shop", "kind": "shop", "x": 72.5, "y": 17.5, "w": 21.5, "h": 13.0}, {"id": "ea5", "label": "Oxbow", "kind": "shop", "x": 72.5, "y": 31.5, "w": 21.5, "h": 10.5}, {"id": "ea6", "label": "Men’s", "kind": "restroom", "x": 72.5, "y": 43.5, "w": 10.5, "h": 11.5}, {"id": "ea7", "label": "Women’s", "kind": "restroom", "x": 83.5, "y": 43.5, "w": 10.5, "h": 11.5}, {"id": "ea8", "label": "Silent Auction", "kind": "amenity", "x": 25.0, "y": 48.5, "w": 46.0, "h": 6.5}, {"id": "ea9", "label": "Raffle", "kind": "amenity", "x": 2.5, "y": 55.5, "w": 21.0, "h": 7.5}, {"id": "ea10", "label": "Stage", "kind": "stage", "x": 24.5, "y": 55.5, "w": 26.5, "h": 7.5}, {"id": "ea11", "label": "MedVet", "kind": "service", "x": 52.5, "y": 55.5, "w": 18.0, "h": 7.5}], "runs": [{"id": "er1", "x": 4, "y": 17, "across": true, "tables": 7, "length": 8, "depth": 2.5, "walkEvery": 4, "walkWidth": 6, "front": "bottom"}, {"id": "er2", "x": 4, "y": 25.5, "across": true, "tables": 7, "length": 8, "depth": 2.5, "walkEvery": 4, "walkWidth": 6, "front": "top"}, {"id": "er3", "x": 4, "y": 28, "across": true, "tables": 7, "length": 8, "depth": 2.5, "walkEvery": 4, "walkWidth": 6, "front": "bottom"}, {"id": "er4", "x": 4, "y": 36.5, "across": true, "tables": 7, "length": 8, "depth": 2.5, "walkEvery": 4, "walkWidth": 6, "front": "top"}, {"id": "er5", "x": 4, "y": 39, "across": true, "tables": 7, "length": 8, "depth": 2.5, "walkEvery": 4, "walkWidth": 6, "front": "bottom"}], "doors": [{"id": "ed1", "label": "Entrance", "wall": "right", "at": 29, "width": 6}]}]}'::jsonb)
+  on conflict (org_id, year) do nothing;
 
   insert into bunfest_presenters (org_id, name, credentials, affiliation, bio, sort_order)
   select v_org, p.name, p.credentials, p.affiliation, p.bio, p.sort

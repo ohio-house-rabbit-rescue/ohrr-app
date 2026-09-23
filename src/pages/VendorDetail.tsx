@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { useBunfestVendors } from '../features/bunfest/content'
 import { useBunfestFloor } from '../features/bunfest/floorData'
-import { formatNumbers, ROOM_NAMES } from '../features/bunfest/floor'
+import { formatNumbers } from '../features/bunfest/floor'
 import { Screen, Card, Badge, SectionLabel, btn } from '../components/ui'
 import { ContactLinks } from '../components/ContactLinks'
 import { Icon } from '../components/icons'
@@ -52,7 +52,7 @@ export default function VendorDetail() {
         <p className="mt-2 text-sm leading-relaxed text-slate-700">{v.description}</p>
       </Card>
 
-      {at.numbers.length > 0 && at.room && (
+      {at.numbers.length > 0 && at.roomName && (
         <Link
           to={`/bunfest/map?table=${at.numbers[0]}`}
           className="flex items-center gap-3 rounded-2xl border border-brand-blue/25 bg-brand-blue-50/50 p-4 transition hover:bg-brand-blue-50"
@@ -62,7 +62,7 @@ export default function VendorDetail() {
           </span>
           <span className="min-w-0 flex-1">
             <span className="block font-display text-sm font-extrabold text-ink">
-              {ROOM_NAMES[at.room]} · {at.numbers.length > 1 ? 'Tables' : 'Table'} {formatNumbers(at.numbers)}
+              {at.roomName} · {at.numbers.length > 1 ? 'Tables' : 'Table'} {formatNumbers(at.numbers)}
             </span>
             <span className="block text-xs text-slate-500">Tap to see it on the map</span>
           </span>

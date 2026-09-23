@@ -1284,16 +1284,17 @@ export type Database = {
         }
         Relationships: []
       }
-      // The BunFest floor: rows of numbered tables per room and year, and who
-      // sits at each — supabase/migrations/20260923100000_bunfest_floor_speakers_rhdv2.sql.
-      bunfest_floor_rows: {
+      // The BunFest venue OHRR designs each year, and who sits at each table —
+      // supabase/migrations/20260923100000_bunfest_floor_speakers_rhdv2.sql.
+      bunfest_venues: {
         Row: {
           id: string
           org_id: string
           year: number
-          room: 'burgundy' | 'emerald'
-          sort_order: number
-          tables: number
+          name: string | null
+          /** A `Venue` — see features/bunfest/floor.ts. */
+          layout: unknown
+          updated_by: string | null
           created_at: string
           updated_at: string
         }
@@ -1301,14 +1302,13 @@ export type Database = {
           id?: string
           org_id: string
           year: number
-          room: 'burgundy' | 'emerald'
-          sort_order?: number
-          tables: number
+          name?: string | null
+          layout?: unknown
+          updated_by?: string | null
         }
         Update: {
-          room?: 'burgundy' | 'emerald'
-          sort_order?: number
-          tables?: number
+          name?: string | null
+          layout?: unknown
         }
         Relationships: []
       }
@@ -2245,7 +2245,7 @@ export type Database = {
           pages: number
           vendors: number
           partners: number
-          floor_rows?: number
+          venue?: number
           tables?: number
         }
       }
@@ -2259,8 +2259,8 @@ export type Database = {
           category: string | null
         }[]
       }
-      save_bunfest_floor: {
-        Args: { p_org: string; p_year: number; p_burgundy: number[]; p_emerald: number[] }
+      save_bunfest_venue: {
+        Args: { p_org: string; p_year: number; p_name: string | null; p_layout: unknown }
         Returns: undefined
       }
       set_bunfest_tables: {

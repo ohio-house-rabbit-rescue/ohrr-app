@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useBunfestVendors, vendorCategoriesOf } from '../features/bunfest/content'
 import { useBunfestFloor } from '../features/bunfest/floorData'
-import { formatNumbers, ROOM_NAMES } from '../features/bunfest/floor'
+import { formatNumbers } from '../features/bunfest/floor'
 import { PageHeader, Screen, Badge, SampleNote, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
 
@@ -52,11 +52,11 @@ export default function Vendors() {
                 </span>
                 {(() => {
                   const at = floor.placeOf('vendor', v.id)
-                  if (at.numbers.length === 0 || !at.room) return null
+                  if (at.numbers.length === 0 || !at.roomName) return null
                   return (
                     <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500">
                       <Icon name="mappin" size={13} className="text-slate-400" />
-                      {ROOM_NAMES[at.room].replace(' Room', '')} · {at.numbers.length > 1 ? 'Tables' : 'Table'}{' '}
+                      {at.roomName.replace(/ Room$/, '')} · {at.numbers.length > 1 ? 'Tables' : 'Table'}{' '}
                       {formatNumbers(at.numbers)}
                     </span>
                   )

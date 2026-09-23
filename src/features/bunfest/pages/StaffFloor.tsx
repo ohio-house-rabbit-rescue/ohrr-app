@@ -1,105 +1,95 @@
 // Staff → BunFest → Floor plan.
 //
-// The list of this year's vendors and rescues, a box beside each for its table
-// numbers ("7" or "7, 8" or "7-8"), and the map drawn live underneath — so
-// typing a number puts the name on the map at once. Side-by-side tables that
-// belong to one stand show as one block with the name once.
+// Two jobs, one tab:
 //
-// Above that, the layout itself: how many tables in each row of each room.
-// Tables are numbered 1, 2, 3 … through the Burgundy Room and on into the
-// Emerald Room, so changing a row renumbers everything after it — which is
-// why the layout comes first and saving it refuses to strand anyone's table.
-import { useCallback, useEffect, useMemo, useState } from 'react'
+//   Who sits where   this year's vendors and rescues, a box beside each for
+//                    its table numbers ("7" or "7, 8" or "7-9"), and the map
+//                    drawn live underneath — type a number, the name appears.
+//                    Side-by-side tables of one stand show as one block.
+//   Design the venue the building itself, which may be different next year:
+//                    rooms, rows of tables, the stage and spa, the doors
+//                    (StaffVenue.tsx).
+//
+// Tables are numbered from the SAVED venue, because that's what the database
+// checks a table number against. So the design is saved first, then the
+// tables are given out.
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { errMessage } from '../../../lib/supabase'
 import { Card, Badge, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
 import { listSuppliers, type Supplier } from '../../hopshop/api'
+import { listPartners, listTables, loadVenue, setTables, venueYears, type PartnerRow, type TableHolderRef, type TableRecord } from '../api'
 import {
-  listFloorRows,
-  listPartners,
-  listTables,
-  saveFloor,
-  setTables,
-  type PartnerRow,
-  type TableHolderRef,
-  type TableRecord,
-} from '../api'
-import {
-  DEFAULT_ROWS,
-  ROOM_NAMES,
-  ROOM_ORDER,
+  MAKOY_2026,
+  blankVenue,
   buildBlocks,
   formatNumbers,
-  numberRows,
   parseNumbers,
+  parseVenue,
+  placeTables,
+  roomRanges,
   totalTables,
-  type RoomId,
   type TableAssignment,
+  type Venue,
 } from '../floor'
-import { TablesPanel } from '../TablesPanel'
+import { VenuePlan, ZoomBox } from '../VenuePlan'
+import StaffVenue from './StaffVenue'
 
-type Layout = Record<RoomId, number[]>
-
-function layoutFromRows(rows: { room: RoomId; sort: number; tables: number }[]): Layout {
-  const out: Layout = { burgundy: [], emerald: [] }
-  for (const room of ROOM_ORDER) {
-    out[room] = rows
-      .filter((r) => r.room === room)
-      .sort((a, b) => a.sort - b.sort)
-      .map((r) => r.tables)
-  }
-  return out
-}
-
-function rowsFromLayout(l: Layout) {
-  return ROOM_ORDER.flatMap((room) => l[room].map((tables, i) => ({ room, sort: (i + 1) * 10, tables })))
-}
+const clone = (v: Venue): Venue => JSON.parse(JSON.stringify(v))
 
 export default function StaffFloor({ orgId }: { orgId: string }) {
   const thisYear = new Date().getFullYear()
   const [year, setYear] = useState(thisYear)
-  const [saved, setSaved] = useState<Layout | null>(null)
-  const [layout, setLayout] = useState<Layout | null>(null)
-  const [isDefault, setIsDefault] = useState(false)
+  const [view, setView] = useState<'assign' | 'design'>('assign')
+  const [saved, setSaved] = useState<Venue | null>(null)
+  const [editing, setEditing] = useState<Venue | null>(null)
+  const [otherYears, setOtherYears] = useState<number[]>([])
   const [tables, setTablesState] = useState<TableRecord[]>([])
   const [vendors, setVendors] = useState<Supplier[]>([])
   const [partners, setPartners] = useState<PartnerRow[]>([])
+  const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [layoutError, setLayoutError] = useState<string | null>(null)
-  const [savingLayout, setSavingLayout] = useState(false)
   const [filter, setFilter] = useState('')
   const [selected, setSelected] = useState<number | undefined>()
 
-  const load = useCallback(async () => {
-    if (!orgId) return
-    try {
-      const [rows, t, sup, par] = await Promise.all([
-        listFloorRows(orgId, year),
-        listTables(orgId, year),
-        listSuppliers(orgId),
-        listPartners(orgId),
-      ])
-      const l = rows.length > 0 ? layoutFromRows(rows.map((r) => ({ room: r.room, sort: r.sort_order, tables: r.tables }))) : layoutFromRows(DEFAULT_ROWS)
-      setSaved(rows.length > 0 ? l : null)
-      setLayout((cur) => cur ?? l)
-      setIsDefault(rows.length === 0)
-      setTablesState(t)
-      setVendors(sup.filter((s) => s.is_vendor))
-      setPartners(par)
-      setError(null)
-    } catch (e) {
-      setError(errMessage(e))
-    }
-  }, [orgId, year])
+  const load = useCallback(
+    async (keepEdits = false) => {
+      if (!orgId) return
+      try {
+        const [v, t, sup, par, ys] = await Promise.all([
+          loadVenue(orgId, year),
+          listTables(orgId, year),
+          listSuppliers(orgId),
+          listPartners(orgId),
+          venueYears(orgId),
+        ])
+        const s = v ? parseVenue(v.layout) : null
+        if (s && v) s.name = v.name || s.name
+        setSaved(s)
+        // 2026 starts from the bundled design until it's saved; other years
+        // choose a starting point.
+        if (!keepEdits) setEditing(s ? clone(s) : year === 2026 ? clone(MAKOY_2026) : null)
+        setOtherYears(ys.filter((y) => y !== year))
+        setTablesState(t)
+        setVendors(sup.filter((x) => x.is_vendor))
+        setPartners(par)
+        setError(null)
+      } catch (e) {
+        setError(errMessage(e))
+      }
+      setLoaded(true)
+    },
+    [orgId, year],
+  )
 
   useEffect(() => {
-    setLayout(null)
+    setLoaded(false)
     void load()
   }, [load])
 
   // This year's roster — tagged for the year, or not tagged by year at all.
-  const thisYears = useMemo(() => {
+  const roster = useMemo(() => {
     const inYear = (years: number[], fallback: boolean) => (years.length > 0 ? years.includes(year) : fallback)
     return {
       vendors: vendors.filter((v) => inYear(v.vendor_years, v.vendor_published)).sort((a, b) => a.name.localeCompare(b.name)),
@@ -107,7 +97,7 @@ export default function StaffFloor({ orgId }: { orgId: string }) {
     }
   }, [vendors, partners, year])
 
-  // What the preview draws: staff see every name, published or not.
+  // The preview shows every name, published or not — staff need to see them.
   const assignments: TableAssignment[] = useMemo(
     () =>
       tables.map((t) => {
@@ -124,11 +114,10 @@ export default function StaffFloor({ orgId }: { orgId: string }) {
     [tables, vendors, partners],
   )
 
-  const numbered = useMemo(() => numberRows(layout ? rowsFromLayout(layout) : DEFAULT_ROWS), [layout])
-  const blocks = useMemo(() => buildBlocks(numbered, assignments), [numbered, assignments])
-  const total = totalTables(numbered)
+  const blocks = useMemo(() => (saved ? buildBlocks(placeTables(saved), assignments) : []), [saved, assignments])
+  const total = saved ? totalTables(saved) : 0
   const used = new Set(tables.map((t) => t.table_no)).size
-  const layoutChanged = !!layout && JSON.stringify(layout) !== JSON.stringify(saved)
+  const ranges = saved ? roomRanges(saved) : new Map()
 
   const numbersFor = (who: TableHolderRef) =>
     tables
@@ -141,37 +130,31 @@ export default function StaffFloor({ orgId }: { orgId: string }) {
       )
       .map((t) => t.table_no)
 
-  const labels = useMemo(
-    () => [...new Set(tables.filter((t) => t.label).map((t) => t.label as string))].sort(),
-    [tables],
-  )
-
-  const setRow = (room: RoomId, i: number, n: number) =>
-    layout && setLayout({ ...layout, [room]: layout[room].map((v, j) => (j === i ? Math.max(1, Math.min(20, n)) : v)) })
-
-  const saveLayout = async () => {
-    if (!layout) return
-    setSavingLayout(true)
-    setLayoutError(null)
-    try {
-      await saveFloor(orgId, year, layout.burgundy, layout.emerald)
-      setSaved(layout)
-      setIsDefault(false)
-      await load()
-    } catch (e) {
-      setLayoutError(errMessage(e))
-    }
-    setSavingLayout(false)
-  }
-
+  const labels = useMemo(() => [...new Set(tables.filter((t) => t.label).map((t) => t.label as string))].sort(), [tables])
   const q = filter.trim().toLowerCase()
   const match = (name: string) => !q || name.toLowerCase().includes(q)
 
-  if (!layout) return error ? <FormError>{error}</FormError> : <Spinner />
+  const startOptions = [
+    ...otherYears.map((y) => ({
+      label: `Copy the ${y} venue`,
+      hint: 'Same building? Start from it and change what’s different.',
+      venue: async () => {
+        const v = await loadVenue(orgId, y)
+        const p = v ? parseVenue(v.layout) : null
+        if (!p) throw new Error(`The ${y} venue couldn’t be read.`)
+        if (v) p.name = v.name || p.name
+        return p
+      },
+    })),
+    { label: 'Start from The Makoy, 2026', hint: 'The Burgundy and Emerald Rooms.', venue: () => clone(MAKOY_2026) },
+    { label: 'Start with an empty room', hint: 'A new venue — add its rooms, then the tables.', venue: () => blankVenue() },
+  ]
+
+  if (!loaded) return <Spinner />
 
   return (
     <div className="space-y-3">
-      <Card className="space-y-2">
+      <Card className="space-y-3">
         <label className="block text-sm font-semibold text-slate-700">
           Which year
           <select className={staffInput} value={year} onChange={(e) => setYear(Number(e.target.value))}>
@@ -182,201 +165,150 @@ export default function StaffFloor({ orgId }: { orgId: string }) {
             ))}
           </select>
         </label>
-        <p className="text-sm text-slate-600">
-          <strong className="text-ink">{used}</strong> of {total} tables given out ·{' '}
-          <strong className="text-ink">{Math.max(0, total - used)}</strong> free
-        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {(
+            [
+              ['assign', 'Who sits where'],
+              ['design', 'Design the venue'],
+            ] as const
+          ).map(([v, text]) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              className={`min-h-[44px] rounded-full text-sm font-bold ${view === v ? 'bg-ink text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+        {saved && view === 'assign' && (
+          <p className="text-sm text-slate-600">
+            <strong className="text-ink">{used}</strong> of {total} tables given out ·{' '}
+            <strong className="text-ink">{Math.max(0, total - used)}</strong> free
+          </p>
+        )}
       </Card>
 
       <FormError>{error}</FormError>
 
-      {/* ------------------------------------------------ who sits where */}
-      <Card className="space-y-3">
-        <div>
-          <h2 className="font-display text-[15px] font-extrabold text-ink">Who sits where</h2>
-          <p className="mt-1 text-sm leading-relaxed text-slate-600">
-            Type a stand’s table numbers — <strong>7</strong>, or <strong>7, 8</strong>, or{' '}
-            <strong>7-9</strong> — and press Save. The map below fills in straight away. Tables side by
-            side show as one stand, with the name once.
+      {view === 'design' && (
+        <StaffVenue
+          key={year}
+          orgId={orgId}
+          year={year}
+          venue={editing}
+          saved={saved}
+          hasAssignments={tables.length > 0}
+          startOptions={startOptions}
+          onChange={setEditing}
+          onSaved={() => load()}
+        />
+      )}
+
+      {view === 'assign' && !saved && (
+        <Card className="space-y-3 text-center">
+          <p className="font-display text-base font-extrabold text-ink">Design the {year} venue first</p>
+          <p className="text-sm leading-relaxed text-slate-600">
+            Table numbers come from the saved design — once it’s saved, give out the tables here.
+            {year === 2026 && ' This year’s starting design is ready to check and save.'}
           </p>
-        </div>
-        <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-          <Icon name="search" size={16} className="shrink-0 text-slate-400" />
-          <input
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-            placeholder="Find a vendor or rescue"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          />
-        </label>
-
-        <Section title={`Vendors · ${thisYears.vendors.length}`}>
-          {thisYears.vendors.filter((v) => match(v.name)).map((v) => (
-            <AssignRow
-              key={v.id}
-              name={v.name}
-              hint={v.vendor_category ?? undefined}
-              hidden={!v.vendor_published}
-              current={numbersFor({ kind: 'vendor', id: v.id })}
-              onSave={(n) => setTables(orgId, year, { kind: 'vendor', id: v.id }, n)}
-              onSaved={load}
-              onFocusTable={setSelected}
-            />
-          ))}
-          {thisYears.vendors.length === 0 && <Empty>No vendors are tagged for {year}. Tick the year on each one under Vendors.</Empty>}
-        </Section>
-
-        <Section title={`Rescue partners · ${thisYears.partners.length}`}>
-          {thisYears.partners.filter((p) => match(p.name)).map((p) => (
-            <AssignRow
-              key={p.id}
-              name={p.name}
-              hint={p.is_host ? 'Host' : (p.location ?? undefined)}
-              hidden={!p.is_published}
-              current={numbersFor({ kind: 'rescue', id: p.id })}
-              onSave={(n) => setTables(orgId, year, { kind: 'rescue', id: p.id }, n)}
-              onSaved={load}
-              onFocusTable={setSelected}
-            />
-          ))}
-          {thisYears.partners.length === 0 && <Empty>No rescues are tagged for {year}. Tick the year on each one under Rescues.</Empty>}
-        </Section>
-
-        <Section title="Anything else">
-          <p className="text-xs leading-relaxed text-slate-500">
-            A sponsor’s table, the OHRR info table — anything that isn’t a vendor or a rescue.
-          </p>
-          {labels.filter(match).map((label) => (
-            <AssignRow
-              key={label}
-              name={label}
-              current={numbersFor({ kind: 'other', label })}
-              onSave={(n) => setTables(orgId, year, { kind: 'other', label }, n)}
-              onSaved={load}
-              onFocusTable={setSelected}
-            />
-          ))}
-          <NewOther orgId={orgId} year={year} onSaved={load} />
-        </Section>
-      </Card>
-
-      {/* ------------------------------------------------ the live map */}
-      <Card className="space-y-3">
-        <h2 className="font-display text-[15px] font-extrabold text-ink">The map, as visitors will see it</h2>
-        {ROOM_ORDER.map((room) => {
-          const rr = numbered.filter((r) => r.room === room)
-          return (
-            <div key={room} className="space-y-1">
-              <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
-                {ROOM_NAMES[room]}
-                {rr.length > 0 && ` · tables ${rr[0].first}–${rr[rr.length - 1].last}`}
-              </p>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-1">
-                <TablesPanel
-                  room={room}
-                  rows={numbered}
-                  blocks={blocks}
-                  selected={selected}
-                  onSelect={(b) => setSelected(b.numbers[0])}
-                  label={`${ROOM_NAMES[room]} tables`}
-                />
-              </div>
-            </div>
-          )
-        })}
-      </Card>
-
-      {/* ------------------------------------------------ the layout */}
-      <Card className="space-y-3">
-        <div>
-          <h2 className="font-display text-[15px] font-extrabold text-ink">How the tables are laid out</h2>
-          <p className="mt-1 text-sm leading-relaxed text-slate-600">
-            How many tables in each row, top to bottom. Numbers run through the Burgundy Room, row by row,
-            then on into the Emerald Room.
-          </p>
-          {isDefault && (
-            <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
-              This is a starting layout sized to this year’s roster — the published map doesn’t number the
-              tables. Change the rows to match the room, then save.
-            </p>
-          )}
-          <p className="mt-2 text-xs leading-relaxed text-slate-500">
-            Set this before giving out tables: changing a row renumbers every table after it.
-          </p>
-        </div>
-
-        {ROOM_ORDER.map((room) => {
-          const rr = numberRows(rowsFromLayout(layout)).filter((r) => r.room === room)
-          return (
-            <div key={room} className="space-y-2">
-              <p className="text-sm font-extrabold text-ink">{ROOM_NAMES[room]}</p>
-              {layout[room].map((n, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="w-12 shrink-0 text-xs font-bold text-slate-500">Row {i + 1}</span>
-                  <button
-                    type="button"
-                    aria-label={`One fewer table in row ${i + 1}`}
-                    onClick={() => setRow(room, i, n - 1)}
-                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-lg font-bold text-slate-600"
-                  >
-                    −
-                  </button>
-                  <span className="w-8 text-center font-display text-lg font-black text-ink">{n}</span>
-                  <button
-                    type="button"
-                    aria-label={`One more table in row ${i + 1}`}
-                    onClick={() => setRow(room, i, n + 1)}
-                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-lg font-bold text-slate-600"
-                  >
-                    +
-                  </button>
-                  <span className="min-w-0 flex-1 text-xs text-slate-500">
-                    {rr[i] ? `tables ${rr[i].first}–${rr[i].last}` : ''}
-                  </span>
-                  {layout[room].length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setLayout({ ...layout, [room]: layout[room].filter((_, j) => j !== i) })}
-                      className="shrink-0 text-xs font-bold text-red-600"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => setLayout({ ...layout, [room]: [...layout[room], layout[room].at(-1) ?? 6] })}
-                className="text-sm font-bold text-brand-blue"
-              >
-                + Add a row
-              </button>
-            </div>
-          )
-        })}
-
-        <FormError>{layoutError}</FormError>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={saveLayout}
-            disabled={savingLayout || (!layoutChanged && !isDefault)}
-            className={`${btn.primary} flex-1 disabled:opacity-60`}
-          >
-            {savingLayout ? 'Saving…' : isDefault && !layoutChanged ? 'Use this layout' : 'Save layout'}
+          <button type="button" onClick={() => setView('design')} className={`${btn.primary} mx-auto`}>
+            Design the venue
           </button>
-          {layoutChanged && saved && (
-            <button type="button" onClick={() => setLayout(saved)} className={`${btn.outline} shrink-0`}>
-              Undo
-            </button>
-          )}
-        </div>
-      </Card>
+        </Card>
+      )}
+
+      {view === 'assign' && saved && (
+        <>
+          <Card className="space-y-3">
+            <div>
+              <h2 className="font-display text-[15px] font-extrabold text-ink">Who sits where</h2>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                Type a stand’s table numbers — <strong>7</strong>, or <strong>7, 8</strong>, or <strong>7-9</strong> —
+                and press Save. The map below fills in straight away. Tables side by side show as one
+                stand, with the name once.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+              <Icon name="search" size={16} className="shrink-0 text-slate-400" />
+              <input className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Find a vendor or rescue" value={filter} onChange={(e) => setFilter(e.target.value)} />
+            </label>
+
+            <Section title={`Vendors · ${roster.vendors.length}`}>
+              {roster.vendors.filter((v) => match(v.name)).map((v) => (
+                <AssignRow
+                  key={v.id}
+                  name={v.name}
+                  hint={v.vendor_category ?? undefined}
+                  hidden={!v.vendor_published}
+                  current={numbersFor({ kind: 'vendor', id: v.id })}
+                  onSave={(n) => setTables(orgId, year, { kind: 'vendor', id: v.id }, n)}
+                  onSaved={() => load(true)}
+                  onFocusTable={setSelected}
+                />
+              ))}
+              {roster.vendors.length === 0 && <Empty>No vendors are tagged for {year}. Tick the year on each one under Vendors.</Empty>}
+            </Section>
+
+            <Section title={`Rescue partners · ${roster.partners.length}`}>
+              {roster.partners.filter((p) => match(p.name)).map((p) => (
+                <AssignRow
+                  key={p.id}
+                  name={p.name}
+                  hint={p.is_host ? 'Host' : (p.location ?? undefined)}
+                  hidden={!p.is_published}
+                  current={numbersFor({ kind: 'rescue', id: p.id })}
+                  onSave={(n) => setTables(orgId, year, { kind: 'rescue', id: p.id }, n)}
+                  onSaved={() => load(true)}
+                  onFocusTable={setSelected}
+                />
+              ))}
+              {roster.partners.length === 0 && <Empty>No rescues are tagged for {year}. Tick the year on each one under Rescues.</Empty>}
+            </Section>
+
+            <Section title="Anything else">
+              <p className="px-3 pt-2.5 text-xs leading-relaxed text-slate-500">
+                A sponsor’s table, the OHRR info table — anything that isn’t a vendor or a rescue.
+              </p>
+              {labels.filter(match).map((label) => (
+                <AssignRow
+                  key={label}
+                  name={label}
+                  current={numbersFor({ kind: 'other', label })}
+                  onSave={(n) => setTables(orgId, year, { kind: 'other', label }, n)}
+                  onSaved={() => load(true)}
+                  onFocusTable={setSelected}
+                />
+              ))}
+              <NewOther orgId={orgId} year={year} onSaved={() => load(true)} />
+            </Section>
+          </Card>
+
+          <Card className="space-y-3">
+            <h2 className="font-display text-[15px] font-extrabold text-ink">The map, as visitors will see it</h2>
+            {saved.rooms.map((room) => {
+              const r = ranges.get(room.id)
+              return (
+                <div key={room.id} className="space-y-1">
+                  <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
+                    {room.name}
+                    {r ? ` · tables ${r[0]}–${r[1]}` : ''}
+                  </p>
+                  <ZoomBox>
+                    <VenuePlan room={room} blocks={blocks} selectedTable={selected} onSelectBlock={(b) => setSelected(b.numbers[0])} label={`${room.name} tables`} />
+                  </ZoomBox>
+                </div>
+              )
+            })}
+          </Card>
+        </>
+      )}
     </div>
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="space-y-1.5">
       <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">{title}</p>
@@ -385,7 +317,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-function Empty({ children }: { children: React.ReactNode }) {
+function Empty({ children }: { children: ReactNode }) {
   return <p className="px-3 py-3 text-sm text-slate-500">{children}</p>
 }
 
@@ -413,7 +345,7 @@ function AssignRow({
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
 
-  // Keep the box in step when the list reloads after someone else's save.
+  // Keep the box in step when the list reloads after a save.
   useEffect(() => setText(shown), [shown])
 
   const dirty = text.trim() !== shown

@@ -1056,6 +1056,8 @@ function StartNextYearCard({ orgId }: { orgId: string }) {
         r.features ? `${r.features} cards` : null,
         r.vendors ? `${r.vendors} vendors` : null,
         r.partners ? `${r.partners} rescues` : null,
+        r.venue ? 'the venue design' : null,
+        r.tables ? `${r.tables} table places` : null,
       ].filter(Boolean)
       setDone(
         parts.length === 0
@@ -1073,9 +1075,9 @@ function StartNextYearCard({ orgId }: { orgId: string }) {
       <div>
         <h2 className="font-display text-[15px] font-extrabold text-ink">Start next year</h2>
         <p className="mt-1 text-sm leading-relaxed text-slate-600">
-          Copies the programme, the festival cards, every page and both rosters into a new year, so
-          you edit last year’s instead of starting from a blank screen. Nothing already in the new
-          year is touched.
+          Copies the programme, the festival cards, every page, both rosters and the floor plan into a
+          new year, so you edit last year’s instead of starting from a blank screen. Nothing already in
+          the new year is touched — and a new venue can be designed from scratch on the Floor plan tab.
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
