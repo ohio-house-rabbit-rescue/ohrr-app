@@ -538,6 +538,8 @@ export type Database = {
           description: string | null
           tags: string[]
           photos: string[]
+          /** Where the listing came from, e.g. "rescuegroups:22283159" — keeps a refresh from duplicating it. */
+          source_id: string | null
           sort_order: number
           is_published: boolean
           created_by: string | null
@@ -559,6 +561,7 @@ export type Database = {
           description?: string | null
           tags?: string[]
           photos?: string[]
+          source_id?: string | null
           sort_order?: number
           is_published?: boolean
           created_by?: string | null
@@ -580,6 +583,7 @@ export type Database = {
           description?: string | null
           tags?: string[]
           photos?: string[]
+          source_id?: string | null
           sort_order?: number
           is_published?: boolean
           created_by?: string | null

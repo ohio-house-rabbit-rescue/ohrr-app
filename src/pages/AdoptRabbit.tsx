@@ -59,6 +59,8 @@ export default function AdoptRabbit() {
     r.coat && `${r.coat} coat`,
     r.colors && r.colors.length > 0 && r.colors.join(', '),
     r.specialNeeds && 'Special needs',
+    // A bonded rabbit's listing names its partner: "Adopted together with Pierce".
+    ...(r.tags ?? []).filter((t) => /together with/i.test(t)),
   ].filter(Boolean) as string[]
 
   return (

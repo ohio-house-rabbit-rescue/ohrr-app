@@ -33,6 +33,7 @@ function rowToRabbit(r: RabbitRow): Rabbit {
     bonded: r.bonded,
     description: r.description || undefined,
     tags: r.tags ?? [],
+    specialNeeds: (r.tags ?? []).some((t) => /special needs/i.test(t)),
     photo: r.photos?.[0],
     photos: r.photos ?? [],
     publishedAt: r.created_at,
