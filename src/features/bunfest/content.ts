@@ -57,7 +57,7 @@ function rowToSession(r: SessionRow): Session {
   }
 }
 
-function rowToPartner(r: PartnerRow): Partner {
+function rowToPartner(r: PartnerRow, year: number): Partner {
   return {
     id: r.id,
     name: r.name,
@@ -70,6 +70,8 @@ function rowToPartner(r: PartnerRow): Partner {
     address: r.address ?? undefined,
     url: r.website ?? undefined,
     host: r.is_host,
+    // A rescue nobody has tagged by year yet falls back to the older flag.
+    atBunfest: r.bunfest_years.length > 0 ? r.bunfest_years.includes(year) : r.at_bunfest,
   }
 }
 
@@ -134,7 +136,7 @@ export function useRescuePartners(bunfestOnly = false): Live<Partner> {
           setState({ items: seedPartners, source: 'seed', loading: false })
           return
         }
-        setState({ items: rows.map(rowToPartner), source: 'live', loading: false })
+        setState({ items: rows.map((r) => rowToPartner(r, year)), source: 'live', loading: false })
       })
     return () => {
       active = false

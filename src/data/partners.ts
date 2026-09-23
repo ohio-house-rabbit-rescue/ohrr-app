@@ -16,6 +16,8 @@ export interface Partner {
   address?: string
   url?: string
   host?: boolean
+  /** At this year's BunFest. Only set from the live directory. */
+  atBunfest?: boolean
 }
 
 // Display order for the region filter (only regions present are shown).

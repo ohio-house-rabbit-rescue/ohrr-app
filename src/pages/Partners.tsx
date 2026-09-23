@@ -5,6 +5,8 @@ import { useRescuePartners } from '../features/bunfest/content'
 import { PageHeader, Screen, Badge, SampleNote, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
 
+const AT_BUNFEST = 'At BunFest'
+
 function initials(name: string) {
   return name
     .replace(/[^A-Za-z ]/g, '')
@@ -29,16 +31,23 @@ export default function Partners({
   const [region, setRegion] = useState<string>('All')
   const { items: partners, source } = useRescuePartners()
 
-  // Only the regions actually present, in display order.
+  // "At BunFest" first when the directory knows who is coming this year, then
+  // the regions actually present, in display order.
+  const someAtBunfest = partners.some((p) => p.atBunfest)
   const regionTabs = useMemo(
-    () => ['All', ...REGIONS.filter((r) => partners.some((p) => p.region === r))],
-    [partners],
+    () => [
+      'All',
+      ...(someAtBunfest ? [AT_BUNFEST] : []),
+      ...REGIONS.filter((r) => partners.some((p) => p.region === r)),
+    ],
+    [partners, someAtBunfest],
   )
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase()
     return partners.filter((p) => {
-      const inRegion = region === 'All' || p.region === region
+      const inRegion =
+        region === 'All' ? true : region === AT_BUNFEST ? !!p.atBunfest : p.region === region
       const stateName = p.state ? (US_STATES[p.state] ?? '') : ''
       const hay = `${p.name} ${p.location} ${p.city ?? ''} ${p.state ?? ''} ${stateName} ${p.region ?? ''}`.toLowerCase()
       return inRegion && (!q || hay.includes(q))
@@ -51,7 +60,10 @@ export default function Partners({
         icon="users"
         title={title}
         subtitle={
-          subtitle ?? `${partners.length} rabbit rescues & humane organizations — find one near you.`
+          subtitle ??
+          (someAtBunfest
+            ? `${partners.filter((p) => p.atBunfest).length} rescues at BunFest this year, ${partners.length} in the directory.`
+            : `${partners.length} rabbit rescues & humane organizations — find one near you.`)
         }
       />
       <Screen className="space-y-4">
