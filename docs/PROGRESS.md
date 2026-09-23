@@ -27,7 +27,8 @@
   surrender, found a rabbit, help, adopt, BunFest host card, letters, thank-yous,
   outreach, flyers. "Hurt? Call" became: OHRR can't respond to emergencies — MedVet
   Hilliard for an injured rabbit, the Ohio Wildlife Center for a wild one. Update 19
-  (one line, waiting) takes the phone off OHRR's BunFest rescue-partner entry. Updates
+  (applied and checked 2026-09-23) took the phone off OHRR's BunFest rescue-partner entry;
+  nothing is waiting to be pasted. Updates
   17 and 18 were **applied 2026-09-23** and checked live (Beverly May signs letters,
   EIN on file, Winstead spelling; every Counter function answers and refuses the
   signed-out).
