@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-23 (volunteer calls)
+- **Last updated:** 2026-09-23 (the Counter)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,46 @@
 ---
 
 ## Current state (at a glance)
+
+- **The Counter — store operations and the BunFest door (2026-09-23, latest).** Update
+  18 in `RUN-THIS-IN-SUPABASE.sql` (with 17; waiting to be run). Sponsor: add new
+  items from a phone first, SKU/barcode second; a separate staff area for store
+  operations and taking tickets at BunFest; don't overwhelm the staff. Decisions
+  (2026-09-23): a Counter volunteer role — yes; selling in the app lowers stock,
+  payment stays on the cash box / card reader — yes; door receipts counted so a
+  ticket can't be used twice; several door phones at once; must work with low or
+  no signal.
+  - **Staff → Counter** (`src/features/counter/`): big buttons, one job each; a
+    per-phone switch "The Hop Shop" (Sell, Add a new item, Today at the till) /
+    "BunFest" (Door tickets, Sell, Raffle tickets); each phone is named ("Door 1")
+    and the name is on everything it records.
+  - **Counter volunteer** (`counter.use`, preset in both Team screens): the till,
+    the door, the raffle table — lands straight on the Counter, menu shows nothing
+    else; can't edit the website, delete, void raffle tickets or draw winners
+    (the raffle functions were re-issued to allow counter.use for selling and
+    taking payment only).
+  - **Add a new item**: photo → name → price → how many → it gets an OHRR item
+    number (`counter_add_item`); then scan or type the maker's barcode
+    (`counter_link_code`), or print a sheet of labels carrying that item's number
+    (`/staff/items/tags?code=`).
+  - **Sell**: scan / name / barcode-number search / tap the picture, basket,
+    "Something else", Paid cash (change) or Paid by card; `record_counter_sale`
+    lowers stock. `counter_day` for the day's cash and card totals.
+  - **Door**: advance tickets (`door_tickets`) loaded from the ticket shop's CSV
+    export (columns and ticket items guessed, staff confirm; shirts/raffle/spa
+    skipped) or by hand; each door phone keeps the list and all entries
+    (`door_pack`), checks receipts with no signal, queues entries and syncs with
+    `door_sync` (client ids — a resend never counts twice). Already used → when and
+    which door; let in anyway needs a reason; undo 15 min; receipts let in twice are
+    listed. Walk-up sales by adults / 5–12 / under 5 at the published prices
+    ($10 / $5 / free, editable under Door setup).
+  - **Offline**: the staff membership is cached on the phone; the Counter has its
+    own gate; `public/sw.js` caches the app so it opens with no connection (checked
+    by stopping the server and reloading).
+  - Not yet: Square hand-off (waiting on which Square hardware OHRR uses), app-sold
+    signed QR tickets (needs online payments — sponsor asked; discussed, parked).
+  - Verified in a throwaway harness with sample data: 24 logic checks, every screen,
+    offline → online sync for sales and door entries, CSV import.
 
 - **Letter signer + a name fix (2026-09-23).** Update 17 in `RUN-THIS-IN-SUPABASE.sql`
   (waiting to be run): OHRR named Bev as the signer, so hours letters are signed by
