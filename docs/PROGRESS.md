@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-23 (the Counter)
+- **Last updated:** 2026-09-23 (the BunFest sample site; website Vets + OHRR details)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,7 +19,41 @@
 
 ## Current state (at a glance)
 
-- **Email, not the phone (2026-09-23, latest).** OHRR: the phone isn't for emergencies,
+- **The Midwest BunFest sample site (2026-09-23, latest).** The third front door from the
+  design brief (*OHRR Design Principles and Personas*), built as a board sample like the OHRR
+  website; midwestbunfest.org is untouched. Repo
+  https://github.com/ohio-house-rabbit-rescue/ohrr-bunfest (public, like the other two;
+  local `C:\Users\johns\ohrr-bunfest`). **Not hosted yet — OHRR connects the repo in
+  Cloudflare Pages** (build `npm run build`, output `dist`); the address will most likely be
+  `ohrr-bunfest.pages.dev`. Nothing needs pasting into Supabase.
+  - **Nothing typed in:** every page reads the shared database — `events` (+`info`),
+    `event_features`, `bunfest_pages`, `bunfest_sessions`, `bunfest_presenters`,
+    `bunfest_vendors_public()`, `rescue_partners`, `sponsor_placements`/`sponsors`,
+    `raffle_items`/`raffle_prizes`/`auction_settings`, `bunfest_venues` +
+    `bunfest_tables_public()`, `vets.gives_rhdv2`, `app_settings.org_profile`. A failed read
+    says so and offers Try again; there is no made-up fallback content.
+  - **Pages:** Home (the six answers — what, when, where, price, your rabbit, tickets — on
+    the first screen at 1280×800 and 375×812), Plan your visit, Bringing your rabbit (rule,
+    proof, attendance agreement, RHDV2 practices; prints), Talks & schedule (track buttons,
+    prints), Speakers, At the festival + each festival page, Vendors (search + category),
+    Rescues, Sponsors (terms expire themselves), Map (the app's VenuePlan, to scale), Silent
+    auction, Volunteer, Past years (`?year=` on schedule/vendors/rescues/festival), 404.
+  - The links OHRR types in the app (`/bunfest/p/spa`, `/vets?rhdv2=1`, `/shop` …) are
+    translated by `src/lib/links.ts` to this site's pages or the OHRR website.
+  - Older-visitor rules: 18px body (Tailwind text scale moved up), dark on white, every menu
+    item visible (labelled Menu button on phones, Tickets button in the phone header), 48px
+    targets, print styles, reduce-motion, `noindex` + `robots.txt`. Email only for OHRR — its
+    number is not on this site (other rescues' and vets' numbers are theirs to publish).
+  - `src/lib/floor.ts` and `src/components/VenuePlan.tsx` are copies of the app's — change
+    the app first.
+- **Website: Staff → Vets and Staff → OHRR details (2026-09-23).** Both were phone-only.
+  Vets mirrors the app's manager (badges, "gives the RHDV2 vaccine" + how to get it,
+  show/hide, delete); OHRR details mirrors the app's screen (notice, hours, email, phone,
+  address, letter signer, EIN) and keeps any other keys in the row. Public `/learn/vets`
+  shows an RHDV2 badge and a filter (`?rhdv2=1`). Checked in a throwaway harness (fake
+  sign-in, live public data, writes captured) and live on ohrr-website.pages.dev.
+
+- **Email, not the phone (2026-09-23).** OHRR: the phone isn't for emergencies,
   email is the primary way in, and everything runs on a very limited team of volunteers.
   OHRR then asked for it to be hard to find: it now appears ONLY on the About page (app
   and website), as small grey print — not in the footer, not a tap-to-call link —
@@ -33,7 +67,7 @@
   EIN on file, Winstead spelling; every Counter function answers and refuses the
   signed-out).
 
-- **The Counter — store operations and the BunFest door (2026-09-23, latest).** Update
+- **The Counter — store operations and the BunFest door (2026-09-23).** Update
   18 (applied 2026-09-23). Sponsor: add new
   items from a phone first, SKU/barcode second; a separate staff area for store
   operations and taking tickets at BunFest; don't overwhelm the staff. Decisions
