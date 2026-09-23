@@ -674,6 +674,9 @@ export type Database = {
           notes: string | null
           is_emergency: boolean
           is_low_cost_spay: boolean
+          /** Gives the RHDV2 vaccine — the BunFest rabbit rule sends people here. */
+          gives_rhdv2: boolean
+          rhdv2_note: string | null
           is_published: boolean
           sort_order: number
           created_by: string | null
@@ -695,6 +698,8 @@ export type Database = {
           notes?: string | null
           is_emergency?: boolean
           is_low_cost_spay?: boolean
+          gives_rhdv2?: boolean
+          rhdv2_note?: string | null
           is_published?: boolean
           sort_order?: number
           created_by?: string | null
@@ -716,6 +721,8 @@ export type Database = {
           notes?: string | null
           is_emergency?: boolean
           is_low_cost_spay?: boolean
+          gives_rhdv2?: boolean
+          rhdv2_note?: string | null
           is_published?: boolean
           sort_order?: number
           created_by?: string | null
@@ -1053,6 +1060,8 @@ export type Database = {
           room: string | null
           /** The festival runs parallel tracks ("Education Sessions", "Special Interest Sessions"). */
           track: string
+          /** Who gives the talk — bunfest_presenters ids, in billing order. */
+          presenter_ids: string[]
           kind: 'session' | 'break' | 'activity'
           is_published: boolean
           sort_order: number
@@ -1071,6 +1080,7 @@ export type Database = {
           description?: string | null
           room?: string | null
           track?: string
+          presenter_ids?: string[]
           kind?: 'session' | 'break' | 'activity'
           is_published?: boolean
           sort_order?: number
@@ -1085,6 +1095,7 @@ export type Database = {
           description?: string | null
           room?: string | null
           track?: string
+          presenter_ids?: string[]
           kind?: 'session' | 'break' | 'activity'
           is_published?: boolean
           sort_order?: number
@@ -1268,6 +1279,105 @@ export type Database = {
           contact?: unknown
           related_label?: string | null
           related?: unknown
+          is_published?: boolean
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      // The BunFest floor: rows of numbered tables per room and year, and who
+      // sits at each — supabase/migrations/20260923100000_bunfest_floor_speakers_rhdv2.sql.
+      bunfest_floor_rows: {
+        Row: {
+          id: string
+          org_id: string
+          year: number
+          room: 'burgundy' | 'emerald'
+          sort_order: number
+          tables: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          year: number
+          room: 'burgundy' | 'emerald'
+          sort_order?: number
+          tables: number
+        }
+        Update: {
+          room?: 'burgundy' | 'emerald'
+          sort_order?: number
+          tables?: number
+        }
+        Relationships: []
+      }
+      bunfest_tables: {
+        Row: {
+          id: string
+          org_id: string
+          year: number
+          table_no: number
+          supplier_id: string | null
+          partner_id: string | null
+          label: string | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          year: number
+          table_no: number
+          supplier_id?: string | null
+          partner_id?: string | null
+          label?: string | null
+          created_by?: string | null
+        }
+        Update: {
+          table_no?: number
+          supplier_id?: string | null
+          partner_id?: string | null
+          label?: string | null
+        }
+        Relationships: []
+      }
+      bunfest_presenters: {
+        Row: {
+          id: string
+          org_id: string
+          name: string
+          credentials: string | null
+          affiliation: string | null
+          bio: string | null
+          photo_url: string | null
+          website: string | null
+          is_published: boolean
+          sort_order: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          name: string
+          credentials?: string | null
+          affiliation?: string | null
+          bio?: string | null
+          photo_url?: string | null
+          website?: string | null
+          is_published?: boolean
+          sort_order?: number
+          created_by?: string | null
+        }
+        Update: {
+          name?: string
+          credentials?: string | null
+          affiliation?: string | null
+          bio?: string | null
+          photo_url?: string | null
+          website?: string | null
           is_published?: boolean
           sort_order?: number
         }
@@ -2135,7 +2245,34 @@ export type Database = {
           pages: number
           vendors: number
           partners: number
+          floor_rows?: number
+          tables?: number
         }
+      }
+      bunfest_tables_public: {
+        Args: { p_year: number }
+        Returns: {
+          table_no: number
+          kind: 'vendor' | 'rescue' | 'other'
+          ref_id: string | null
+          name: string | null
+          category: string | null
+        }[]
+      }
+      save_bunfest_floor: {
+        Args: { p_org: string; p_year: number; p_burgundy: number[]; p_emerald: number[] }
+        Returns: undefined
+      }
+      set_bunfest_tables: {
+        Args: {
+          p_org: string
+          p_year: number
+          p_tables: number[]
+          p_supplier?: string | null
+          p_partner?: string | null
+          p_label?: string | null
+        }
+        Returns: undefined
       }
       save_vendor_details: {
         Args: {

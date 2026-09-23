@@ -325,3 +325,60 @@ export async function startBunfestYear(orgId: string, from: number, to: number):
   if (error) throw error
   return (data ?? { sessions: 0, features: 0, pages: 0, vendors: 0, partners: 0 }) as YearCopy
 }
+
+/* ---------------------------------------------------- the floor plan */
+
+export type FloorRowRecord = Database['public']['Tables']['bunfest_floor_rows']['Row']
+export type TableRecord = Database['public']['Tables']['bunfest_tables']['Row']
+
+export async function listFloorRows(orgId: string, year: number): Promise<FloorRowRecord[]> {
+  const { data, error } = await supabase
+    .from('bunfest_floor_rows')
+    .select('*')
+    .eq('org_id', orgId)
+    .eq('year', year)
+    .order('room')
+    .order('sort_order')
+  if (error) throw error
+  return data ?? []
+}
+
+/** The whole layout at once: tables per row, top to bottom, for each room. */
+export async function saveFloor(orgId: string, year: number, burgundy: number[], emerald: number[]): Promise<void> {
+  const { error } = await supabase.rpc('save_bunfest_floor', {
+    p_org: orgId,
+    p_year: year,
+    p_burgundy: burgundy,
+    p_emerald: emerald,
+  })
+  if (error) throw error
+}
+
+export async function listTables(orgId: string, year: number): Promise<TableRecord[]> {
+  const { data, error } = await supabase
+    .from('bunfest_tables')
+    .select('*')
+    .eq('org_id', orgId)
+    .eq('year', year)
+    .order('table_no')
+  if (error) throw error
+  return data ?? []
+}
+
+export type TableHolderRef =
+  | { kind: 'vendor'; id: string }
+  | { kind: 'rescue'; id: string }
+  | { kind: 'other'; label: string }
+
+/** Give one stand its tables for the year — an empty list takes them away. */
+export async function setTables(orgId: string, year: number, who: TableHolderRef, numbers: number[]): Promise<void> {
+  const { error } = await supabase.rpc('set_bunfest_tables', {
+    p_org: orgId,
+    p_year: year,
+    p_tables: numbers,
+    p_supplier: who.kind === 'vendor' ? who.id : null,
+    p_partner: who.kind === 'rescue' ? who.id : null,
+    p_label: who.kind === 'other' ? who.label : null,
+  })
+  if (error) throw error
+}

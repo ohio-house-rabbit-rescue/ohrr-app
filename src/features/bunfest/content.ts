@@ -14,7 +14,6 @@ import type { Database } from '../../lib/database.types'
 import { sessions as seedSessions, type Session } from '../../data/sessions'
 import { partners as seedPartners, type Partner } from '../../data/partners'
 import { vendors as seedVendors, type Vendor } from '../../data/vendors'
-import { allPlacedBooths, booths as seedBooths, type BoothAssignment, type RoomId } from '../../data/floorplan'
 
 export type Source = 'live' | 'seed'
 export interface Live<T> {
@@ -145,34 +144,19 @@ export function useRescuePartners(bunfestOnly = false): Live<Partner> {
   return state
 }
 
-/** A vendor as the public pages show one, plus where their table is. */
-export interface BunfestVendor extends Vendor {
-  booth?: string
-  room?: RoomId
-  tables: 1 | 2
-}
+/**
+ * A vendor as the public pages show one. Where they sit is on the floor plan
+ * (useBunfestFloor), numbered by OHRR — not estimated here.
+ */
+export type BunfestVendor = Vendor
 
 export interface VendorsResult {
   items: BunfestVendor[]
-  /** Room assignments in display order, for the floor plan. */
-  assignments: BoothAssignment[]
   source: Source
   loading: boolean
 }
 
-// The bundled vendors carry the estimated booth labels ("B7") the floor plan
-// computes, so the list and the map agree before OHRR enters real ones.
-const seedLabels = new Map(allPlacedBooths.map((b) => [b.vendorId, b.label]))
-
-const seedResult: VendorsResult = {
-  items: seedVendors.map((v) => {
-    const booth = seedBooths.find((b) => b.vendorId === v.id)
-    return { ...v, booth: seedLabels.get(v.id), room: booth?.room, tables: booth?.tables ?? 1 }
-  }),
-  assignments: seedBooths,
-  source: 'seed',
-  loading: false,
-}
+const seedResult: VendorsResult = { items: seedVendors, source: 'seed', loading: false }
 
 export function useBunfestVendors(): VendorsResult {
   const bunfest = useBunfestEvent()
@@ -194,16 +178,8 @@ export function useBunfestVendors(): VendorsResult {
         category: r.category ?? 'Vendors',
         description: r.blurb ?? '',
         url: r.website ?? undefined,
-        booth: r.booth ?? undefined,
-        room: r.room ?? undefined,
-        tables: (r.tables === 2 ? 2 : 1) as 1 | 2,
       }))
-      // Only vendors OHRR has put in a room appear on the map; the rest still
-      // appear in the list.
-      const assignments: BoothAssignment[] = items
-        .filter((v): v is BunfestVendor & { room: RoomId } => Boolean(v.room))
-        .map((v) => ({ vendorId: v.id, room: v.room, tables: v.tables }))
-      setState({ items, assignments, source: 'live', loading: false })
+      setState({ items, source: 'live', loading: false })
     })
     return () => {
       active = false

@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { roomName } from '../data/floorplan'
 import { useBunfestVendors, vendorCategoriesOf } from '../features/bunfest/content'
+import { useBunfestFloor } from '../features/bunfest/floorData'
+import { formatNumbers, ROOM_NAMES } from '../features/bunfest/floor'
 import { PageHeader, Screen, Badge, SampleNote, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
 
 export default function Vendors() {
   const [category, setCategory] = useState<string>('All')
   const { items: vendors, source } = useBunfestVendors()
+  const floor = useBunfestFloor()
   const categories = useMemo(() => ['All', ...vendorCategoriesOf(vendors)], [vendors])
 
   const list = useMemo(
@@ -48,13 +50,17 @@ export default function Vendors() {
                 <span className="inline-flex items-center gap-1 text-sm font-bold text-brand-blue">
                   View details <Icon name="chevron" size={14} />
                 </span>
-                {v.room && (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400">
-                    <Icon name="mappin" size={13} className="text-slate-400" />
-                    {roomName(v.room).replace(' Room', '')}
-                    {v.booth ? ` · ${v.booth}` : ''}
-                  </span>
-                )}
+                {(() => {
+                  const at = floor.placeOf('vendor', v.id)
+                  if (at.numbers.length === 0 || !at.room) return null
+                  return (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500">
+                      <Icon name="mappin" size={13} className="text-slate-400" />
+                      {ROOM_NAMES[at.room].replace(' Room', '')} · {at.numbers.length > 1 ? 'Tables' : 'Table'}{' '}
+                      {formatNumbers(at.numbers)}
+                    </span>
+                  )
+                })()}
               </div>
             </Link>
           ))}

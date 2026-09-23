@@ -220,6 +220,7 @@ export default function App() {
           <Route path="volunteers" element={<Suspense fallback={null}><StaffVolunteers /></Suspense>} />
           <Route path="bunfest/schedule" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
           <Route path="bunfest/pages" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
+          <Route path="bunfest/floor" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
           <Route path="bunfest/vendors" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
           <Route path="bunfest/partners" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
           <Route path="raffle" element={<StaffRaffle />} />

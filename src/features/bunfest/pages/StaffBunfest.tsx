@@ -19,6 +19,7 @@ import { Screen, Card, Badge, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
 import { listSuppliers, saveSupplier, type Supplier } from '../../hopshop/api'
+import StaffFloor from './StaffFloor'
 import {
   copySessions,
   deletePartner,
@@ -53,13 +54,14 @@ import {
   type FeatureRow,
 } from '../api'
 
-type Tab = 'schedule' | 'vendors' | 'partners' | 'year' | 'pages'
+type Tab = 'schedule' | 'vendors' | 'partners' | 'year' | 'pages' | 'floor'
 const TABS: [Tab, string][] = [
   ['year', 'This year'],
   ['schedule', 'Schedule'],
   ['pages', 'Pages'],
   ['vendors', 'Vendors'],
   ['partners', 'Rescues'],
+  ['floor', 'Floor plan'],
 ]
 
 // The two tracks the festival runs. Free text, so a third one next year needs
@@ -106,12 +108,6 @@ function YearChips({ value, onChange }: { value: number[]; onChange: (years: num
     </div>
   )
 }
-const ROOMS: { value: 'burgundy' | 'emerald' | ''; label: string }[] = [
-  { value: '', label: 'Not placed yet' },
-  { value: 'burgundy', label: 'Burgundy Room' },
-  { value: 'emerald', label: 'Emerald Room' },
-]
-
 export default function StaffBunfest() {
   const { membership } = useAuth()
   const orgId = membership?.orgId ?? ''
@@ -123,7 +119,9 @@ export default function StaffBunfest() {
       ? 'partners'
       : pathname.endsWith('/schedule')
         ? 'schedule'
-        : pathname.endsWith('/pages')
+        : pathname.endsWith('/floor')
+          ? 'floor'
+          : pathname.endsWith('/pages')
           ? 'pages'
           : 'year'
 
@@ -154,6 +152,7 @@ export default function StaffBunfest() {
       {tab === 'pages' && <PagesTab orgId={orgId} />}
       {tab === 'vendors' && <VendorsTab orgId={orgId} />}
       {tab === 'partners' && <PartnersTab orgId={orgId} />}
+      {tab === 'floor' && <StaffFloor orgId={orgId} />}
     </Screen>
   )
 }
@@ -593,32 +592,14 @@ function VendorForm({ orgId, initial, onDone }: { orgId: string; initial: Suppli
         About them (visitors read this)
         <textarea className={staffInput} rows={2} value={d.blurb} onChange={txt('blurb')} placeholder="Handmade bunny-themed jewelry, home decor and ornaments." />
       </label>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Room
-          <select className={staffInput} value={d.room} onChange={txt('room')}>
-            {ROOMS.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm font-semibold text-slate-700">
-          Booth
-          <input className={staffInput} value={d.booth} onChange={txt('booth')} placeholder="B7" />
-        </label>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Tables
-          <input inputMode="numeric" className={staffInput} value={d.tables} onChange={(e) => setD({ ...d, tables: e.target.value.replace(/[^0-9]/g, '') })} />
-        </label>
-        <label className="block text-sm font-semibold text-slate-700">
-          Order in the list
-          <input inputMode="numeric" className={staffInput} value={d.sort} onChange={(e) => setD({ ...d, sort: e.target.value.replace(/[^0-9]/g, '') })} />
-        </label>
-      </div>
+      <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
+        Their table numbers are set on the <strong>Floor plan</strong> tab, beside everyone else’s,
+        so two stands can’t be given the same table.
+      </p>
+      <label className="block text-sm font-semibold text-slate-700">
+        Order in the list
+        <input inputMode="numeric" className={staffInput} value={d.sort} onChange={(e) => setD({ ...d, sort: e.target.value.replace(/[^0-9]/g, '') })} />
+      </label>
       <YearChips value={d.years} onChange={(years) => setD({ ...d, years })} />
       <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
         <input
