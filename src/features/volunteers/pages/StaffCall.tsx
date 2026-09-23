@@ -67,6 +67,7 @@ export default function StaffCall() {
   const [tab, setTab] = useState<Tab>('signups')
   const [editing, setEditing] = useState(id === 'new')
   const [error, setError] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (id === 'new') return
@@ -94,8 +95,9 @@ export default function StaffCall() {
         <CallEditor
           orgId={orgId}
           initial={id === 'new' ? null : (row ?? null)}
-          onSaved={(saved) => {
+          onSaved={(saved, msg) => {
             setEditing(false)
+            setNote(msg ?? null)
             if (saved !== id) navigate(`/staff/calls/${saved}`, { replace: true })
             else void load()
           }}
@@ -139,6 +141,8 @@ export default function StaffCall() {
           </button>
         </div>
       </div>
+
+      {note && <p className="rounded-xl bg-brand-blue-50 px-3 py-2 text-sm text-brand-blue">{note}</p>}
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {(

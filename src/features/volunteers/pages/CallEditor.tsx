@@ -27,7 +27,8 @@ export default function CallEditor({
 }: {
   orgId: string
   initial: CallRow | null
-  onSaved: (id: string) => void
+  /** `note` is something staff should know about what the save did. */
+  onSaved: (id: string, note?: string) => void
   onCancel: () => void
   onDeleted?: () => void
 }) {
@@ -119,12 +120,12 @@ export default function CallEditor({
         closes_on: d.closes_on || null,
         is_published: d.is_published,
       })
-      if (r.orphaned > 0) {
-        setNote(
-          `Saved. ${r.orphaned} ${r.orphaned === 1 ? 'shift has' : 'shifts have'} people on ${r.orphaned === 1 ? 'it' : 'them'} but no longer fit the hours — they’re closed to new sign-ups; check them under Sign-ups.`,
-        )
-      }
-      onSaved(r.id)
+      onSaved(
+        r.id,
+        r.orphaned > 0
+          ? `Saved. ${r.orphaned} ${r.orphaned === 1 ? 'shift has' : 'shifts have'} people on ${r.orphaned === 1 ? 'it' : 'them'} but no longer fit${r.orphaned === 1 ? 's' : ''} the hours — ${r.orphaned === 1 ? 'it’s' : 'they’re'} closed to new sign-ups; check under Sign-ups.`
+          : undefined,
+      )
     } catch (err) {
       setError(errMessage(err))
       setBusy(false)
