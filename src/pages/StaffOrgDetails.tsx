@@ -40,6 +40,9 @@ export default function StaffOrgDetails() {
         phone: stored.phone ?? ORG_PROFILE_FALLBACK.phone,
         email: stored.email ?? ORG_PROFILE_FALLBACK.email,
         address: stored.address ?? ORG_PROFILE_FALLBACK.address,
+        letter_signer_name: stored.letter_signer_name ?? '',
+        letter_signer_title: stored.letter_signer_title ?? '',
+        ein: stored.ein ?? '',
       })
     } catch (e) {
       setError(errMessage(e))
@@ -138,6 +141,33 @@ export default function StaffOrgDetails() {
             <label className="block text-sm font-semibold text-slate-700">
               Address
               <input className={staffInput} value={d.address} onChange={txt('address')} />
+            </label>
+          </Card>
+
+          <Card className="space-y-3">
+            <div>
+              <h2 className="font-display text-[15px] font-extrabold text-ink">Volunteer-hours letters</h2>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                Who signs the letters volunteers need for school credit, a military service award or a workplace
+                programme. Their name and title go under the signature line.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-semibold text-slate-700">
+                Signed by
+                <input className={staffInput} value={d.letter_signer_name} onChange={txt('letter_signer_name')} placeholder="Full name" />
+              </label>
+              <label className="block text-sm font-semibold text-slate-700">
+                Their title
+                <input className={staffInput} value={d.letter_signer_title} onChange={txt('letter_signer_title')} placeholder="Volunteer Coordinator" />
+              </label>
+            </div>
+            <label className="block text-sm font-semibold text-slate-700">
+              EIN (optional)
+              <input className={staffInput} value={d.ein} onChange={txt('ein')} placeholder="00-0000000" />
+              <span className="mt-1 block text-xs font-normal text-slate-500">
+                Employers’ volunteer-grant programmes often ask for it. Leave blank to leave it off.
+              </span>
             </label>
           </Card>
 

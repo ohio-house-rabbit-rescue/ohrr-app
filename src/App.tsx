@@ -102,6 +102,9 @@ const StaffBunfest = lazy(() => import('./features/bunfest/pages/StaffBunfest'))
 const StaffTails = lazy(() => import('./features/tails/pages/StaffTails'))
 const MyHours = lazy(() => import('./features/volunteers/pages/MyHours'))
 const StaffVolunteers = lazy(() => import('./features/volunteers/pages/StaffVolunteers'))
+const CallPage = lazy(() => import('./features/volunteers/pages/CallPage'))
+const StaffCalls = lazy(() => import('./features/volunteers/pages/StaffCalls'))
+const StaffCallRoute = lazy(() => import('./features/volunteers/pages/StaffCalls').then((m) => ({ default: m.StaffCallRoute })))
 const PostEditor = lazy(() => import('./features/share/pages/PostEditor'))
 
 export default function App() {
@@ -145,6 +148,7 @@ export default function App() {
         <Route path="/volunteer/foster" element={<FosterForm />} />
         <Route path="/volunteer/hours" element={<Suspense fallback={null}><MyHours /></Suspense>} />
         <Route path="/volunteer/hours/:token" element={<Suspense fallback={null}><MyHours /></Suspense>} />
+        <Route path="/volunteer/call/:slug" element={<Suspense fallback={null}><CallPage /></Suspense>} />
         <Route path="/volunteer/:slug" element={<VolunteerWay />} />
         <Route path="/support" element={<Give />} />
         <Route path="/hop-shop" element={<HopShop />} />
@@ -220,6 +224,8 @@ export default function App() {
           <Route path="bunfest" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
           <Route path="tails" element={<Suspense fallback={null}><StaffTails /></Suspense>} />
           <Route path="volunteers" element={<Suspense fallback={null}><StaffVolunteers /></Suspense>} />
+          <Route path="calls" element={<Suspense fallback={null}><StaffCalls /></Suspense>} />
+          <Route path="calls/:id" element={<Suspense fallback={null}><StaffCallRoute /></Suspense>} />
           <Route path="bunfest/schedule" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
           <Route path="bunfest/pages" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
           <Route path="bunfest/floor" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />

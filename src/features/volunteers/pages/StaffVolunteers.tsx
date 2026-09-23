@@ -292,9 +292,14 @@ function VolunteerDetail({ v, onChanged }: { v: VolunteerRow; onChanged: () => P
         <span className="font-bold text-ink">
           {hoursLabel(total)} total{confirmed !== total ? ` · ${hoursLabel(confirmed)} confirmed` : ''}
         </span>
-        <Link to="/staff/hours-letter" className="text-xs font-bold text-brand-blue">
-          Service letter →
-        </Link>
+        {v.email && (
+          <Link
+            to={`/staff/hours-letter?email=${encodeURIComponent(v.email)}&name=${encodeURIComponent(v.name)}`}
+            className="text-xs font-bold text-brand-blue"
+          >
+            Hours letter →
+          </Link>
+        )}
       </div>
 
       <FormError>{error}</FormError>

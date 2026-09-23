@@ -56,6 +56,7 @@ export default function StaffLayout() {
     { to: '/staff/hopshop', label: 'Hop Shop', show: Boolean(membership) },
     { to: '/staff/announcements', label: 'Announcements', show: can('announcements.post') },
     { to: '/staff/home-screen', label: 'Home screen cards', show: can('announcements.post') },
+    { to: '/staff/calls', label: 'Volunteer calls — needs, sign-ups, thanks', show: can('volunteers.shifts.manage') || can('bookings.manage') },
     { to: '/staff/volunteers', label: 'Volunteers — roster & hours', show: can('volunteers.shifts.manage') || can('bookings.manage') },
     { to: '/staff/volunteer', label: 'Volunteer opportunities', show: can('volunteers.shifts.manage') },
     { to: '/staff/learn', label: 'Care guides & pages', show: can('content.education.edit') },

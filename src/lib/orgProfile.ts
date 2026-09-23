@@ -22,6 +22,11 @@ export interface OrgProfile {
   phone: string
   email: string
   address: string
+  /** Who signs volunteer-hours letters — never guessed; blank until set. */
+  letter_signer_name: string
+  letter_signer_title: string
+  /** Shown on letters when set — volunteer-grant programmes often ask for it. */
+  ein: string
 }
 
 export const ORG_PROFILE_FALLBACK: OrgProfile = {
@@ -32,6 +37,9 @@ export const ORG_PROFILE_FALLBACK: OrgProfile = {
   phone: ohrr.phone,
   email: ohrr.email,
   address: ohrr.address,
+  letter_signer_name: '',
+  letter_signer_title: '',
+  ein: '',
 }
 
 /** The org's live details, with the bundled values filling any blanks. */
@@ -51,6 +59,10 @@ export function useOrgProfile(): OrgProfile {
     phone: pick('phone'),
     email: pick('email'),
     address: pick('address'),
+    // No bundled fallback for these: a letter must never carry an invented name.
+    letter_signer_name: typeof v.letter_signer_name === 'string' ? v.letter_signer_name.trim() : '',
+    letter_signer_title: typeof v.letter_signer_title === 'string' ? v.letter_signer_title.trim() : '',
+    ein: typeof v.ein === 'string' ? v.ein.trim() : '',
   }
 }
 

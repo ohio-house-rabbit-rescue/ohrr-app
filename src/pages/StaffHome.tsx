@@ -215,6 +215,15 @@ export default function StaffHome() {
           )}
           {(canManageVolunteer || canBookings) && (
             <ActionCard
+              to="/staff/calls"
+              title="Volunteer calls"
+              subtitle="Put out a need, share it everywhere, check people in, thank them"
+              icon="heart"
+              tone="orange"
+            />
+          )}
+          {(canManageVolunteer || canBookings) && (
+            <ActionCard
               to="/staff/volunteers"
               title="Volunteers"
               subtitle="The roster, their hours, and each person's private hours link"

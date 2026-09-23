@@ -1180,6 +1180,10 @@ export type Database = {
           notes: string | null
           photo_url: string | null
           access_token: string
+          /** What their hours are for — the letter they'll need. */
+          hours_for: 'school' | 'military' | 'workplace' | 'community' | 'other' | null
+          /** School, branch, employer … whatever that letter asks for. */
+          letter_details: Record<string, string>
           created_by: string | null
           created_at: string
           updated_at: string
@@ -1196,6 +1200,8 @@ export type Database = {
           orientation_on?: string | null
           notes?: string | null
           photo_url?: string | null
+          hours_for?: 'school' | 'military' | 'workplace' | 'community' | 'other' | null
+          letter_details?: Record<string, string>
           created_by?: string | null
         }
         Update: {
@@ -1208,6 +1214,8 @@ export type Database = {
           orientation_on?: string | null
           notes?: string | null
           photo_url?: string | null
+          hours_for?: 'school' | 'military' | 'workplace' | 'community' | 'other' | null
+          letter_details?: Record<string, string>
         }
         Relationships: []
       }
@@ -1380,6 +1388,48 @@ export type Database = {
           website?: string | null
           is_published?: boolean
           sort_order?: number
+        }
+        Relationships: []
+      }
+      // A volunteer call: one need, its shifts made from it —
+      // supabase/migrations/20260923120000_volunteer_calls.sql.
+      volunteer_calls: {
+        Row: {
+          id: string
+          org_id: string
+          slug: string
+          title: string
+          summary: string | null
+          details: string | null
+          location: string | null
+          on_date: string
+          starts_at: string
+          ends_at: string
+          shift_minutes: number
+          people_per_shift: number
+          areas: string[]
+          who: string | null
+          perks: string[]
+          requirements: string | null
+          closes_on: string | null
+          type_id: string | null
+          is_published: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          slug: string
+          title: string
+          on_date: string
+          starts_at: string
+          ends_at: string
+        }
+        Update: {
+          title?: string
+          is_published?: boolean
         }
         Relationships: []
       }
@@ -1754,6 +1804,8 @@ export type Database = {
           source: string | null
           confirmed_by: string | null
           checked_in_at: string | null
+          /** When the volunteer was thanked for this shift. */
+          thanked_at: string | null
           created_at: string
           updated_at: string
         }
@@ -2258,6 +2310,94 @@ export type Database = {
           name: string | null
           category: string | null
         }[]
+      }
+      save_volunteer_call: {
+        Args: { p_org: string; p_call: unknown }
+        Returns: { id: string; slug: string; shifts: number; orphaned: number }
+      }
+      volunteer_call_public: {
+        Args: { p_slug: string }
+        Returns: unknown
+      }
+      volunteer_calls_open: {
+        Args: Record<string, never>
+        Returns: {
+          slug: string
+          title: string
+          summary: string | null
+          on_date: string
+          starts_at: string
+          ends_at: string
+          location: string | null
+          places: number
+          taken: number
+        }[]
+      }
+      sign_up_for_call: {
+        Args: {
+          p_slug: string
+          p_slot_ids: string[]
+          p_name: string
+          p_email: string
+          p_phone?: string | null
+          p_area?: string | null
+          p_hours_for?: string | null
+          p_details?: unknown
+          p_source?: string | null
+          p_attested?: boolean
+        }
+        Returns: {
+          shifts: { booking_id: string; slot_id: string; starts_at: string; ends_at: string; cancel_token: string }[]
+          new_volunteer: boolean
+          hours_token: string | null
+        }
+      }
+      add_walk_in: {
+        Args: { p_slot_id: string; p_name: string; p_email: string; p_phone?: string | null; p_area?: string | null }
+        Returns: string
+      }
+      mark_call_attendance: {
+        Args: { p_booking: string; p_status: 'confirmed' | 'checked_in' | 'no_show' }
+        Returns: undefined
+      }
+      call_roster: {
+        Args: { p_call: string }
+        Returns: {
+          slot_id: string
+          starts_at: string
+          ends_at: string
+          capacity: number
+          booking_id: string | null
+          name: string | null
+          email: string | null
+          phone: string | null
+          area: string | null
+          status: string | null
+          source: string | null
+          thanked_at: string | null
+        }[]
+      }
+      call_thanks: {
+        Args: { p_call: string }
+        Returns: {
+          email: string
+          name: string
+          phone: string | null
+          shifts: number
+          hours_here: number
+          hours_year: number
+          hours_all: number
+          hours_token: string | null
+          thanked_at: string | null
+        }[]
+      }
+      mark_thanked: {
+        Args: { p_call: string; p_email: string }
+        Returns: undefined
+      }
+      call_sources: {
+        Args: { p_call: string }
+        Returns: { source: string; people: number }[]
       }
       save_bunfest_venue: {
         Args: { p_org: string; p_year: number; p_name: string | null; p_layout: unknown }

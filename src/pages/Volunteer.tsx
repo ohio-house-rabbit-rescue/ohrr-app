@@ -8,6 +8,9 @@ import {
   OHRR_CONTACT_EMAIL,
 } from '../data/volunteer'
 import { isFull, remainingLabel, useVolunteerOpportunities } from '../lib/volunteerOpps'
+import { useEffect, useState } from 'react'
+import { listOpenCalls, type OpenCall } from '../features/volunteers/callsApi'
+import { fmtClock, fmtDay } from '../features/volunteers/calls'
 import { PageHeader, Screen, SectionLabel, ActionCard, Card, btn } from '../components/ui'
 import MyBookingsCard from '../features/bookings/MyBookingsCard'
 import MyHoursCard from '../features/volunteers/MyHoursCard'
@@ -33,6 +36,7 @@ export default function Volunteer() {
       />
       <Screen className="space-y-6">
         <PresentedBy surface="volunteer" />
+        <OpenCalls />
         <MyBookingsCard />
         <MyHoursCard />
         <p className="px-1 text-sm leading-relaxed text-slate-600">{volunteerIntro}</p>
@@ -160,5 +164,37 @@ export default function Volunteer() {
         </div>
       </Screen>
     </>
+  )
+}
+
+/** Volunteer calls still taking people — what's needed right now, first. */
+function OpenCalls() {
+  const [calls, setCalls] = useState<OpenCall[]>([])
+  useEffect(() => {
+    listOpenCalls()
+      .then(setCalls)
+      .catch(() => setCalls([]))
+  }, [])
+  if (calls.length === 0) return null
+  return (
+    <div className="space-y-2.5">
+      <SectionLabel>Help needed now</SectionLabel>
+      {calls.map((c) => {
+        const left = Math.max(0, c.places - c.taken)
+        return (
+          <Link key={c.slug} to={`/volunteer/call/${c.slug}`} className="block">
+            <Card className="border-brand-orange/40 transition hover:shadow-md">
+              <p className="font-display text-base font-extrabold text-ink">{c.title}</p>
+              <p className="mt-0.5 text-sm text-slate-600">
+                {fmtDay(c.on_date)} · {fmtClock(c.starts_at)}–{fmtClock(c.ends_at)}
+              </p>
+              <p className="mt-1.5 text-sm font-bold text-brand-orange-dark">
+                {left > 0 ? `${left} ${left === 1 ? 'place' : 'places'} left — sign up` : 'Full — thank you!'}
+              </p>
+            </Card>
+          </Link>
+        )
+      })}
+    </div>
   )
 }
