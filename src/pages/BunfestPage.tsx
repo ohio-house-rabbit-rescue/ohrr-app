@@ -1,5 +1,6 @@
+import type { ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useBunfestPage } from '../features/bunfest/pages'
+import { useBunfestPage, reserveDay, reserveState } from '../features/bunfest/pages'
 import { PageHeader, Screen, Card, Badge, SectionLabel, btn } from '../components/ui'
 import { ContactLinks } from '../components/ContactLinks'
 import { ReserveSession } from '../components/ReserveSession'
@@ -15,6 +16,8 @@ export default function BunfestPage() {
   // Raffle page only: staff-entered raffle details + ticket pricing (auction_settings).
   const auction = useAuctionSettings(page?.feature === 'raffle')
   const raffleDetails = auction?.raffle_details?.trim() || null
+  // Whether this page is taking bookings ahead of the day.
+  const reserve = reserveState(page?.reserve)
 
   if (!page && loading) {
     return (
@@ -101,13 +104,25 @@ export default function BunfestPage() {
           ))}
         </div>
 
-        {/* Interactive add-ons */}
-        {p.feature === 'reserve' && p.reserve && (
+        {/* Interactive add-ons. Advance booking carries its own dates, so the
+            form appears and disappears on the day OHRR picked rather than
+            waiting for somebody to remember to switch it off. */}
+        {p.feature === 'reserve' && p.reserve && reserve === 'open' && (
           <ReserveSession
             title={p.title}
             formName={p.reserve.formName}
             services={p.reserve.services}
+            slots={p.reserve.slots}
+            closesOn={p.reserve.closesOn}
           />
+        )}
+        {p.feature === 'reserve' && p.reserve && reserve === 'early' && (
+          <ReserveNotice>
+            Advance requests for {p.title} open on {reserveDay(p.reserve.opensOn)}.
+          </ReserveNotice>
+        )}
+        {p.feature === 'reserve' && p.reserve?.closedNote && reserve === 'closed' && (
+          <ReserveNotice>{p.reserve.closedNote}</ReserveNotice>
         )}
         {/* Prizes staff scanned in (published raffle_prizes) */}
         {p.feature === 'raffle' && <RafflePrizes />}
@@ -156,5 +171,19 @@ export default function BunfestPage() {
         )}
       </Screen>
     </>
+  )
+}
+
+/**
+ * Stands in for the request form when advance booking isn't open — either not
+ * yet, or not any more. Saying which beats a page that quietly has nothing on
+ * it where the form used to be.
+ */
+function ReserveNotice({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex gap-2.5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-600">
+      <Icon name="clock" size={16} className="mt-0.5 shrink-0 text-slate-400" />
+      <p>{children}</p>
+    </div>
   )
 }

@@ -9,7 +9,12 @@
 import { useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
 import type { Database } from '../../lib/database.types'
-import { bunfestPageById, type BunfestPage, type InfoSection } from '../../data/bunfestPages'
+import {
+  bunfestPageById,
+  type BunfestPage,
+  type InfoSection,
+  type ReserveSetup,
+} from '../../data/bunfestPages'
 import type { IconName } from '../../components/icons'
 import { useBunfestEvent } from '../../lib/events'
 
@@ -56,6 +61,17 @@ function toRelated(v: unknown): { label: string; to: string }[] {
     .filter((r) => r.label && r.to)
 }
 
+function strings(v: unknown): string[] | undefined {
+  if (!Array.isArray(v)) return undefined
+  const out = v.filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+  return out.length > 0 ? out : undefined
+}
+
+/** Only a "YYYY-MM-DD" is a date we can compare; anything else is ignored. */
+function ymd(v: unknown): string | undefined {
+  return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined
+}
+
 function toRecord(v: unknown): Record<string, unknown> {
   return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
 }
@@ -81,9 +97,11 @@ export function rowToPage(r: PageRow): BunfestPage {
       r.feature === 'reserve' && str(reserve.formName)
         ? {
             formName: str(reserve.formName) as string,
-            services: Array.isArray(reserve.services)
-              ? reserve.services.filter((s): s is string => typeof s === 'string')
-              : undefined,
+            services: strings(reserve.services),
+            slots: strings(reserve.slots),
+            opensOn: ymd(reserve.opensOn),
+            closesOn: ymd(reserve.closesOn),
+            closedNote: str(reserve.closedNote),
           }
         : undefined,
     emailSignup: str(r.email_signup),
@@ -137,4 +155,42 @@ export function useBunfestPage(slug: string | undefined): LivePage {
   }, [slug, year])
 
   return state
+}
+
+/* ------------------------------------------------ taking bookings ahead */
+
+/** Today where the visitor is, as "YYYY-MM-DD" — the same shape as the dates. */
+function today(): string {
+  const d = new Date()
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+/**
+ * Where a page's advance booking stands right now.
+ *
+ * 'early'  set up, but not open to the public yet
+ * 'open'   taking requests
+ * 'closed' the window has passed — say so rather than take one nobody reads
+ *
+ * Both dates are inclusive and compared as plain "YYYY-MM-DD" strings, so a
+ * window set in Ohio doesn't shift for someone booking from another timezone.
+ */
+export type ReserveState = 'early' | 'open' | 'closed'
+
+export function reserveState(r: ReserveSetup | undefined): ReserveState {
+  if (!r) return 'closed'
+  const now = today()
+  if (r.opensOn && now < r.opensOn) return 'early'
+  if (r.closesOn && now > r.closesOn) return 'closed'
+  return 'open'
+}
+
+/** "Friday, 17 October" — for telling people when a window opens or shuts. */
+export function reserveDay(v: string | undefined): string | null {
+  if (!v) return null
+  // Midday keeps the date from sliding a day either way when it is parsed.
+  const d = new Date(`${v}T12:00:00`)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
 }

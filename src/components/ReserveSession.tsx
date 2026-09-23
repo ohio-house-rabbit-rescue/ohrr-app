@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { SESSION_SLOTS } from '../data/bunfestPages'
+import { reserveDay } from '../features/bunfest/pages'
 import { Card, SectionLabel, btn } from './ui'
 import { Icon } from './icons'
 import { submitRequest } from '../lib/requests'
@@ -22,10 +23,16 @@ export function ReserveSession({
   title,
   formName,
   services,
+  slots,
+  closesOn,
 }: {
   title: string
   formName: string
   services?: string[]
+  /** The times offered this year; the bundled half-hours are the fallback. */
+  slots?: string[]
+  /** Last day requests are taken — worth saying, so people don't leave it. */
+  closesOn?: string
 }) {
   const [status, setStatus] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle')
   const [service, setService] = useState('')
@@ -100,7 +107,7 @@ export function ReserveSession({
               Preferred time <span className="font-normal text-slate-400">— we’ll confirm</span>
             </span>
             <div className="mt-1.5 flex flex-wrap gap-2">
-              {SESSION_SLOTS.map((s) => (
+              {(slots && slots.length > 0 ? slots : SESSION_SLOTS).map((s) => (
                 <button key={s} type="button" onClick={() => setSlot(slot === s ? '' : s)} className={pill(slot === s)}>
                   {s}
                 </button>
@@ -134,6 +141,9 @@ export function ReserveSession({
           </button>
           <p className="text-center text-xs leading-relaxed text-slate-400">
             No payment now — you pay at the {title} table at BunFest. RHDV2 vaccination required.
+            {closesOn && reserveDay(closesOn) && (
+              <> Advance requests close after {reserveDay(closesOn)}.</>
+            )}
           </p>
         </form>
       </Card>

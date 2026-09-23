@@ -138,6 +138,11 @@ begin
   -- Note what changed from the app's bundled copy: advance booking for the
   -- Bunny Spa and Glamour Shots has closed for 2026 (both are day-of,
   -- first-come now), and the raffle and silent auction times are published.
+  --
+  -- Both pages still arrive with their advance-booking set-up filled in —
+  -- services, times and what to say once it shuts — just switched off. Turning
+  -- it on another year is picking "A form to request a time" and setting the
+  -- last day to take them; the form then takes itself down on that day.
   -- -----------------------------------------------------------
   if not exists (select 1 from bunfest_pages where org_id = v_org and year = v_year) then
     insert into bunfest_pages (org_id, year, slug, title, subtitle, icon, sponsor_note, chips, note, sections, feature, reserve, email_signup, contact, related_label, related, sort_order)
@@ -149,8 +154,13 @@ begin
        'For the safety of all rabbits, any rabbit attending Midwest BunFest must be vaccinated against RHDV2 and current on the annual booster — proof is required at entry.',
        '[{"heading":"Services","list":["Nail trims","Light grooming","Gland cleaning"]},
          {"heading":"Prices","list":["$12.00 — individual services","$20.00 — full spa package (nail clipping, gland cleaning and light grooming)"]},
-         {"heading":"Sign up on the day","body":"Advance scheduling has closed for this year. There are still day-of appointments: hop by the Bunny Spa as soon as you arrive to sign up in person. They go first-come, first-served and fill up quickly. You pay at the table, and all proceeds benefit OHRR."}]'::jsonb,
-       null, null, null, null,
+         {"heading":"On the day","body":"Day-of appointments are first-come, first-served: hop by the Bunny Spa as soon as you arrive to sign up in person. They fill up quickly. You pay at the table, and all proceeds benefit OHRR."}]'::jsonb,
+       null,
+       '{"formName":"spa-reservation",
+         "services":["Nail trims","Light grooming","Gland cleaning","Full spa package"],
+         "slots":["10:00 AM","10:30 AM","11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM"],
+         "closedNote":"Advance scheduling has closed for this year — sign up in person at the Bunny Spa on the day."}'::jsonb,
+       null, null,
        'Pairs well with', '[{"label":"Glamour Shots","to":"/bunfest/p/glamour"}]'::jsonb, 10),
 
       (v_org, v_year, 'glamour', 'Glamour Shots',
@@ -159,8 +169,12 @@ begin
        array['$20 flat — all your photos'],
        'For the safety of all rabbits, any rabbit attending Midwest BunFest must be vaccinated against RHDV2 and current on the annual booster — proof is required at entry.',
        '[{"heading":"How it works","list":["Two photo booths run all day so every bunny who wants a photo can have one","10-minute sessions; arrive 5–10 minutes early to check in and settle your bunny","Bring your own props, or choose from the wide variety of props and themes available","Single bunnies or bonded pairs, trios, quartets — all welcome","$20 flat rate, and you take home a thumb drive with every photo from the session"]},
-         {"heading":"Sign up on the day","body":"Advance scheduling has closed for this year. Glamour Shots fills up quickly, so hop by as soon as you arrive to sign up in person — day-of appointments are first-come, first-served. Proceeds help OHRR save abandoned, abused and unwanted bunnies in central Ohio."}]'::jsonb,
-       null, null, null, null,
+         {"heading":"On the day","body":"Glamour Shots fills up quickly, so hop by as soon as you arrive to sign up in person — day-of appointments are first-come, first-served. Proceeds help OHRR save abandoned, abused and unwanted bunnies in central Ohio."}]'::jsonb,
+       null,
+       '{"formName":"glamour-reservation",
+         "slots":["10:00 AM","10:30 AM","11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM","2:30 PM","3:00 PM","3:30 PM"],
+         "closedNote":"Advance scheduling has closed for this year — sign up in person at the Glamour Shots table on the day."}'::jsonb,
+       null, null,
        'Pairs well with', '[{"label":"Bunny Spa","to":"/bunfest/p/spa"}]'::jsonb, 20),
 
       (v_org, v_year, 'raffle', 'Raffle & Silent Auction',

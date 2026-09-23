@@ -1406,6 +1406,12 @@ function PageForm({
     reserve_services: Array.isArray(reserve.services)
       ? reserve.services.filter((x): x is string => typeof x === 'string').join(', ')
       : '',
+    reserve_slots: Array.isArray(reserve.slots)
+      ? reserve.slots.filter((x): x is string => typeof x === 'string').join(', ')
+      : '',
+    reserve_opens: asString(reserve.opensOn),
+    reserve_closes: asString(reserve.closesOn),
+    reserve_closed_note: asString(reserve.closedNote),
     email_signup: initial?.email_signup ?? '',
     address: asString(contact.address),
     phone: asString(contact.phone),
@@ -1447,13 +1453,16 @@ function PageForm({
         note: d.note.trim() || null,
         sections: sectionsFromForm(sections, initial?.sections),
         feature: d.feature || null,
-        reserve:
-          d.feature === 'reserve'
-            ? {
-                formName: d.reserve_form.trim() || `${d.slug.trim()}-reservation`,
-                services: d.reserve_services.split(',').map((x) => x.trim()).filter(Boolean),
-              }
-            : null,
+        // Kept even when the form is switched off, so turning it back on next
+        // year doesn't mean retyping the services and the times.
+        reserve: {
+          formName: d.reserve_form.trim() || `${d.slug.trim()}-reservation`,
+          services: d.reserve_services.split(',').map((x) => x.trim()).filter(Boolean),
+          slots: d.reserve_slots.split(',').map((x) => x.trim()).filter(Boolean),
+          opensOn: d.reserve_opens || null,
+          closesOn: d.reserve_closes || null,
+          closedNote: d.reserve_closed_note.trim() || null,
+        },
         email_signup: d.email_signup.trim() || null,
         contact: hasContact
           ? {
@@ -1565,16 +1574,38 @@ function PageForm({
       {d.feature === 'reserve' && (
         <div className="space-y-2 rounded-2xl bg-slate-50 p-3">
           <p className="text-xs leading-relaxed text-slate-600">
-            Requests arrive in the staff Inbox. Only switch this on for a year when OHRR is actually
-            taking bookings ahead of the day.
+            Requests arrive in the staff Inbox, and nobody pays until they turn up. Set the last day
+            you want to take them and the form takes itself down — you don’t have to remember.
           </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-semibold text-slate-700">
+              Open requests from
+              <input type="date" className={staffInput} value={d.reserve_opens} onChange={txt('reserve_opens')} />
+              <span className="mt-1 block text-xs font-normal text-slate-500">Leave empty to open now.</span>
+            </label>
+            <label className="block text-sm font-semibold text-slate-700">
+              Take them until
+              <input type="date" className={staffInput} value={d.reserve_closes} onChange={txt('reserve_closes')} />
+              <span className="mt-1 block text-xs font-normal text-slate-500">
+                Leave empty to keep taking them.
+              </span>
+            </label>
+          </div>
           <label className="block text-sm font-semibold text-slate-700">
-            Name for the requests
-            <input className={staffInput} value={d.reserve_form} onChange={txt('reserve_form')} placeholder="spa-reservation" />
+            Times people can ask for, separated by commas
+            <input className={staffInput} value={d.reserve_slots} onChange={txt('reserve_slots')} placeholder="10:00 AM, 10:30 AM, 11:00 AM" />
           </label>
           <label className="block text-sm font-semibold text-slate-700">
             Choices offered, separated by commas
             <input className={staffInput} value={d.reserve_services} onChange={txt('reserve_services')} placeholder="Nail trims, Light grooming, Full spa package" />
+          </label>
+          <label className="block text-sm font-semibold text-slate-700">
+            What the page says once requests have closed
+            <textarea className={staffInput} rows={2} value={d.reserve_closed_note} onChange={txt('reserve_closed_note')} placeholder="Advance scheduling has closed. Hop by as soon as you arrive to sign up in person." />
+          </label>
+          <label className="block text-sm font-semibold text-slate-700">
+            Name for the requests
+            <input className={staffInput} value={d.reserve_form} onChange={txt('reserve_form')} placeholder="spa-reservation" />
           </label>
         </div>
       )}

@@ -33,10 +33,33 @@ export interface BunfestPage {
   related?: { label: string; to: string }[]
   // Interactive add-ons rendered under the content:
   feature?: 'reserve' | 'raffle'
-  reserve?: { formName: string; services?: string[] } // for 'reserve'
+  reserve?: ReserveSetup // for 'reserve'
+}
+
+/**
+ * Taking appointments ahead of the day.
+ *
+ * OHRR opens advance booking for the Bunny Spa and Glamour Shots some years
+ * and not others, and closes it a week or two out so the team can print the
+ * list. That was a yes/no in the app, which meant someone had to remember to
+ * switch it off — so it carries its own dates now and closes itself.
+ * `opensOn` / `closesOn` are "YYYY-MM-DD", both inclusive, both optional:
+ * no `opensOn` means it is open already, no `closesOn` means it stays open.
+ */
+export interface ReserveSetup {
+  formName: string
+  /** The choices offered, e.g. the spa's services. */
+  services?: string[]
+  /** The times people can ask for. Falls back to SESSION_SLOTS. */
+  slots?: string[]
+  opensOn?: string
+  closesOn?: string
+  /** What the page says once advance requests have closed. */
+  closedNote?: string
 }
 
 // Festival runs 10–4; offer 30-minute reservation windows people can request.
+// A page can set its own `slots` instead — this is only the fallback.
 export const SESSION_SLOTS = [
   '10:00 AM',
   '10:30 AM',
@@ -76,8 +99,8 @@ export const bunfestPages: BunfestPage[] = [
         ],
       },
       {
-        heading: 'Sign up on the day',
-        body: 'Advance scheduling has closed for this year. There are still day-of appointments: hop by the Bunny Spa as soon as you arrive to sign up in person. They go first-come, first-served and fill up quickly. You pay at the table, and all proceeds benefit OHRR.',
+        heading: 'On the day',
+        body: 'Day-of appointments are first-come, first-served: hop by the Bunny Spa as soon as you arrive to sign up in person. They fill up quickly. You pay at the table, and all proceeds benefit OHRR.',
       },
     ],
     note: RHDV2_NOTE,
@@ -103,8 +126,8 @@ export const bunfestPages: BunfestPage[] = [
         ],
       },
       {
-        heading: 'Sign up on the day',
-        body: 'Advance scheduling has closed for this year. Glamour Shots fills up quickly, so hop by as soon as you arrive to sign up in person — day-of appointments are first-come, first-served. Proceeds help OHRR save abandoned, abused and unwanted bunnies in central Ohio.',
+        heading: 'On the day',
+        body: 'Glamour Shots fills up quickly, so hop by as soon as you arrive to sign up in person — day-of appointments are first-come, first-served. Proceeds help OHRR save abandoned, abused and unwanted bunnies in central Ohio.',
       },
     ],
     note: RHDV2_NOTE,
