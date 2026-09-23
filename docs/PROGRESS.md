@@ -20,8 +20,9 @@
 ## Current state (at a glance)
 
 - **Volunteer calls — ask, share, sign up, check in, thank (2026-09-23, latest).**
-  **Paste `RUN-THIS-IN-SUPABASE.sql`** (Drive → OHRR App Design; it now holds
-  updates 15 *and* 16 and is safe to run twice). Sponsor: "We need 5 people for up
+  Database: update 16, **applied 2026-09-23** together with 15 and checked live
+  (every function answers; the staff-only reads return nothing to signed-out
+  visitors; both sign-up pages reach the database). Sponsor: "We need 5 people for up
   to 6 hours, shifts are 2 hours… share this across all social platforms, letters
   and email… sign up in the app or online… log that they showed for this block…
   thank them with their hours… military medal and school letters, automated, always
@@ -60,7 +61,10 @@
     both surfaces with sample data (sign-up payloads, every tab, pictures, letters).
 
 - **BunFest floor plan, venue designer, speakers, RHDV2 (2026-09-23).** Update 15 in
-  `RUN-THIS-IN-SUPABASE.sql` (not yet confirmed as run).
+  `RUN-THIS-IN-SUPABASE.sql`, **applied 2026-09-23** and checked live: The Makoy's
+  two rooms with 59 numbered tables on the event map, the ten speakers on 10 of
+  the 12 talks, two RHDV2 practices in the vet finder, and the "Bringing Your
+  Bunny" link going to them. Nothing is waiting to be pasted now.
   - **Per-year venue** (`bunfest_venues.layout`): rooms in feet, rows of tables
     (start, direction, count, table size, walkways every N, which side customers
     stand), fixed areas and doors — Staff → BunFest → Floor plan → Design the venue,
