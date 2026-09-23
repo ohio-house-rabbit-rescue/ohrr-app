@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useBunfestSessions } from '../features/bunfest/content'
 import { event } from '../data/event'
 import type { Session } from '../data/sessions'
@@ -67,6 +68,16 @@ export default function Schedule() {
           </SampleNote>
         )}
 
+        <Link
+          to="/bunfest/speakers"
+          className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 text-sm font-bold text-ink shadow-sm"
+        >
+          <span className="inline-flex items-center gap-2">
+            <Icon name="users" size={17} className="text-brand-blue" /> Meet the speakers
+          </span>
+          <Icon name="chevron" size={17} className="text-slate-300" />
+        </Link>
+
         <div className="flex items-center justify-between gap-3">
           <SegTabs options={tabs} value={current} onChange={setTab} />
           {savedTalks.length > 0 && (
@@ -100,7 +111,16 @@ export default function Schedule() {
                   <SaveButton id={s.id} title={s.title} saved={saved.has(s.id)} />
                 </div>
                 <h3 className="mt-1 font-display text-base font-extrabold text-ink">{s.title}</h3>
-                <p className="mt-0.5 text-xs font-semibold text-brand-blue">{s.presenter}</p>
+                {s.presenterIds && s.presenterIds.length > 0 ? (
+                  <Link
+                    to={`/bunfest/speakers#${s.presenterIds[0]}`}
+                    className="mt-0.5 inline-flex items-start gap-1 text-xs font-semibold text-brand-blue underline decoration-brand-blue/30 underline-offset-2"
+                  >
+                    {s.presenter}
+                  </Link>
+                ) : (
+                  <p className="mt-0.5 text-xs font-semibold text-brand-blue">{s.presenter}</p>
+                )}
                 {/* On the Saved tab the two tracks are mixed together, so say which. */}
                 {current === SAVED && tracks.length > 1 && s.track && (
                   <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">

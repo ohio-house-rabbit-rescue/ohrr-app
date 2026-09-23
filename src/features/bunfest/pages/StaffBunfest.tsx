@@ -20,6 +20,7 @@ import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
 import { listSuppliers, saveSupplier, type Supplier } from '../../hopshop/api'
 import StaffFloor from './StaffFloor'
+import StaffSpeakers from './StaffSpeakers'
 import {
   copySessions,
   deletePartner,
@@ -27,6 +28,8 @@ import {
   fromTime,
   listPartners,
   listSessions,
+  listPresenters,
+  type PresenterRow,
   savePartner,
   saveSession,
   saveVendorDetails,
@@ -160,10 +163,39 @@ export default function StaffBunfest() {
 /* ============================================================== schedule */
 
 function ScheduleTab({ orgId }: { orgId: string }) {
+  const [view, setView] = useState<'sessions' | 'speakers'>('sessions')
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        {(
+          [
+            ['sessions', 'Sessions'],
+            ['speakers', 'Speakers'],
+          ] as const
+        ).map(([v, label]) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setView(v)}
+            className={`min-h-[40px] flex-1 rounded-full text-sm font-bold ${
+              view === v ? 'bg-ink text-white' : 'border border-slate-200 bg-white text-slate-600'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {view === 'sessions' ? <SessionsList orgId={orgId} /> : <StaffSpeakers orgId={orgId} />}
+    </div>
+  )
+}
+
+function SessionsList({ orgId }: { orgId: string }) {
   const thisYear = new Date().getFullYear()
   const [year, setYear] = useState(thisYear)
   const [years, setYears] = useState<number[]>([])
   const [rows, setRows] = useState<SessionRow[] | null>(null)
+  const [presenters, setPresenters] = useState<PresenterRow[]>([])
   const [editing, setEditing] = useState<string | 'new' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
@@ -171,8 +203,9 @@ function ScheduleTab({ orgId }: { orgId: string }) {
   const load = useCallback(async () => {
     if (!orgId) return
     try {
-      const [list, ys] = await Promise.all([listSessions(orgId, year), sessionYears(orgId)])
+      const [list, ys, ps] = await Promise.all([listSessions(orgId, year), sessionYears(orgId), listPresenters(orgId)])
       setRows(list)
+      setPresenters(ps)
       setYears([...new Set([thisYear, ...ys])].sort((a, b) => b - a))
     } catch (e) {
       setError(errMessage(e))
@@ -238,6 +271,7 @@ function ScheduleTab({ orgId }: { orgId: string }) {
             <SessionForm
               orgId={orgId}
               year={year}
+              presenters={presenters}
               initial={r}
               onDone={async () => {
                 setEditing(null)
@@ -274,6 +308,7 @@ function ScheduleTab({ orgId }: { orgId: string }) {
           <SessionForm
             orgId={orgId}
             year={year}
+            presenters={presenters}
             initial={null}
             onDone={async () => {
               setEditing(null)
@@ -294,11 +329,13 @@ function SessionForm({
   orgId,
   year,
   initial,
+  presenters,
   onDone,
 }: {
   orgId: string
   year: number
   initial: SessionRow | null
+  presenters: PresenterRow[]
   onDone: () => Promise<void>
 }) {
   const [d, setD] = useState({
@@ -311,7 +348,13 @@ function SessionForm({
     track: initial?.track ?? TRACKS[0],
     kind: initial?.kind ?? ('session' as SessionRow['kind']),
     is_published: initial?.is_published ?? true,
+    presenter_ids: initial?.presenter_ids ?? ([] as string[]),
   })
+  const togglePresenter = (id: string) =>
+    setD((cur) => ({
+      ...cur,
+      presenter_ids: cur.presenter_ids.includes(id) ? cur.presenter_ids.filter((x) => x !== id) : [...cur.presenter_ids, id],
+    }))
   const [busy, setBusy] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -329,12 +372,21 @@ function SessionForm({
         start_time: toTime(d.start_time),
         end_time: d.end_time ? toTime(d.end_time) : null,
         title: d.title.trim(),
-        presenter: d.presenter.trim() || null,
+        // Picked the speakers but left the line blank? Write it from them.
+        presenter:
+          d.presenter.trim() ||
+          d.presenter_ids
+            .map((id) => presenters.find((p) => p.id === id))
+            .filter((p): p is PresenterRow => !!p)
+            .map((p) => (p.credentials ? `${p.name}, ${p.credentials}` : p.name))
+            .join(' and ') ||
+          null,
         description: d.description.trim() || null,
         room: d.room.trim() || null,
         track: d.track.trim() || TRACKS[0],
         kind: d.kind,
         is_published: d.is_published,
+        presenter_ids: d.presenter_ids,
       })
       await onDone()
     } catch (err) {
@@ -363,6 +415,32 @@ function SessionForm({
         Who’s presenting
         <input className={staffInput} value={d.presenter} onChange={txt('presenter')} placeholder="Emily Fagundo, DVM · MedVet Hilliard" />
       </label>
+      {presenters.length > 0 && (
+        <div>
+          <span className="block text-sm font-semibold text-slate-700">Link to their bios</span>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {presenters.map((p) => {
+              const on = d.presenter_ids.includes(p.id)
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => togglePresenter(p.id)}
+                  aria-pressed={on}
+                  className={`min-h-[40px] rounded-full px-3 text-sm font-bold ${
+                    on ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'
+                  }`}
+                >
+                  {p.name}
+                </button>
+              )
+            })}
+          </div>
+          <span className="mt-1 block text-xs text-slate-500">
+            Their names on the schedule then open the Speakers page. Add people under Speakers.
+          </span>
+        </div>
+      )}
       <label className="block text-sm font-semibold text-slate-700">
         What it covers
         <textarea className={staffInput} rows={2} value={d.description} onChange={txt('description')} />

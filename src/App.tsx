@@ -51,6 +51,7 @@ import PartnerDetail from './pages/PartnerDetail'
 import Sponsors from './pages/Sponsors'
 import Visit from './pages/Visit'
 import EventMap from './pages/EventMap'
+import Speakers from './pages/Speakers'
 import BunfestPage from './pages/BunfestPage'
 import RaffleCatalog from './features/raffle/RaffleCatalog'
 import RaffleItemDetail from './features/raffle/RaffleItemDetail'
@@ -183,6 +184,7 @@ export default function App() {
       <Route path="/bunfest" element={<BunfestLayout />}>
         <Route index element={<BunfestHome />} />
         <Route path="schedule" element={<Schedule />} />
+        <Route path="speakers" element={<Speakers />} />
         <Route path="vendors" element={<Vendors />} />
         <Route path="vendors/:id" element={<VendorDetail />} />
         <Route path="partners" element={<Partners />} />

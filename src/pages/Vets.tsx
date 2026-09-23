@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { PageHeader, Screen, Card, SectionLabel, Badge, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
 import { useVets, telHref, phoneDigits, prettyUrl } from '../lib/vets'
@@ -36,6 +36,11 @@ function VetCard({ vet }: { vet: Vet }) {
           </span>
         )}
       </div>
+      {vet.givesRhdv2 && (
+        <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-extrabold text-green-800 ring-1 ring-green-200">
+          <Icon name="check" size={13} /> Gives the RHDV2 vaccine
+        </p>
+      )}
       {vet.doctors && <p className="mt-0.5 text-sm text-slate-500">{vet.doctors}</p>}
       {vet.notes && (
         <p className="mt-1.5 text-sm font-semibold text-brand-orange">{vet.notes}</p>
@@ -90,6 +95,14 @@ type RegionFilter = (typeof REGION_OPTIONS)[number]
 export default function Vets() {
   const { vets, source } = useVets()
   const [region, setRegion] = useState<RegionFilter>('Central Ohio')
+  const [params] = useSearchParams()
+  const rhdv2Ref = useRef<HTMLElement>(null)
+  const rhdv2 = vets.filter((v) => v.givesRhdv2)
+
+  // BunFest's rabbit rule links here with ?rhdv2=1 — go straight to the answer.
+  useEffect(() => {
+    if (params.get('rhdv2') && rhdv2.length > 0) rhdv2Ref.current?.scrollIntoView({ block: 'start' })
+  }, [params, rhdv2.length])
 
   // Regions that actually have vets (live data may add new ones — tolerate them).
   const regions = useMemo(() => {
@@ -136,6 +149,31 @@ export default function Vets() {
           </span>
           <Icon name="chevron" size={18} className="shrink-0 text-red-300" />
         </a>
+
+        {/* The question BunFest's rabbit rule sends people to answer */}
+        {rhdv2.length > 0 && (
+          <section ref={rhdv2Ref} className="scroll-mt-24 space-y-2.5">
+            <SectionLabel>Where to get the RHDV2 vaccine</SectionLabel>
+            <p className="px-1 text-sm leading-relaxed text-slate-600">
+              Any rabbit coming to Midwest BunFest needs the RHDV2 vaccine and a current annual booster.
+              These practices give it; your own vet may too.
+            </p>
+            {rhdv2.map((v) => (
+              <Card key={v.id} className="border-green-200">
+                <h3 className="font-display text-base font-extrabold leading-tight text-ink">{v.name}</h3>
+                {v.rhdv2Note && <p className="mt-1 text-sm leading-relaxed text-slate-700">{v.rhdv2Note}</p>}
+                <div className="mt-2 space-y-1.5">
+                  {v.phone && <PhoneLink value={v.phone} />}
+                  {v.email && (
+                    <a href={`mailto:${v.email}`} className="flex items-center gap-2 break-all text-sm font-semibold text-brand-blue">
+                      <Icon name="mail" size={15} className="shrink-0" /> {v.email}
+                    </a>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </section>
+        )}
 
         <SegTabs options={regions} value={region} onChange={setRegion} wrap />
 

@@ -405,4 +405,17 @@ begin
   update vets set gives_rhdv2 = true,
          rhdv2_note = coalesce(rhdv2_note, 'Gives the vaccine by appointment — call 614-870-7008.')
    where org_id = v_org and name ilike 'Norton Road Vet%';
+
+  -- "Bringing Your Bunny" sent people to the whole vet list; send them to the
+  -- practices that actually give the vaccine. Only the seeded link is changed.
+  update bunfest_pages p
+     set related = (
+       select jsonb_agg(
+                case when x.e ->> 'to' = '/vets'
+                     then jsonb_build_object('label', 'Where to get the RHDV2 vaccine', 'to', '/vets?rhdv2=1')
+                     else x.e end
+                order by x.ord)
+         from jsonb_array_elements(p.related) with ordinality as x(e, ord))
+   where p.org_id = v_org and p.year = 2026 and p.slug = 'bringing-bunny'
+     and exists (select 1 from jsonb_array_elements(p.related) as r(e) where r.e ->> 'to' = '/vets');
 end $seed$;

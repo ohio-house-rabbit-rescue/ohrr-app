@@ -16,6 +16,8 @@ export interface Session {
   description: string
   /** "Education Sessions" / "Special Interest Sessions" — a talk's track. */
   track?: string
+  /** Who gives it — bunfest_presenters ids, when OHRR has linked them. */
+  presenterIds?: string[]
   isBreak?: boolean
 }
 

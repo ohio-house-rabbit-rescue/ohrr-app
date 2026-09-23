@@ -22,6 +22,9 @@ export interface Vet {
   notes?: string
   isEmergency: boolean
   isLowCostSpay: boolean
+  /** Gives the RHDV2 vaccine — the one BunFest requires. */
+  givesRhdv2?: boolean
+  rhdv2Note?: string
 }
 
 export const VET_REGIONS = [
@@ -78,6 +81,8 @@ export const seedVets: Vet[] = [
     phone: '614-870-7008',
     website: 'https://www.nortonroadvethospital.com/',
     notes: 'Open 7 days per week for wellness and emergency visits',
+    givesRhdv2: true,
+    rhdv2Note: 'Gives the vaccine by appointment — call 614-870-7008.',
   }),
   v('animal-hospital-pataskala', 'Central Ohio', 'Animal Hospital of Pataskala', {
     doctors: 'Dr. Susan Borders',
@@ -92,6 +97,8 @@ export const seedVets: Vet[] = [
     email: 'Slborders1@gmail.com',
     website: 'https://www.facebook.com/profile.php?id=100076848312694',
     notes: 'Mobile wellness checks',
+    givesRhdv2: true,
+    rhdv2Note: 'Monthly vaccine clinics. For dates and locations, see the Borders Veterinary Services Facebook page or email Dr. Susan Borders at slborders1@gmail.com.',
   }),
   v('animal-care-unlimited', 'Central Ohio', 'Animal Care Unlimited', {
     doctors: 'Dr. Jamie Bobulsky, Dr. Melinda Marksz, Dr. Crissy Olson, Dr. Jodi Smith',

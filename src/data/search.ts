@@ -46,6 +46,8 @@ const screens: { title: string; subtitle: string; to: string; extra?: string }[]
   { title: 'Help', subtitle: 'How the app works', to: '/help', extra: 'guide' },
   { title: 'Midwest BunFest', subtitle: 'The festival', to: '/bunfest', extra: 'event october binky on' },
   { title: 'BunFest Schedule', subtitle: 'Education sessions', to: '/bunfest/schedule', extra: 'talks' },
+  { title: 'BunFest Speakers', subtitle: 'Who is giving the talks', to: '/bunfest/speakers', extra: 'presenters vets bios speakers' },
+  { title: 'Where to get the RHDV2 vaccine', subtitle: 'Needed for BunFest', to: '/vets?rhdv2=1', extra: 'rhdv2 vaccine booster vaccination rabbit hemorrhagic disease' },
   { title: 'BunFest Vendors', subtitle: 'Marketplace', to: '/bunfest/vendors', extra: 'shopping' },
   { title: 'Event Map', subtitle: 'Floor plan', to: '/bunfest/map', extra: 'booth' },
   { title: 'Rescue Partners', subtitle: 'BunFest', to: '/bunfest/partners' },

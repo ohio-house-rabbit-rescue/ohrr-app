@@ -20,6 +20,8 @@ export function rowToVet(r: VetRow): Vet {
     notes: r.notes ?? undefined,
     isEmergency: r.is_emergency,
     isLowCostSpay: r.is_low_cost_spay,
+    givesRhdv2: r.gives_rhdv2,
+    rhdv2Note: r.rhdv2_note ?? undefined,
   }
 }
 

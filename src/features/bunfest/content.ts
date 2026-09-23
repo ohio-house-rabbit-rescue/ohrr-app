@@ -52,6 +52,7 @@ function rowToSession(r: SessionRow): Session {
     presenter: [r.presenter, r.room].filter(Boolean).join(' · '),
     description: r.description ?? '',
     track: r.track || undefined,
+    presenterIds: r.presenter_ids?.length ? r.presenter_ids : undefined,
     isBreak: r.kind === 'break',
   }
 }
@@ -191,4 +192,36 @@ export function useBunfestVendors(): VendorsResult {
 /** Categories present in a vendor list, for the filter row. */
 export function vendorCategoriesOf(items: BunfestVendor[]): string[] {
   return [...new Set(items.map((v) => v.category).filter(Boolean))].sort()
+}
+
+/* ------------------------------------------------------------ speakers */
+
+export type Presenter = Database['public']['Tables']['bunfest_presenters']['Row']
+
+/** "Barbara Oglesbee, DVM, DABVP (Avian)" */
+export function presenterName(p: Pick<Presenter, 'name' | 'credentials'>): string {
+  return p.credentials ? `${p.name}, ${p.credentials}` : p.name
+}
+
+/** The published speakers. No bundled fallback — bios are OHRR's to publish. */
+export function useBunfestPresenters(): Live<Presenter> {
+  const [state, setState] = useState<Live<Presenter>>({ items: [], source: 'seed', loading: isSupabaseConfigured })
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    let active = true
+    supabase
+      .from('bunfest_presenters')
+      .select('*')
+      .eq('is_published', true)
+      .order('sort_order')
+      .order('name')
+      .then(({ data, error }) => {
+        if (!active) return
+        setState({ items: error || !data ? [] : data, source: error || !data?.length ? 'seed' : 'live', loading: false })
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+  return state
 }

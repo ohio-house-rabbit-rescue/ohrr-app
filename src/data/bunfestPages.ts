@@ -255,7 +255,10 @@ export const bunfestPages: BunfestPage[] = [
     ],
     note: RHDV2_NOTE,
     relatedLabel: 'Next',
-    related: [{ label: 'Rabbit Attendance Agreement', to: '/bunfest/p/attendance-agreement' }],
+    related: [
+      { label: 'Rabbit Attendance Agreement', to: '/bunfest/p/attendance-agreement' },
+      { label: 'Where to get the RHDV2 vaccine', to: '/vets?rhdv2=1' },
+    ],
   },
   {
     id: 'attendance-agreement',

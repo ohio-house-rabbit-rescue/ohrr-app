@@ -67,6 +67,8 @@ export async function copySessions(orgId: string, from: number, to: number): Pro
     presenter: r.presenter,
     description: r.description,
     room: r.room,
+    track: r.track,
+    presenter_ids: r.presenter_ids,
     kind: r.kind,
     is_published: false, // a copy starts hidden — it's last year's until checked
     sort_order: r.sort_order,
@@ -380,5 +382,32 @@ export async function setTables(orgId: string, year: number, who: TableHolderRef
     p_partner: who.kind === 'rescue' ? who.id : null,
     p_label: who.kind === 'other' ? who.label : null,
   })
+  if (error) throw error
+}
+
+/* ------------------------------------------------------------ speakers */
+
+export type PresenterRow = Database['public']['Tables']['bunfest_presenters']['Row']
+export type PresenterInput = Database['public']['Tables']['bunfest_presenters']['Insert'] & { id?: string }
+
+export async function listPresenters(orgId: string): Promise<PresenterRow[]> {
+  const { data, error } = await supabase
+    .from('bunfest_presenters')
+    .select('*')
+    .eq('org_id', orgId)
+    .order('sort_order')
+    .order('name')
+  if (error) throw error
+  return data ?? []
+}
+
+export async function savePresenter(p: PresenterInput): Promise<PresenterRow> {
+  const { data, error } = await supabase.from('bunfest_presenters').upsert(p, { onConflict: 'id' }).select('*').single()
+  if (error) throw error
+  return data
+}
+
+export async function deletePresenter(id: string): Promise<void> {
+  const { error } = await supabase.from('bunfest_presenters').delete().eq('id', id)
   if (error) throw error
 }

@@ -20,6 +20,8 @@ interface Draft {
   notes: string
   is_emergency: boolean
   is_low_cost_spay: boolean
+  gives_rhdv2: boolean
+  rhdv2_note: string
   is_published: boolean
 }
 
@@ -36,6 +38,8 @@ const emptyDraft: Draft = {
   notes: '',
   is_emergency: false,
   is_low_cost_spay: false,
+  gives_rhdv2: false,
+  rhdv2_note: '',
   is_published: true,
 }
 
@@ -53,6 +57,8 @@ function draftFrom(v: VetRow): Draft {
     notes: v.notes ?? '',
     is_emergency: v.is_emergency,
     is_low_cost_spay: v.is_low_cost_spay,
+    gives_rhdv2: v.gives_rhdv2,
+    rhdv2_note: v.rhdv2_note ?? '',
     is_published: v.is_published,
   }
 }
@@ -72,6 +78,8 @@ function toRow(d: Draft) {
     notes: t(d.notes),
     is_emergency: d.is_emergency,
     is_low_cost_spay: d.is_low_cost_spay,
+    gives_rhdv2: d.gives_rhdv2,
+    rhdv2_note: d.gives_rhdv2 ? t(d.rhdv2_note) : null,
     is_published: d.is_published,
   }
 }
@@ -94,7 +102,7 @@ function VetForm({
     (k: keyof Draft) =>
     (e: { target: { value: string } }) =>
       setDraft((d) => ({ ...d, [k]: e.target.value }))
-  const check = (k: 'is_emergency' | 'is_low_cost_spay' | 'is_published') => (e: { target: { checked: boolean } }) =>
+  const check = (k: 'is_emergency' | 'is_low_cost_spay' | 'gives_rhdv2' | 'is_published') => (e: { target: { checked: boolean } }) =>
     setDraft((d) => ({ ...d, [k]: e.target.checked }))
 
   const submit = async (e: { preventDefault(): void }) => {
@@ -171,6 +179,16 @@ function VetForm({
           <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={draft.is_low_cost_spay} onChange={check('is_low_cost_spay')} />
           Low-cost spay/neuter (listed in that section)
         </label>
+        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={draft.gives_rhdv2} onChange={check('gives_rhdv2')} />
+          Gives the RHDV2 vaccine (BunFest’s rabbit rule points people here)
+        </label>
+        {draft.gives_rhdv2 && (
+          <label className="block text-sm font-semibold text-slate-700">
+            How to get it there
+            <input className={staffInput} value={draft.rhdv2_note} onChange={set('rhdv2_note')} placeholder="By appointment — call 614-…" />
+          </label>
+        )}
         <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
           <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={draft.is_published} onChange={check('is_published')} />
           Show in the app (uncheck for a draft)
