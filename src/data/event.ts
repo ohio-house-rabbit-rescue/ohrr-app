@@ -45,6 +45,8 @@ export const event = {
   admissionNote: 'Cash or card. Buy at the door or in advance.',
   links: {
     bunfest: 'https://www.midwestbunfest.org/',
+    // The BunFest sample site (ohrr-bunfest repo): print-friendly pages from the same database.
+    festivalSite: 'https://ohrr-bunfest.pages.dev',
     eventInfo: 'https://www.midwestbunfest.org/event-info.html',
     tickets: 'https://www.midwestbunfest.org/purchase-tickets.html',
     map: 'https://www.midwestbunfest.org/event-map.html',

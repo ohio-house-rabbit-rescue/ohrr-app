@@ -129,7 +129,16 @@ export default function BunfestHome() {
 
         <Card className="border-slate-200 bg-white">
           <p className="text-[13px] leading-relaxed text-slate-500">
-            Official details and tickets at{' '}
+            The schedule, map and rabbit rules to print are on the{' '}
+            <a
+              className="font-bold text-brand-blue"
+              href={event.links.festivalSite}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              BunFest website
+            </a>
+            . The current official site is{' '}
             <a
               className="font-bold text-brand-blue"
               href={event.links.bunfest}
