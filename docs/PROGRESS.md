@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-23 (the BunFest sample site; website Vets + OHRR details)
+- **Last updated:** 2026-09-23 (the real adoptable rabbits — update 20 waiting to be run)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,7 +19,24 @@
 
 ## Current state (at a glance)
 
-- **The Midwest BunFest sample site (2026-09-23, latest).** The third front door from the
+- **The real adoptable rabbits (2026-09-23, latest). Update 20 is in
+  `RUN-THIS-IN-SUPABASE.sql`, waiting to be run.** Sponsor: replace the demo rabbits with
+  the real ones; Petfinder later. OHRR's Adoptable Bunnies page is a RescueGroups.org frame
+  (organisation 6091) — the same record feeds Petfinder and Adopt-a-Pet, so RescueGroups is
+  the one source (its API is the natural tie-in later). `scripts/rescuegroups-rabbits.py`
+  reads that public listing and writes `20260923200000_real_rabbits.sql`: 17 rabbits with
+  OHRR's photos (RescueGroups CDN, 800×600), breed (RescueGroups' "Bunny Rabbit" = none
+  given, left blank), age, sex, size, OHRR's write-up minus the closing apply line,
+  litter-trained, "Special needs" tag, bonded pairs (April & Pierce, Dan & Forrest) marked
+  and naming each other, spayed/neutered for all per OHRR's adoption policy. New column
+  `rabbits.source_id` ("rescuegroups:<id>", unique per org) so a re-run adds only new
+  rabbits and never overwrites a staff edit. **Two listings are both named "Nimbus"**
+  (different photos and write-ups) — OHRR to check. The website now has a page per rabbit
+  (`/adopt/rabbit/:id`; cards were two lines with no way to read on); the app's rabbit
+  page shows "Special needs" and "Adopted together with …". Previewed on the website with
+  the scraped rows (fetch patch, throwaway) before commit.
+
+- **The Midwest BunFest sample site (2026-09-23).** The third front door from the
   design brief (*OHRR Design Principles and Personas*), built as a board sample like the OHRR
   website; midwestbunfest.org is untouched. Repo
   https://github.com/ohio-house-rabbit-rescue/ohrr-bunfest (public, like the other two;
