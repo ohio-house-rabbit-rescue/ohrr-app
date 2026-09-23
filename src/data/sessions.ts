@@ -83,7 +83,7 @@ export const sessions: Session[] = [
     track: EDUCATION_TRACK,
     title: 'Best Friends Forever: Bonding Rabbits',
     presenter:
-      'Karen Winsted and Ryan Terebesi · Rabbit Expert Volunteers, Columbus Humane and Ohio House Rabbit Rescue',
+      'Karen Winstead and Ryan Terebesi · Rabbit Expert Volunteers, Columbus Humane and Ohio House Rabbit Rescue',
     description:
       'Rabbits are usually happiest with another bun to pal around with — the trick is finding the right one. The do’s and don’t’s of bonding, from chaperoning first dates to knowing when your rabbits can safely move in together.',
   },
