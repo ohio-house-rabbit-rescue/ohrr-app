@@ -1,10 +1,35 @@
-import type { ReactNode } from 'react'
+import { useState, type InputHTMLAttributes, type ReactNode } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
+import { Icon } from './icons'
 
 // Shared form input styling, matching the public app's forms.
 export const staffInput =
   'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
+
+/**
+ * A password box with a Show / Hide button inside it, so people can check
+ * what they typed — easy to get wrong on a phone keyboard. Takes the same
+ * props as an <input>, apart from `type`.
+ */
+export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'className'>) {
+  const [show, setShow] = useState(false)
+  return (
+    <span className="relative mt-1 block">
+      <input {...props} type={show ? 'text' : 'password'} autoCapitalize="none" autoCorrect="off" spellCheck={false} className={`${staffInput} !mt-0 pr-24`} />
+      <button
+        type="button"
+        onClick={() => setShow((v) => !v)}
+        aria-pressed={show}
+        aria-label={show ? 'Hide password' : 'Show password'}
+        className="absolute inset-y-0 right-0 flex min-w-[44px] items-center gap-1.5 rounded-r-xl px-3 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
+      >
+        <Icon name={show ? 'eyeOff' : 'eye'} size={18} />
+        {show ? 'Hide' : 'Show'}
+      </button>
+    </span>
+  )
+}
 
 export function Spinner({ label = 'Loading…' }: { label?: string }) {
   return (

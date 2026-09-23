@@ -45,6 +45,8 @@ export type IconName =
   | 'printer'
   | 'trash'
   | 'box'
+  | 'eye'
+  | 'eyeOff'
 
 const paths: Record<IconName, ReactNode> = {
   home: <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />,
@@ -261,6 +263,20 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M3.5 8 12 4l8.5 4v8L12 20l-8.5-4z" />
       <path d="M3.5 8 12 12l8.5-4" />
       <path d="M12 12v8" />
+    </>
+  ),
+  eye: (
+    <>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  eyeOff: (
+    <>
+      <path d="M9.9 5.8A9.7 9.7 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.6 3.4" />
+      <path d="M6.3 7.4A17 17 0 0 0 2.5 12s3.5 6.5 9.5 6.5a9.5 9.5 0 0 0 4.3-1" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+      <path d="M3 3l18 18" />
     </>
   ),
 }

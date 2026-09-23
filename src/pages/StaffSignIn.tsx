@@ -4,7 +4,7 @@ import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
-import { NotConfigured, Spinner, FormError, staffInput } from '../components/staffui'
+import { NotConfigured, Spinner, FormError, PasswordInput, staffInput } from '../components/staffui'
 import { authOrigin } from '../lib/appUrl'
 
 type Mode = 'signin' | 'signup' | 'forgot'
@@ -171,9 +171,7 @@ export default function StaffSignIn() {
           {mode !== 'forgot' && (
             <label className="block text-sm font-semibold text-slate-700">
               Password
-              <input
-                className={staffInput}
-                type="password"
+              <PasswordInput
                 autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
                 required
                 minLength={8}
