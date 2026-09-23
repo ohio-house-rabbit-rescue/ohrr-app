@@ -21,8 +21,9 @@
 
 - **Email, not the phone (2026-09-23, latest).** OHRR: the phone isn't for emergencies,
   email is the primary way in, and everything runs on a very limited team of volunteers.
-  OHRR's own site shows its number only in the page footer; the app and website now do
-  the same (website footer, app About page) and point everywhere else to email —
+  OHRR then asked for it to be hard to find: it now appears ONLY on the About page (app
+  and website), as small grey print — not in the footer, not a tap-to-call link —
+  and everything else points to email —
   surrender, found a rabbit, help, adopt, BunFest host card, letters, thank-yous,
   outreach, flyers. "Hurt? Call" became: OHRR can't respond to emergencies — MedVet
   Hilliard for an injured rabbit, the Ohio Wildlife Center for a wild one. Update 19

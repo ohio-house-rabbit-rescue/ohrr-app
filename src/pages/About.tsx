@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ohrr } from '../data/ohrr'
-import { telHref, useOrgProfile } from '../lib/orgProfile'
+import { useOrgProfile } from '../lib/orgProfile'
 import {
   mission,
   vision,
@@ -62,11 +62,6 @@ export default function About() {
             <span className="text-slate-600">{org.hopshop_hours}</span>
             <p className="text-xs text-slate-500">{ohrr.adoptionsNote}</p>
           </Row>
-          <Row icon="phone">
-            <a href={telHref(org.phone)} className="font-semibold text-brand-blue">
-              {org.phone}
-            </a>
-          </Row>
           <Row icon="mail">
             <a href={`mailto:${ohrr.email}`} className="break-all font-semibold text-brand-blue">
               {ohrr.email}
@@ -89,6 +84,8 @@ export default function About() {
               Schedule a visit
             </Link>
           </div>
+          {/* The one place OHRR's number is shown: small print, as OHRR asked — email is the way in. */}
+          {org.phone && <p className="text-xs text-slate-400">{org.phone}</p>}
         </Card>
 
         {/* Mission & Vision */}
