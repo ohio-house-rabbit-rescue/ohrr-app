@@ -41,9 +41,23 @@
   - **`start_bunfest_year()`** copies a whole year forward — programme, festival
     cards, every page and both rosters — so next year starts from last year
     rather than a blank screen. Nothing already in the new year is touched.
-  - **This year, typed in.** Both 2026 tracks (11 talks), nine activity pages,
-    the 18 rescue partners, the 27 vendors and the 12 sponsors, transcribed from
-    midwestbunfest.org on 2026-09-22.
+  - **This year, typed in.** Both 2026 tracks (10 talks and a break each), nine
+    activity pages, the 18 rescue partners, the 27 vendors and the 12 sponsors,
+    transcribed from midwestbunfest.org on 2026-09-22. **Applied 2026-09-23** and
+    verified live.
+  - **Advance booking carries its own dates.** Taking spa and photo appointments
+    ahead of the day was a yes/no, so somebody had to remember to switch it off —
+    and if they didn't, the app kept collecting requests nobody was reading. A
+    page's `reserve` block now holds `opensOn` / `closesOn` (inclusive, plain
+    YYYY-MM-DD so a window set in Ohio doesn't shift for someone booking from
+    another timezone), the `slots` offered and what to say once it shuts. The Bunny
+    Spa and Glamour Shots arrive fully set up and switched off; turning it on is
+    picking the form and setting the last day.
+  - **Caught in verification:** the years each rescue came were recorded but no
+    page read them, so the BunFest partners list showed all 21 in the directory
+    rather than the 18 coming. An "At BunFest" filter now leads the row.
+  - **Also done 2026-09-23:** both stale Netlify mirrors (app and website) deleted
+    by OHRR; Cloudflare Pages is the only deployment.
   - **Three things the app had wrong, corrected.** Advance booking for the Bunny
     Spa and Glamour Shots has closed for 2026 — the app was still offering to
     take requests, so those pages now give the day-of, first-come guidance OHRR
