@@ -47,7 +47,8 @@ export default function RaffleDesk() {
     void refreshSummary()
   }, [refreshSummary])
 
-  if (!can('events.bunfest.manage')) return <Screen><p className="text-sm text-slate-600">You don’t have access to the raffle desk.</p></Screen>
+  const isManager = can('events.bunfest.manage')
+  if (!isManager && !can('counter.use')) return <Screen><p className="text-sm text-slate-600">You don’t have access to the raffle desk.</p></Screen>
 
   return (
     <Screen className="space-y-4">
@@ -84,14 +85,17 @@ export default function RaffleDesk() {
         <button type="button" className={pill(tab === 'sell')} onClick={() => setTab('sell')}>
           Sell
         </button>
-        <button type="button" className={pill(tab === 'draw')} onClick={() => setTab('draw')}>
-          Draw
-        </button>
+        {/* Drawing winners stays with BunFest managers. */}
+        {isManager && (
+          <button type="button" className={pill(tab === 'draw')} onClick={() => setTab('draw')}>
+            Draw
+          </button>
+        )}
       </div>
       {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
       {tab === 'desk' && <DeskTab orgId={orgId} onChange={refreshSummary} />}
       {tab === 'sell' && <SellTab orgId={orgId} onChange={refreshSummary} />}
-      {tab === 'draw' && <DrawTab orgId={orgId} onChange={refreshSummary} />}
+      {tab === 'draw' && isManager && <DrawTab orgId={orgId} onChange={refreshSummary} />}
     </Screen>
   )
 }
@@ -186,6 +190,8 @@ function DeskTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
 }
 
 function OrderCard({ order: o, busy, onStatus }: { order: RaffleOrder; busy: boolean; onStatus: (s: RaffleOrder['status']) => void }) {
+  // Voiding (and un-voiding) stays with BunFest managers; counter volunteers can't.
+  const isManager = useAuth().can('events.bunfest.manage')
   const amount = formatValue(o.amount_cents)
   const tone = o.status === 'paid' ? 'blue' : o.status === 'void' ? 'slate' : 'orange'
   return (
@@ -217,12 +223,12 @@ function OrderCard({ order: o, busy, onStatus }: { order: RaffleOrder; busy: boo
             Undo paid
           </button>
         )}
-        {o.status !== 'void' && (
+        {o.status !== 'void' && isManager && (
           <button type="button" disabled={busy} onClick={() => window.confirm(`Void ${o.name}’s ${o.qty} ticket${o.qty === 1 ? '' : 's'}?`) && onStatus('void')} className="min-h-[44px] rounded-full px-4 text-sm font-bold text-red-600">
             Void
           </button>
         )}
-        {o.status === 'void' && (
+        {o.status === 'void' && isManager && (
           <button type="button" disabled={busy} onClick={() => onStatus('reserved')} className={`${btn.outline} disabled:opacity-60`}>
             Restore
           </button>

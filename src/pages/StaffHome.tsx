@@ -28,6 +28,9 @@ export default function StaffHome() {
   if (!membership) return <Navigate to="/staff/start" replace />
 
   const isAdminish = membership.role === 'owner' || membership.role === 'admin'
+  // A counter volunteer goes straight to the Counter — the one screen they need.
+  if (!isAdminish && capabilities.size === 1 && can('counter.use')) return <Navigate to="/staff/counter" replace />
+  const canCounter = can('counter.use') || can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.inventory.update')
   const canInbox = can('inbox.manage')
   const canBookings = can('bookings.manage')
   const canQueue = can('announcements.post') || can('social.publish')
@@ -53,6 +56,7 @@ export default function StaffHome() {
   const canManageSettings = can('settings.manage')
   const canScan = can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update')
   const showTiles =
+    canCounter ||
     canQueue ||
     canInbox ||
     canBookings ||
@@ -118,6 +122,20 @@ export default function StaffHome() {
               icon="calendar"
               tone="blue"
             />
+          )}
+          {canCounter && (
+            <Link
+              to="/staff/counter"
+              className="flex items-center gap-4 rounded-2xl bg-brand-blue p-4 text-white shadow-md transition hover:-translate-y-0.5 hover:bg-brand-blue-dark active:translate-y-0"
+            >
+              <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20">
+                <Icon name="bag" size={30} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-display text-xl font-black">Counter</span>
+                <span className="mt-0.5 block text-sm text-white/90">Sell, add a new item, and the BunFest door — works without signal</span>
+              </span>
+            </Link>
           )}
           {canScan && (
             <Link

@@ -37,6 +37,26 @@ interface AuthValue {
 
 const AuthContext = createContext<AuthValue | null>(null)
 
+// The last membership that loaded, kept on this device: a door or counter
+// phone that loses signal keeps working instead of being sent to sign in.
+const MEMBER_CACHE = 'ohrr.staff.membership.v1'
+const readCached = (uid: string): { membership: Membership; capabilities: Capability[] } | null => {
+  try {
+    const v = JSON.parse(localStorage.getItem(MEMBER_CACHE) ?? 'null')
+    return v && v.userId === uid ? v : null
+  } catch {
+    return null
+  }
+}
+const writeCached = (uid: string, m: Membership | null, caps: Capability[]) => {
+  try {
+    if (m) localStorage.setItem(MEMBER_CACHE, JSON.stringify({ userId: uid, membership: m, capabilities: caps }))
+    else localStorage.removeItem(MEMBER_CACHE)
+  } catch {
+    /* private mode */
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [sessionLoaded, setSessionLoaded] = useState(false)
@@ -76,7 +96,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select('id, org_id, role, status')
       .eq('status', 'active')
       .limit(1)
-    if (error || !rows || rows.length === 0) {
+    if (error) {
+      // No signal (or the server is unreachable): use what this device knew.
+      const cached = readCached(userId)
+      setMembership(cached?.membership ?? null)
+      setCapabilities(new Set(cached?.capabilities ?? []))
+      return
+    }
+    if (!rows || rows.length === 0) {
+      writeCached(userId, null, [])
       setMembership(null)
       setCapabilities(new Set())
       return
@@ -87,13 +115,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (m.role === 'owner' || m.role === 'admin') {
       setCapabilities(new Set(CAPABILITIES))
+      writeCached(userId, m, [...CAPABILITIES])
       return
     }
-    const { data: grants } = await supabase
+    const { data: grants, error: grantsError } = await supabase
       .from('membership_permissions')
       .select('permission_key')
       .eq('membership_id', m.id)
-    setCapabilities(new Set((grants ?? []).map((g) => g.permission_key as Capability)))
+    if (grantsError) {
+      setCapabilities(new Set(readCached(userId)?.capabilities ?? []))
+      return
+    }
+    const caps = (grants ?? []).map((g) => g.permission_key as Capability)
+    setCapabilities(new Set(caps))
+    writeCached(userId, m, caps)
   }, [userId])
 
   // 2) Load membership once the session has settled and whenever the user changes.
@@ -119,6 +154,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
+    try {
+      localStorage.removeItem(MEMBER_CACHE)
+    } catch {
+      /* private mode */
+    }
     setMembership(null)
     setCapabilities(new Set())
   }, [])

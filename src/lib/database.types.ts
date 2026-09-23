@@ -2399,6 +2399,28 @@ export type Database = {
         Args: { p_call: string }
         Returns: { source: string; people: number }[]
       }
+      // The Counter (supabase/migrations/20260923160000_counter_and_door.sql)
+      counter_products: { Args: { p_org: string }; Returns: Json }
+      counter_add_item: {
+        Args: {
+          p_org: string
+          p_name: string
+          p_price_cents: number
+          p_quantity: number
+          p_photo_url?: string | null
+          p_code?: string | null
+          p_description?: string | null
+        }
+        Returns: { id: string; code: string }
+      }
+      counter_link_code: { Args: { p_org: string; p_product: string; p_code: string }; Returns: Json }
+      record_counter_sale: { Args: { p_org: string; p_sale: Json }; Returns: Json }
+      counter_day: { Args: { p_org: string; p_day: string }; Returns: Json }
+      door_pack: { Args: { p_org: string; p_event: string }; Returns: Json }
+      door_sync: { Args: { p_org: string; p_event: string; p_entries: Json }; Returns: Json }
+      door_import: { Args: { p_org: string; p_event: string; p_rows: Json; p_source?: string }; Returns: { new: number; updated: number } }
+      door_remove_ticket: { Args: { p_org: string; p_event: string; p_code: string }; Returns: undefined }
+      save_door_settings: { Args: { p_org: string; p_value: Json }; Returns: undefined }
       save_bunfest_venue: {
         Args: { p_org: string; p_year: number; p_name: string | null; p_layout: unknown }
         Returns: undefined

@@ -3,12 +3,15 @@
 // Avery 5163 / 8163 labels (2" × 4", 10 per US-Letter sheet); on plain paper
 // the same grid prints with cut lines. Codes are random and become real the
 // first time someone scans one and fills it in — nothing to register first.
+//
+// ?code=OHRR-XXXXX&name=… prints a sheet of ONE item's own number instead —
+// a label for each one on the shelf (from Counter → Add a new item).
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { Icon } from '../../../components/icons'
 import { Screen } from '../../../components/ui'
-import { newTagCode, shortCode, tagUrl } from '../codes'
+import { newTagCode, normalizeCode, shortCode, tagUrl } from '../codes'
 import { BigButton } from '../ScanUI'
 import { isNative } from '../../../native/platform'
 import { renderTagSheet } from '../tagSheet'
@@ -24,19 +27,24 @@ function makeCodes(n: number): string[] {
 }
 
 export default function PrintTags() {
+  const [params] = useSearchParams()
+  const fixed = params.get('code') ? normalizeCode(params.get('code') ?? '') || null : null
+  const itemName = params.get('name')
+  const make = (n: number) => (fixed ? Array.from({ length: n }, () => fixed) : makeCodes(n))
   const [sheets, setSheets] = useState(1)
-  const [codes, setCodes] = useState<string[]>(() => makeCodes(PER_SHEET))
+  const [codes, setCodes] = useState<string[]>(() => make(PER_SHEET))
   const [qrs, setQrs] = useState<Record<string, string>>({})
 
   useEffect(() => {
-    setCodes((c) => (c.length === sheets * PER_SHEET ? c : makeCodes(sheets * PER_SHEET)))
+    setCodes((c) => (c.length === sheets * PER_SHEET ? c : make(sheets * PER_SHEET)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheets])
 
   useEffect(() => {
     let alive = true
     ;(async () => {
       const out: Record<string, string> = {}
-      for (const c of codes) {
+      for (const c of new Set(codes)) {
         out[c] = await QRCode.toDataURL(tagUrl(c), { errorCorrectionLevel: 'M', margin: 1, width: 320 })
       }
       if (alive) setQrs(out)
@@ -74,12 +82,14 @@ export default function PrintTags() {
     <>
       <Screen className="space-y-4 print:hidden">
         <div className="pt-1">
-          <Link to="/staff/items" className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
-            <Icon name="arrowLeft" size={20} /> Items
+          <Link to={fixed ? '/staff/counter' : '/staff/items'} className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
+            <Icon name="arrowLeft" size={20} /> {fixed ? 'Counter' : 'Items'}
           </Link>
-          <h1 className="mt-1 font-display text-2xl font-black text-ink">Print tags</h1>
+          <h1 className="mt-1 font-display text-2xl font-black text-ink">{fixed ? `Labels for ${itemName || shortCode(fixed)}` : 'Print tags'}</h1>
           <p className="mt-1 text-base text-slate-600">
-            Stick a tag on each donated item. Scanning the square opens the item in the app; the five characters underneath can be typed instead.
+            {fixed
+              ? `Every label on the sheet carries this item’s number, ${shortCode(fixed)} — stick one on each. Scanning any of them rings the item up at the till.`
+              : 'Stick a tag on each donated item. Scanning the square opens the item in the app; the five characters underneath can be typed instead.'}
           </p>
         </div>
 
@@ -119,9 +129,11 @@ export default function PrintTags() {
           </BigButton>
         )}
         {note && <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">{note}</p>}
-        <BigButton tone="plain" onClick={() => setCodes(makeCodes(sheets * PER_SHEET))}>
-          New codes
-        </BigButton>
+        {!fixed && (
+          <BigButton tone="plain" onClick={() => setCodes(makeCodes(sheets * PER_SHEET))}>
+            New codes
+          </BigButton>
+        )}
         <p className="text-sm text-slate-500">
           {isNative
             ? 'The share sheet can print (AirPrint), save the sheet, or send it to whoever has the printer. Each print makes a fresh set of codes, so printed sheets never repeat.'
@@ -130,8 +142,8 @@ export default function PrintTags() {
 
         {/* on-screen preview */}
         <div className="grid grid-cols-2 gap-2">
-          {codes.slice(0, 4).map((c) => (
-            <Tag key={c} code={c} qr={qrs[c]} />
+          {codes.slice(0, fixed ? 2 : 4).map((c, i) => (
+            <Tag key={`${c}-${i}`} code={c} qr={qrs[c]} />
           ))}
         </div>
       </Screen>
@@ -140,8 +152,8 @@ export default function PrintTags() {
       <div className="hidden print:block">
         {Array.from({ length: sheets }, (_, s) => (
           <div key={s} className="tag-sheet">
-            {codes.slice(s * PER_SHEET, (s + 1) * PER_SHEET).map((c) => (
-              <Tag key={c} code={c} qr={qrs[c]} print />
+            {codes.slice(s * PER_SHEET, (s + 1) * PER_SHEET).map((c, i) => (
+              <Tag key={`${c}-${i}`} code={c} qr={qrs[c]} print />
             ))}
           </div>
         ))}

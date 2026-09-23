@@ -86,6 +86,13 @@ import StaffInbox from './pages/StaffInbox'
 const MyBunnyRoutes = lazy(() => import('./features/mybunny/routes'))
 // Scan an item (camera + tag printer) — lazy: the barcode reader is big
 const ScanFlow = lazy(() => import('./features/scan/pages/ScanFlow'))
+const CounterHome = lazy(() => import('./features/counter/pages/CounterHome'))
+const CounterSell = lazy(() => import('./features/counter/pages/CounterSell'))
+const CounterAdd = lazy(() => import('./features/counter/pages/CounterAdd'))
+const CounterToday = lazy(() => import('./features/counter/pages/CounterToday'))
+const CounterDoor = lazy(() => import('./features/counter/pages/Door'))
+const CounterDoorSetup = lazy(() => import('./features/counter/pages/DoorSetup'))
+const CounterGate = lazy(() => import('./features/counter/CounterShell').then((m) => ({ default: m.CounterGate })))
 const ItemsList = lazy(() => import('./features/scan/pages/ItemsList'))
 const PrintTags = lazy(() => import('./features/scan/pages/PrintTags'))
 const TagLanding = lazy(() => import('./features/scan/pages/TagLanding'))
@@ -210,6 +217,15 @@ export default function App() {
         <Route path="reset" element={<StaffResetPassword />} />
         <Route path="start" element={<StaffOnboard />} />
         <Route path="join" element={<StaffJoin />} />
+        {/* The Counter keeps working with no signal, so it has its own gate (CounterShell.tsx). */}
+        <Route element={<Suspense fallback={null}><CounterGate /></Suspense>}>
+          <Route path="counter" element={<Suspense fallback={null}><CounterHome /></Suspense>} />
+          <Route path="counter/sell" element={<Suspense fallback={null}><CounterSell /></Suspense>} />
+          <Route path="counter/add" element={<Suspense fallback={null}><CounterAdd /></Suspense>} />
+          <Route path="counter/today" element={<Suspense fallback={null}><CounterToday /></Suspense>} />
+          <Route path="counter/door" element={<Suspense fallback={null}><CounterDoor /></Suspense>} />
+          <Route path="counter/door/setup" element={<Suspense fallback={null}><CounterDoorSetup /></Suspense>} />
+        </Route>
         <Route element={<RequireMembership />}>
           <Route path="hopshop" element={<HopShopManager />} />
           <Route path="hopshop/reorder" element={<HopShopManager />} />

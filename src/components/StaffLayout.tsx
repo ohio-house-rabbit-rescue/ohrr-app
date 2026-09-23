@@ -14,7 +14,7 @@ function roleLabel(role: string | undefined) {
 }
 
 export default function StaffLayout() {
-  const { user, membership, can, signOut } = useAuth()
+  const { user, membership, can, capabilities, signOut } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -26,8 +26,12 @@ export default function StaffLayout() {
 
   // The section menu. Adding a section later = one line here; the dropdown never
   // overflows or needs a scrolling tab strip, however many sections there are.
+  // A counter volunteer (the till and the door, nothing else) sees only that.
+  const counterOnly = can('counter.use') && membership?.role !== 'owner' && membership?.role !== 'admin' && capabilities.size === 1
+  const canCounter = can('counter.use') || can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.inventory.update')
   const navItems = [
-    { to: '/staff', label: 'Dashboard', end: true, show: true },
+    { to: '/staff', label: 'Dashboard', end: true, show: !counterOnly },
+    { to: '/staff/counter', label: 'Counter — sell, add items, door tickets', show: canCounter },
     { to: '/staff/inbox', label: 'Inbox', show: can('inbox.manage') },
     { to: '/staff/share', label: 'Share kit', show: can('announcements.post') },
     { to: '/staff/posts', label: 'Post queue', show: can('announcements.post') || can('social.publish') },
@@ -53,7 +57,7 @@ export default function StaffLayout() {
         can('adoptions.listings.edit') ||
         can('adoptions.status.change'),
     },
-    { to: '/staff/hopshop', label: 'Hop Shop', show: Boolean(membership) },
+    { to: '/staff/hopshop', label: 'Hop Shop', show: Boolean(membership) && !counterOnly },
     { to: '/staff/announcements', label: 'Announcements', show: can('announcements.post') },
     { to: '/staff/home-screen', label: 'Home screen cards', show: can('announcements.post') },
     { to: '/staff/calls', label: 'Volunteer calls — needs, sign-ups, thanks', show: can('volunteers.shifts.manage') || can('bookings.manage') },
@@ -65,7 +69,7 @@ export default function StaffLayout() {
     { to: '/staff/bunfest', label: 'BunFest — schedule, vendors, rescues', show: can('events.bunfest.manage') },
     { to: '/staff/tails', label: 'Happy Tails', show: can('content.education.edit') || can('inbox.manage') },
     { to: '/staff/raffle', label: 'Silent Auction', show: can('events.bunfest.manage') },
-    { to: '/staff/raffle-tickets', label: 'Raffle tickets', show: can('events.bunfest.manage') },
+    { to: '/staff/raffle-tickets', label: 'Raffle tickets', show: can('events.bunfest.manage') || can('counter.use') },
     { to: '/staff/sponsors', label: 'Sponsors & partners', show: can('events.bunfest.manage') },
     { to: '/staff/bunny-help', label: 'Bunny Help topics', show: can('content.education.edit') },
     {
