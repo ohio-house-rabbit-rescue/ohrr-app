@@ -23,9 +23,12 @@
   design brief (*OHRR Design Principles and Personas*), built as a board sample like the OHRR
   website; midwestbunfest.org is untouched. Repo
   https://github.com/ohio-house-rabbit-rescue/ohrr-bunfest (public, like the other two;
-  local `C:\Users\johns\ohrr-bunfest`). **Not hosted yet — OHRR connects the repo in
-  Cloudflare Pages** (build `npm run build`, output `dist`); the address will most likely be
-  `ohrr-bunfest.pages.dev`. Nothing needs pasting into Supabase.
+  local `C:\Users\johns\ohrr-bunfest`). **Live at https://ohrr-bunfest.pages.dev**
+  (Cloudflare Pages project `ohrr-bunfest`, connected by OHRR 2026-09-23; build
+  `npm run build`, output `dist`, `NODE_VERSION` 22; every push to `main` deploys). All 14
+  pages checked on the live address with live data. The website's BunFest page and About
+  link, and the app's BunFest home, now point to it; midwestbunfest.org stays named as the
+  current official site. Nothing needs pasting into Supabase.
   - **Nothing typed in:** every page reads the shared database — `events` (+`info`),
     `event_features`, `bunfest_pages`, `bunfest_sessions`, `bunfest_presenters`,
     `bunfest_vendors_public()`, `rescue_partners`, `sponsor_placements`/`sponsors`,
