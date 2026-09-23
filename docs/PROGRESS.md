@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-22 (round 5)
+- **Last updated:** 2026-09-23 (volunteer calls)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,63 @@
 ---
 
 ## Current state (at a glance)
+
+- **Volunteer calls — ask, share, sign up, check in, thank (2026-09-23, latest).**
+  **Paste `RUN-THIS-IN-SUPABASE.sql`** (Drive → OHRR App Design; it now holds
+  updates 15 *and* 16 and is safe to run twice). Sponsor: "We need 5 people for up
+  to 6 hours, shifts are 2 hours… share this across all social platforms, letters
+  and email… sign up in the app or online… log that they showed for this block…
+  thank them with their hours… military medal and school letters, automated, always
+  thanking them."
+  - **One call, entered once** (`volunteer_calls`, Staff → Volunteer calls, app and
+    website). Day, hours, shift length, people per shift, areas, perks, what to
+    read first. `save_volunteer_call()` makes the shifts as an ordinary shift
+    booking type (`call-<slug>`), remakes them on edit, never deletes a shift
+    somebody is on (it closes it and says so). The slug never changes, so links
+    already shared keep working. "Fill in from BunFest" uses the festival record.
+  - **Spread the word:** nine ready messages from the one call (Facebook,
+    Instagram, story, text, email to a company, email to a community group,
+    printed letter with QR, flyer with QR, newsletter paragraph), each with its own
+    `?src=` link. Phone media link to the app, desk and paper media to the website.
+    Sign-ups shows which source brought people (`call_sources`).
+  - **Sign-up page** `/volunteer/call/:slug` in the app and on the website: shift
+    buttons with places left, pick several, an area, and the optional "Need a letter
+    for your hours?" (school / military award / workplace / community) with the
+    details that letter needs, kept on the volunteer's record
+    (`volunteers.hours_for`, `letter_details`). A new volunteer gets their private
+    hours page; an existing email never gets a token back (privacy).
+  - **On the day:** tap *Here* per person per shift — the whole shift counts, no
+    clocking; *Didn't come*; walk-ins added straight to their shift
+    (`mark_call_attendance`, `add_walk_in`).
+  - **Thank everyone:** each helper's hours here / this year / in all
+    (`call_thanks`), an email and text that always thank them and link their hours
+    page, *Mark thanked* (`bookings.thanked_at`), and their letter.
+  - **Hours letters** (`/staff/hours-letter`, rewritten; website mirror added):
+    school, military (verifies hours for the MOVSM; says the award decision rests
+    with the command), workplace, "to whom it may concern", and a certificate.
+    Details pre-filled from sign-up. Who signs is set once in OHRR details
+    (`letter_signer_name/title`, optional EIN) — blank until OHRR sets it, and the
+    letter then leaves the lines blank to sign by hand. Never invented.
+  - Pure logic shared by copy: `src/features/volunteers/calls.ts`, `letters.ts`,
+    `paint.ts` ↔ website `src/lib/volunteers/`. Verified in throwaway harnesses on
+    both surfaces with sample data (sign-up payloads, every tab, pictures, letters).
+
+- **BunFest floor plan, venue designer, speakers, RHDV2 (2026-09-23).** Update 15 in
+  `RUN-THIS-IN-SUPABASE.sql` (not yet confirmed as run).
+  - **Per-year venue** (`bunfest_venues.layout`): rooms in feet, rows of tables
+    (start, direction, count, table size, walkways every N, which side customers
+    stand), fixed areas and doors — Staff → BunFest → Floor plan → Design the venue,
+    app and website. Tables number continuously room by room. The Makoy's two rooms
+    are seeded as an **estimate** (the published map isn't to scale) — check them.
+  - **Who sits where** (`bunfest_tables`): type "7, 8" beside a vendor or rescue and
+    the map fills in; side-by-side tables of one holder draw as one block with the
+    name once; a table can't be given twice. `start_bunfest_year()` copies the venue
+    and assignments forward.
+  - **Speakers** (`bunfest_presenters`, `bunfest_sessions.presenter_ids`) — the ten
+    2026 bios from midwestbunfest.org. **RHDV2**: `vets.gives_rhdv2` (Borders, Norton
+    Road) and the vet finder's filter; "Bringing Your Bunny" links to it.
+  - Also: *OHRR Design Principles and Personas.pdf* in the Drive root — the brief for
+    the BunFest sample site (older visitors first).
 
 - **Midwest BunFest 2026, and the last of the hard-coded content (2026-09-22,
   0.3.0 · rev 6, latest).** **Paste `RUN-THIS-IN-SUPABASE.sql`** (Drive →
