@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (website: important things on the first screen; A−/A+ removed; nav audit; update 21 waiting)
+- **Last updated:** 2026-09-24 (street address off public pages; orange Volunteer; doors on inner pages; updates 21 + 22 waiting)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,7 +19,29 @@
 
 ## Current state (at a glance)
 
-- **Website: the important things on the first screen (2026-09-24, latest; website live, `f1caf8c`).**
+- **Street address off public pages; orange Volunteer; doors on inner pages (2026-09-24, latest;
+  website `0685cac`, app `6ce2830` + `7f23900`; update 22 waiting).** Sponsor: "minimize the address
+  exposure … people will drop a bunny off at the rescue and then we are forced to take it."
+  - **Address rule (app + website):** public screens say "Columbus, Ohio" (website `OHRR.place`);
+    no street, ZIP, directions or map link for OHRR's own location. A visiting note says visits are by
+    appointment and the address comes with the appointment or volunteer shift; a calm note
+    (from OHRR's Admissions Policy: restricted admissions) asks people not to bring a rabbit without
+    talking to OHRR first (Contact, About, Surrender, app Surrender/Found). Booking pages show only
+    the place before booking ("OHRR Adoption Center"); the confirmation, calendar file and My
+    bookings keep the full location. Flyers, outreach letters, volunteer-call messages and call
+    letters dropped the street. **Kept:** supplier order emails, staff booking defaults, the org
+    profile (staff settings) and letters about one volunteer. The app also hides the phone and
+    address on OHRR's own BunFest partner row.
+  - **Update 22** (`supabase/migrations/20260924130000_hide_ohrr_street_address.sql`) clears the
+    street from OHRR's own `rescue_partners` row (shown on website, app and BunFest site).
+  - **Menu:** Volunteer is orange on the website (`--color-brand-orange-nav: #b35900`, 4.8:1 on
+    white, the brightest brand-hue orange that passes AA).
+  - **Inner pages get the home page's layout:** `PageHero` takes `doors` (2–3 main actions,
+    titles only on phones) or an `aside` beside the title: Adopt, Rabbit care, Found / surrender,
+    Found a rabbit, Volunteer, Give, About, Contact, Hop Shop; Bunny Help's question box sits in the
+    band. Jump links land below the sticky header (`[id] { scroll-margin-top }`). Contact rebuilt
+    (form, hours and visiting, email). Events, News, Happy Tails left as they are (short lists).
+- **Website: the important things on the first screen (2026-09-24; website live, `f1caf8c`).**
   Sponsor: "a lot of app feel and wasted space … the important things above the fold". Measured at
   1280×720 and 375×740: header + tall blue title band took 60% of the first screen.
   - **Title band (`PageHero`)** is a short light band (brand-blue-50, ink title), not a tall blue
