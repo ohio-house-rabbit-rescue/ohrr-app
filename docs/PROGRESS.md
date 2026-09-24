@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (website nav audit: a clear way back from staff, a complete phone menu; update 21 waiting)
+- **Last updated:** 2026-09-24 (website: important things on the first screen; A−/A+ removed; nav audit; update 21 waiting)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,7 +19,24 @@
 
 ## Current state (at a glance)
 
-- **Website nav audit (2026-09-24, latest; website live, commit `c9c88ab`).** Sponsor: "I'm in
+- **Website: the important things on the first screen (2026-09-24, latest; website live, `f1caf8c`).**
+  Sponsor: "a lot of app feel and wasted space … the important things above the fold". Measured at
+  1280×720 and 375×740: header + tall blue title band took 60% of the first screen.
+  - **Title band (`PageHero`)** is a short light band (brand-blue-50, ink title), not a tall blue
+    app header: bands end at ~300px on a laptop (was 420–450) and each page's first action is
+    130–165px higher. **Header** ~20px shorter. **Sections** `py-8 md:py-12` (was 12/20).
+  - **Home:** the purpose sits beside the three doors on a laptop, with four rabbits on the first
+    screen; on a phone the purpose and all three doors fit. The doors are compact rows (titles
+    only on phones), not app action cards. Sponsor strip moved below the rabbits.
+  - **BunFest:** When/Where/Admission/tickets come before the logo on phones. **Found a rabbit:**
+    the Report button comes before the checklist.
+  - **Phones:** five pages (Adopt, Surrender, Volunteer, About, Contact) scrolled sideways; a grid
+    with no column setting stretched to a long email address. Fixed once in `index.css` (`.grid`
+    defaults to one shrinkable column in the base layer; long words wrap).
+  - **Removed:** the website's A−/A+ text-size control (OHRR: "the website does not need the font
+    size change option"; `82eb68e`); the app keeps Settings → Text size. Unused `HomeHero.tsx`.
+  - **App:** the staff header's way back to the app is now a blue 40px "App" button (`815cdba`).
+- **Website nav audit (2026-09-24; website live, commit `c9c88ab`).** Sponsor: "I'm in
   the staff and can not get back to the main site." The old staff screen had ~30 tool buttons in a
   wrapping row, and the only way out was a small grey "View site" pill after them.
   - **Staff:** a "← Back to the website" button on every staff screen, next to Sign out (also
