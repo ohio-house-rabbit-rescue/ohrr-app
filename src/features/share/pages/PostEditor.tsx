@@ -1,19 +1,55 @@
 // Staff → Post queue → New post / Edit. A photo from the phone (or none),
-// the words, which platforms, which day. Saved as a draft; "Approve" puts it
-// in the release line. Share-kit cards arrive here already filled in.
+// the words, which platforms, which day. "Save draft" keeps it with you;
+// "Send for approval" puts it in front of someone else with "Approve social
+// posts" (update 26), who approves it or sends it back with a note. Share-kit
+// cards arrive here already filled in.
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { supabase, errMessage } from '../../../lib/supabase'
-import { Screen, Card, btn } from '../../../components/ui'
+import { Screen, Card, Badge, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
 import { isNative } from '../../../native/platform'
 import { pickPhoto, type PhotoSource } from '../../../native/camera'
 import { HASHTAGS } from '../templates'
-import { PLATFORMS, createPost, setPostStatus, updatePost, uploadPostPhoto, type Platform, type PostDraft, type SocialPost } from '../queue'
+import {
+  APPROVE_CAP,
+  PLATFORMS,
+  STATUS_LABEL,
+  createPost,
+  setPostStatus,
+  shortDate,
+  updatePost,
+  uploadPostPhoto,
+  type Platform,
+  type PostDraft,
+  type PostStatus,
+  type SocialPost,
+} from '../queue'
 
 const empty: PostDraft = { title: '', caption: '', image_url: null, platforms: ['instagram', 'facebook'], scheduled_for: null, notes: '' }
+
+// Change these on an approved post and the database sends it back for approval.
+const wordsKey = (d: Pick<PostDraft, 'title' | 'caption' | 'image_url' | 'platforms'>) => JSON.stringify([d.title.trim(), d.caption, d.image_url, d.platforms])
+
+// What the editor keeps about the stored post, besides the form.
+interface Saved {
+  id: string
+  status: PostStatus
+  createdBy: string | null
+  approvedAt: string | null
+  reviewNote: string | null
+  words: string
+}
+const savedFrom = (p: SocialPost): Saved => ({
+  id: p.id,
+  status: p.status,
+  createdBy: p.created_by,
+  approvedAt: p.approved_at,
+  reviewNote: p.review_note ?? null,
+  words: wordsKey(p),
+})
 
 export default function PostEditor() {
   const { id } = useParams()
@@ -21,7 +57,9 @@ export default function PostEditor() {
   const navigate = useNavigate()
   const { membership, user, can } = useAuth()
   const orgId = membership?.orgId ?? ''
+  const me = user?.id ?? ''
   const [d, setD] = useState<PostDraft>(empty)
+  const [saved, setSaved] = useState<Saved | null>(null)
   const [loading, setLoading] = useState(!isNew)
   const [busy, setBusy] = useState(false)
   const [photoBusy, setPhotoBusy] = useState(false)
@@ -43,6 +81,7 @@ export default function PostEditor() {
         else {
           const p = data as SocialPost
           setD({ title: p.title, caption: p.caption, image_url: p.image_url, image_alt: p.image_alt, platforms: p.platforms, scheduled_for: p.scheduled_for, notes: p.notes ?? '', source: p.source })
+          setSaved(savedFrom(p))
         }
         setLoading(false)
       })
@@ -51,7 +90,7 @@ export default function PostEditor() {
     }
   }, [id, isNew])
 
-  if (!can('announcements.post')) return <Screen><p className="text-sm text-slate-600">You don’t have access to write posts.</p></Screen>
+  if (!can('announcements.post') && !can(APPROVE_CAP)) return <Screen><p className="text-sm text-slate-600">You don’t have access to write posts.</p></Screen>
 
   const usePhoto = async (src: Blob | string) => {
     setPhotoBusy(true)
@@ -84,7 +123,9 @@ export default function PostEditor() {
     }
   }
 
-  const save = async (approve: boolean) => {
+  // 'keep' leaves the status alone. (An approved post whose words change goes
+  // back for approval by itself: the database does that.)
+  const save = async (target: 'draft' | 'submitted' | 'keep') => {
     if (!d.title.trim()) {
       setError('Give the post a short name (for the queue).')
       return
@@ -95,37 +136,71 @@ export default function PostEditor() {
     }
     setBusy(true)
     setError(null)
+    let current = saved
     try {
-      let postId = id
-      if (isNew) {
-        const created = await createPost(orgId, user?.id ?? '', d)
-        postId = created.id
+      if (!current) {
+        current = savedFrom(await createPost(orgId, me, d))
+        setSaved(current)
       } else {
-        await updatePost(id!, d)
+        await updatePost(current.id, d)
       }
-      if (approve && postId) await setPostStatus(postId, 'approved')
-      navigate('/staff/posts')
     } catch (e) {
       setError(errMessage(e))
       setBusy(false)
+      return
     }
+    if (target !== 'keep' && target !== current.status) {
+      try {
+        await setPostStatus(current.id, target)
+      } catch (e) {
+        // The words are safe; only the status didn't change. Stay here and say why.
+        setSaved({ ...current, words: wordsKey(d) })
+        setError(`Saved, but ${target === 'submitted' ? 'not sent for approval' : 'not moved to drafts'}: ${errMessage(e)}`)
+        setBusy(false)
+        return
+      }
+    }
+    navigate('/staff/posts')
   }
 
   const togglePlatform = (p: Platform) => setD((x) => ({ ...x, platforms: x.platforms.includes(p) ? x.platforms.filter((y) => y !== p) : [...x.platforms, p] }))
 
   if (loading) return <Spinner />
 
+  const status = saved?.status ?? null
+  const isDraft = status === null || status === 'draft' || status === 'archived'
+  const mine = saved?.createdBy === me
+  const wordsChanged = saved !== null && wordsKey(d) !== saved.words
+
   return (
     <Screen className="space-y-4">
       <Link to="/staff/posts" className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
         <Icon name="arrowLeft" size={20} /> Post queue
       </Link>
-      <h1 className="font-display text-2xl font-black text-ink">{isNew ? 'New post' : 'Edit post'}</h1>
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="font-display text-2xl font-black text-ink">{isNew && !saved ? 'New post' : 'Edit post'}</h1>
+        <Badge tone={status === 'submitted' ? 'orange' : status === 'approved' ? 'blue' : 'slate'}>{status ? STATUS_LABEL[status] : 'Draft · not saved yet'}</Badge>
+      </div>
+      {status === 'draft' && saved?.reviewNote && (
+        <div className="rounded-2xl border border-brand-orange/40 bg-brand-orange-50 px-4 py-3">
+          <p className="text-sm font-bold text-ink">Sent back for changes</p>
+          <p className="mt-0.5 whitespace-pre-wrap text-sm text-slate-700">{saved.reviewNote}</p>
+          <p className="mt-1 text-xs text-slate-500">Make the changes, then send it for approval again.</p>
+        </div>
+      )}
+      {status === 'submitted' && (
+        <p className="text-sm text-slate-600">{mine ? 'Waiting for someone else to approve it.' : 'Waiting for approval.'} Saving changes keeps it in line.</p>
+      )}
+      {status === 'approved' && (
+        <p className="text-sm text-slate-600">
+          Approved {shortDate(saved?.approvedAt)}. Changing the words, the picture, the short name or where it goes sends it back for approval.
+        </p>
+      )}
 
       <form
         onSubmit={(e: FormEvent) => {
           e.preventDefault()
-          void save(false)
+          void save(isDraft ? 'draft' : 'keep')
         }}
         className="space-y-4"
       >
@@ -202,14 +277,27 @@ export default function PostEditor() {
         </Card>
 
         <FormError>{error}</FormError>
-        <div className="grid grid-cols-2 gap-2">
-          <button type="submit" disabled={busy || photoBusy} className={`${btn.outline} w-full disabled:opacity-60`}>
-            Save draft
-          </button>
-          <button type="button" onClick={() => void save(true)} disabled={busy || photoBusy} className={`${btn.primary} w-full disabled:opacity-60`}>
-            <Icon name="check" size={16} /> Save & approve
-          </button>
-        </div>
+        {isDraft ? (
+          <div className="grid grid-cols-2 gap-2">
+            <button type="submit" disabled={busy || photoBusy} className={`${btn.outline} w-full disabled:opacity-60`}>
+              Save draft
+            </button>
+            <button type="button" onClick={() => void save('submitted')} disabled={busy || photoBusy} className={`${btn.primary} w-full disabled:opacity-60`}>
+              <Icon name="check" size={16} /> Send for approval
+            </button>
+          </div>
+        ) : (
+          <div className={`grid gap-2 ${status === 'submitted' && mine ? 'grid-cols-2' : ''}`}>
+            {status === 'submitted' && mine && (
+              <button type="button" onClick={() => void save('draft')} disabled={busy || photoBusy} className={`${btn.outline} w-full disabled:opacity-60`}>
+                Save as draft
+              </button>
+            )}
+            <button type="submit" disabled={busy || photoBusy} className={`${btn.primary} w-full disabled:opacity-60`}>
+              {status === 'approved' && wordsChanged ? 'Save and send for approval' : 'Save changes'}
+            </button>
+          </div>
+        )}
       </form>
     </Screen>
   )

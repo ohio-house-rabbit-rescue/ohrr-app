@@ -1,10 +1,24 @@
 // The post queue: premade posts stored in `social_posts`, released later by
 // the person with `social.publish`. See supabase/migrations/20260921130000_social_posts.sql.
+// Update 26 (20260924200000_social_post_approval.sql) adds a second person's
+// approval: draft → submitted ("Waiting for approval") → approved → posted.
+// Every status change goes through set_social_post_status(), never a table update.
 import { supabase } from '../../lib/supabase'
 import type { Database } from '../../lib/database.types'
+import type { Capability } from '../../lib/capabilities'
 import { downscaleToJpeg } from '../raffle/photoUpload'
 
-export type PostStatus = 'draft' | 'approved' | 'posted' | 'archived'
+export type PostStatus = 'draft' | 'submitted' | 'approved' | 'posted' | 'archived'
+export const STATUS_LABEL: Record<PostStatus, string> = {
+  draft: 'Draft',
+  submitted: 'Waiting for approval',
+  approved: 'Approved',
+  posted: 'Posted',
+  archived: 'Archived',
+}
+
+// "Approve social posts" (update 26) isn't in lib/capabilities.ts's list yet, so it's cast.
+export const APPROVE_CAP = 'social.approve' as string as Capability
 export type Platform = 'instagram' | 'facebook' | 'tiktok' | 'other'
 export const PLATFORMS: { value: Platform; label: string }[] = [
   { value: 'instagram', label: 'Instagram' },
@@ -26,11 +40,17 @@ export interface SocialPost {
   source: string | null
   notes: string | null
   created_by: string | null
+  approved_by: string | null
   approved_at: string | null
+  posted_by: string | null
   posted_at: string | null
   posted_to: Platform[] | null
   created_at: string
   updated_at: string
+  // Update 26 — not in database.types.ts yet, and absent until the update is run.
+  submitted_by?: string | null
+  submitted_at?: string | null
+  review_note?: string | null
 }
 
 export interface PostDraft {
@@ -92,9 +112,52 @@ export async function updatePost(id: string, d: Partial<PostDraft>): Promise<voi
   if (error) throw error
 }
 
-export async function setPostStatus(id: string, status: PostStatus, postedTo?: Platform[]): Promise<void> {
-  const { error } = await supabase.rpc('set_social_post_status', { p_id: id, p_status: status, p_posted_to: postedTo ?? null })
-  if (error) throw error
+/**
+ * Change a post's status (the only way to). `note` goes with a "Send back".
+ * p_note arrives with update 26 and isn't in database.types.ts yet, hence the cast;
+ * it's only sent when there is a note, so other calls still work before the update.
+ */
+export async function setPostStatus(id: string, status: PostStatus, postedTo?: Platform[], note?: string): Promise<void> {
+  const text = note?.trim() || null
+  const args = { p_id: id, p_status: status, p_posted_to: postedTo ?? null, ...(text ? { p_note: text } : {}) }
+  const { error } = await supabase.rpc('set_social_post_status', args as Database['public']['Functions']['set_social_post_status']['Args'])
+  if (error) throw new Error(statusError(error, status, Boolean(text)))
+}
+
+// Before update 26 is in the database there's no "Waiting for approval" and no
+// note: say so, and keep the database's own words.
+function statusError(e: { message: string; code?: string }, status: PostStatus, withNote: boolean): string {
+  const missing = (status === 'submitted' && /bad status/i.test(e.message)) || (withNote && e.code === 'PGRST202')
+  return missing ? `This needs database update 26 (social post approval), which isn’t in yet. (${e.message})` : e.message
+}
+
+// count_posts_to_approve arrives with update 26 and isn't in database.types.ts yet.
+type UntypedRpc = (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }>
+
+/** Posts waiting for approval that someone else wrote — 0 without the permission or before update 26. */
+export async function countPostsToApprove(orgId: string): Promise<number> {
+  try {
+    const { data, error } = await (supabase.rpc as unknown as UntypedRpc).call(supabase, 'count_posts_to_approve', { p_org: orgId })
+    return !error && typeof data === 'number' ? data : 0
+  } catch {
+    return 0
+  }
+}
+
+/** Staff names by user id (Team profile name, else email) for "Approved by …". Empty if it can't load. */
+export async function loadStaffNames(orgId: string): Promise<Map<string, string>> {
+  const names = new Map<string, string>()
+  try {
+    const [members, profiles] = await Promise.all([
+      supabase.rpc('list_org_members', { p_org: orgId }),
+      supabase.from('memberships').select('user_id, display_name').eq('org_id', orgId),
+    ])
+    for (const m of members.data ?? []) if (m.email) names.set(m.user_id, m.email)
+    for (const p of profiles.data ?? []) if (p.display_name?.trim()) names.set(p.user_id, p.display_name.trim())
+  } catch {
+    /* the queue works without names */
+  }
+  return names
 }
 
 export async function deletePost(id: string): Promise<void> {
@@ -137,6 +200,14 @@ export function isReady(p: SocialPost, today = localToday()): boolean {
 
 export function localToday(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+}
+
+/** "Sep 24" (with the year when it isn't this year). */
+export function shortDate(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: d.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined })
 }
 
 export function whenLabel(p: SocialPost): string {
