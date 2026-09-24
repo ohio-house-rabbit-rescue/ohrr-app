@@ -2170,6 +2170,39 @@ export type Database = {
         }
         Relationships: []
       }
+      // The Legacy Fund's Rescue Rabbit Guardians, a year at a time
+      // (20260924230000_legacy_fund_guardians.sql, update 29). Only what is shown in public.
+      guardians: {
+        Row: {
+          id: string
+          org_id: string
+          year: number
+          display_name: string
+          sort_name: string
+          is_published: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          year: number
+          display_name: string
+          sort_name?: string
+          is_published?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          year?: number
+          display_name?: string
+          sort_name?: string
+          is_published?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {

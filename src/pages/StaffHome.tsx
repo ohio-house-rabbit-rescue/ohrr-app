@@ -232,6 +232,15 @@ export default function StaffHome() {
               tone="blue"
             />
           )}
+          {can('giving.guardians') && (
+            <ActionCard
+              to="/staff/guardians"
+              title="Rescue Rabbit Guardians"
+              subtitle="The Legacy Fund thank-you list, a year at a time"
+              icon="heart"
+              tone="blue"
+            />
+          )}
           {canPostAnnouncements && (
             <ActionCard
               to="/staff/announcements"

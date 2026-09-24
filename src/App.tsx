@@ -28,6 +28,9 @@ import StaffBookings from './features/bookings/pages/StaffBookings'
 import ServiceLetter from './features/bookings/pages/ServiceLetter'
 import ImpactPage from './features/impact/pages/ImpactPage'
 import StaffImpact from './features/impact/pages/StaffImpact'
+// The OHRR Legacy Fund + its Rescue Rabbit Guardians list (update 29)
+import LegacyFund from './features/giving/pages/LegacyFund'
+import StaffGuardians from './features/giving/pages/StaffGuardians'
 import Learn from './pages/Learn'
 import LearnTopic from './pages/LearnTopic'
 import Volunteer from './pages/Volunteer'
@@ -152,6 +155,8 @@ export default function App() {
         <Route path="/learn/breeds" element={<Suspense fallback={null}><BreedGuide /></Suspense>} />
         <Route path="/learn/breeds/:slug" element={<Suspense fallback={null}><BreedDetail /></Suspense>} />
         <Route path="/learn/:id" element={<LearnTopic />} />
+        {/* The Legacy Fund has its own screen: the words, the Guardians list and a form */}
+        <Route path="/info/legacy-fund" element={<LegacyFund />} />
         {/* Give / About / Adopt pages brought in from the old site (same table, other sections) */}
         <Route path="/info/:id" element={<LearnTopic />} />
         {/* An easy address for "Is a rabbit right for us?" and its two-minute check */}
@@ -271,6 +276,7 @@ export default function App() {
           <Route path="bookings" element={<StaffBookings />} />
           <Route path="hours-letter" element={<ServiceLetter />} />
           <Route path="impact" element={<StaffImpact />} />
+          <Route path="guardians" element={<StaffGuardians />} />
           <Route path="scan" element={<Suspense fallback={null}><ScanFlow /></Suspense>} />
           <Route path="share" element={<Suspense fallback={null}><StaffShare /></Suspense>} />
           <Route path="posts" element={<Suspense fallback={null}><PostQueue /></Suspense>} />

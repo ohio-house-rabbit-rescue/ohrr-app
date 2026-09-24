@@ -17,6 +17,8 @@ export const CAPABILITIES = [
   'volunteers.shifts.manage',
   'volunteers.signups.approve',
   'volunteers.certificates',
+  // Update 29: the Legacy Fund's Rescue Rabbit Guardians list.
+  'giving.guardians',
   'content.education.edit',
   'events.bunfest.manage',
   'announcements.post',
@@ -54,6 +56,7 @@ export const PERMISSION_CATALOG: PermissionMeta[] = [
   { key: 'volunteers.shifts.manage', area: 'Volunteers', description: 'Create/manage volunteer shifts' },
   { key: 'volunteers.signups.approve', area: 'Volunteers', description: 'Approve volunteer sign-ups' },
   { key: 'volunteers.certificates', area: 'Volunteers', description: 'Make volunteer certificates and set the hours that earn one' },
+  { key: 'giving.guardians', area: 'Giving', description: 'Keep the Rescue Rabbit Guardians list (the Legacy Fund thank-you)' },
   { key: 'content.education.edit', area: 'Content', description: 'Edit education / care content' },
   { key: 'events.bunfest.manage', area: 'Events', description: 'Manage Midwest BunFest info' },
   { key: 'announcements.post', area: 'Content', description: 'Post announcements' },

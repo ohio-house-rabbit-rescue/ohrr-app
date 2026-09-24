@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (volunteer approval + letters, mobile vet, post approval, vendor records + pack sizes, staff levels, Donate pill; **updates 25–28 to run**)
+- **Last updated:** 2026-09-24 (updates 25–28 applied and checked live; Legacy Fund page + Rescue Rabbit Guardians list; **update 29 to run**)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,22 @@
 ---
 
 ## Current state (at a glance)
+
+- **Legacy Fund, 2026-09-24 (latest; website `f175ed8` + app the same day; update 29 to run — Drive RUN-THIS and
+  `Supabase history/APPLY-29.sql`).** Updates 25–28 were run and checked live the same day (anon REST:
+  `volunteer_check` answers with a role, `count_posts_to_approve`, `level_rank`, and the new staff tables
+  refuse anon). OHRR on the Legacy Fund proposal: "the legacy donors just follow the existing website
+  details for now" — so the contact stays Pat Barron (pbarronosu@aol.com), the Guardians stay one group
+  (a planned gift, or $1,000+ in a calendar year), and nothing new is said in legal terms (no EIN, sample
+  bequest wording or memorial gifts until OHRR asks).
+  - `/info/legacy-fund` is its own page on the website and in the app: the live page's words (still the
+    staff-edited 'legacy-fund' page), the Legacy Fund graphic, the contact, the **2026 Rescue Rabbit
+    Guardians** by name (the live site shows them as a picture; 47 names, sorted by surname as it does)
+    and "Request more info", which now reaches the Inbox (kind `legacy-info`, "I've already included
+    OHRR"). Before update 29 runs, the names come bundled.
+  - Staff → Rescue Rabbit Guardians (permission `giving.guardians`; owners and admins have it): add, edit
+    (with "sort under"), hide, remove, and start a new year from last year's list. The table holds only
+    the name as shown, never what anyone gave.
 
 - **A long round, 2026-09-24 (latest; website `6fe33e4`…`8de568c`, app `5d06c6e`…`d384d45`; updates
   25–28 to run, in order — Drive RUN-THIS and `Supabase history/APPLY-25…28.sql`).** Everything degrades

@@ -32,6 +32,7 @@ const KIND: Record<string, { label: string; icon: IconName }> = {
   'foster-application': { label: 'Foster interest', icon: 'home' },
   'found-rabbit': { label: 'Found rabbit', icon: 'mappin' },
   'notify-me': { label: 'Tell me when', icon: 'clock' },
+  'legacy-info': { label: 'Legacy Fund', icon: 'gift' },
   'contact': { label: 'Message', icon: 'mail' },
   'adoption-application': { label: 'Adoption application', icon: 'heart' },
   'booking': { label: 'Booking', icon: 'calendar' },

@@ -20,6 +20,7 @@ const TITLES: [string, string][] = [
   ['/learn/breeds', 'Breed guide'],
   ['/learn', 'Rabbit care'],
   ['/info/is-a-rabbit-right-for-us', 'Is a rabbit right for us?'],
+  ['/info/legacy-fund', 'OHRR Legacy Fund'],
   ['/info', 'Rabbit care'],
   ['/vets', 'Find a rabbit-savvy vet'],
   ['/found/report', 'Report a found rabbit'],
