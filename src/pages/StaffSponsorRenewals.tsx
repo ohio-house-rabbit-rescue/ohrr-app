@@ -77,12 +77,14 @@ function fmtDate(iso: string, opts: { long?: boolean; noYear?: boolean } = {}): 
 
 /* ---- the list ---- */
 
-type WindowLabel = 'Next 30 days' | 'Next 60 days' | 'Next 90 days' | 'All'
-const WINDOWS: readonly WindowLabel[] = ['Next 30 days', 'Next 60 days', 'Next 90 days', 'All']
+// Opens on six months: sponsorships tend to end together (every 2026 one ends
+// Dec 31), and asking early gives time to hear back before the term runs out.
+type WindowLabel = 'Next 30 days' | 'Next 90 days' | 'Next 6 months' | 'All'
+const WINDOWS: readonly WindowLabel[] = ['Next 30 days', 'Next 90 days', 'Next 6 months', 'All']
 const WINDOW_DAYS: Record<WindowLabel, number | null> = {
   'Next 30 days': 30,
-  'Next 60 days': 60,
   'Next 90 days': 90,
+  'Next 6 months': 183,
   All: null,
 }
 /** A sponsorship that ended this recently may still renew, so it always stays on the list. */
@@ -616,7 +618,7 @@ export default function StaffSponsorRenewals() {
   const [renewalsState, setRenewalsState] = useState<'ok' | 'missing' | 'error'>('ok')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [windowLabel, setWindowLabel] = useState<WindowLabel>('Next 90 days')
+  const [windowLabel, setWindowLabel] = useState<WindowLabel>('Next 6 months')
   const [flash, setFlash] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [toolNote, setToolNote] = useState<string | null>(null)
@@ -812,7 +814,7 @@ export default function StaffSponsorRenewals() {
             </>
           ) : (
             <>
-              <p className="text-sm font-semibold text-slate-700">No sponsorships end in the next {windowDays} days.</p>
+              <p className="text-sm font-semibold text-slate-700">No sponsorships end in the {windowLabel.toLowerCase()}.</p>
               <p className="mt-1 text-sm text-slate-500">
                 {nextOutside
                   ? `The next one, ${nextOutside.sponsor.name}, ends ${fmtDate(nextOutside.termEnd)}. Choose a longer window or “All” above to see it.`
