@@ -56,7 +56,7 @@ export const volunteerWays: VolunteerWay[] = [
     requirements: [
       'Must be at least 6 years old. Children 10 and under must be accompanied by an adult.',
       'Ability to focus on and interact with individual bunnies in 15-minute intervals',
-      'If you are a parent accompanying a child, you must sign up for a volunteer slot also. Because of COVID, we must account for all people in the building.',
+      'If you are a parent accompanying a child, you must sign up for a volunteer slot also, so we know everyone who is in the building. COVID and other illnesses are still around: if you are feeling unwell, please reschedule your shift.',
     ],
     location: 'OHRR Adoption Center',
     commitment: '1-hour shifts · no more than two per month',
