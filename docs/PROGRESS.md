@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (updates 21 + 22 applied and checked live; nothing to run)
+- **Last updated:** 2026-09-24 (street address in a select place or two, modeled on the live site; nothing to run)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,7 +19,17 @@
 
 ## Current state (at a glance)
 
-- **Street address off public pages; orange Volunteer; doors on inner pages (2026-09-24, latest;
+- **Street address: a select place or two, like the current site (2026-09-24, latest; website
+  `6a1989b`, app `bd5c21b`).** Sponsor corrected the first pass: "people need to find it but if you
+  have it everywhere on things like contact us when we want them to email then they will drop a bunny
+  off … look at how it is now and model that. it is not everywhere just a select place or two." The
+  live site shows it in its footer (every page) and on its Hop Shop and Contact pages. Now: **website**
+  footer (street, city/ZIP, Directions link) + Hop Shop page (address, landmark, Get directions); **app**
+  About screen (with the no-drop-off note under it) + Hop Shop screen. Contact, Home, the About page
+  body, booking pages before booking, flyers, letters and the rescues list stay address-free; Contact
+  and the visiting note point to email ("Visits are by appointment, so please email us before you
+  come."). The entry below describes the first pass; this supersedes its "address rule".
+- **Street address off public pages; orange Volunteer; doors on inner pages (2026-09-24;
   website `0685cac`, app `6ce2830` + `7f23900`; update 22 applied and checked live 2026-09-24).** Sponsor: "minimize the address
   exposure … people will drop a bunny off at the rescue and then we are forced to take it."
   - **Address rule (app + website):** public screens say "Columbus, Ohio" (website `OHRR.place`);
