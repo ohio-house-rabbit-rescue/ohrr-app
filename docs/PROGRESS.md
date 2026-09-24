@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (even boxes; Bunny Help above the fold on home; the two-minute "Is a rabbit right for us?" check; nothing to run)
+- **Last updated:** 2026-09-24 (two-minute check in the app; shorter website footer with social icons; BunFest Add to calendar on website, app and BunFest site; nothing to run)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,7 +19,26 @@
 
 ## Current state (at a glance)
 
-- **Even boxes, Bunny Help above the fold, the two-minute check (2026-09-24, latest; website
+- **App gets the two-minute check; shorter footer; BunFest Add to calendar everywhere (2026-09-24,
+  latest; app `e84c4d0`, website `0f3973c`, BunFest site `9e540c1`).**
+  - **App:** `ReadyCheck.tsx` (the website's seven questions word for word) above the
+    `is-a-rabbit-right-for-us` article (`/info/is-a-rabbit-right-for-us`, alias `/thinking-about-a-rabbit`;
+    shows the check even if the article can't load). Entry cards on Home (after Quick actions), Adopt
+    (under the live-rabbits line) and Rabbit Care; a search entry; the Easter line on Home from
+    `lib/season.ts` (7 weeks before Easter; hidden now).
+  - **Website footer** (sponsor: "the links at the bottom are still a lot … socials can be icons"): 19 links
+    → 13; one "where we are" block (address + Directions, hours, email) with Facebook/Instagram as 44px
+    icons and the mailing list; "Also at OHRR" = Events, BunFest, Hop Shop, News, Happy Tails, Sponsors &
+    partners; Privacy + Staff sign-in in the bottom line. "See rescues near you" moved into Surrender's
+    admissions text (the only other way to that page).
+  - **Add to calendar** where BunFest shows its date (sponsor: "where it says mark your calendars it should
+    have a link to add to your calendars. Same on the app"): website BunFest page (`AddToCalendar`, .ics +
+    Google), BunFest site Home "When" line + Visit page, app BunFest home + Plan Your Visit + the Events
+    card (`AddEventToCalendar`: on the web an .ics or Google; in the native app "Remind me on this phone"
+    (evening before + an hour ahead) or Google, as bookings already do). All built from the shared
+    `events` row; hidden once the event is over. Checked: 10 AM–4 PM Eastern, Sun Oct 25 2026, The Makoy.
+    Native path type-checked/built but not yet run on a device.
+- **Even boxes, Bunny Help above the fold, the two-minute check (2026-09-24; website
   `0160f94`).** Sponsor: boxes with different amounts of words look like "mismatched boxes" (keep the
   words); get Bunny Help above the fold and open it fully when used; educate people before they buy
   (OHRR research, Drive `Research/market-data-points.md` 2.1–2.3: rabbits are given up almost always
@@ -40,7 +59,7 @@
     answers list the reasons and offer a socialization shift and the care guides; nothing stored.
     Offered on Home (after the rabbits), Adopt and Rabbit care (doors) and site search. The home hero
     shows "Easter is … Thinking about a bunny? Read this first" by itself in the 7 weeks before Easter
-    (`lib/season.ts`). **App mirror not built yet.**
+    (`lib/season.ts`). App mirror built next (see above).
 - **Street address: a select place or two, like the current site (2026-09-24; website
   `6a1989b`, app `bd5c21b`).** Sponsor corrected the first pass: "people need to find it but if you
   have it everywhere on things like contact us when we want them to email then they will drop a bunny
