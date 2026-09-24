@@ -2,8 +2,12 @@
 // through SECURITY DEFINER functions gated on the hopshop.* capabilities
 // (supabase/migrations/20260922110000_hopshop_suppliers.sql); suppliers are
 // plain table rows behind RLS.
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
 import type { Database } from '../../lib/database.types'
+
+// Update 27's columns and tables (pack sizes, company records) aren't in database.types.ts yet; this untyped handle reaches them.
+export const db = supabase as unknown as SupabaseClient
 
 export type Supplier = Database['public']['Tables']['suppliers']['Row']
 export type OrderHow = NonNullable<Supplier['order_how']>
@@ -31,6 +35,25 @@ export interface StockCard {
   quantity: number | null
   code: string | null
   updated_at: string
+  // Update 27 (pack sizes) — absent until that SQL has run.
+  order_url?: string | null
+  ordered_pack_id?: string | null
+  ordered_packs?: number | null
+  packs?: Pack[]
+}
+
+/** A size the product comes in from the supplier: a single, a box, a case of 12 … (`product_packs`). */
+export interface Pack {
+  id: string
+  label: string
+  /** How many sellable items are in it. */
+  units: number
+  /** What OHRR pays for one pack. */
+  cost_cents: number | null
+  supplier_sku: string | null
+  min_packs: number
+  is_default: boolean
+  notes: string | null
 }
 
 export const ORDER_HOW_LABEL: Record<OrderHow, string> = {
@@ -166,9 +189,154 @@ export function groupBySupplier(items: StockCard[]): { key: string; name: string
   return [...groups.values()].sort((a, b) => (a.supplierId === null ? 1 : b.supplierId === null ? -1 : a.name.localeCompare(b.name)))
 }
 
-/** The plain-text order for one supplier — pasted into an email or read out on the phone. */
-export function orderText(supplierName: string, items: StockCard[], accountNumber?: string | null): string {
+/* ------------------------------------------------------------ pack sizes */
+
+let packsProbe: Promise<boolean> | null = null
+
+/** True once update 27 has run (the pack table answers). Asked once per session. */
+export function packsReady(): Promise<boolean> {
+  if (!packsProbe) {
+    packsProbe = Promise.resolve(db.from('product_packs').select('id').limit(1)).then(
+      ({ error }) => !error,
+      () => false,
+    )
+  }
+  return packsProbe
+}
+
+export type PackInput = Omit<Pack, 'id'> & { id: string | null }
+
+/**
+ * Make a product's packs match the editor's list: removed ones are deleted,
+ * the rest saved in the order shown.
+ */
+export async function syncPacks(orgId: string, productId: string, before: Pack[], after: PackInput[]): Promise<void> {
+  const kept = new Set(after.map((p) => p.id).filter((id): id is string => !!id))
+  const gone = before.filter((p) => !kept.has(p.id)).map((p) => p.id)
+  if (gone.length > 0) {
+    const { error } = await db.from('product_packs').delete().in('id', gone)
+    if (error) throw error
+  }
+  for (const [i, p] of after.entries()) {
+    const { id, ...fields } = p
+    const row = { ...fields, sort_order: i }
+    const { error } = id
+      ? await db.from('product_packs').update(row).eq('id', id)
+      : await db.from('product_packs').insert({ ...row, org_id: orgId, product_id: productId })
+    if (error) throw error
+  }
+}
+
+/** The supplier's page for this product ("Order link"). */
+export async function setOrderUrl(productId: string, url: string | null): Promise<void> {
+  const { error } = await db.from('hopshop_products').update({ order_url: url }).eq('id', productId)
+  if (error) throw error
+}
+
+/** Put whole packs on order: "2 cases of 12" puts 24 on order. */
+export async function orderPacks(productId: string, packId: string, packs: number): Promise<StockCard> {
+  const { data, error } = await db.rpc('hopshop_order_packs', { p_product_id: productId, p_pack_id: packId, p_packs: packs })
+  if (error) throw error
+  return data as StockCard
+}
+
+export interface PackChoice {
+  packId: string
+  count: number
+}
+
+/** The pack the reorder list suggests: the default one, or else the smallest. */
+export function defaultPack(p: StockCard): Pack | null {
+  const packs = p.packs ?? []
+  if (packs.length === 0) return null
+  return packs.find((k) => k.is_default) ?? [...packs].sort((a, b) => a.units - b.units)[0]
+}
+
+/** What to aim for: the reorder quantity, or enough to get back above the reorder point — whichever is more. */
+export function unitsWanted(p: StockCard): number {
+  const short = p.reorder_point != null ? p.reorder_point - (p.quantity ?? 0) + 1 : 0
+  return Math.max(1, p.reorder_qty ?? 0, short)
+}
+
+/** Whole packs to cover what's wanted, never below the supplier's minimum. */
+export function packsFor(p: StockCard, k: Pack): number {
+  return Math.max(k.min_packs || 1, Math.ceil(unitsWanted(p) / Math.max(1, k.units)))
+}
+
+export function suggestPacks(p: StockCard): PackChoice | null {
+  const k = defaultPack(p)
+  return k ? { packId: k.id, count: packsFor(p, k) } : null
+}
+
+function plural(label: string): string {
+  if (!/[a-z]$/i.test(label)) return label
+  if (/(s|x|z|ch|sh)$/i.test(label)) return `${label}es`
+  if (/[^aeiou]y$/i.test(label)) return `${label.slice(0, -1)}ies`
+  return `${label}s`
+}
+
+/** "2 cases of 12" · "6 singles" · "1 box of 24" */
+export function packName(k: Pack, count: number): string {
+  const label = k.label.trim().toLowerCase() || 'pack'
+  const word = count === 1 ? label : plural(label)
+  return k.units === 1 ? `${count} ${word}` : `${count} ${word} of ${k.units}`
+}
+
+/** "2 cases of 12 (24) · $58.00" */
+export function packLine(k: Pack, count: number): string {
+  const units = k.units === 1 ? '' : ` (${count * k.units})`
+  const cost = k.cost_cents != null ? ` · ${money(k.cost_cents * count)}` : ''
+  return `${packName(k, count)}${units}${cost}`
+}
+
+/** "$2.42 each", from what one pack costs. */
+export function eachFromPack(k: { cost_cents: number | null; units: number }): string | null {
+  if (k.cost_cents == null || !k.units) return null
+  return `$${(k.cost_cents / k.units / 100).toFixed(2)} each`
+}
+
+export function packOf(p: StockCard, choice: PackChoice | null | undefined): Pack | null {
+  return (choice && p.packs?.find((k) => k.id === choice.packId)) || null
+}
+
+/** What one reorder line would cost, when the cost is known. */
+export function lineCost(p: StockCard, choice: PackChoice | null | undefined): number | null {
+  const k = packOf(p, choice)
+  if (k && choice) return k.cost_cents != null ? k.cost_cents * choice.count : null
+  return p.cost_cents != null ? p.cost_cents * (p.reorder_qty ?? 1) : null
+}
+
+/** "$75 minimum · free shipping" → 7500, when the minimum is written in dollars. */
+export function minOrderCents(min: string | null | undefined): number | null {
+  const m = min?.match(/\$\s*(\d+(?:\.\d{1,2})?)/)
+  return m ? Math.round(parseFloat(m[1]) * 100) : null
+}
+
+/** "2 cases of 12 (24) ordered" — what went on order, in packs when it was ordered that way. */
+export function onOrderText(p: StockCard): string {
+  const k = p.ordered_pack_id ? p.packs?.find((x) => x.id === p.ordered_pack_id) : null
+  if (k && p.ordered_packs) return `${packName(k, p.ordered_packs)} (${p.on_order_qty}) ordered`
+  return `${p.on_order_qty} ordered`
+}
+
+/**
+ * The plain-text order for one supplier — pasted into an email or read out on
+ * the phone: each item with their item number, the packs and how many that is.
+ */
+export function orderText(
+  supplierName: string,
+  items: StockCard[],
+  accountNumber?: string | null,
+  choices?: Record<string, PackChoice | undefined>,
+): string {
   const lines = items.map((p) => {
+    const choice = choices?.[p.id] ?? suggestPacks(p)
+    const k = packOf(p, choice)
+    if (k && choice) {
+      const sku = k.supplier_sku || p.supplier_sku
+      const units = k.units === 1 ? '' : ` (${choice.count * k.units} in all)`
+      return `• ${p.name}${sku ? ` — item ${sku}` : ''} — ${packName(k, choice.count)}${units}`
+    }
     const qty = p.reorder_qty ?? 1
     const unit = p.unit ? ` ${p.unit}` : ''
     const sku = p.supplier_sku ? ` (item ${p.supplier_sku})` : ''

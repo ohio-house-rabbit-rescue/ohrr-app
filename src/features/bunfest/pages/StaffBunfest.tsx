@@ -18,7 +18,9 @@ import { errMessage } from '../../../lib/supabase'
 import { Screen, Card, Badge, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
-import { listSuppliers, saveSupplier, type Supplier } from '../../hopshop/api'
+import { listSuppliers, type Supplier } from '../../hopshop/api'
+import { giftTotals, type GiftTotals } from '../../hopshop/companies'
+import { CompanyForm, CompanySummary, CompanyThumb, useVendorRecordsReady } from '../../hopshop/CompanyForm'
 import StaffFloor from './StaffFloor'
 import StaffSpeakers from './StaffSpeakers'
 import {
@@ -32,7 +34,6 @@ import {
   type PresenterRow,
   savePartner,
   saveSession,
-  saveVendorDetails,
   sessionYears,
   toTime,
   SESSION_KINDS,
@@ -526,13 +527,34 @@ function VendorsTab({ orgId }: { orgId: string }) {
     void load()
   }, [load])
 
+  // Gift counts and totals for the summary on each row (update 27).
+  const ready = useVendorRecordsReady()
+  const [gifts, setGifts] = useState<Map<string, GiftTotals> | null>(null)
+  const loadGifts = useCallback(async () => {
+    if (!ready || !orgId) return
+    try {
+      setGifts(await giftTotals(orgId))
+    } catch {
+      setGifts(null)
+    }
+  }, [ready, orgId])
+  useEffect(() => {
+    void loadGifts()
+  }, [loadGifts])
+
+  const done = async () => {
+    setEditing(null)
+    await load()
+  }
+  const yearPicker = (years: number[], onChange: (years: number[]) => void) => <YearChips value={years} onChange={onChange} />
   const published = (rows ?? []).filter((r) => r.vendor_published).length
 
   return (
     <div className="space-y-3">
       <Card className="text-sm text-slate-600">
-        A vendor is a company in the Hop Shop <strong>Suppliers</strong> list with “Vendor” ticked. Add their booth
-        here; what you write under <strong>About them</strong> is what visitors read.{' '}
+        A vendor is a company in the Hop Shop <strong>Suppliers</strong> list with “Vendor” ticked. Visitors see the name,
+        category, <strong>About them</strong> and website; everything else on the card — contact, photo, paperwork, fees,
+        what they’ve given — is for the team only.{' '}
         {rows && rows.length > 0 && (
           <span className="font-semibold text-ink">
             {published} of {rows.length} published.
@@ -550,18 +572,21 @@ function VendorsTab({ orgId }: { orgId: string }) {
       {rows?.map((r) =>
         editing === r.id ? (
           <Card key={r.id}>
-            <VendorForm
+            <p className="mb-3 font-display text-[15px] font-extrabold text-ink">{r.name}</p>
+            <CompanyForm
               orgId={orgId}
               initial={r}
-              onDone={async () => {
-                setEditing(null)
-                await load()
-              }}
+              mode="bunfest"
+              onSaved={done}
+              onCancel={() => setEditing(null)}
+              onGiftsChanged={() => void loadGifts()}
+              yearPicker={yearPicker}
             />
           </Card>
         ) : (
           <Card key={r.id} className="space-y-1">
             <div className="flex items-start gap-3">
+              <CompanyThumb c={r} />
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-1.5">
                   <span className="font-display text-[15px] font-extrabold text-ink">{r.name}</span>
@@ -573,9 +598,10 @@ function VendorsTab({ orgId }: { orgId: string }) {
                     .filter(Boolean)
                     .join(' · ') || 'No booth details yet'}
                 </span>
+                <CompanySummary c={r} gifts={gifts?.get(r.id)} />
               </span>
-              <button type="button" onClick={() => setEditing(r.id)} className="shrink-0 text-sm font-bold text-brand-blue">
-                Edit
+              <button type="button" onClick={() => setEditing(r.id)} className="min-h-[44px] shrink-0 px-2 text-sm font-bold text-brand-blue">
+                Open
               </button>
             </div>
           </Card>
@@ -584,115 +610,15 @@ function VendorsTab({ orgId }: { orgId: string }) {
 
       {editing === 'new' ? (
         <Card>
-          <VendorForm
-            orgId={orgId}
-            initial={null}
-            onDone={async () => {
-              setEditing(null)
-              await load()
-            }}
-          />
+          <p className="mb-3 font-display text-[15px] font-extrabold text-ink">New vendor</p>
+          <CompanyForm orgId={orgId} initial={null} mode="bunfest" onSaved={done} onCancel={() => setEditing(null)} yearPicker={yearPicker} />
         </Card>
       ) : (
-        <button type="button" onClick={() => setEditing('new')} className={`${btn.outline} w-full`}>
+        <button type="button" onClick={() => setEditing('new')} className={`${btn.outline} min-h-[44px] w-full`}>
           <Icon name="plus" size={16} /> Add a vendor
         </button>
       )}
     </div>
-  )
-}
-
-function VendorForm({ orgId, initial, onDone }: { orgId: string; initial: Supplier | null; onDone: () => Promise<void> }) {
-  const [d, setD] = useState({
-    name: initial?.name ?? '',
-    website: initial?.website ?? '',
-    category: initial?.vendor_category ?? '',
-    blurb: initial?.vendor_blurb ?? '',
-    booth: initial?.vendor_booth ?? '',
-    room: (initial?.vendor_room ?? '') as 'burgundy' | 'emerald' | '',
-    tables: String(initial?.vendor_tables ?? 1),
-    published: initial?.vendor_published ?? false,
-    sort: String(initial?.vendor_sort ?? 0),
-    years: initial?.vendor_years ?? [new Date().getFullYear()],
-  })
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const txt = (k: keyof typeof d) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value })
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
-    setBusy(true)
-    setError(null)
-    try {
-      let website = d.website.trim() || null
-      if (website && !/^https?:\/\//i.test(website)) website = `https://${website}`
-      // A new vendor is a new company in the shared list, marked vendor-only.
-      const saved = await saveSupplier({
-        ...(initial ? { id: initial.id } : {}),
-        org_id: orgId,
-        name: d.name.trim(),
-        is_vendor: true,
-        is_supplier: initial?.is_supplier ?? false,
-        website,
-      })
-      await saveVendorDetails(saved.id, {
-        category: d.category.trim() || null,
-        blurb: d.blurb.trim() || null,
-        booth: d.booth.trim() || null,
-        room: d.room || null,
-        tables: Math.max(1, Math.min(4, Number(d.tables) || 1)),
-        published: d.published,
-        sort: Number(d.sort) || 0,
-        years: d.years,
-      })
-      await onDone()
-    } catch (err) {
-      setError(errMessage(err))
-      setBusy(false)
-    }
-  }
-
-  return (
-    <form onSubmit={submit} className="space-y-3">
-      <label className="block text-sm font-semibold text-slate-700">
-        Company
-        <input className={staffInput} required value={d.name} onChange={txt('name')} placeholder="Bunny Brook Designs" />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        Their website / shop
-        <input className={staffInput} inputMode="url" value={d.website} onChange={txt('website')} placeholder="bunnybrookdesigns.com" />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        Category
-        <input className={staffInput} value={d.category} onChange={txt('category')} placeholder="Jewelry & Gifts" />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        About them (visitors read this)
-        <textarea className={staffInput} rows={2} value={d.blurb} onChange={txt('blurb')} placeholder="Handmade bunny-themed jewelry, home decor and ornaments." />
-      </label>
-      <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
-        Their table numbers are set on the <strong>Floor plan</strong> tab, beside everyone else’s,
-        so two stands can’t be given the same table.
-      </p>
-      <label className="block text-sm font-semibold text-slate-700">
-        Order in the list
-        <input inputMode="numeric" className={staffInput} value={d.sort} onChange={(e) => setD({ ...d, sort: e.target.value.replace(/[^0-9]/g, '') })} />
-      </label>
-      <YearChips value={d.years} onChange={(years) => setD({ ...d, years })} />
-      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <input
-          type="checkbox"
-          className="h-5 w-5 rounded border-slate-300 text-brand-blue"
-          checked={d.published}
-          onChange={(e) => setD({ ...d, published: e.target.checked })}
-        />
-        Show this vendor to visitors
-      </label>
-      <FormError>{error}</FormError>
-      <button type="submit" disabled={busy || !d.name.trim()} className={`${btn.primary} w-full disabled:opacity-60`}>
-        {busy ? 'Saving…' : 'Save'}
-      </button>
-    </form>
   )
 }
 
