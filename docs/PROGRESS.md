@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (street address off public pages; orange Volunteer; doors on inner pages; updates 21 + 22 waiting)
+- **Last updated:** 2026-09-24 (updates 21 + 22 applied and checked live; nothing to run)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -20,7 +20,7 @@
 ## Current state (at a glance)
 
 - **Street address off public pages; orange Volunteer; doors on inner pages (2026-09-24, latest;
-  website `0685cac`, app `6ce2830` + `7f23900`; update 22 waiting).** Sponsor: "minimize the address
+  website `0685cac`, app `6ce2830` + `7f23900`; update 22 applied and checked live 2026-09-24).** Sponsor: "minimize the address
   exposure … people will drop a bunny off at the rescue and then we are forced to take it."
   - **Address rule (app + website):** public screens say "Columbus, Ohio" (website `OHRR.place`);
     no street, ZIP, directions or map link for OHRR's own location. A visiting note says visits are by
@@ -32,8 +32,10 @@
     letters dropped the street. **Kept:** supplier order emails, staff booking defaults, the org
     profile (staff settings) and letters about one volunteer. The app also hides the phone and
     address on OHRR's own BunFest partner row.
-  - **Update 22** (`supabase/migrations/20260924130000_hide_ohrr_street_address.sql`) clears the
-    street from OHRR's own `rescue_partners` row (shown on website, app and BunFest site).
+  - **Update 22** (`supabase/migrations/20260924130000_hide_ohrr_street_address.sql`) cleared the
+    street from OHRR's own `rescue_partners` row (shown on website, app and BunFest site); applied and
+    checked on the live website and BunFest rescues pages 2026-09-24. **Update 21** (the socialization
+    health note) applied and checked on the live Volunteer page the same day. Nothing to run.
   - **Menu:** Volunteer is orange on the website (`--color-brand-orange-nav: #b35900`, 4.8:1 on
     white, the brightest brand-hue orange that passes AA).
   - **Inner pages get the home page's layout:** `PageHero` takes `doors` (2–3 main actions,
