@@ -10,6 +10,7 @@ import {
   volunteerFamily,
   familyThanks,
 } from '../data/about'
+import { mapsUrl } from '../lib/events'
 import { PageHeader, Screen, Card, SectionLabel, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 
@@ -42,24 +43,30 @@ export default function About() {
           <img src="/ohrr-logo.jpg" alt="Ohio House Rabbit Rescue" className="w-60 max-w-full" />
         </div>
 
-        {/* Visit & contact. No street address here: it comes with a booking,
-            so nobody is sent to the door with a rabbit OHRR hasn't accepted. */}
+        {/* Visit & contact — one of the two screens with the street address
+            (see ohrr.address), with the no-drop-off note right under it. */}
         <Card className="space-y-3">
           <h3 className="font-display text-base font-extrabold text-ink">OHRR Adoption Center</h3>
           <Row icon="mappin">
-            <p className="font-semibold text-ink">Visiting the Adoption Center</p>
-            <p className="mt-0.5 leading-relaxed text-slate-600">
-              The Adoption Center is in Columbus, Ohio. Visits are by appointment, and we send the address
-              with your appointment or volunteer shift. For anything else,{' '}
+            <a
+              href={mapsUrl(ohrr.address)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-brand-blue underline decoration-brand-blue/30 underline-offset-2"
+            >
+              {ohrr.addressLine1}, {ohrr.addressLine2}
+            </a>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">{ohrr.directions}</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
+              Visits are by appointment, so please{' '}
               <a
                 href={`mailto:${org.email}`}
                 className="font-semibold text-brand-blue underline decoration-brand-blue/30 underline-offset-2"
               >
                 email us
               </a>{' '}
-              first.
+              before you come. {ohrr.noDropOffNote}
             </p>
-            <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{ohrr.noDropOffNote}</p>
           </Row>
           <Row icon="clock">
             <span className="font-semibold text-ink">Hop Shop hours:</span>{' '}
