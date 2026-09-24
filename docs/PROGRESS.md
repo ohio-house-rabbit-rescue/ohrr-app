@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (updates 25–28 applied and checked live; Legacy Fund page + Rescue Rabbit Guardians list; **update 29 to run**)
+- **Last updated:** 2026-09-24 (Legacy Fund page + Rescue Rabbit Guardians list; updates 25–29 applied and checked live; nothing to run, next is 30)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,8 +19,8 @@
 
 ## Current state (at a glance)
 
-- **Legacy Fund, 2026-09-24 (latest; website `f175ed8` + app the same day; update 29 to run — Drive RUN-THIS and
-  `Supabase history/APPLY-29.sql`).** Updates 25–28 were run and checked live the same day (anon REST:
+- **Legacy Fund, 2026-09-24 (latest; website `f175ed8` + app `b253c67`; update 29 applied and checked live the same day —
+  47 published 2026 names, anon insert refused; `Supabase history/APPLY-29 (applied 2026-09-24).sql`).** Updates 25–28 were run and checked live the same day (anon REST:
   `volunteer_check` answers with a role, `count_posts_to_approve`, `level_rank`, and the new staff tables
   refuse anon). OHRR on the Legacy Fund proposal: "the legacy donors just follow the existing website
   details for now" — so the contact stays Pat Barron (pbarronosu@aol.com), the Guardians stay one group
