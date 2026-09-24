@@ -3,6 +3,10 @@
 // reminder / calendar entry and a private cancel link. Every rule (capacity,
 // lead time, per-month limit) is enforced in the database; this page just
 // explains the answer it gets back.
+//
+// Some shifts are for approved volunteers only (the type's approval_role, from
+// update 25): those ask for the email the person applied with first, and only
+// show the times once it checks out.
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { PageHeader, Screen, Card, SectionLabel, btn } from '../../../components/ui'
@@ -14,6 +18,8 @@ import { ohrr } from '../../../data/ohrr'
 import { bookSlot, getBookingType, openSlots } from '../api'
 import { rememberBooking } from '../mine'
 import NotifyMe from '../NotifyMe'
+import ApprovalGate from '../../volunteers/ApprovalGate'
+import { checkMessage } from '../../volunteers/approval'
 
 // Friendly names for the things OHRR hasn't published times for yet, so the
 // "no dates" screen can say what it's about.
@@ -38,6 +44,9 @@ export default function BookPage() {
   const [error, setError] = useState<string | null>(null)
   const [picked, setPicked] = useState<OpenSlot | null>(null)
   const [receipt, setReceipt] = useState<BookingReceipt | null>(null)
+  // Approved-only shifts: the email that checked out, or "anyone can book after all".
+  const [approved, setApproved] = useState<{ email: string; firstName?: string } | null>(null)
+  const [openToAll, setOpenToAll] = useState(false)
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -100,6 +109,8 @@ export default function BookPage() {
 
   const isShift = type.kind === 'shift'
   const reqs = (type.requirements ?? '').split('\n').map((s) => s.trim()).filter(Boolean)
+  const role = type.approval_role ?? null
+  const gated = Boolean(role) && !approved && !openToAll
 
   return (
     <>
@@ -136,7 +147,35 @@ export default function BookPage() {
 
         {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
 
-        {!picked ? (
+        {approved && (
+          <div className="flex items-center gap-3 rounded-2xl bg-green-50 py-1.5 pl-4 pr-2 text-green-800">
+            <Icon name="check" size={20} className="shrink-0" />
+            <p className="min-w-0 flex-1 break-words text-base">
+              <span className="font-bold">{checkMessage({ state: 'approved', firstName: approved.firstName }).title}</span> Signing up as{' '}
+              {approved.email}.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setApproved(null)
+                setPicked(null)
+              }}
+              className="inline-flex min-h-[44px] shrink-0 items-center px-2 text-sm font-bold text-brand-blue underline underline-offset-2"
+            >
+              Not you?
+            </button>
+          </div>
+        )}
+
+        {gated && role ? (
+          <ApprovalGate
+            where={{ type: slug }}
+            role={role}
+            what={type.name}
+            onApproved={(email, firstName) => setApproved({ email, firstName })}
+            onOpen={() => setOpenToAll(true)}
+          />
+        ) : !picked ? (
           <section className="space-y-2.5">
             <SectionLabel>Pick a time</SectionLabel>
             {slots === null && !error && <Spinner label="Finding open times…" />}
@@ -181,6 +220,7 @@ export default function BookPage() {
           <BookForm
             type={type}
             slot={picked}
+            lockedEmail={approved?.email}
             initialAnswer={params.get('rabbit') ?? ''}
             onBack={() => setPicked(null)}
             onBooked={(r) => {
@@ -198,6 +238,7 @@ export default function BookPage() {
 function BookForm({
   type,
   slot,
+  lockedEmail,
   initialAnswer,
   onBack,
   onBooked,
@@ -205,12 +246,14 @@ function BookForm({
 }: {
   type: BookingType
   slot: OpenSlot
+  /** The approved email (approved-only shifts): the booking must use it. */
+  lockedEmail?: string
   initialAnswer: string
   onBack: () => void
   onBooked: (r: BookingReceipt) => void
   onRefresh: () => void
 }) {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', answer: initialAnswer, notes: '' })
+  const [form, setForm] = useState({ name: '', email: lockedEmail ?? '', phone: '', answer: initialAnswer, notes: '' })
   const [party, setParty] = useState(1)
   const [attested, setAttested] = useState(false)
   const [status, setStatus] = useState<'idle' | 'submitting'>('idle')
@@ -263,7 +306,14 @@ function BookForm({
         </label>
         <label className="block text-sm font-semibold text-slate-700">
           Email
-          <input className={input} type="email" required value={form.email} onChange={set('email')} autoComplete="email" inputMode="email" />
+          {lockedEmail ? (
+            <>
+              <input className={`${input} !bg-slate-50 !text-slate-600`} type="email" readOnly value={lockedEmail} />
+              <span className="mt-1 block text-xs font-normal text-slate-500">The email you applied with.</span>
+            </>
+          ) : (
+            <input className={input} type="email" required value={form.email} onChange={set('email')} autoComplete="email" inputMode="email" />
+          )}
         </label>
         <label className="block text-sm font-semibold text-slate-700">
           Phone

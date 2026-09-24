@@ -26,6 +26,11 @@ export interface BookingType {
   /** Standing weekly schedule; the database keeps `auto_weeks` weeks of times filled from it. */
   weekly: WeeklyRule[]
   auto_weeks: number
+  /**
+   * Who can book: approved volunteers of this kind ('socialization', 'buncare' …);
+   * null = anyone. Undefined until update 25 adds the column — treat it as null.
+   */
+  approval_role?: string | null
 }
 
 /** One line of a weekly schedule: "Sat + Sun, 1:30–2:30 pm, 4 people". `days`: 0 = Sunday. */

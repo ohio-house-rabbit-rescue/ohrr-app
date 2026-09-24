@@ -1,6 +1,7 @@
 // Hand a file to whoever is using the app: the share sheet inside the
 // Android/iOS build (a blob download can't reach Files there), an ordinary
-// download on the web. Used for CSV exports from the staff screens.
+// download on the web. Used for CSV exports from the staff screens, and for
+// the PDF hours letter a volunteer makes on their own page.
 import { isNative } from '../native/platform'
 
 /** Quote a CSV cell the way spreadsheets expect. */
@@ -16,7 +17,11 @@ export function toCsv(headers: string[], rows: unknown[][]): string {
 
 /** Save or share a CSV. Resolves 'shared' | 'saved' | 'cancelled' | 'failed'. */
 export async function exportCsv(filename: string, csv: string): Promise<'shared' | 'saved' | 'cancelled' | 'failed'> {
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  return exportBlob(filename, new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+}
+
+/** Save or share any file (a CSV, a volunteer's PDF letter): the share sheet in the phone app, a download on the web. */
+export async function exportBlob(filename: string, blob: Blob): Promise<'shared' | 'saved' | 'cancelled' | 'failed'> {
   if (isNative) {
     const { shareFileNative } = await import('../native/share')
     const r = await shareFileNative(blob, filename, undefined, filename)

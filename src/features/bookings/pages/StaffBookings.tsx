@@ -34,6 +34,7 @@ import {
   type WeeklyRule,
 } from '../types'
 import HoursTab from './HoursTab'
+import { APPROVAL_KINDS, kindLabel } from '../../volunteers/approval'
 
 type Tab = 'roster' | 'times' | 'hours' | 'setup'
 
@@ -497,6 +498,11 @@ function Setup({ orgId, types, onChanged }: { orgId: string; types: BookingType[
                 {t.max_per_month ? ` · max ${t.max_per_month}/month` : ''}
                 {t.confirm_mode === 'staff' ? ' · staff confirms' : ''} · /book/{t.slug}
               </span>
+              {t.approval_role && (
+                <span className="mt-1 block text-xs font-semibold text-slate-700">
+                  Only volunteers approved for {kindLabel(t.approval_role)}
+                </span>
+              )}
               {t.weekly.length > 0 ? (
                 <span className="mt-1 block text-xs text-slate-600">
                   <span className="font-bold text-brand-blue">Every week:</span> {fmtWeekly(t.weekly).join(' · ')}
@@ -560,6 +566,7 @@ function TypeForm({ initial, onSaved }: { initial: Partial<BookingType> & { org_
         location: d.location || null,
         ask_reason: d.ask_reason || null,
         attest_text: d.attest_text || null,
+        approval_role: d.approval_role || null,
         max_per_month: d.max_per_month || null,
         auto_weeks: Math.min(26, Math.max(1, Number(d.auto_weeks) || 8)),
         weekly: (d.weekly ?? [])
@@ -596,6 +603,23 @@ function TypeForm({ initial, onSaved }: { initial: Partial<BookingType> & { org_
           </select>
         </label>
       </div>
+      <label className="block text-sm font-semibold text-slate-700">
+        Who can book
+        <select className={staffInput} value={d.approval_role ?? ''} onChange={(e) => setD({ ...d, approval_role: e.target.value || null })}>
+          <option value="">Anyone</option>
+          {d.approval_role && !APPROVAL_KINDS.some((k) => k.value === d.approval_role) && (
+            <option value={d.approval_role}>Approved volunteers for {kindLabel(d.approval_role)}</option>
+          )}
+          {APPROVAL_KINDS.map((k) => (
+            <option key={k.value} value={k.value}>
+              Approved volunteers for {k.label}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-xs font-normal text-slate-500">
+          Approved-only: people enter the email they applied with before they see the times.
+        </span>
+      </label>
       <label className="block text-sm font-semibold text-slate-700">
         What it is (shown to people)
         <textarea className={staffInput} rows={2} value={d.description ?? ''} onChange={txt('description')} />

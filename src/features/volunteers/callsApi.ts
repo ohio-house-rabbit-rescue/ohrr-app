@@ -78,6 +78,21 @@ export async function saveCall(orgId: string, call: Partial<CallRow>): Promise<{
   return data as { id: string; slug: string; shifts: number; orphaned: number }
 }
 
+/**
+ * Who can sign up for a call: approved volunteers of one kind, or anyone
+ * (null). The database copies it onto the call's shifts. Returns false when
+ * the database doesn't have the setting yet (before update 25) — then
+ * everyone can sign up, as before.
+ */
+export async function setCallApproval(id: string, role: string | null): Promise<boolean> {
+  const { error } = await supabase.from('volunteer_calls').update({ approval_role: role }).eq('id', id)
+  if (error) {
+    if (/approval_role|schema cache/i.test(error.message ?? '')) return false
+    throw error
+  }
+  return true
+}
+
 export async function deleteCall(id: string): Promise<void> {
   const { error } = await supabase.from('volunteer_calls').delete().eq('id', id)
   if (error) throw error

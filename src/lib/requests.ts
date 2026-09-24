@@ -9,6 +9,7 @@ export type RequestKind =
   | 'service-signup'
   | 'surrender-intake'
   | 'volunteer-signup'
+  | 'volunteer-application'
   | 'happy-tail'
   | 'raffle-request'
   | 'reserve-session'
@@ -40,6 +41,8 @@ function summarize(kind: RequestKind, f: RequestFields): string {
       return pick('type', 'bunnyName', 'bunny_name') || 'Surrender intake'
     case 'volunteer-signup':
       return pick('role', 'item') || 'Volunteer'
+    case 'volunteer-application':
+      return 'Volunteer application'
     case 'happy-tail':
       return pick('bunny') || 'Happy Tail'
     case 'raffle-request':

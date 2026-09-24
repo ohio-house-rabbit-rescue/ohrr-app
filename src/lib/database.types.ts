@@ -1233,6 +1233,15 @@ export type Database = {
           hours_for: 'school' | 'military' | 'workplace' | 'community' | 'other' | null
           /** School, branch, employer … whatever that letter asks for. */
           letter_details: Record<string, string>
+          // Applications and approvals (supabase/migrations/20260924190000_volunteer_approval_and_letters.sql)
+          /** What they may sign up for: kinds such as 'socialization' or 'buncare', or '*' for everything. */
+          approved_for: string[]
+          review_status: 'pending' | 'approved' | 'declined' | null
+          applied_at: string | null
+          /** Their answers on the application form, plus 'kinds' (what they'd like to do). */
+          application: { [key: string]: Json | undefined }
+          reviewed_at: string | null
+          reviewed_by: string | null
           created_by: string | null
           created_at: string
           updated_at: string
@@ -1251,6 +1260,10 @@ export type Database = {
           photo_url?: string | null
           hours_for?: 'school' | 'military' | 'workplace' | 'community' | 'other' | null
           letter_details?: Record<string, string>
+          approved_for?: string[]
+          review_status?: 'pending' | 'approved' | 'declined' | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           created_by?: string | null
         }
         Update: {
@@ -1265,6 +1278,73 @@ export type Database = {
           photo_url?: string | null
           hours_for?: 'school' | 'military' | 'workplace' | 'community' | 'other' | null
           letter_details?: Record<string, string>
+          approved_for?: string[]
+          review_status?: 'pending' | 'approved' | 'declined' | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+        }
+        Relationships: []
+      }
+      // A self-serve hours letter, recorded under the code printed on it so a
+      // school or employer can check it (20260924190000_volunteer_approval_and_letters.sql).
+      // Written only by issue_my_letter(); staff can read them.
+      volunteer_letters: {
+        Row: {
+          /** "K7Q2-M9XP" */
+          code: string
+          org_id: string
+          volunteer_id: string | null
+          name: string
+          kind: 'school' | 'military' | 'workplace' | 'general' | 'certificate'
+          period_from: string
+          period_to: string
+          total_hours: number
+          details: Record<string, string>
+          issued_by: 'self' | 'staff'
+          created_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      // Certificates are OHRR's to give (update 25, Part 8): the hours marks the
+      // top tier sets, and the certificates to consider when a volunteer makes a
+      // letter or passes a mark. Both need "volunteers.certificates".
+      volunteer_settings: {
+        Row: {
+          org_id: string
+          /** e.g. [25, 50, 100, 250] */
+          certificate_hours: number[]
+          updated_by: string | null
+          updated_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      certificate_suggestions: {
+        Row: {
+          id: string
+          org_id: string
+          volunteer_id: string
+          reason: 'letter' | 'hours'
+          /** Their confirmed hours when it was suggested. */
+          hours: number | null
+          /** The mark they passed (reason 'hours'). */
+          milestone: number | null
+          /** The letter they made (reason 'letter'). */
+          letter_code: string | null
+          letter_kind: string | null
+          status: 'open' | 'made' | 'dismissed'
+          handled_by: string | null
+          handled_at: string | null
+          created_at: string
+        }
+        Insert: never
+        Update: {
+          status?: 'open' | 'made' | 'dismissed'
+          handled_by?: string | null
+          handled_at?: string | null
         }
         Relationships: []
       }
@@ -1463,6 +1543,8 @@ export type Database = {
           closes_on: string | null
           type_id: string | null
           is_published: boolean
+          /** Who can sign up: approved volunteers of this kind ('events' …); null = anyone. Update 25. */
+          approval_role: string | null
           created_by: string | null
           created_at: string
           updated_at: string
@@ -1475,10 +1557,12 @@ export type Database = {
           on_date: string
           starts_at: string
           ends_at: string
+          approval_role?: string | null
         }
         Update: {
           title?: string
           is_published?: boolean
+          approval_role?: string | null
         }
         Relationships: []
       }
@@ -1753,6 +1837,9 @@ export type Database = {
           weekly: Json
           auto_weeks: number
           slots_filled_on: string | null
+          // Who can book (supabase/migrations/20260924190000_volunteer_approval_and_letters.sql):
+          // approved volunteers of this kind ('socialization', 'buncare' …); null = anyone.
+          approval_role: string | null
           created_at: string
           updated_at: string
         }
@@ -1777,6 +1864,7 @@ export type Database = {
           sort_order?: number
           weekly?: Json
           auto_weeks?: number
+          approval_role?: string | null
         }
         Update: {
           slug?: string
@@ -1797,6 +1885,7 @@ export type Database = {
           sort_order?: number
           weekly?: Json
           auto_weeks?: number
+          approval_role?: string | null
         }
         Relationships: []
       }
@@ -2513,6 +2602,38 @@ export type Database = {
         Returns: string
       }
       hopshop_set_order: { Args: { p_product_id: string; p_action: 'ordered' | 'received' | 'clear'; p_qty?: number | null }; Returns: Json }
+      // Volunteers apply, staff approve; self-serve hours letters
+      // (supabase/migrations/20260924190000_volunteer_approval_and_letters.sql)
+      apply_to_volunteer: {
+        Args: {
+          p_name: string
+          p_email: string
+          p_phone: string | null
+          p_kinds: string[]
+          p_answers: Json
+          p_hours_for?: string | null
+          p_source?: string | null
+        }
+        /** { state: 'received' } */
+        Returns: Json
+      }
+      volunteer_check: {
+        Args: { p_email: string; p_type_slug?: string | null; p_call_slug?: string | null }
+        /** { state: 'open' | 'approved' | 'pending' | 'other' | 'not_yet' | 'unknown' | 'invalid' | 'closed', role?, first_name? } */
+        Returns: Json
+      }
+      issue_my_letter: {
+        Args: { p_token: string; p_kind: string; p_from: string; p_to: string; p_details?: Json }
+        /** { code, name, from, to, lines: [{ on_date, activity, hours }], total, pending, issued_on } */
+        Returns: Json
+      }
+      verify_volunteer_letter: {
+        Args: { p_code: string }
+        /** { code, name, kind, from, to, total_hours, issued_on } or null */
+        Returns: Json
+      }
+      /** Save the hours marks; returns how many new certificate suggestions it made for people already past one. */
+      set_certificate_hours: { Args: { p_org: string; p_hours: number[] }; Returns: number }
     }
     Enums: {
       membership_role: MembershipRole

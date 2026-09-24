@@ -8,7 +8,8 @@ import { Card, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { FormError, staffInput } from '../../../components/staffui'
 import { fmtClock, lengthText, needText, plannedShifts, type Call } from '../calls'
-import { deleteCall, saveCall, type CallRow } from '../callsApi'
+import { deleteCall, saveCall, setCallApproval, type CallRow } from '../callsApi'
+import { APPROVAL_KINDS, kindLabel } from '../approval'
 
 const LENGTHS = [60, 90, 120, 180, 240]
 
@@ -49,6 +50,8 @@ export default function CallEditor({
     requirements: initial?.requirements ?? '',
     closes_on: initial?.closes_on ?? '',
     is_published: initial?.is_published ?? true,
+    // New calls are for approved volunteers (Events & BunFest), as the database starts them.
+    approval_role: initial ? (initial.approval_role ?? '') : 'events',
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -120,12 +123,15 @@ export default function CallEditor({
         closes_on: d.closes_on || null,
         is_published: d.is_published,
       })
-      onSaved(
-        r.id,
+      // Who can sign up is its own column (update 25), set after the call is saved.
+      const roleSaved = await setCallApproval(r.id, d.approval_role || null)
+      const notes = [
         r.orphaned > 0
           ? `Saved. ${r.orphaned} ${r.orphaned === 1 ? 'shift has' : 'shifts have'} people on ${r.orphaned === 1 ? 'it' : 'them'} but no longer fit${r.orphaned === 1 ? 's' : ''} the hours — ${r.orphaned === 1 ? 'it’s' : 'they’re'} closed to new sign-ups; check under Sign-ups.`
-          : undefined,
-      )
+          : '',
+        !roleSaved && d.approval_role ? 'Anyone can sign up for now: “Who can sign up” starts working once update 25 has been run in Supabase.' : '',
+      ].filter(Boolean)
+      onSaved(r.id, notes.length ? notes.join(' ') : undefined)
     } catch (err) {
       setError(errMessage(err))
       setBusy(false)
@@ -230,6 +236,23 @@ export default function CallEditor({
         <label className="block text-sm font-semibold text-slate-700">
           Areas to pick from — one per line (optional)
           <textarea className={staffInput} rows={3} value={d.areas} onChange={txt('areas')} placeholder={'Glamour Shots\nHop Shop'} />
+        </label>
+        <label className="block text-sm font-semibold text-slate-700">
+          Who can sign up
+          <select className={staffInput} value={d.approval_role} onChange={txt('approval_role')}>
+            <option value="">Anyone</option>
+            {d.approval_role && !APPROVAL_KINDS.some((k) => k.value === d.approval_role) && (
+              <option value={d.approval_role}>Approved volunteers for {kindLabel(d.approval_role)}</option>
+            )}
+            {APPROVAL_KINDS.map((k) => (
+              <option key={k.value} value={k.value}>
+                Approved volunteers for {k.label}
+              </option>
+            ))}
+          </select>
+          <span className="mt-1 block text-xs font-normal text-slate-500">
+            Approved-only: people enter the email they applied with before they can pick a shift.
+          </span>
         </label>
         <label className="block text-sm font-semibold text-slate-700">
           Who can help

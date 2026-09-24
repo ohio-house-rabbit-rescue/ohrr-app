@@ -111,6 +111,7 @@ const StaffTails = lazy(() => import('./features/tails/pages/StaffTails'))
 const MyHours = lazy(() => import('./features/volunteers/pages/MyHours'))
 const StaffVolunteers = lazy(() => import('./features/volunteers/pages/StaffVolunteers'))
 const CallPage = lazy(() => import('./features/volunteers/pages/CallPage'))
+const ApplyPage = lazy(() => import('./features/volunteers/pages/ApplyPage'))
 const StaffCalls = lazy(() => import('./features/volunteers/pages/StaffCalls'))
 const StaffCallRoute = lazy(() => import('./features/volunteers/pages/StaffCalls').then((m) => ({ default: m.StaffCallRoute })))
 const PostEditor = lazy(() => import('./features/share/pages/PostEditor'))
@@ -156,6 +157,7 @@ export default function App() {
         <Route path="/thinking-about-a-rabbit" element={<Navigate to={RABBIT_READY} replace />} />
         <Route path="/volunteer" element={<Volunteer />} />
         <Route path="/volunteer/signup" element={<VolunteerSignup />} />
+        <Route path="/volunteer/apply" element={<Suspense fallback={null}><ApplyPage /></Suspense>} />
         <Route path="/volunteer/foster" element={<FosterForm />} />
         <Route path="/volunteer/hours" element={<Suspense fallback={null}><MyHours /></Suspense>} />
         <Route path="/volunteer/hours/:token" element={<Suspense fallback={null}><MyHours /></Suspense>} />

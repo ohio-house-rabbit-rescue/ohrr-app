@@ -26,9 +26,28 @@ export interface PaintableLetter {
   table?: { lines: HoursLine[]; total: number }
   closing?: string
   signer?: { name: string; title: string }
+  /** Write the signer's name as a signature (a volunteer's self-serve letter). */
+  signed?: boolean
+  /** "Check this letter at … — code K7Q2-M9XP", above the footer. */
+  verify?: string
   qr?: { url: string; caption: string }
   footer: string
   org: OrgHead
+}
+
+// The signature on a self-serve letter: the signer's name in a handwriting
+// face (Dancing Script, SIL Open Font License, bundled at /fonts so it works
+// offline). It is not an image of anyone's real signature.
+let sigFont: Promise<string> | null = null
+function signatureFont(): Promise<string> {
+  sigFont ??= new FontFace('OHRR Signature', 'url(/fonts/dancing-script-600.woff2)', { weight: '600' })
+    .load()
+    .then((f) => {
+      document.fonts.add(f)
+      return '"OHRR Signature"'
+    })
+    .catch(() => 'cursive')
+  return sigFont
 }
 
 const PAD = 150
@@ -168,6 +187,11 @@ export async function paintLetter(canvas: HTMLCanvasElement, d: PaintableLetter,
     ctx.font = '500 30px "Open Sans"'
     if (d.closing) ctx.fillText(d.closing, PAD, sy)
     if (d.signer) {
+      if (d.signed && d.signer.name) {
+        ctx.fillStyle = '#1e3a8a'
+        ctx.font = `600 76px ${await signatureFont()}`
+        ctx.fillText(d.signer.name, PAD + 10, sy + 96)
+      }
       ctx.fillStyle = '#94a3b8'
       ctx.fillRect(PAD, sy + 110, INNER / 2 - 40, 2)
       ctx.fillStyle = '#0f172a'
@@ -181,9 +205,14 @@ export async function paintLetter(canvas: HTMLCanvasElement, d: PaintableLetter,
     }
   }
 
+  ctx.textAlign = 'center'
+  if (d.verify) {
+    ctx.fillStyle = '#475569'
+    ctx.font = '600 24px "Open Sans"'
+    ctx.fillText(d.verify, LETTER_W / 2, LETTER_H - 118)
+  }
   ctx.fillStyle = '#94a3b8'
   ctx.font = '500 22px "Open Sans"'
-  ctx.textAlign = 'center'
   ctx.fillText(d.footer, LETTER_W / 2, LETTER_H - 80)
   ctx.textAlign = 'left'
 }
@@ -191,7 +220,19 @@ export async function paintLetter(canvas: HTMLCanvasElement, d: PaintableLetter,
 /** A certificate of appreciation — big, centred, made to be framed. */
 export async function paintCertificate(
   canvas: HTMLCanvasElement,
-  d: { name: string; lines: string[]; date: string; signer: { name: string; title: string }; org: OrgHead },
+  d: {
+    name: string
+    lines: string[]
+    date: string
+    signer: { name: string; title: string }
+    org: OrgHead
+    /** Write the signer's name as a signature (a volunteer's self-serve certificate). */
+    signed?: boolean
+    /** "Check this certificate at … — code K7Q2-M9XP", at the foot. */
+    verify?: string
+    /** The line over the name; default CERTIFICATE OF APPRECIATION (e.g. CERTIFICATE OF ACHIEVEMENT). */
+    heading?: string
+  },
   logoUrl = '/ohrr-mark.png',
 ): Promise<void> {
   const ctx = letterPage(canvas)
@@ -212,7 +253,7 @@ export async function paintCertificate(
   ctx.textAlign = 'center'
   ctx.fillStyle = BRAND_ORANGE
   ctx.font = '800 40px "Nunito"'
-  ctx.fillText('CERTIFICATE OF APPRECIATION', cx, y)
+  ctx.fillText((d.heading || 'Certificate of appreciation').toUpperCase(), cx, y)
   y += 170
   ctx.fillStyle = '#0f172a'
   let size = 110
@@ -235,6 +276,11 @@ export async function paintCertificate(
   // Signature and date, side by side near the bottom.
   const sy = LETTER_H - 520
   const w = 520
+  if (d.signed && d.signer.name) {
+    ctx.fillStyle = '#1e3a8a'
+    ctx.font = `600 80px ${await signatureFont()}`
+    ctx.fillText(d.signer.name, cx - w / 2 - 60, sy - 18)
+  }
   ctx.fillStyle = '#94a3b8'
   ctx.fillRect(cx - w - 60, sy, w, 2)
   ctx.fillRect(cx + 60, sy, w, 2)
@@ -246,5 +292,10 @@ export async function paintCertificate(
   ctx.font = '500 26px "Open Sans"'
   ctx.fillText(d.signer.title ? `${d.signer.title}, ${d.org.name}` : d.org.name, cx - w / 2 - 60, sy + 84)
   ctx.fillText('Date', cx + 60 + w / 2, sy + 84)
+  if (d.verify) {
+    ctx.fillStyle = '#64748b'
+    ctx.font = '600 24px "Open Sans"'
+    ctx.fillText(d.verify, cx, LETTER_H - 170)
+  }
   ctx.textAlign = 'left'
 }

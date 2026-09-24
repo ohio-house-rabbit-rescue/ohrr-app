@@ -4,10 +4,16 @@
 // no record of who they are, what they're cleared for, or whether they've done
 // their orientation. This is that record, plus the private link (and QR code)
 // each person uses to see and log their own hours.
+//
+// Update 25: new volunteers apply (/volunteer/apply) and wait here, at the top,
+// until someone approves them — for everything, or for certain kinds of
+// volunteering — or declines them. Each roster entry says what the person is
+// approved for; the certificate hours (for whoever makes certificates) are at
+// the foot.
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
-import { errMessage } from '../../../lib/supabase'
+import { errMessage, supabase } from '../../../lib/supabase'
 import { Screen, Card, Badge, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
@@ -15,6 +21,8 @@ import QrCode from '../../../components/QrCode'
 import { copyText, shareText } from '../../share/share'
 import { bccMailto, exportCsv, toCsv } from '../../../lib/exportFile'
 import {
+  approveVolunteer,
+  declineVolunteer,
   deleteHoursEntry,
   deleteVolunteer,
   hoursLabel,
@@ -25,16 +33,18 @@ import {
   statusLabel,
   unconfirmedHours,
   volunteerHours,
+  volunteerPageUrl,
   VOLUNTEER_ROLES,
   VOLUNTEER_STATUS,
   type HoursRow,
   type VolunteerRow,
 } from '../api'
+import { APPROVAL_KINDS, approvedText, EVERYTHING, kindLabel } from '../approval'
 
 type Tab = 'roster' | 'hours'
 
 export default function StaffVolunteers() {
-  const { membership } = useAuth()
+  const { membership, user, can } = useAuth()
   const orgId = membership?.orgId ?? ''
   const [tab, setTab] = useState<Tab>('roster')
   const [rows, setRows] = useState<VolunteerRow[] | null>(null)
@@ -65,6 +75,8 @@ export default function StaffVolunteers() {
         </p>
       </div>
 
+      {rows && <Applications rows={rows} userId={user?.id ?? null} onChanged={load} />}
+
       <div className="flex gap-2">
         {(
           [
@@ -89,7 +101,420 @@ export default function StaffVolunteers() {
       {rows === null && !error && <Spinner />}
       {rows && tab === 'roster' && <Roster orgId={orgId} rows={rows} onChanged={load} />}
       {rows && tab === 'hours' && <ToConfirm rows={rows} pending={pending} onChanged={load} />}
+      {orgId && can('volunteers.certificates') && <CertificateHours orgId={orgId} />}
     </Screen>
+  )
+}
+
+/* ========================================================= applications */
+
+type Decision = { kind: 'approved'; approvedFor: string[] } | { kind: 'declined' }
+
+const firstName = (v: VolunteerRow) => v.name.trim().split(/\s+/)[0] || v.name
+
+function mailto(v: VolunteerRow, subject: string, body: string): string {
+  return `mailto:${v.email ?? ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+}
+
+/** What they're approved for, their private page, and how to sign up. */
+function approvedMail(v: VolunteerRow, approvedFor: string[]): string {
+  const what = approvedFor.includes(EVERYTHING) ? 'every kind of volunteering we do' : approvedText(approvedFor)
+  return mailto(
+    v,
+    'You’re approved to volunteer with OHRR',
+    [
+      `Hi ${firstName(v)},`,
+      '',
+      `Thank you for applying to volunteer with Ohio House Rabbit Rescue. You’re approved for ${what}.`,
+      '',
+      'This link opens your own volunteer page. It shows what you’re signed up for and the hours you’ve given, and it makes a signed hours letter whenever you need one. Please keep it to yourself:',
+      hoursUrl(v.access_token),
+      '',
+      `To sign up for a shift, open the Volunteer page in the OHRR app (${volunteerPageUrl()}), pick a shift, and enter this email address — ${v.email ?? ''} — when it asks for the email you applied with.`,
+      '',
+      'Thank you for giving your time to the rabbits. We’re so glad to have you.',
+      '',
+      'Ohio House Rabbit Rescue',
+    ].join('\n'),
+  )
+}
+
+/** A kind note for someone OHRR can't take on. */
+function declinedMail(v: VolunteerRow): string {
+  return mailto(
+    v,
+    'Your OHRR volunteer application',
+    [
+      `Hi ${firstName(v)},`,
+      '',
+      'Thank you so much for applying to volunteer with Ohio House Rabbit Rescue, and for thinking of the rabbits.',
+      '',
+      'We’re not able to offer you a volunteer place right now. We’re a small, volunteer-run rescue and can only welcome so many new people at a time, so please don’t take it as a reflection on you.',
+      '',
+      'There are still lots of ways to help — sharing our adoptable rabbits, coming along to Midwest BunFest, or visiting the Hop Shop — and you’re welcome to apply again in the future.',
+      '',
+      'With thanks,',
+      'Ohio House Rabbit Rescue',
+    ].join('\n'),
+  )
+}
+
+// Their answers, in the order the form asks them; anything else after.
+const ANSWER_ORDER: [key: string, label: string][] = [
+  ['age', 'Age'],
+  ['guardianName', 'Parent or guardian'],
+  ['guardianEmail', 'Guardian’s email'],
+  ['availability', 'Usually free'],
+  ['experience', 'With rabbits'],
+  ['hoursFor', 'Needs hours for'],
+  ['anythingElse', 'Anything else'],
+]
+
+function answerText(v: unknown): string {
+  if (v == null) return ''
+  if (Array.isArray(v)) return v.map(String).join(', ')
+  if (typeof v === 'object') return JSON.stringify(v)
+  return String(v)
+}
+
+function answersOf(v: VolunteerRow): { wanted: string[]; lines: [string, string][] } {
+  const app = (v.application ?? {}) as Record<string, unknown>
+  const wanted = Array.isArray(app.kinds) ? app.kinds.map(String) : []
+  const known = new Set(ANSWER_ORDER.map(([k]) => k))
+  const lines: [string, string][] = []
+  for (const [k, label] of ANSWER_ORDER) if (answerText(app[k]).trim()) lines.push([label, answerText(app[k])])
+  for (const [k, val] of Object.entries(app)) {
+    if (k === 'kinds' || known.has(k) || !answerText(val).trim()) continue
+    const label = k.replace(/[_-]+/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').trim()
+    lines.push([label.charAt(0).toUpperCase() + label.slice(1).toLowerCase(), answerText(val)])
+  }
+  return { wanted, lines }
+}
+
+function appliedWhen(iso: string | null | undefined): string {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+/** "Waiting for approval (N)" — new applicants, newest first. */
+function Applications({ rows, userId, onChanged }: { rows: VolunteerRow[]; userId: string | null; onChanged: () => Promise<void> }) {
+  // Decided here just now: kept on screen so staff can send the email.
+  const [decided, setDecided] = useState<Record<string, Decision>>({})
+  const waiting = rows
+    .filter((r) => r.review_status === 'pending')
+    .sort((a, b) => (b.applied_at ?? '').localeCompare(a.applied_at ?? ''))
+  const recent = rows.filter((r) => decided[r.id] && r.review_status !== 'pending')
+  if (waiting.length === 0 && recent.length === 0) return null
+
+  return (
+    <section id="applications" className="space-y-2.5">
+      <p className="px-1 font-display text-lg font-extrabold text-ink">Waiting for approval ({waiting.length})</p>
+      {recent.map((r) => (
+        <Decided
+          key={r.id}
+          v={r}
+          d={decided[r.id]}
+          onHide={() =>
+            setDecided((x) => {
+              const next = { ...x }
+              delete next[r.id]
+              return next
+            })
+          }
+        />
+      ))}
+      {waiting.map((r) => (
+        <Applicant
+          key={r.id}
+          v={r}
+          userId={userId}
+          onDecided={async (d) => {
+            setDecided((x) => ({ ...x, [r.id]: d }))
+            await onChanged()
+          }}
+        />
+      ))}
+    </section>
+  )
+}
+
+function Applicant({ v, userId, onDecided }: { v: VolunteerRow; userId: string | null; onDecided: (d: Decision) => Promise<void> }) {
+  const { wanted, lines } = answersOf(v)
+  const [mode, setMode] = useState<'idle' | 'pick' | 'decline'>('idle')
+  const [pick, setPick] = useState<string[]>(() => wanted.filter((k) => APPROVAL_KINDS.some((a) => a.value === k)))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const run = async (fn: () => Promise<void>, d: Decision) => {
+    setBusy(true)
+    setError(null)
+    try {
+      await fn()
+      await onDecided(d)
+    } catch (e) {
+      setError(errMessage(e))
+      setBusy(false)
+    }
+  }
+  const approve = (list: string[]) => run(() => approveVolunteer(v.id, userId, list), { kind: 'approved', approvedFor: list })
+
+  return (
+    <Card className="space-y-3 border-brand-orange/40">
+      <div>
+        <p className="font-display text-[15px] font-extrabold text-ink">{v.name}</p>
+        <p className="text-xs text-slate-500">
+          {[v.applied_at ? `Applied ${appliedWhen(v.applied_at)}` : '', v.email, v.phone].filter(Boolean).join(' · ')}
+        </p>
+      </div>
+      <dl className="divide-y divide-slate-100 rounded-xl border border-slate-200 text-sm">
+        <div className="flex items-baseline gap-3 px-3 py-2">
+          <dt className="w-28 shrink-0 text-xs font-bold uppercase tracking-wide text-slate-400">Would like</dt>
+          <dd className="min-w-0 text-ink">{wanted.length ? wanted.map(kindLabel).join(', ') : 'Didn’t say'}</dd>
+        </div>
+        {lines.map(([label, value]) => (
+          <div key={label} className="flex items-baseline gap-3 px-3 py-2">
+            <dt className="w-28 shrink-0 text-xs font-bold uppercase tracking-wide text-slate-400">{label}</dt>
+            <dd className="min-w-0 whitespace-pre-wrap break-words text-ink">{value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      {mode === 'pick' && (
+        <div className="space-y-2 rounded-xl bg-slate-50 p-3">
+          <p className="text-sm font-semibold text-slate-700">Approve {firstName(v)} for</p>
+          <KindChips value={pick} onChange={setPick} />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={busy || pick.length === 0}
+              onClick={() => void approve(pick)}
+              className="min-h-[44px] flex-1 rounded-full bg-green-600 px-4 text-sm font-bold text-white disabled:opacity-50"
+            >
+              {busy ? 'Saving…' : 'Save'}
+            </button>
+            <button type="button" onClick={() => setMode('idle')} className="min-h-[44px] rounded-full border border-slate-200 px-4 text-sm font-bold text-slate-500">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mode === 'decline' && (
+        <div className="space-y-2 rounded-xl bg-red-50 p-3">
+          <p className="text-sm text-red-800">Decline {firstName(v)}’s application? They stay on the roster, marked declined.</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void run(() => declineVolunteer(v.id, userId), { kind: 'declined' })}
+              className="min-h-[44px] flex-1 rounded-full bg-red-600 px-4 text-sm font-bold text-white disabled:opacity-50"
+            >
+              {busy ? 'Saving…' : 'Yes, decline'}
+            </button>
+            <button type="button" onClick={() => setMode('idle')} className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-500">
+              Keep it
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mode === 'idle' && (
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void approve([EVERYTHING])}
+            className="col-span-2 inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full bg-green-600 px-4 text-sm font-bold text-white disabled:opacity-50"
+          >
+            <Icon name="check" size={16} /> {busy ? 'Saving…' : 'Approve for everything'}
+          </button>
+          <button type="button" onClick={() => setMode('pick')} className="min-h-[44px] rounded-full border border-green-600 px-3 text-sm font-bold text-green-700">
+            Approve for…
+          </button>
+          <button type="button" onClick={() => setMode('decline')} className="min-h-[44px] rounded-full border border-red-200 px-3 text-sm font-bold text-red-600">
+            Decline
+          </button>
+          {v.email && (
+            <a
+              href={mailto(v, 'Your OHRR volunteer application', `Hi ${firstName(v)},\n\nThank you for applying to volunteer with Ohio House Rabbit Rescue.\n\n`)}
+              className="col-span-2 inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full bg-brand-blue-50 px-4 text-sm font-bold text-brand-blue"
+            >
+              <Icon name="mail" size={16} /> Email them
+            </a>
+          )}
+        </div>
+      )}
+      <FormError>{error}</FormError>
+    </Card>
+  )
+}
+
+/** Just approved or declined: the email to send them. */
+function Decided({ v, d, onHide }: { v: VolunteerRow; d: Decision; onHide: () => void }) {
+  const approved = d.kind === 'approved'
+  return (
+    <Card className={`space-y-2 ${approved ? 'border-green-200 bg-green-50/60' : 'bg-slate-50'}`}>
+      <p className="font-display text-[15px] font-extrabold text-ink">
+        {v.name} —{' '}
+        {approved ? `approved for ${d.approvedFor.includes(EVERYTHING) ? 'everything' : approvedText(d.approvedFor)}` : 'declined'}
+      </p>
+      <p className="text-sm text-slate-600">
+        {!v.email
+          ? 'There’s no email on their record, so let them know another way.'
+          : approved
+            ? 'Let them know: the email has their private volunteer page and how to sign up for a shift.'
+            : 'A kind note is ready to send.'}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {v.email && (
+          <a href={approved ? approvedMail(v, d.approvedFor) : declinedMail(v)} className={`${btn.blue} !py-2.5`}>
+            <Icon name="mail" size={16} /> Email them
+          </a>
+        )}
+        <button type="button" onClick={onHide} className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600">
+          Done
+        </button>
+      </div>
+    </Card>
+  )
+}
+
+/** Tick the kinds of volunteering. */
+function KindChips({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {APPROVAL_KINDS.map((k) => {
+        const on = value.includes(k.value)
+        return (
+          <button
+            key={k.value}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onChange(on ? value.filter((x) => x !== k.value) : [...value, k.value])}
+            className={`min-h-[44px] rounded-full px-3.5 text-sm font-bold ${on ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
+          >
+            {k.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ==================================================== certificate hours */
+
+/**
+ * The hours that earn a certificate (e.g. 25, 50, 100, 250). When a
+ * volunteer's confirmed hours pass one, they appear in "Certificates to
+ * consider" on the staff home. Hidden until update 25 adds the table.
+ */
+function CertificateHours({ orgId }: { orgId: string }) {
+  const [saved, setSaved] = useState<number[] | null>(null)
+  const [draft, setDraft] = useState<number[]>([])
+  const [add, setAdd] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    supabase
+      .from('volunteer_settings')
+      .select('certificate_hours')
+      .eq('org_id', orgId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!alive || error) return
+        const marks = [...(data?.certificate_hours ?? [])].sort((a, b) => a - b)
+        setSaved(marks)
+        setDraft(marks)
+      })
+    return () => {
+      alive = false
+    }
+  }, [orgId])
+
+  if (!saved) return null
+  const dirty = draft.join(',') !== saved.join(',')
+  const put = (list: number[]) => setDraft([...new Set(list)].filter((h) => h > 0 && h <= 100000).sort((a, b) => a - b))
+  const addMark = () => {
+    const h = Math.round(Number(add))
+    if (h > 0) put([...draft, h])
+    setAdd('')
+  }
+
+  const save = async () => {
+    setBusy(true)
+    setError(null)
+    setNote(null)
+    const { data, error } = await supabase.rpc('set_certificate_hours', { p_org: orgId, p_hours: draft })
+    setBusy(false)
+    if (error) return setError(errMessage(error))
+    setSaved(draft)
+    const n = Number(data ?? 0)
+    setNote(
+      n > 0
+        ? `${n} ${n === 1 ? 'volunteer has' : 'volunteers have'} already passed one; they’re in Certificates to consider.`
+        : 'Saved.',
+    )
+  }
+
+  return (
+    <Card className="space-y-3">
+      <div>
+        <p className="font-display text-[15px] font-extrabold text-ink">Certificate hours</p>
+        <p className="text-sm text-slate-600">
+          When a volunteer’s confirmed hours pass one of these, they appear in Certificates to consider on the staff home.
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {draft.map((h) => (
+          <span key={h} className="inline-flex min-h-[44px] items-center gap-1 rounded-full bg-brand-blue-50 pl-4 pr-1 text-sm font-bold text-brand-blue">
+            {h} hours
+            <button
+              type="button"
+              aria-label={`Remove ${h} hours`}
+              onClick={() => put(draft.filter((x) => x !== h))}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-white"
+            >
+              <Icon name="x" size={16} />
+            </button>
+          </span>
+        ))}
+        {draft.length === 0 && <p className="text-sm text-slate-500">None set yet.</p>}
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          inputMode="numeric"
+          aria-label="Hours"
+          placeholder="e.g. 50"
+          value={add}
+          onChange={(e) => setAdd(e.target.value.replace(/\D/g, ''))}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              addMark()
+            }
+          }}
+          className="h-11 w-28 rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-ink outline-none focus:border-brand-blue"
+        />
+        <button type="button" onClick={addMark} disabled={!add} className="min-h-[44px] rounded-full border border-slate-200 px-4 text-sm font-bold text-slate-600 disabled:opacity-50">
+          Add
+        </button>
+        {draft.length === 0 && (
+          <button type="button" onClick={() => put([25, 50, 100, 250])} className="min-h-[44px] px-2 text-sm font-bold text-brand-blue">
+            Use 25, 50, 100, 250
+          </button>
+        )}
+      </div>
+      {dirty && (
+        <button type="button" onClick={() => void save()} disabled={busy} className={`${btn.primary} w-full disabled:opacity-60`}>
+          {busy ? 'Saving…' : 'Save the certificate hours'}
+        </button>
+      )}
+      {note && <p className="text-sm font-bold text-green-700">{note}</p>}
+      <FormError>{error}</FormError>
+    </Card>
   )
 }
 
@@ -107,6 +532,8 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
   }, [rows, q])
 
   const active = rows.filter((r) => r.status === 'active')
+  // Before update 25 there's nothing to approve with; after it every row has approved_for.
+  const approvalReady = rows.length === 0 || rows.some((r) => r.approved_for !== undefined)
 
   return (
     <div className="space-y-3">
@@ -142,13 +569,14 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
               exportCsv(
                 `ohrr-volunteers-${new Date().toISOString().slice(0, 10)}.csv`,
                 toCsv(
-                  ['Name', 'Status', 'Email', 'Phone', 'Roles', 'Started', 'Orientation', 'Notes'],
+                  ['Name', 'Status', 'Email', 'Phone', 'Roles', 'Approved for', 'Started', 'Orientation', 'Notes'],
                   rows.map((r) => [
                     r.name,
                     statusLabel(r.status),
                     r.email ?? '',
                     r.phone ?? '',
                     r.roles.join('; '),
+                    r.approved_for ? approvedText(r.approved_for) : '',
                     r.started_on ?? '',
                     r.orientation_on ?? '',
                     r.notes ?? '',
@@ -168,6 +596,7 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
           <VolunteerForm
             orgId={orgId}
             initial={null}
+            approvalReady={approvalReady}
             onDone={async () => {
               setEditing(null)
               await onChanged()
@@ -190,6 +619,7 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
             <VolunteerForm
               orgId={orgId}
               initial={r}
+              approvalReady={r.approved_for !== undefined}
               onDone={async () => {
                 setEditing(null)
                 await onChanged()
@@ -204,9 +634,16 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
                 <span className="flex flex-wrap items-center gap-1.5">
                   <span className="font-display text-[15px] font-extrabold text-ink">{r.name}</span>
                   {r.status !== 'active' && <Badge tone="slate">{statusLabel(r.status)}</Badge>}
+                  {r.review_status === 'pending' && <Badge tone="orange">Waiting for approval</Badge>}
+                  {r.review_status === 'declined' && <Badge tone="slate">Declined</Badge>}
                   {r.orientation_on && <Badge tone="blue">Orientation done</Badge>}
                 </span>
                 {r.roles.length > 0 && <span className="block text-xs text-slate-500">{r.roles.join(' · ')}</span>}
+                {r.approved_for && (
+                  <span className="block text-xs text-slate-500">
+                    Approved for: <span className="font-semibold text-slate-700">{approvedText(r.approved_for)}</span>
+                  </span>
+                )}
                 <span className="block text-xs text-slate-400">
                   {[r.email, r.phone].filter(Boolean).join(' · ') || 'No contact details'}
                 </span>
@@ -349,14 +786,23 @@ function VolunteerDetail({ v, onChanged }: { v: VolunteerRow; onChanged: () => P
 function VolunteerForm({
   orgId,
   initial,
+  approvalReady,
   onDone,
   onCancel,
 }: {
   orgId: string
   initial: VolunteerRow | null
+  /** The approval columns exist (update 25 has run). */
+  approvalReady: boolean
   onDone: () => Promise<void>
   onCancel: () => void
 }) {
+  // Someone staff add by hand is approved for everything unless they say otherwise.
+  const startApproved = initial ? (initial.approved_for ?? []) : [EVERYTHING]
+  const [approval, setApproval] = useState<'all' | 'some' | 'none'>(
+    startApproved.includes(EVERYTHING) ? 'all' : startApproved.length > 0 ? 'some' : 'none',
+  )
+  const [kinds, setKinds] = useState<string[]>(startApproved.filter((k) => k !== EVERYTHING))
   const [d, setD] = useState({
     name: initial?.name ?? '',
     email: initial?.email ?? '',
@@ -390,6 +836,9 @@ function VolunteerForm({
         started_on: d.started_on || null,
         orientation_on: d.orientation_on || null,
         notes: d.notes.trim() || null,
+        ...(approvalReady
+          ? { approved_for: approval === 'all' ? [EVERYTHING] : approval === 'some' ? kinds : [] }
+          : {}),
       })
       await onDone()
     } catch (err) {
@@ -444,6 +893,38 @@ function VolunteerForm({
           ))}
         </div>
       </div>
+      {approvalReady && (
+        <div>
+          <p className="text-sm font-semibold text-slate-700">Approved for</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {(
+              [
+                ['all', 'Everything'],
+                ['some', 'Only some'],
+                ['none', 'Nothing yet'],
+              ] as const
+            ).map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={approval === v}
+                onClick={() => setApproval(v)}
+                className={`min-h-[44px] rounded-full px-3.5 text-sm font-bold ${
+                  approval === v ? 'bg-ink text-white' : 'border border-slate-200 bg-white text-slate-600'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {approval === 'some' && (
+            <div className="mt-2">
+              <KindChips value={kinds} onChange={setKinds} />
+            </div>
+          )}
+          <p className="mt-1 text-xs text-slate-500">What they can sign up for with their email. Shifts that anyone can book aren’t affected.</p>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <label className="block text-sm font-semibold text-slate-700">
           Started

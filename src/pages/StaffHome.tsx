@@ -8,6 +8,7 @@ import { Spinner, NotConfigured } from '../components/staffui'
 import { PERMISSION_CATALOG } from '../lib/capabilities'
 import { DeleteAccount } from '../components/DeleteAccount'
 import ExpiringNotice from '../features/sponsors/ExpiringNotice'
+import { ApplicationsNotice, CertificatesNotice } from '../features/volunteers/StaffNotices'
 
 const roleBadge: Record<string, { label: string; tone: 'blue' | 'orange' | 'slate' }> = {
   owner: { label: 'Owner', tone: 'blue' },
@@ -89,6 +90,8 @@ export default function StaffHome() {
       </div>
 
       {canManageSponsors && <ExpiringNotice orgId={membership.orgId} />}
+      {(canManageVolunteer || canBookings) && <ApplicationsNotice orgId={membership.orgId} />}
+      {can('volunteers.certificates') && <CertificatesNotice orgId={membership.orgId} />}
 
       {showTiles ? (
         <div className="space-y-3">

@@ -9,6 +9,12 @@
 // letter is a couple of taps. Every letter thanks them.
 //
 // Print or save as PDF on a computer; in the phone app, share the page image.
+//
+// Certificates are OHRR's to give (update 25): only staff who make volunteer
+// certificates see that kind. "Certificates to consider" on the staff home
+// opens this screen with ?kind=certificate&heading=achievement|appreciation
+// &suggestion=<id>; printing, saving or sharing the certificate marks that
+// suggestion as made. The signer's name can be written as the signature.
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
@@ -20,6 +26,8 @@ import { hoursHistory, type HoursLine } from '../api'
 import { isNative } from '../../../native/platform'
 import { canvasToBlob } from '../../share/render'
 import { savePngAsync } from '../../share/share'
+import { canvasToPdf } from '../../../lib/pdf'
+import { exportBlob } from '../../../lib/exportFile'
 import { fmtHours } from '../../volunteers/calls'
 import { LETTER_KINDS, buildLetter, letterText, longDate, type LetterInput, type LetterKind } from '../../volunteers/letters'
 import { paintCertificate, paintLetter } from '../../volunteers/paint'
@@ -41,20 +49,29 @@ function periodFor(p: string): { from: string; to: string } {
   return { from: `${y}-01-01`, to: iso(now) }
 }
 
-const KINDS = new Set(LETTER_KINDS.map((k) => k.value))
+const PERIODS = new Set(['year', 'last-year', '12', 'all'])
 
 export default function ServiceLetter() {
-  const { membership } = useAuth()
+  const { membership, user, can } = useAuth()
   const orgId = membership?.orgId ?? ''
   const org = useOrgBits()
   const [params] = useSearchParams()
   const email = params.get('email') ?? ''
   const name = params.get('name') || email
+  // A certificate is for the staff who make them.
+  const kinds = LETTER_KINDS.filter((k) => k.value !== 'certificate' || can('volunteers.certificates'))
   const startKind = params.get('kind')
-  const [kind, setKind] = useState<LetterKind>(startKind && KINDS.has(startKind as LetterKind) ? (startKind as LetterKind) : 'general')
-  const [period, setPeriod] = useState(params.get('from') ? 'custom' : 'year')
-  const [from, setFrom] = useState(params.get('from') ?? periodFor('year').from)
-  const [to, setTo] = useState(params.get('to') ?? periodFor('year').to)
+  const [kind, setKind] = useState<LetterKind>(
+    startKind && kinds.some((k) => k.value === startKind) ? (startKind as LetterKind) : 'general',
+  )
+  const startPeriod = params.get('from') ? 'custom' : PERIODS.has(params.get('period') ?? '') ? (params.get('period') as string) : 'year'
+  const [period, setPeriod] = useState(startPeriod)
+  const [from, setFrom] = useState(params.get('from') ?? periodFor(startPeriod === 'custom' ? 'year' : startPeriod).from)
+  const [to, setTo] = useState(params.get('to') ?? periodFor(startPeriod === 'custom' ? 'year' : startPeriod).to)
+  const [heading, setHeading] = useState<'appreciation' | 'achievement'>(params.get('heading') === 'achievement' ? 'achievement' : 'appreciation')
+  const [signed, setSigned] = useState(true)
+  const suggestion = params.get('suggestion')
+  const [marked, setMarked] = useState(false)
   const [details, setDetails] = useState<Record<string, string>>({})
   const [volunteerId, setVolunteerId] = useState<string | null>(null)
   const [lines, setLines] = useState<HoursLine[] | null>(null)
@@ -93,32 +110,71 @@ export default function ServiceLetter() {
   }, [orgId, email, from, to])
 
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-  const input: LetterInput | null = lines ? { kind, name, details, from, to, lines, org, today } : null
+  // "Everything" starts from their first recorded day, not the rescue's founding.
+  const letterFrom = period === 'all' && lines && lines.length > 0 ? lines[0].on_date : from
+  const input: LetterInput | null = lines ? { kind, name, details, from: letterFrom, to, lines, org, today } : null
   const letter = useMemo(() => (input ? buildLetter(input) : null), [input])
   const kindMeta = LETTER_KINDS.find((k) => k.value === kind)!
+  const certTitle = heading === 'achievement' ? 'Certificate of Achievement' : 'Certificate of Appreciation'
+  const title = kind === 'certificate' ? certTitle : (letter?.title ?? '')
+  const sign = signed && Boolean(org.signerName)
+  const fileBase = `ohrr-${kind}-hours-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`
+
+  // The certificate they came here to make: take it off "Certificates to consider".
+  const markMade = async () => {
+    if (!suggestion || marked || kind !== 'certificate') return
+    const { error } = await supabase
+      .from('certificate_suggestions')
+      .update({ status: 'made', handled_by: user?.id ?? null, handled_at: new Date().toISOString() })
+      .eq('id', suggestion)
+    if (!error) setMarked(true)
+  }
+
+  const paint = async (): Promise<HTMLCanvasElement | null> => {
+    if (!letter || !input) return null
+    const canvas = document.createElement('canvas')
+    if (kind === 'certificate') {
+      await paintCertificate(canvas, { name, lines: letter.paragraphs.slice(1), date: today, signer: letter.signer, org, heading: certTitle, signed: sign })
+    } else {
+      await paintLetter(canvas, {
+        date: today,
+        recipient: letter.recipient,
+        title: letter.title,
+        salutation: letter.salutation,
+        paragraphs: letter.paragraphs,
+        table: letter.table ? { lines: input.lines, total: letter.total } : undefined,
+        closing: letter.closing,
+        signer: letter.signer,
+        signed: sign,
+        footer: letter.footer,
+        org,
+      })
+    }
+    return canvas
+  }
 
   const share = async () => {
-    if (!letter || !input) return
     setSharing(true)
     try {
-      const canvas = document.createElement('canvas')
-      if (kind === 'certificate') {
-        await paintCertificate(canvas, { name, lines: letter.paragraphs.slice(1), date: today, signer: letter.signer, org })
-      } else {
-        await paintLetter(canvas, {
-          date: today,
-          recipient: letter.recipient,
-          title: letter.title,
-          salutation: letter.salutation,
-          paragraphs: letter.paragraphs,
-          table: letter.table ? { lines: input.lines, total: letter.total } : undefined,
-          closing: letter.closing,
-          signer: letter.signer,
-          footer: letter.footer,
-          org,
-        })
+      const canvas = await paint()
+      if (canvas) {
+        const r = await savePngAsync(await canvasToBlob(canvas), `${fileBase}.png`)
+        if (r !== 'cancelled') await markMade()
       }
-      await savePngAsync(await canvasToBlob(canvas), `ohrr-${kind}-hours-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`)
+    } catch (e) {
+      setError(errMessage(e))
+    }
+    setSharing(false)
+  }
+
+  const savePdf = async () => {
+    setSharing(true)
+    try {
+      const canvas = await paint()
+      if (canvas) {
+        const r = await exportBlob(`${fileBase}.pdf`, await canvasToPdf(canvas, `${title} - ${name}`))
+        if (r === 'saved' || r === 'shared') await markMade()
+      }
     } catch (e) {
       setError(errMessage(e))
     }
@@ -149,7 +205,7 @@ export default function ServiceLetter() {
         <div>
           <p className="text-sm font-semibold text-slate-700">Who it’s for</p>
           <div className="mt-1.5 flex flex-wrap gap-2">
-            {LETTER_KINDS.map((k) => (
+            {kinds.map((k) => (
               <button
                 key={k.value}
                 type="button"
@@ -157,12 +213,44 @@ export default function ServiceLetter() {
                 onClick={() => setKind(k.value)}
                 className={`min-h-[44px] rounded-full px-4 text-sm font-bold ${kind === k.value ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
               >
-                {k.label}
+                {k.value === 'certificate' ? 'Certificate' : k.label}
               </button>
             ))}
           </div>
           <p className="mt-1.5 text-xs text-slate-500">{kindMeta.hint}</p>
         </div>
+
+        {kind === 'certificate' && (
+          <div>
+            <p className="text-sm font-semibold text-slate-700">Certificate of</p>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {(
+                [
+                  ['appreciation', 'Appreciation'],
+                  ['achievement', 'Achievement'],
+                ] as const
+              ).map(([h, label]) => (
+                <button
+                  key={h}
+                  type="button"
+                  aria-pressed={heading === h}
+                  onClick={() => setHeading(h)}
+                  className={`min-h-[44px] rounded-full px-4 text-sm font-bold ${heading === h ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-xs text-slate-500">Achievement suits an hours mark; appreciation suits anything.</p>
+          </div>
+        )}
+
+        {org.signerName && (
+          <label className="flex min-h-[44px] items-center gap-3 text-sm font-semibold text-slate-700">
+            <input type="checkbox" className="h-5 w-5 rounded border-slate-300 text-brand-blue" checked={signed} onChange={(e) => setSigned(e.target.checked)} />
+            Sign with {org.signerName}’s name
+          </label>
+        )}
 
         {kindMeta.ask.length > 0 && (
           <div className="space-y-2">
@@ -239,19 +327,33 @@ export default function ServiceLetter() {
               <Icon name="printer" size={16} /> {sharing ? 'Making the letter…' : 'Print / share the letter'}
             </button>
           ) : (
-            <button type="button" onClick={() => window.print()} className={btn.primary} disabled={!letter}>
-              <Icon name="printer" size={16} /> Print / save as PDF
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  window.print()
+                  void markMade()
+                }}
+                className={btn.primary}
+                disabled={!letter}
+              >
+                <Icon name="printer" size={16} /> Print
+              </button>
+              <button type="button" onClick={() => void savePdf()} className={btn.blue} disabled={!letter || sharing}>
+                {sharing ? 'Making the PDF…' : 'Save as PDF'}
+              </button>
+            </>
           )}
           {letter && input && (
             <a
-              href={`mailto:${email}?subject=${encodeURIComponent(`${letter.title} — ${name}`)}&body=${encodeURIComponent(letterText(letter, input))}`}
+              href={`mailto:${email}?subject=${encodeURIComponent(`${title} — ${name}`)}&body=${encodeURIComponent(letterText(letter, input))}`}
               className={btn.outline}
             >
               <Icon name="mail" size={16} /> Email it to {name.split(' ')[0]}
             </a>
           )}
         </div>
+        {marked && <p className="text-sm font-bold text-green-700">Done — it’s off the Certificates to consider list.</p>}
         {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
         {lines === null && !error && <Spinner />}
         {lines && lines.length === 0 && (
@@ -262,7 +364,7 @@ export default function ServiceLetter() {
       {letter && input && kind === 'certificate' && (
         <div className="letter mx-5 my-5 rounded-2xl border-[10px] border-double border-brand-blue bg-white p-10 text-center print:m-0 print:rounded-none">
           <img src="/ohrr-mark.png" alt="" className="mx-auto h-24 w-24" />
-          <p className="mt-6 font-display text-lg font-extrabold tracking-[0.2em] text-brand-orange">CERTIFICATE OF APPRECIATION</p>
+          <p className="mt-6 font-display text-lg font-extrabold tracking-[0.2em] text-brand-orange">{certTitle.toUpperCase()}</p>
           <p className="mt-6 font-display text-5xl font-black text-ink">{name}</p>
           {letter.paragraphs.slice(1).map((p) => (
             <p key={p} className="mx-auto mt-5 max-w-xl text-xl leading-relaxed text-slate-700">
@@ -271,7 +373,9 @@ export default function ServiceLetter() {
           ))}
           <div className="mx-auto mt-16 grid max-w-2xl grid-cols-2 gap-10 text-sm text-slate-600">
             <div>
-              <div className="h-10 border-b border-slate-400" />
+              <div className="flex h-10 items-end justify-center border-b border-slate-400">
+                {sign && <span className="signature text-3xl leading-none text-blue-900">{letter.signer.name}</span>}
+              </div>
               <p className="mt-2 font-bold text-ink">{letter.signer.name || 'Signature'}</p>
               <p>{letter.signer.title ? `${letter.signer.title}, ${org.name}` : org.name}</p>
             </div>
@@ -338,7 +442,9 @@ export default function ServiceLetter() {
           )}
           <p className="mt-6 text-base text-ink">{letter.closing}</p>
           <div className="mt-10 max-w-xs text-sm text-slate-600">
-            <div className="h-10 border-b border-slate-400" />
+            <div className="flex h-10 items-end border-b border-slate-400">
+              {sign && <span className="signature pl-2 text-3xl leading-none text-blue-900">{letter.signer.name}</span>}
+            </div>
             {letter.signer.name && <p className="mt-1 font-bold text-ink">{letter.signer.name}</p>}
             {letter.signer.title && <p>{letter.signer.title}</p>}
             <p>{org.name}</p>
@@ -346,6 +452,8 @@ export default function ServiceLetter() {
         </div>
       )}
       <style>{`
+        @font-face { font-family: 'OHRR Signature'; src: url(/fonts/dancing-script-600.woff2) format('woff2'); font-weight: 600; font-display: swap; }
+        .signature { font-family: 'OHRR Signature', cursive; font-weight: 600; }
         @media print {
           @page { size: letter; margin: 0.8in; }
           header, nav, [data-tabbar] { display: none !important; }

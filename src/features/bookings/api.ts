@@ -86,8 +86,15 @@ export async function saveBookingType(t: Partial<BookingType> & { org_id: string
   // `weekly` is jsonb in the database; drop the read-only columns before upserting.
   const { weekly, ...rest } = t
   const row = { ...rest, ...(weekly ? { weekly: weekly as unknown as Json } : {}) }
-  const { data, error } = await supabase.from('booking_types').upsert(row, { onConflict: 'org_id,slug' }).select('*').single()
-  if (error) throw error
+  let { data, error } = await supabase.from('booking_types').upsert(row, { onConflict: 'org_id,slug' }).select('*').single()
+  // Before update 25 there is no "who can book" column: save the rest.
+  const noColumn = /approval_role|schema cache/i.test(error?.message ?? '')
+  if (error && noColumn && 'approval_role' in row) {
+    const { approval_role: wanted, ...older } = row
+    ;({ data, error } = await supabase.from('booking_types').upsert(older, { onConflict: 'org_id,slug' }).select('*').single())
+    if (!error && wanted) throw new Error('Saved — but “Who can book” only works once update 25 has been run in Supabase.')
+  }
+  if (error || !data) throw error ?? new Error('Could not save that.')
   const saved = asType(data as Record<string, unknown>)
   // Keep the next weeks of times in step with the schedule straight away.
   if (weekly) await fillSlots(saved.id).catch(() => undefined)

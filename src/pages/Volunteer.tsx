@@ -35,6 +35,14 @@ export default function Volunteer() {
         subtitle="We truly are one big, happy volunteer family and we would love to have you join us."
       />
       <Screen className="space-y-6">
+        {/* New volunteers apply first; OHRR approves them for the shifts they'll do. */}
+        <ActionCard
+          to="/volunteer/apply"
+          title="New? Apply to volunteer"
+          subtitle="Tell OHRR about you. Once you’re approved, you can sign up for shifts here."
+          icon="users"
+          tone="orange"
+        />
         <PresentedBy surface="volunteer" />
         <OpenCalls />
         <MyBookingsCard />

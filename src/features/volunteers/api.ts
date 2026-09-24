@@ -8,6 +8,7 @@
 import { supabase } from '../../lib/supabase'
 import type { Database } from '../../lib/database.types'
 import { APP_URL } from '../mybunny/ics'
+import type { UpcomingItem } from './approval'
 
 export type VolunteerRow = Database['public']['Tables']['volunteers']['Row']
 export type VolunteerInput = Database['public']['Tables']['volunteers']['Insert'] & { id?: string }
@@ -43,6 +44,11 @@ export function hoursUrl(token: string): string {
   return `${base}/volunteer/hours/${token}`
 }
 
+/** The app's Volunteer screen, where approved volunteers pick a shift. */
+export function volunteerPageUrl(): string {
+  return `${APP_URL.replace(/\/my-bunny\/?$/, '')}/volunteer`
+}
+
 /* ----------------------------------------------------------------- staff */
 
 export async function listVolunteers(orgId: string): Promise<VolunteerRow[]> {
@@ -56,9 +62,17 @@ export async function listVolunteers(orgId: string): Promise<VolunteerRow[]> {
   return data ?? []
 }
 
+/** Before update 25 runs there are no approval columns; the rest still saves. */
+const noApprovalColumns = (e: { message?: string } | null) => /approved_for|review_status|reviewed_(at|by)|schema cache/i.test(e?.message ?? '')
+
 export async function saveVolunteer(v: VolunteerInput): Promise<VolunteerRow> {
-  const { data, error } = await supabase.from('volunteers').upsert(v, { onConflict: 'id' }).select('*').single()
-  if (error) throw error
+  let { data, error } = await supabase.from('volunteers').upsert(v, { onConflict: 'id' }).select('*').single()
+  if (error && 'approved_for' in v && noApprovalColumns(error)) {
+    const rest = { ...v }
+    delete rest.approved_for
+    ;({ data, error } = await supabase.from('volunteers').upsert(rest, { onConflict: 'id' }).select('*').single())
+  }
+  if (error || !data) throw error ?? new Error('Could not save that volunteer.')
   // Pull in any hours already recorded against the same email address. A
   // failure here is not worth losing the save over.
   try {
@@ -67,6 +81,41 @@ export async function saveVolunteer(v: VolunteerInput): Promise<VolunteerRow> {
     /* the roster row is saved either way */
   }
   return data
+}
+
+/* ------------------------------------------- applications (update 25) */
+
+/** Approve someone who applied: they can sign up for `approvedFor` (['*'] = everything). */
+export async function approveVolunteer(id: string, userId: string | null, approvedFor: string[]): Promise<void> {
+  const { error } = await supabase
+    .from('volunteers')
+    .update({
+      status: 'active',
+      approved_for: approvedFor,
+      review_status: 'approved',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: userId,
+    })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function declineVolunteer(id: string, userId: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('volunteers')
+    .update({ review_status: 'declined', reviewed_at: new Date().toISOString(), reviewed_by: userId })
+    .eq('id', id)
+  if (error) throw error
+}
+
+/** How many applications are waiting (0 before update 25 runs). */
+export async function countApplications(orgId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('volunteers')
+    .select('id', { count: 'exact', head: true })
+    .eq('org_id', orgId)
+    .eq('review_status', 'pending')
+  return error ? 0 : (count ?? 0)
 }
 
 export async function deleteVolunteer(id: string): Promise<void> {
@@ -115,7 +164,8 @@ export interface MyHoursEntry {
   hours: number
   activity: string
   status: 'logged' | 'confirmed'
-  source: 'self' | 'staff' | 'checkin'
+  /** 'shift': a shift they were checked in to (update 25) — it can't be removed here. */
+  source: 'self' | 'staff' | 'checkin' | 'shift'
   note: string | null
 }
 
@@ -130,6 +180,14 @@ export interface MyRecord {
   entries: MyHoursEntry[]
   totals: { all: number; confirmed: number; this_year: number; this_month: number; this_week: number; today: number }
   by_year: { year: number; hours: number }[]
+  // From update 25 on (undefined before it runs):
+  /** What they may sign up for; '*' = everything. */
+  approved_for?: string[]
+  review_status?: 'pending' | 'approved' | 'declined' | null
+  hours_for?: VolunteerRow['hours_for']
+  letter_details?: Record<string, string> | null
+  /** What they're signed up for, soonest first. */
+  upcoming?: UpcomingItem[]
 }
 
 /** Read a volunteer's own record by their private token. null = bad link. */

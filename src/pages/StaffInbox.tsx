@@ -13,6 +13,7 @@ import { Spinner, FormError, staffInput } from '../components/staffui'
 import { exportCsv, toCsv } from '../lib/exportFile'
 import { publishHappyTail } from '../features/tails/api'
 import { TAIL_STATUS, type TailStatus } from '../data/tails'
+import { kindLabel } from '../features/volunteers/approval'
 
 type Row = Database['public']['Tables']['requests']['Row']
 type Status = Row['status']
@@ -22,6 +23,7 @@ const KIND: Record<string, { label: string; icon: IconName }> = {
   'service-signup': { label: 'Bonding / clinic', icon: 'heart' },
   'surrender-intake': { label: 'Surrender', icon: 'mappin' },
   'volunteer-signup': { label: 'Volunteer', icon: 'users' },
+  'volunteer-application': { label: 'Volunteer application', icon: 'users' },
   'happy-tail': { label: 'Happy Tail', icon: 'sparkles' },
   'raffle-request': { label: 'Raffle tickets', icon: 'ticket' },
   'reserve-session': { label: 'BunFest session', icon: 'clock' },
@@ -50,6 +52,17 @@ function when(iso: string): string {
   if (days === 0) return `Today ${time}`
   if (days === 1) return `Yesterday ${time}`
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ` ${time}`
+}
+
+/**
+ * A payload value as text. Most are strings; a volunteer application's
+ * `kinds` is a list ("socialization", "buncare" → "Bunny Socialization, Buncare").
+ */
+function valueText(key: string, v: unknown): string {
+  if (v == null) return ''
+  if (Array.isArray(v)) return v.map((x) => (key === 'kinds' ? kindLabel(String(x)) : String(x))).join(', ')
+  if (typeof v === 'object') return JSON.stringify(v)
+  return String(v)
 }
 
 /** "bunnyName" → "Bunny name", "agreementDate" → "Agreement date". */
@@ -146,8 +159,8 @@ export default function StaffInbox() {
                   r.phone ?? '',
                   r.subject ?? '',
                   r.status,
-                  Object.entries((r.payload ?? {}) as Record<string, string>)
-                    .map(([k, v]) => `${labelOf(k)}: ${v}`)
+                  Object.entries((r.payload ?? {}) as Record<string, unknown>)
+                    .map(([k, v]) => `${labelOf(k)}: ${valueText(k, v)}`)
                     .join(' | '),
                   r.staff_notes ?? '',
                 ]),
@@ -188,7 +201,7 @@ export default function StaffInbox() {
                     </span>
                     <span className="block text-sm text-slate-700">
                       {k.label}
-                      {r.subject ? ` · ${r.subject}` : ''}
+                      {r.subject && r.subject !== k.label ? ` · ${r.subject}` : ''}
                     </span>
                     <span className="block text-xs text-slate-400">{when(r.created_at)}</span>
                   </span>
@@ -215,9 +228,17 @@ export default function StaffInbox() {
                     <dl className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
                       {r.email && <Field label="Email" value={r.email} />}
                       {Object.entries(payload).map(([key, value]) => (
-                        <Field key={key} label={labelOf(key)} value={value} />
+                        <Field key={key} label={labelOf(key)} value={valueText(key, value)} />
                       ))}
                     </dl>
+                    {r.kind === 'volunteer-application' && (
+                      <Link
+                        to="/staff/volunteers"
+                        className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-brand-blue"
+                      >
+                        Approve or decline in Volunteers <Icon name="chevron" size={14} />
+                      </Link>
+                    )}
                     {r.kind === 'happy-tail' && <PublishTail row={r} payload={payload} onPublished={() => void setStatus(r, 'done')} />}
                     <Notes row={r} onSave={(n) => setStatus(r, r.status, n)} />
                     <div className="grid grid-cols-2 gap-2">

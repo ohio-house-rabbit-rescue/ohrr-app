@@ -5,6 +5,9 @@
 // link records which, so OHRR can see what worked. Signing up puts the person
 // on the volunteer roster; asking what the hours are for (optional) means the
 // right letter can be written from the record later, without asking again.
+//
+// A call can be for approved volunteers only (update 25): then the page asks
+// for the email they applied with before showing the sign-up form.
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { errMessage } from '../../../lib/supabase'
@@ -28,6 +31,8 @@ import {
   type HoursFor,
 } from '../calls'
 import { loadPublicCall, signUpForCall, type SignUpResult } from '../callsApi'
+import { checkMessage, volunteerCheck } from '../approval'
+import ApprovalGate from '../ApprovalGate'
 
 const input =
   'mt-1 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-base text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
@@ -39,6 +44,9 @@ export default function CallPage() {
   const [call, setCall] = useState<Call | null | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<SignUpResult | null>(null)
+  // Who can sign up: a kind of approved volunteer, or null for anyone.
+  const [role, setRole] = useState<string | null | undefined>(undefined)
+  const [approved, setApproved] = useState<{ email: string; firstName?: string } | null>(null)
 
   useEffect(() => {
     loadPublicCall(slug)
@@ -48,6 +56,24 @@ export default function CallPage() {
         setCall(null)
       })
   }, [slug])
+
+  useEffect(() => {
+    if (!call) return
+    const fromCall = (call as Call & { approval_role?: string | null }).approval_role
+    if (fromCall !== undefined) {
+      setRole(fromCall)
+      return
+    }
+    // The public call doesn't say who can sign up; the check does — asked with
+    // no email it answers "open" (anyone) or names the kind of volunteer.
+    let alive = true
+    volunteerCheck('', { call: call.slug })
+      .then((r) => alive && setRole(r.state === 'open' || r.state === 'closed' ? null : (r.role ?? null)))
+      .catch(() => alive && setRole(null))
+    return () => {
+      alive = false
+    }
+  }, [call])
 
   if (call === undefined) {
     return (
@@ -112,8 +138,36 @@ export default function CallPage() {
               Other ways to volunteer
             </Link>
           </Card>
+        ) : role === undefined ? (
+          <div className="h-32 animate-pulse rounded-2xl bg-slate-100" />
+        ) : role && !approved ? (
+          <ApprovalGate
+            where={{ call: call.slug }}
+            role={role}
+            what={call.title}
+            onApproved={(email, firstName) => setApproved({ email, firstName })}
+            onOpen={() => setRole(null)}
+          />
         ) : (
-          <SignUpForm call={call} source={source} onDone={setDone} />
+          <>
+            {approved && (
+              <div className="flex items-center gap-3 rounded-2xl bg-green-50 py-1.5 pl-4 pr-2 text-green-800">
+                <Icon name="check" size={20} className="shrink-0" />
+                <p className="min-w-0 flex-1 break-words text-base">
+                  <span className="font-bold">{checkMessage({ state: 'approved', firstName: approved.firstName }).title}</span> Signing
+                  up as {approved.email}.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setApproved(null)}
+                  className="inline-flex min-h-[44px] shrink-0 items-center px-2 text-sm font-bold text-brand-blue underline underline-offset-2"
+                >
+                  Not you?
+                </button>
+              </div>
+            )}
+            <SignUpForm call={call} source={source} lockedEmail={approved?.email} onDone={setDone} />
+          </>
         )}
       </Screen>
     </>
@@ -134,11 +188,22 @@ function Fact({ icon, label, value }: { icon: 'calendar' | 'mappin' | 'users' | 
   )
 }
 
-function SignUpForm({ call, source, onDone }: { call: Call; source: string | null; onDone: (r: SignUpResult) => void }) {
+function SignUpForm({
+  call,
+  source,
+  lockedEmail,
+  onDone,
+}: {
+  call: Call
+  source: string | null
+  /** The approved email (approved-only calls): the sign-up must use it. */
+  lockedEmail?: string
+  onDone: (r: SignUpResult) => void
+}) {
   const shifts = (call.shifts ?? []).filter((s) => new Date(s.ends_at) > new Date())
   const [picked, setPicked] = useState<string[]>([])
   const [area, setArea] = useState('')
-  const [f, setF] = useState({ name: '', email: '', phone: '' })
+  const [f, setF] = useState({ name: '', email: lockedEmail ?? '', phone: '' })
   const [hoursFor, setHoursFor] = useState<HoursFor | ''>('')
   const [details, setDetails] = useState<Record<string, string>>({})
   const [attested, setAttested] = useState(false)
@@ -254,8 +319,14 @@ function SignUpForm({ call, source, onDone }: { call: Call; source: string | nul
         </label>
         <label className="block text-base font-semibold text-slate-700">
           Email
-          <input className={input} required type="email" autoComplete="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
-          <span className="mt-1 block text-sm font-normal text-slate-500">So we can thank you, and keep a record of your hours.</span>
+          {lockedEmail ? (
+            <input className={`${input} !bg-slate-50 !text-slate-600`} type="email" readOnly value={lockedEmail} />
+          ) : (
+            <input className={input} required type="email" autoComplete="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+          )}
+          <span className="mt-1 block text-sm font-normal text-slate-500">
+            {lockedEmail ? 'The email you applied with. ' : ''}So we can thank you, and keep a record of your hours.
+          </span>
         </label>
         <label className="block text-base font-semibold text-slate-700">
           Phone <span className="font-normal text-slate-500">(optional)</span>
