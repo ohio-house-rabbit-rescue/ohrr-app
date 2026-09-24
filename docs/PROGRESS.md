@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-23 (the real adoptable rabbits — update 20 waiting to be run)
+- **Last updated:** 2026-09-23 (the real adoptable rabbits — update 20 applied)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,8 +19,10 @@
 
 ## Current state (at a glance)
 
-- **The real adoptable rabbits (2026-09-23, latest). Update 20 is in
-  `RUN-THIS-IN-SUPABASE.sql`, waiting to be run.** Sponsor: replace the demo rabbits with
+- **The real adoptable rabbits (2026-09-23, latest). Update 20 applied 2026-09-23** (run
+  in five parts) and checked live: 17 rows, the app's Adopt tab and the website's Adopt
+  page and home strip show them ("Live"), Dan's page shows Special needs + Adopted
+  together with Forrest, photos load. Nothing waiting in Supabase. Sponsor: replace the demo rabbits with
   the real ones; Petfinder later. OHRR's Adoptable Bunnies page is a RescueGroups.org frame
   (organisation 6091) — the same record feeds Petfinder and Adopt-a-Pet, so RescueGroups is
   the one source (its API is the natural tie-in later). `scripts/rescuegroups-rabbits.py`
