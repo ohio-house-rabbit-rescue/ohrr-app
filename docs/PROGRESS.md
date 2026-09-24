@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (street address in a select place or two, modeled on the live site; nothing to run)
+- **Last updated:** 2026-09-24 (even boxes; Bunny Help above the fold on home; the two-minute "Is a rabbit right for us?" check; nothing to run)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,7 +19,29 @@
 
 ## Current state (at a glance)
 
-- **Street address: a select place or two, like the current site (2026-09-24, latest; website
+- **Even boxes, Bunny Help above the fold, the two-minute check (2026-09-24, latest; website
+  `0160f94`).** Sponsor: boxes with different amounts of words look like "mismatched boxes" (keep the
+  words); get Bunny Help above the fold and open it fully when used; educate people before they buy
+  (OHRR research, Drive `Research/market-data-points.md` 2.1–2.3: rabbits are given up almost always
+  for human reasons; surrender requests rise 2–3 months after Easter).
+  - **Box rule:** side-by-side topics with very different amounts of text become rows or open columns
+    (Volunteer opportunities: details beside the sign-up; Give's top ways as rows like Donate; Adopt's
+    Still deciding / matchmaking as two columns with a rule; Found a rabbit as one reading column).
+    Similar cards line up: `LinkCard` summaries clamp to 3 lines with the link on the bottom edge;
+    Surrender, Volunteer "more ways", vet and rescue cards pin buttons/contacts to the bottom.
+    Measured at 1280px: no flagged rows left except BunFest's six short feature cards (left as is).
+  - **Home Bunny Help (`HomeBunnyHelp.tsx`):** "Help with my rabbit" is a question box among the doors
+    (above the fold on a 375×740 phone). Tapping it opens example questions, the emergency vet line,
+    live answers and every topic by category — a drop-down on a laptop, in place on a phone. The old
+    below-the-fold box is gone.
+  - **The two-minute check (`ReadyCheck.tsx`)** on OHRR's staff-edited article
+    `/info/is-a-rabbit-right-for-us` (alias `/thinking-about-a-rabbit`; flyers/QR codes already use the
+    /info path). Seven questions whose wording and "why" lines come from that article; "not yet"
+    answers list the reasons and offer a socialization shift and the care guides; nothing stored.
+    Offered on Home (after the rabbits), Adopt and Rabbit care (doors) and site search. The home hero
+    shows "Easter is … Thinking about a bunny? Read this first" by itself in the 7 weeks before Easter
+    (`lib/season.ts`). **App mirror not built yet.**
+- **Street address: a select place or two, like the current site (2026-09-24; website
   `6a1989b`, app `bd5c21b`).** Sponsor corrected the first pass: "people need to find it but if you
   have it everywhere on things like contact us when we want them to email then they will drop a bunny
   off … look at how it is now and model that. it is not everywhere just a select place or two." The
