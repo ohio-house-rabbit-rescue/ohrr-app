@@ -53,6 +53,15 @@
   - **OHRR to do:** Supabase → Authentication → URL Configuration → Redirect URLs must include
     `https://ohrr-website.pages.dev/staff/reset` (or `https://ohrr-website.pages.dev/**`) or reset
     emails from the website will land on the app instead.
+  - **Volunteer follow-up (website `cc36909`, 2026-09-24):** the sponsor asked whether the
+    volunteer side (sign-ups, outreach, the rest) was on the website too. Checked route by route:
+    calls, bookings + Hours tab, hours letters, outreach letters, share kit + post queue, flyers,
+    inbox, team, foster, interest form, roster and the hours page were already there. Two gaps
+    fixed: the website's opportunity editor lacked the 2026-09-22 limit fields (`limit_kind`
+    people/hours, filled counts, `contact_email`) and used a shorter category list; the public
+    "Open shifts" cards had no Sign up. Now `src/lib/volunteerOpps.ts` (copy of the app's), "N of
+    6 spots left" / "Full", Sign up → `/volunteer/interest?role=&item=` (the `item` field is sent
+    with the `volunteer-signup` request, as the app does). Tested in the harness.
 
 - **The real adoptable rabbits (2026-09-23). Update 20 applied 2026-09-23** (run
   in five parts) and checked live: 17 rows, the app's Adopt tab and the website's Adopt
