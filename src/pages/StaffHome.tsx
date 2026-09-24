@@ -9,6 +9,8 @@ import { PERMISSION_CATALOG } from '../lib/capabilities'
 import { DeleteAccount } from '../components/DeleteAccount'
 import ExpiringNotice from '../features/sponsors/ExpiringNotice'
 import { ApplicationsNotice, CertificatesNotice } from '../features/volunteers/StaffNotices'
+import { PostsToApproveNotice } from '../features/share/PostsToApproveNotice'
+import { levelInfo, useMyLevel } from '../lib/staffLevels'
 
 const roleBadge: Record<string, { label: string; tone: 'blue' | 'orange' | 'slate' }> = {
   owner: { label: 'Owner', tone: 'blue' },
@@ -22,6 +24,8 @@ export default function StaffHome() {
   const newCount = useNewRequestCount(membership && can('inbox.manage') ? membership.orgId : null)
   const pendingCount = usePendingBookingCount(membership && can('bookings.manage') ? membership.orgId : null)
   const readyPosts = useReadyPostCount(membership && (can('announcements.post') || can('social.publish')) ? membership.orgId : null)
+  // Update 28: the person's level (Founder / Board / Lead / Worker), and whether it's in yet.
+  const myLevel = useMyLevel(user?.id, membership?.orgId)
 
   if (!configured) return <NotConfigured />
   if (loading) return <Spinner />
@@ -34,8 +38,10 @@ export default function StaffHome() {
   const canCounter = can('counter.use') || can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.inventory.update')
   const canInbox = can('inbox.manage')
   const canBookings = can('bookings.manage')
-  const canQueue = can('announcements.post') || can('social.publish')
-  const badge = roleBadge[membership.role] ?? roleBadge.staff
+  const canQueue = can('announcements.post') || can('social.publish') || can('social.approve')
+  const badge = myLevel.level
+    ? { label: levelInfo(myLevel.level).label, tone: myLevel.level === 'founder' || myLevel.level === 'board' ? ('blue' as const) : ('slate' as const) }
+    : (roleBadge[membership.role] ?? roleBadge.staff)
 
   // What this person can do in the Hop Shop (drives the dashboard subtitle).
   const hopshopCaps = PERMISSION_CATALOG.filter(
@@ -92,6 +98,7 @@ export default function StaffHome() {
       {canManageSponsors && <ExpiringNotice orgId={membership.orgId} />}
       {(canManageVolunteer || canBookings) && <ApplicationsNotice orgId={membership.orgId} />}
       {can('volunteers.certificates') && <CertificatesNotice orgId={membership.orgId} />}
+      {can('social.approve') && <PostsToApproveNotice />}
 
       {showTiles ? (
         <div className="space-y-3">
@@ -398,6 +405,17 @@ export default function StaffHome() {
             admin can grant you access from the Team screen.
           </p>
         </Card>
+      )}
+
+      {/* Anyone on the team can log the time they give, shift or not (update 28). */}
+      {myLevel.ready && (
+        <ActionCard
+          to="/staff/my-hours"
+          title="My volunteer hours"
+          subtitle="Log time you give that isn’t a shift — vet runs, fostering, events, admin"
+          icon="clock"
+          tone="blue"
+        />
       )}
 
       {!isAdminish && (

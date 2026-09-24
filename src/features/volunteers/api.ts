@@ -62,14 +62,19 @@ export async function listVolunteers(orgId: string): Promise<VolunteerRow[]> {
   return data ?? []
 }
 
-/** Before update 25 runs there are no approval columns; the rest still saves. */
-const noApprovalColumns = (e: { message?: string } | null) => /approved_for|review_status|reviewed_(at|by)|schema cache/i.test(e?.message ?? '')
+/**
+ * Before update 25 runs there are no approval columns, and before update 28 no
+ * trust_level; the rest still saves.
+ */
+const noNewColumns = (e: { message?: string } | null) =>
+  /approved_for|review_status|reviewed_(at|by)|trust_level|schema cache/i.test(e?.message ?? '')
 
 export async function saveVolunteer(v: VolunteerInput): Promise<VolunteerRow> {
   let { data, error } = await supabase.from('volunteers').upsert(v, { onConflict: 'id' }).select('*').single()
-  if (error && 'approved_for' in v && noApprovalColumns(error)) {
+  if (error && ('approved_for' in v || 'trust_level' in v) && noNewColumns(error)) {
     const rest = { ...v }
     delete rest.approved_for
+    delete rest.trust_level
     ;({ data, error } = await supabase.from('volunteers').upsert(rest, { onConflict: 'id' }).select('*').single())
   }
   if (error || !data) throw error ?? new Error('Could not save that volunteer.')
@@ -142,6 +147,26 @@ export async function unconfirmedHours(orgId: string): Promise<HoursRow[]> {
     .eq('org_id', orgId)
     .eq('status', 'logged')
     .order('on_date', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+/**
+ * Hours volunteers logged themselves that already count — a trusted
+ * volunteer's arrive confirmed (update 28) — logged in the last `days` days,
+ * newest first, so staff can look them over and un-confirm any that are wrong.
+ */
+export async function recentSelfReported(orgId: string, days = 60): Promise<HoursRow[]> {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString()
+  const { data, error } = await supabase
+    .from('volunteer_hours_entries')
+    .select('*')
+    .eq('org_id', orgId)
+    .eq('status', 'confirmed')
+    .eq('source', 'self')
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(200)
   if (error) throw error
   return data ?? []
 }

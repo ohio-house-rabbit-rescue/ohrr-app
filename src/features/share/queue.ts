@@ -17,8 +17,8 @@ export const STATUS_LABEL: Record<PostStatus, string> = {
   archived: 'Archived',
 }
 
-// "Approve social posts" (update 26) isn't in lib/capabilities.ts's list yet, so it's cast.
-export const APPROVE_CAP = 'social.approve' as string as Capability
+// "Approve social posts" (update 26).
+export const APPROVE_CAP: Capability = 'social.approve'
 export type Platform = 'instagram' | 'facebook' | 'tiktok' | 'other'
 export const PLATFORMS: { value: Platform; label: string }[] = [
   { value: 'instagram', label: 'Instagram' },

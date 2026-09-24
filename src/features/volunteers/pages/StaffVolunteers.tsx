@@ -10,6 +10,10 @@
 // volunteering — or declines them. Each roster entry says what the person is
 // approved for; the certificate hours (for whoever makes certificates) are at
 // the foot.
+//
+// Update 28: a volunteer can be Trusted. Hours a trusted volunteer logs count
+// straight away (still marked self-reported); "To confirm" lists them under
+// "Counted straight away" so staff can un-confirm any that look wrong.
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
@@ -28,6 +32,7 @@ import {
   hoursLabel,
   hoursUrl,
   listVolunteers,
+  recentSelfReported,
   saveVolunteer,
   setHoursStatus,
   statusLabel,
@@ -49,18 +54,31 @@ export default function StaffVolunteers() {
   const [tab, setTab] = useState<Tab>('roster')
   const [rows, setRows] = useState<VolunteerRow[] | null>(null)
   const [pending, setPending] = useState<HoursRow[]>([])
+  const [selfReported, setSelfReported] = useState<HoursRow[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!orgId) return
     try {
-      const [list, unconfirmed] = await Promise.all([listVolunteers(orgId), unconfirmedHours(orgId)])
+      const [list, unconfirmed, recent] = await Promise.all([
+        listVolunteers(orgId),
+        unconfirmedHours(orgId),
+        recentSelfReported(orgId).catch(() => [] as HoursRow[]),
+      ])
       setRows(list)
       setPending(unconfirmed)
+      setSelfReported(recent)
     } catch (e) {
       setError(errMessage(e))
     }
   }, [orgId])
+
+  // A trusted volunteer's own hours that already count (update 28).
+  const counted = useMemo(() => {
+    const trusted = new Set((rows ?? []).filter((r) => r.trust_level === 'trusted').map((r) => r.id))
+    return selfReported.filter((h) => h.volunteer_id && trusted.has(h.volunteer_id))
+  }, [rows, selfReported])
+
   useEffect(() => {
     void load()
   }, [load])
@@ -100,7 +118,7 @@ export default function StaffVolunteers() {
       <FormError>{error}</FormError>
       {rows === null && !error && <Spinner />}
       {rows && tab === 'roster' && <Roster orgId={orgId} rows={rows} onChanged={load} />}
-      {rows && tab === 'hours' && <ToConfirm rows={rows} pending={pending} onChanged={load} />}
+      {rows && tab === 'hours' && <ToConfirm rows={rows} pending={pending} counted={counted} onChanged={load} />}
       {orgId && can('volunteers.certificates') && <CertificateHours orgId={orgId} />}
     </Screen>
   )
@@ -534,6 +552,8 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
   const active = rows.filter((r) => r.status === 'active')
   // Before update 25 there's nothing to approve with; after it every row has approved_for.
   const approvalReady = rows.length === 0 || rows.some((r) => r.approved_for !== undefined)
+  // Likewise trust_level, from update 28.
+  const trustReady = rows.length === 0 || rows.some((r) => r.trust_level !== undefined)
 
   return (
     <div className="space-y-3">
@@ -569,7 +589,7 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
               exportCsv(
                 `ohrr-volunteers-${new Date().toISOString().slice(0, 10)}.csv`,
                 toCsv(
-                  ['Name', 'Status', 'Email', 'Phone', 'Roles', 'Approved for', 'Started', 'Orientation', 'Notes'],
+                  ['Name', 'Status', 'Email', 'Phone', 'Roles', 'Approved for', 'Trust', 'Started', 'Orientation', 'Notes'],
                   rows.map((r) => [
                     r.name,
                     statusLabel(r.status),
@@ -577,6 +597,7 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
                     r.phone ?? '',
                     r.roles.join('; '),
                     r.approved_for ? approvedText(r.approved_for) : '',
+                    r.trust_level === 'trusted' ? 'Trusted' : r.trust_level ? 'Standard' : '',
                     r.started_on ?? '',
                     r.orientation_on ?? '',
                     r.notes ?? '',
@@ -597,6 +618,7 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
             orgId={orgId}
             initial={null}
             approvalReady={approvalReady}
+            trustReady={trustReady}
             onDone={async () => {
               setEditing(null)
               await onChanged()
@@ -620,6 +642,7 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
               orgId={orgId}
               initial={r}
               approvalReady={r.approved_for !== undefined}
+              trustReady={r.trust_level !== undefined}
               onDone={async () => {
                 setEditing(null)
                 await onChanged()
@@ -634,6 +657,7 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
                 <span className="flex flex-wrap items-center gap-1.5">
                   <span className="font-display text-[15px] font-extrabold text-ink">{r.name}</span>
                   {r.status !== 'active' && <Badge tone="slate">{statusLabel(r.status)}</Badge>}
+                  {r.trust_level === 'trusted' && <Badge tone="blue">Trusted</Badge>}
                   {r.review_status === 'pending' && <Badge tone="orange">Waiting for approval</Badge>}
                   {r.review_status === 'declined' && <Badge tone="slate">Declined</Badge>}
                   {r.orientation_on && <Badge tone="blue">Orientation done</Badge>}
@@ -752,7 +776,7 @@ function VolunteerDetail({ v, onChanged }: { v: VolunteerRow; onChanged: () => P
                 </span>
                 <span className="block text-xs text-slate-500">
                   {new Date(`${h.on_date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  {h.source === 'self' ? ' · logged by them' : h.source === 'checkin' ? ' · from a shift' : ' · added by staff'}
+                  {h.source === 'self' ? ' · self-reported' : h.source === 'checkin' ? ' · from a shift' : ' · added by staff'}
                   {h.note ? ` · ${h.note}` : ''}
                 </span>
               </span>
@@ -760,10 +784,22 @@ function VolunteerDetail({ v, onChanged }: { v: VolunteerRow; onChanged: () => P
                 <button
                   type="button"
                   onClick={() => setHoursStatus(h.id, 'confirmed').then(load).then(onChanged).catch((e) => setError(errMessage(e)))}
-                  className="shrink-0 rounded-full bg-green-600 px-3 py-1.5 text-xs font-bold text-white"
+                  className="min-h-[44px] shrink-0 rounded-full bg-green-600 px-3.5 text-xs font-bold text-white"
                 >
                   Confirm
                 </button>
+              ) : h.source === 'self' ? (
+                // Their own hours that already count (a trusted volunteer's): staff can still take them back.
+                <span className="flex shrink-0 flex-col items-end">
+                  <Badge tone="blue">Confirmed</Badge>
+                  <button
+                    type="button"
+                    onClick={() => setHoursStatus(h.id, 'logged').then(load).then(onChanged).catch((e) => setError(errMessage(e)))}
+                    className="min-h-[36px] px-1 text-xs font-bold text-slate-500 underline-offset-2 hover:underline"
+                  >
+                    Un-confirm
+                  </button>
+                </span>
               ) : (
                 <Badge tone="blue">Confirmed</Badge>
               )}
@@ -787,6 +823,7 @@ function VolunteerForm({
   orgId,
   initial,
   approvalReady,
+  trustReady,
   onDone,
   onCancel,
 }: {
@@ -794,9 +831,12 @@ function VolunteerForm({
   initial: VolunteerRow | null
   /** The approval columns exist (update 25 has run). */
   approvalReady: boolean
+  /** The trust_level column exists (update 28 has run). */
+  trustReady: boolean
   onDone: () => Promise<void>
   onCancel: () => void
 }) {
+  const [trust, setTrust] = useState<VolunteerRow['trust_level']>(initial?.trust_level ?? 'standard')
   // Someone staff add by hand is approved for everything unless they say otherwise.
   const startApproved = initial ? (initial.approved_for ?? []) : [EVERYTHING]
   const [approval, setApproval] = useState<'all' | 'some' | 'none'>(
@@ -839,6 +879,7 @@ function VolunteerForm({
         ...(approvalReady
           ? { approved_for: approval === 'all' ? [EVERYTHING] : approval === 'some' ? kinds : [] }
           : {}),
+        ...(trustReady ? { trust_level: trust } : {}),
       })
       await onDone()
     } catch (err) {
@@ -925,6 +966,34 @@ function VolunteerForm({
           <p className="mt-1 text-xs text-slate-500">What they can sign up for with their email. Shifts that anyone can book aren’t affected.</p>
         </div>
       )}
+      {trustReady && (
+        <div>
+          <p className="text-sm font-semibold text-slate-700">Their logged hours</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {(
+              [
+                ['standard', 'Standard'],
+                ['trusted', 'Trusted'],
+              ] as const
+            ).map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={trust === v}
+                onClick={() => setTrust(v)}
+                className={`min-h-[44px] rounded-full px-3.5 text-sm font-bold ${
+                  trust === v ? 'bg-ink text-white' : 'border border-slate-200 bg-white text-slate-600'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Trusted volunteers’ logged hours count straight away; you can still un-confirm them.
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <label className="block text-sm font-semibold text-slate-700">
           Started
@@ -971,10 +1040,13 @@ function VolunteerForm({
 function ToConfirm({
   rows,
   pending,
+  counted,
   onChanged,
 }: {
   rows: VolunteerRow[]
   pending: HoursRow[]
+  /** Trusted volunteers' self-reported hours that already count (update 28). */
+  counted: HoursRow[]
   onChanged: () => Promise<void>
 }) {
   const [error, setError] = useState<string | null>(null)
@@ -982,10 +1054,14 @@ function ToConfirm({
 
   if (pending.length === 0) {
     return (
-      <Card className="space-y-2 text-sm text-slate-600">
-        <p className="font-bold text-ink">Nothing waiting.</p>
-        <p>Hours a volunteer logs for themselves appear here so you can confirm or correct them before they count on a service letter.</p>
-      </Card>
+      <div className="space-y-3">
+        <Card className="space-y-2 text-sm text-slate-600">
+          <p className="font-bold text-ink">Nothing waiting.</p>
+          <p>Hours a volunteer logs for themselves appear here so you can confirm or correct them before they count on a service letter.</p>
+        </Card>
+        <FormError>{error}</FormError>
+        <CountedStraightAway counted={counted} nameOf={nameOf} onChanged={onChanged} onError={setError} />
+      </div>
     )
   }
 
@@ -1037,6 +1113,75 @@ function ToConfirm({
           </div>
         </Card>
       ))}
+      <CountedStraightAway counted={counted} nameOf={nameOf} onChanged={onChanged} onError={setError} />
     </div>
+  )
+}
+
+/**
+ * Hours trusted volunteers logged themselves, which count straight away
+ * (update 28). Listed so staff can still check them: "Un-confirm" sends one
+ * back to the list above.
+ */
+function CountedStraightAway({
+  counted,
+  nameOf,
+  onChanged,
+  onError,
+}: {
+  counted: HoursRow[]
+  nameOf: (id: string | null) => string
+  onChanged: () => Promise<void>
+  onError: (msg: string) => void
+}) {
+  const [busyId, setBusyId] = useState<string | null>(null)
+  if (counted.length === 0) return null
+
+  const unconfirm = async (id: string) => {
+    setBusyId(id)
+    try {
+      await setHoursStatus(id, 'logged')
+      await onChanged()
+    } catch (e) {
+      onError(errMessage(e))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  return (
+    <section className="space-y-2 pt-2">
+      <div className="px-1">
+        <p className="font-display text-base font-extrabold text-ink">Counted straight away ({counted.length})</p>
+        <p className="text-xs text-slate-500">
+          Logged by trusted volunteers in the last 60 days. They already count — un-confirm any that don’t look right.
+        </p>
+      </div>
+      {counted.map((h) => (
+        <Card key={h.id} className="space-y-1">
+          <div className="flex items-start gap-3">
+            <span className="min-w-0 flex-1">
+              <span className="block font-display text-[15px] font-extrabold text-ink">
+                {nameOf(h.volunteer_id)} · {hoursLabel(Number(h.hours))}
+              </span>
+              <span className="block text-sm text-slate-600">{h.activity}</span>
+              <span className="block text-xs text-slate-400">
+                {new Date(`${h.on_date}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                {' · self-reported'}
+                {h.note ? ` · ${h.note}` : ''}
+              </span>
+            </span>
+            <button
+              type="button"
+              disabled={busyId === h.id}
+              onClick={() => void unconfirm(h.id)}
+              className="min-h-[44px] shrink-0 rounded-full border border-slate-200 bg-white px-3.5 text-xs font-bold text-slate-600 disabled:opacity-60"
+            >
+              {busyId === h.id ? '…' : 'Un-confirm'}
+            </button>
+          </div>
+        </Card>
+      ))}
+    </section>
   )
 }

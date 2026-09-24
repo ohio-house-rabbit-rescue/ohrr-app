@@ -9,6 +9,8 @@
 // file so it stays authoritative. Keep it in sync with the migration until then.
 
 export type MembershipRole = 'owner' | 'admin' | 'staff'
+/** Staff levels, highest first (20260924220000_staff_levels_and_volunteer_trust.sql). founder = owner, board = admin. */
+export type StaffLevel = 'founder' | 'board' | 'lead' | 'worker'
 export type MembershipStatus = 'active' | 'disabled'
 export type InviteKind = 'master' | 'worker'
 
@@ -35,6 +37,8 @@ export type Database = {
           title: string | null
           photo_url: string | null
           show_on_about: boolean
+          // Staff level (20260924220000_*.sql) — change it with set_member_level(), never directly.
+          level: StaffLevel
           created_at: string
         }
         Insert: {
@@ -43,6 +47,7 @@ export type Database = {
           user_id: string
           role?: MembershipRole
           status?: MembershipStatus
+          level?: StaffLevel
           created_at?: string
         }
         Update: {
@@ -51,7 +56,44 @@ export type Database = {
           user_id?: string
           role?: MembershipRole
           status?: MembershipStatus
+          level?: StaffLevel
           created_at?: string
+        }
+        Relationships: []
+      }
+      // What someone has been trained and signed off for, with an optional expiry
+      // (20260924220000_staff_levels_and_volunteer_trust.sql). One per member and kind.
+      // Anyone on the team can read them; only people who can manage that member write.
+      member_certifications: {
+        Row: {
+          id: string
+          org_id: string
+          membership_id: string
+          /** 'hop-shop', 'buncare', 'animal-handling', 'vet-transport' … or free text. */
+          kind: string
+          certified_on: string
+          expires_on: string | null
+          certified_by: string | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          membership_id: string
+          kind: string
+          certified_on?: string
+          expires_on?: string | null
+          certified_by?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          kind?: string
+          certified_on?: string
+          expires_on?: string | null
+          certified_by?: string | null
+          notes?: string | null
         }
         Relationships: []
       }
@@ -106,6 +148,8 @@ export type Database = {
           invitee_phone: string | null
           position_note: string | null
           note: string | null
+          // The level the new person joins at (20260924220000_*.sql); null = from the role.
+          level: StaffLevel | null
           created_by: string | null
           created_at: string
         }
@@ -125,6 +169,7 @@ export type Database = {
           invitee_phone?: string | null
           position_note?: string | null
           note?: string | null
+          level?: StaffLevel | null
           created_by?: string | null
           created_at?: string
         }
@@ -144,6 +189,7 @@ export type Database = {
           invitee_phone?: string | null
           position_note?: string | null
           note?: string | null
+          level?: StaffLevel | null
           created_by?: string | null
           created_at?: string
         }
@@ -1242,6 +1288,9 @@ export type Database = {
           application: { [key: string]: Json | undefined }
           reviewed_at: string | null
           reviewed_by: string | null
+          // (20260924220000_staff_levels_and_volunteer_trust.sql) A trusted volunteer's
+          // self-logged hours arrive confirmed; staff can still un-confirm them.
+          trust_level: 'standard' | 'trusted'
           created_by: string | null
           created_at: string
           updated_at: string
@@ -1264,6 +1313,7 @@ export type Database = {
           review_status?: 'pending' | 'approved' | 'declined' | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          trust_level?: 'standard' | 'trusted'
           created_by?: string | null
         }
         Update: {
@@ -1282,6 +1332,7 @@ export type Database = {
           review_status?: 'pending' | 'approved' | 'declined' | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          trust_level?: 'standard' | 'trusted'
         }
         Relationships: []
       }
@@ -2634,6 +2685,33 @@ export type Database = {
       }
       /** Save the hours marks; returns how many new certificate suggestions it made for people already past one. */
       set_certificate_hours: { Args: { p_org: string; p_hours: number[] }; Returns: number }
+      // Staff levels, certifications, trusted volunteers
+      // (supabase/migrations/20260924220000_staff_levels_and_volunteer_trust.sql)
+      /** The Team screen: everyone with their level, and whether the signed-in person may manage them. */
+      list_team: {
+        Args: { p_org: string }
+        Returns: {
+          membership_id: string
+          user_id: string
+          email: string
+          role: MembershipRole
+          status: MembershipStatus
+          level: StaffLevel
+          display_name: string | null
+          title: string | null
+          created_at: string
+          can_manage: boolean
+        }[]
+      }
+      /** Only for people below your own level (founders: anyone but themselves); keeps role in step. */
+      set_member_level: { Args: { p_membership: string; p_level: StaffLevel }; Returns: undefined }
+      /** After create_invite_code: the level the new person joins at (never above the inviter's). */
+      set_invite_level: { Args: { p_code: string; p_level: StaffLevel | null }; Returns: undefined }
+      /** The signed-in person's level, or null if they aren't an active member. */
+      my_level: { Args: { p_org: string }; Returns: StaffLevel | null }
+      can_manage_member: { Args: { p_membership: string }; Returns: boolean }
+      /** The signed-in staff member's own volunteer access_token — the record is made the first time. */
+      my_staff_volunteer_page: { Args: { p_org: string }; Returns: string }
     }
     Enums: {
       membership_role: MembershipRole

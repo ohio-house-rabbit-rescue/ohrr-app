@@ -27,6 +27,7 @@ export const CAPABILITIES = [
   'inbox.manage',
   'bookings.manage',
   'social.publish',
+  'social.approve',
   'counter.use',
 ] as const
 
@@ -63,6 +64,7 @@ export const PERMISSION_CATALOG: PermissionMeta[] = [
   { key: 'inbox.manage', area: 'Inbox', description: 'Read and handle requests sent from the app and website' },
   { key: 'bookings.manage', area: 'Bookings', description: 'Set up bookable shifts & appointments, see rosters, confirm and check in' },
   { key: 'social.publish', area: 'Content', description: 'Release queued social-media posts (the one person who posts as OHRR)' },
+  { key: 'social.approve', area: 'Content', description: 'Approve social-media posts written by someone else' },
   { key: 'counter.use', area: 'Counter', description: 'The Counter: add items, ring up sales, take tickets at the door, sell raffle tickets' },
 ]
 
@@ -86,4 +88,8 @@ export const PRESETS: Record<string, Capability[]> = {
   'Content Editor': ['content.education.edit', 'announcements.post', 'events.bunfest.manage'],
   // The till and the door only — no website editing, deleting or voiding.
   'Counter volunteer': ['counter.use'],
+  // A certified Hop Shop worker (update 28): the counter, stock counts and orders — a "worker" level.
+  'Hop Shop Worker': ['counter.use', 'hopshop.inventory.update', 'hopshop.orders.view'],
+  // A second pair of eyes on social posts (update 26).
+  'Content Approver': ['social.approve'],
 }

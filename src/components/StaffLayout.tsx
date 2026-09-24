@@ -5,6 +5,7 @@ import { Icon } from './icons'
 import ScrollToTop from './ScrollToTop'
 import BackButton from './BackButton'
 import { buildLabel } from '../data/version'
+import { levelInfo, useMyLevel } from '../lib/staffLevels'
 
 function roleLabel(role: string | undefined) {
   if (role === 'owner') return 'Owner'
@@ -18,6 +19,8 @@ export default function StaffLayout() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
+  // Update 28: show the level (Founder / Board / Lead / Worker) once it's in.
+  const myLevel = useMyLevel(user?.id, membership?.orgId)
 
   const onSignOut = async () => {
     await signOut()
@@ -32,9 +35,10 @@ export default function StaffLayout() {
   const navItems = [
     { to: '/staff', label: 'Dashboard', end: true, show: !counterOnly },
     { to: '/staff/counter', label: 'Counter — sell, add items, door tickets', show: canCounter },
+    { to: '/staff/my-hours', label: 'My volunteer hours', show: myLevel.ready },
     { to: '/staff/inbox', label: 'Inbox', show: can('inbox.manage') },
     { to: '/staff/share', label: 'Share kit', show: can('announcements.post') },
-    { to: '/staff/posts', label: 'Post queue', show: can('announcements.post') || can('social.publish') },
+    { to: '/staff/posts', label: 'Post queue', show: can('announcements.post') || can('social.publish') || can('social.approve') },
     { to: '/staff/flyers', label: 'Flyers', show: can('announcements.post') },
     { to: '/staff/outreach', label: 'Outreach letters', show: can('announcements.post') },
     { to: '/staff/impact', label: 'Impact numbers', show: can('announcements.post') },
@@ -115,7 +119,7 @@ export default function StaffLayout() {
                   <span className="block truncate font-display text-sm font-extrabold text-ink">OHRR Staff</span>
                   {membership && (
                     <span className="block text-[11px] font-semibold text-slate-400">
-                      {roleLabel(membership.role)}
+                      {myLevel.level ? levelInfo(myLevel.level).label : roleLabel(membership.role)}
                     </span>
                   )}
                 </span>
