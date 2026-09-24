@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-23 (the real adoptable rabbits — update 20 applied)
+- **Last updated:** 2026-09-23 (website audit: older-visitor pass + every app capability on the website)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,7 +19,42 @@
 
 ## Current state (at a glance)
 
-- **The real adoptable rabbits (2026-09-23, latest). Update 20 applied 2026-09-23** (run
+- **Website audit — the older visitor, and every app capability on the website (2026-09-23,
+  latest; website `89b1883`, live).** Sponsor: audit the website for its age group, implement
+  the app's details and design ideas on the website, make it appealing with reasons to return,
+  represent every app capability including staff sign-in, and solve what's found.
+  - **Against the brief's web rules:** body text was 14px with grey-on-white labels — the
+    Tailwind text scale is moved up (text-sm 16px, text-base 18px), readable text is slate-600+,
+    buttons are ≥44px, every PageHero carries "Home › … › page" (`parent` prop), phones get a
+    labelled Menu button, an **A− / A+ text-size control** in the header (localStorage, same
+    three steps as the app's Settings → Text size), reduce-motion + visible focus + skip link.
+    The hero already rotated only by hand. The footer's staff link now opens the site's own
+    `/staff` (it opened the app's) and shows live hours + any notice from OHRR details.
+  - **Reasons to return (Home):** "Something wrong with your bunny?" (Bunny Help search up
+    front), "This week at OHRR" (`ThisWeek.tsx`: doors + notice, next event with days-to-go,
+    help needed now from open volunteer calls, newest Happy Tail), six doors (adds Happy Tails and
+    Found a rabbit), and an honest app pitch (My Bunny reminders, offline, camera).
+  - **App capabilities added to the website (public):** Bunny Help `/help` + `/help/:slug`
+    (`src/lib/bunnyhelp/`, care_topics with the seed fallback, the app's search without Fuse),
+    site search `/search`, Happy Tails `/tails`, `/tails/:id`, `/tails/share` (request kind
+    `happy-tail`, public-uploads bucket), Found a rabbit `/found` + `/found/report` (kind
+    `found-rabbit`, added to `lib/requests.ts`), Find a Rescue `/rescues` + `/rescues/:id`, a
+    volunteer's own hours `/volunteer/hours[/:token]` (same RPCs and localStorage key as the app).
+    Learn, Volunteer and Surrender link to them; Get the app now separates "only in the app".
+  - **Staff:** Forgot your password? on sign-in + `/staff/reset` (outside the shell); Events,
+    Sponsors (full port incl. placements), Volunteers roster, Silent auction catalogue
+    (`/staff/auction`), Bunny Help topics, Features switches, Activity log — each in the nav and
+    on the dashboard with its capability. The app's home-screen editor was not ported (it edits
+    hero_slides, which Staff → Homepage already does).
+  - Still app-only by design: My Bunny (device data), Scan an item, the Counter (offline, camera),
+    `/t/:code` tag landing, in-app raffle ticket page.
+  - Verified: tsc + build; every public page in the browser at 1280 and 375; every staff page in a
+    throwaway harness (fake owner session, live reads, writes captured); reset page; forgot link.
+  - **OHRR to do:** Supabase → Authentication → URL Configuration → Redirect URLs must include
+    `https://ohrr-website.pages.dev/staff/reset` (or `https://ohrr-website.pages.dev/**`) or reset
+    emails from the website will land on the app instead.
+
+- **The real adoptable rabbits (2026-09-23). Update 20 applied 2026-09-23** (run
   in five parts) and checked live: 17 rows, the app's Adopt tab and the website's Adopt
   page and home strip show them ("Live"), Dan's page shows Special needs + Adopted
   together with Forrest, photos load. Nothing waiting in Supabase. Sponsor: replace the demo rabbits with
