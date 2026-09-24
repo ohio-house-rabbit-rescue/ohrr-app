@@ -147,7 +147,7 @@ export default function StaffShare() {
           </label>
           <label className="block text-sm font-semibold text-slate-700">
             Small line (optional)
-            <textarea className={staffInput} rows={2} value={custom.subline} onChange={(e) => setCustom({ ...custom, subline: e.target.value })} placeholder="Saturday & Sunday noon–4, 5485 N. High St." maxLength={160} />
+            <textarea className={staffInput} rows={2} value={custom.subline} onChange={(e) => setCustom({ ...custom, subline: e.target.value })} placeholder="Saturday & Sunday noon–4, in Columbus" maxLength={160} />
           </label>
           <button type="button" disabled={!custom.headline.trim()} onClick={() => setPost(customPost(custom.headline.trim(), custom.subline.trim()))} className={`${btn.primary} w-full disabled:opacity-60`}>
             Make the card

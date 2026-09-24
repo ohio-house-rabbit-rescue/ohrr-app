@@ -8,6 +8,9 @@ export const ohrr = {
   tagline: 'Ohio’s first adoption center just for rabbits — rescuing, rehoming, and teaching better bunny care.',
   ein: '27-0830606',
   founded: 2009,
+  // The street address is for staff, suppliers and letters to one named person
+  // only — public screens and share outputs say "Columbus, Ohio", and the
+  // address comes with a booking. (People were leaving rabbits at the door.)
   address: '5485 N. High Street, Columbus, OH 43214',
   addressLine1: '5485 N. High Street',
   addressLine2: 'Columbus, OH 43214',
@@ -23,6 +26,11 @@ export const ohrr = {
   hoursShort: 'Sat & Sun, 12–4 PM',
   hopShopHours: 'Saturday / Sunday Noon – 4:00 pm',
   adoptionsNote: 'Adoptions by appointment only',
+  // Shown where the address used to be and on the surrender / found-rabbit
+  // screens. From OHRR's Admissions Policy ("a restricted admissions
+  // organization"; a rabbit comes in once OHRR accepts it for admission).
+  noDropOffNote:
+    'Please don’t bring a rabbit to the Adoption Center without talking to us first. OHRR is a restricted-admissions rescue: a rabbit can only come in once we’ve accepted it.',
   links: {
     site: 'https://www.ohiohouserabbitrescue.org/',
     adopt: 'https://www.ohiohouserabbitrescue.org/adopt/',

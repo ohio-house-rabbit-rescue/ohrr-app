@@ -25,7 +25,7 @@ const NOT_OPEN_YET: Record<string, string> = {
   'buncare-shift': 'Buncare shifts',
 }
 import { downloadBookingIcs, googleCalendarUrl, scheduleBookingReminders } from '../calendar'
-import { dayKey, durationLabel, fmtDay, fmtRange, fmtTime, type BookingReceipt, type BookingType, type OpenSlot, fmtWeekly } from '../types'
+import { dayKey, durationLabel, fmtDay, fmtRange, fmtTime, type BookingReceipt, type BookingType, type OpenSlot, fmtWeekly, placeName } from '../types'
 
 const input =
   'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-base text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
@@ -112,7 +112,7 @@ export default function BookPage() {
         <Card className="space-y-2 text-sm text-slate-600">
           <p>
             <span className="font-bold text-ink">{durationLabel(type.duration_min)}</span>
-            {type.location ? <> · {type.location}</> : null}
+            {placeName(type.location) ? <> · {placeName(type.location)}</> : null}
           </p>
           {type.weekly.length > 0 && (
             <p>

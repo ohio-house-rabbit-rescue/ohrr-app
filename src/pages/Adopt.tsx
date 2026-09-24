@@ -129,8 +129,8 @@ export default function Adopt() {
 
         <Card className="border-brand-blue/20 bg-brand-blue-50/60">
           <p className="text-sm leading-relaxed text-slate-600">
-            Adoptions are by appointment on Saturdays and Sundays at the Adoption Center,{' '}
-            {ohrr.address}. Questions? Email{' '}
+            Adoptions are by appointment on Saturdays and Sundays at the Adoption Center in Columbus; we
+            send the address with your appointment. Questions? Email{' '}
             <a href={`mailto:${ohrr.email}`} className="break-all font-semibold text-brand-blue">
               {ohrr.email}
             </a>

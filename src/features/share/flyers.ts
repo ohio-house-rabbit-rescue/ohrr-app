@@ -193,7 +193,8 @@ export async function renderFlyer(canvas: HTMLCanvasElement, f: Flyer, logoUrl =
   fy += 90
   ctx.fillStyle = '#64748b'
   ctx.font = `500 40px "${body}"`
-  ctx.fillText(ohrr.address, pad, fy)
+  // Town only: flyers get pinned up and passed on, and the address comes with a booking.
+  ctx.fillText('Columbus, Ohio', pad, fy)
   fy += 56
   ctx.fillText(ohrr.email, pad, fy)
 }

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { PageHeader, Screen, Card, SectionLabel, btn } from '../components/ui'
+import { PageHeader, Screen, Card, SectionLabel, QuietNote, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 import {
   foundContacts,
@@ -57,6 +57,9 @@ export default function FoundRabbit() {
             </a>
           </p>
         </Card>
+
+        {/* No drop-offs: a rabbit comes in only once OHRR has accepted it */}
+        <QuietNote>{ohrr.noDropOffNote}</QuietNote>
 
         {/* Domestic or wild */}
         <section className="space-y-2.5">

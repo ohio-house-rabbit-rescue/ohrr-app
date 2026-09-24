@@ -43,7 +43,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'What are OHRR’s hours?',
-        a: 'Saturday and Sunday, 12–4 PM, by appointment. The adoption center is at 5485 N. High Street, Columbus, OH.',
+        a: 'Saturday and Sunday, 12–4 PM, by appointment at the Adoption Center in Columbus; we send the address with your appointment.',
         link: { label: 'About & contact', to: '/about' },
       },
     ],

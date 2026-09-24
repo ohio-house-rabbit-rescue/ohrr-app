@@ -47,7 +47,7 @@ export const partners: Partner[] = [
     state: 'OH',
     region: 'Midwest',
     email: 'ohrrcontact@ohiohouserabbitrescue.org',
-    address: '5485 N. High Street, Columbus, OH 43214',
+    // No street address for OHRR itself — it comes with a booking.
     url: 'https://www.ohiohouserabbitrescue.org/',
     host: true,
   },

@@ -65,9 +65,11 @@ function rowToPartner(r: PartnerRow, year: number): Partner {
     city: r.city ?? undefined,
     state: r.state ?? undefined,
     region: r.region ?? undefined,
-    phone: r.phone ?? undefined,
+    // OHRR's own row keeps its street off public screens (it comes with a
+    // booking) and its number on the About page only.
+    phone: r.is_host ? undefined : r.phone ?? undefined,
     email: r.email ?? undefined,
-    address: r.address ?? undefined,
+    address: r.is_host ? undefined : r.address ?? undefined,
     url: r.website ?? undefined,
     host: r.is_host,
     // A rescue nobody has tagged by year yet falls back to the older flag.

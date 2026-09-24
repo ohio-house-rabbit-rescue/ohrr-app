@@ -3,7 +3,6 @@ import { hopShopIntro, hopShopProducts, hopShopPurchaseNote } from '../data/hops
 import { ohrr } from '../data/ohrr'
 import { telHref, useOrgProfile } from '../lib/orgProfile'
 import { useHopShopProducts, money } from '../lib/hopshopPublic'
-import { mapsUrl } from '../lib/events'
 import { PageHeader, Screen, Card, SectionLabel } from '../components/ui'
 import { Icon } from '../components/icons'
 import PresentedBy from '../features/sponsors/PresentedBy'
@@ -24,7 +23,7 @@ export default function HopShop() {
         <PresentedBy surface="hop-shop" />
         <p className="px-1 text-sm leading-relaxed text-slate-600">{hopShopIntro}</p>
 
-        {/* Hours + address (map link) */}
+        {/* Hours + where. No street address: people email and we send directions. */}
         <Card className="border-slate-200 bg-slate-50/80">
           <div className="flex items-center gap-2 text-sm">
             <Icon name="clock" size={15} className="shrink-0 text-brand-blue" />
@@ -33,16 +32,15 @@ export default function HopShop() {
           </div>
           <div className="mt-2.5 flex items-start gap-2 text-sm">
             <Icon name="mappin" size={15} className="mt-0.5 shrink-0 text-brand-blue" />
-            <span>
+            <span className="leading-relaxed text-slate-600">
+              The Hop Shop is inside the Adoption Center in Columbus.{' '}
               <a
-                href={mapsUrl(ohrr.address)}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`mailto:${org.email}?subject=${encodeURIComponent('Directions to the Hop Shop')}`}
                 className="font-semibold text-brand-blue underline decoration-brand-blue/30 underline-offset-2"
               >
-                {ohrr.addressLine1}, {ohrr.addressLine2}
-              </a>
-              <span className="mt-1 block text-xs leading-relaxed text-slate-500">{ohrr.directions}</span>
+                Email us
+              </a>{' '}
+              and we’ll send directions.
             </span>
           </div>
           <p className="mt-2.5 text-xs text-slate-500">

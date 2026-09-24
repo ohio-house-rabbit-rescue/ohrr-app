@@ -1,8 +1,9 @@
 // Ready-to-send outreach letters — the email a volunteer sends to a campus
 // office, a vet clinic, a pet store, a school, a property manager or a
 // newsletter editor to get OHRR in front of the people it is missing. Every
-// fact comes from OHRR's own pages (volunteer rules, hours, address, the
-// education pages); the sender only adds their name and who it is for.
+// fact comes from OHRR's own pages (volunteer rules, hours, the education
+// pages); the sender only adds their name and who it is for. No street
+// address: letters get forwarded, and the address comes with a booking.
 // Links are UTM-tagged so the analytics show which letters bring people in.
 import { ohrr } from '../../data/ohrr'
 import { OHRR_CONTACT_EMAIL } from '../../data/volunteer'
@@ -23,7 +24,6 @@ export interface OutreachLetter {
 
 const SIGN = `{{sender}}
 Ohio House Rabbit Rescue (volunteer)
-${ohrr.address}
 ${OHRR_CONTACT_EMAIL}
 ${SHARE_SITE}`
 
@@ -35,7 +35,7 @@ export const OUTREACH: OutreachLetter[] = [
     subject: 'Volunteer hours with the rabbits — one hour at a time',
     body: `Hello {{org}},
 
-I volunteer with Ohio House Rabbit Rescue, Ohio's adoption center just for rabbits, in Clintonville (${ohrr.addressLine1}, Columbus). We are looking for students who would like to help — and we can keep it small.
+I volunteer with Ohio House Rabbit Rescue, Ohio's adoption center just for rabbits, in Clintonville, Columbus. We are looking for students who would like to help — and we can keep it small.
 
 Bunny socialization: one-hour shifts sitting with rabbits who need to learn to trust people again. Shifts are booked online, up to two a month per person, no experience needed, and they count for service hours — we issue a signed service-hours letter from our records.
 
@@ -95,7 +95,7 @@ ${SIGN}`,
     subject: 'A group visit to sit with the rabbits',
     body: `Hello {{org}},
 
-I volunteer with Ohio House Rabbit Rescue, Ohio's adoption center just for rabbits, in Clintonville (${ohrr.addressLine1}, Columbus). Bunny socialization — sitting quietly with a rabbit so it learns to trust people — is open to groups, and it works well for children.
+I volunteer with Ohio House Rabbit Rescue, Ohio's adoption center just for rabbits, in Clintonville, Columbus. Bunny socialization — sitting quietly with a rabbit so it learns to trust people — is open to groups, and it works well for children.
 
 How it works: visits are one hour, at the Adoption Center. Children from age six can take part; children ten and under come with an adult, and the adult takes part too. Quiet hands, fifteen minutes with each bunny.
 

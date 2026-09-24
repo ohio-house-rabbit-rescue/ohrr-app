@@ -259,9 +259,11 @@ export interface Message {
   link: string
 }
 
+// No street address: these messages get posted publicly, and the address
+// comes with the shift someone books.
 function signature(org: OrgBits): string {
   const who = [org.signerName, org.signerTitle].filter(Boolean).join(', ')
-  return [who, org.name, org.address, org.email].filter(Boolean).join('\n')
+  return [who, org.name, org.email].filter(Boolean).join('\n')
 }
 
 /** The message for one medium. `{{org}}` in emails is the group's name. */

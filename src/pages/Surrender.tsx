@@ -8,7 +8,8 @@ import {
   surrenderContact,
   fullPolicies,
 } from '../data/surrender'
-import { PageHeader, Screen, Card, SectionLabel, btn } from '../components/ui'
+import { ohrr } from '../data/ohrr'
+import { PageHeader, Screen, Card, SectionLabel, QuietNote, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 
 export default function Surrender() {
@@ -29,6 +30,9 @@ export default function Surrender() {
             </a>
           </div>
         </Card>
+
+        {/* No drop-offs: a rabbit comes in only once OHRR has accepted it */}
+        <QuietNote>{ohrr.noDropOffNote}</QuietNote>
 
         {/* How it works */}
         <section className="space-y-2.5">

@@ -158,7 +158,8 @@ export default function AdoptHowItWorks() {
             <a href={`mailto:${ohrr.email}`} className="break-all font-semibold text-brand-blue">
               {ohrr.email}
             </a>
-            . Adoptions are by appointment at the Adoption Center, {ohrr.address}.
+            . Adoptions are by appointment at the Adoption Center in Columbus; we send the address with your
+            appointment.
           </p>
         </Card>
       </Screen>

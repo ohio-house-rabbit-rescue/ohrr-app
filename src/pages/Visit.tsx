@@ -137,7 +137,7 @@ export default function Visit() {
           <dl className="mt-3 space-y-2 text-sm">
             <div className="flex items-center gap-2">
               <Icon name="mappin" size={15} className="shrink-0 text-brand-blue" />
-              <span className="text-slate-600">{ohrr.address}</span>
+              <span className="text-slate-600">Columbus, Ohio</span>
             </div>
             <div className="flex items-center gap-2">
               <Icon name="mail" size={15} className="shrink-0 text-brand-blue" />

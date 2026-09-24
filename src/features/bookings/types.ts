@@ -153,3 +153,12 @@ export function durationLabel(min: number): string {
   if (min > 60) return `${Math.floor(min / 60)} h ${min % 60} min`
   return `${min} minutes`
 }
+
+/**
+ * Just the place, for anyone who hasn't booked yet: "OHRR Adoption Center ·
+ * <street>, Columbus" → "OHRR Adoption Center". The street comes with the
+ * booking (receipt, calendar file, My bookings), never before it.
+ */
+export function placeName(location: string | null | undefined): string {
+  return (location ?? '').split(' · ')[0].trim()
+}

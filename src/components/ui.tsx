@@ -220,3 +220,13 @@ export function SampleNote({ children }: { children?: ReactNode }) {
     </div>
   )
 }
+
+/* ---- a calm aside: worth reading, not an alarm ---- */
+export function QuietNote({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm leading-relaxed text-slate-600">
+      <Icon name="info" size={16} className="mt-0.5 shrink-0 text-brand-blue" />
+      <p>{children}</p>
+    </div>
+  )
+}
