@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (two-minute check in the app; shorter website footer with social icons; BunFest Add to calendar on website, app and BunFest site; nothing to run)
+- **Last updated:** 2026-09-24 (real photos lead on the website: rabbit collage, What’s happening picture cards, OHRR photos on inner pages; update 23 waiting)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,8 +19,33 @@
 
 ## Current state (at a glance)
 
-- **App gets the two-minute check; shorter footer; BunFest Add to calendar everywhere (2026-09-24,
-  latest; app `e84c4d0`, website `0f3973c`, BunFest site `9e540c1`).**
+- **Real photos lead on the website (2026-09-24, latest; website `659cac9`, `7763108`, `1a559bf`; app
+  `8860f00`; update 23 waiting).** Sponsor compared with the current site: "lots of information, but very
+  little … visually appealing"; keep the words, blend in imagery. Rule kept: photos only of real OHRR
+  things (their rabbits, volunteers, shop, events/fundraiser artwork); icons stay on the function doors.
+  - **Home hero:** a 2×2 collage of real adoptable rabbits (live RescueGroups photos, names on them, each
+    opens its rabbit; "Meet all N rabbits") beside the headline and doors on a laptop; a swipeable photo
+    row ending in a "Meet all N" tile on a phone. Replaced the "Rabbits looking for homes" row. Sponsor:
+    "a little more above the fold" (their screen ≈1300×675): kicker phone-only (the header says it), headline
+    `lg:text-[2.375rem]` (two lines), tighter padding, collage 24rem, and on a laptop "Help with my rabbit"
+    shares one line with its box. Measured: whole hero + the What's happening heading above the fold at
+    1300×675; card tops too at 1440×800; Bunny Help above the fold at 1024×700 and 375×740.
+  - **"What's happening at OHRR" picture cards** (up to 4, artwork never cropped, equal heights): a new
+    `hero_slides.placement = 'happening'` group, managed in Staff → Homepage features (website) and Staff →
+    Home screen (app, "What's happening (website)"); the app's own Home ignores those rows. Until update 23
+    runs, the five posts from the current OHRR home page show from `data/heroSlides.ts`. The BunFest card
+    hides itself after Oct 25. Artwork also bundled in the app (`public/img/news`) for editor previews.
+  - **Update 23** (`supabase/migrations/20260924150000_whats_happening_cards.sql`, Drive RUN-THIS +
+    `Supabase history/APPLY-23.sql`): opens the 'happening' placement and seeds the five cards. Waiting.
+  - **Inner pages** (`PhotoStrip.tsx`, `data/ohrrPhotos.ts`; 15 photos from OHRR's own site in
+    `public/img/ohrr/`, ≈1.15 MB total, EXIF/GPS stripped, lazy-loaded): Volunteer (3 volunteers-with-
+    rabbits), Hop Shop (2 shelves), About volunteer family (4 named squares + "Photos: Ohio House Rabbit
+    Rescue"), Give ("Lola's tale" from the Veterinary Care Fund page, captions from its text), Found a
+    rabbit (wild cottontail in Domestic-or-wild + 3 catching-a-stray photos captioned from the article),
+    Adopt ("Rescued is my favorite breed"). Rejected: child-as-subject, tiny, street/building exteriors,
+    unclear identities. **Ask OHRR:** the wild-cottontail photo may be stock and BevMay.png looks
+    professional — confirm they're free to reuse; and send 10–15 newer, larger photos.
+- **App gets the two-minute check; shorter footer; BunFest Add to calendar everywhere (2026-09-24; app `e84c4d0`, website `0f3973c`, BunFest site `9e540c1`).**
   - **App:** `ReadyCheck.tsx` (the website's seven questions word for word) above the
     `is-a-rabbit-right-for-us` article (`/info/is-a-rabbit-right-for-us`, alias `/thinking-about-a-rabbit`;
     shows the check even if the article can't load). Entry cards on Home (after Quick actions), Adopt
