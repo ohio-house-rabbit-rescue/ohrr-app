@@ -9,6 +9,7 @@
 
 import { event } from '../data/event'
 import type { Session } from '../data/sessions'
+import type { EventItem } from '../data/events'
 
 // "HH:MM" (24h) -> {h, m}
 function parse24(t: string): { h: number; m: number } | null {
@@ -135,9 +136,47 @@ function addMinutes(t: { h: number; m: number }, mins: number): { h: number; m: 
   return { h: Math.floor(total / 60), m: total % 60 }
 }
 
+/**
+ * One whole event (the BunFest day) as a .ics, from the shared `events` row:
+ * its real start/end, venue and address. The row's times carry their offset,
+ * so they go out as UTC and land at the right hour in any calendar.
+ */
+export function eventIcs(e: EventItem): string {
+  const where = [e.venue, e.address].filter(Boolean).join(', ')
+  const details = [e.summary, e.url].filter(Boolean).join('\n\n')
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Ohio House Rabbit Rescue//OHRR app//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:event-${e.slug}@ohiohouserabbitrescue.org`,
+    `DTSTAMP:${utcStamp(new Date())}`,
+    `DTSTART:${utcStamp(new Date(e.startsAt))}`,
+    ...(e.endsAt ? [`DTEND:${utcStamp(new Date(e.endsAt))}`] : []),
+    `SUMMARY:${esc(e.title)}`,
+    ...(details ? [`DESCRIPTION:${esc(details)}`] : []),
+    ...(where ? [`LOCATION:${esc(where)}`] : []),
+    ...(e.url ? [`URL:${e.url}`] : []),
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ]
+  return lines.map(fold).join('\r\n')
+}
+
+/** Trigger a download of one event as a .ics file (web only). */
+export function downloadEventIcs(e: EventItem) {
+  saveIcs(eventIcs(e), `${e.slug}.ics`)
+}
+
 /** Trigger a download of the sessions as a .ics file. */
 export function downloadIcs(sessions: Session[], filename = 'midwest-bunfest.ics') {
-  const blob = new Blob([buildIcs(sessions)], { type: 'text/calendar;charset=utf-8' })
+  saveIcs(buildIcs(sessions), filename)
+}
+
+function saveIcs(text: string, filename: string) {
+  const blob = new Blob([text], { type: 'text/calendar;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

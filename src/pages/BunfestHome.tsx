@@ -2,11 +2,12 @@ import { Link } from 'react-router-dom'
 import { event } from '../data/event'
 import { useBunfestFeatures } from '../features/bunfest/thisYear'
 import { BUNFEST_HUB } from '../data/content'
-import { useBunfestEvent, eventDate, eventTime } from '../lib/events'
+import { useBunfestEvent, eventDate, eventTime, isUpcoming } from '../lib/events'
 import { Screen, SectionLabel, ActionCard, IconTile, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 import PresentedBy from '../features/sponsors/PresentedBy'
 import ShareButton, { appLink } from '../components/ShareButton'
+import AddEventToCalendar from '../components/AddEventToCalendar'
 
 export default function BunfestHome() {
   // This year's cards, from Staff → BunFest (bundled 2026 list until then)
@@ -50,6 +51,13 @@ export default function BunfestHome() {
             <Icon name="mappin" size={16} className="text-white/80" /> {bunfest.venue} · {bunfest.city}
           </span>
         </div>
+        {/* Mark your calendars — the whole day, from the same event record */}
+        {isUpcoming(bunfest) && (
+          <AddEventToCalendar
+            event={bunfest}
+            className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/50 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20 active:scale-[.98]"
+          />
+        )}
 
         <div className="mt-5 flex gap-2.5">
           <Link to="/bunfest/schedule" className={btn.white}>

@@ -11,6 +11,8 @@ import { PageHeader, Screen, Card, SectionLabel, btn } from '../components/ui'
 import { Icon, type IconName } from '../components/icons'
 import { ArticleBody } from '../components/ArticleBody'
 import { Spinner } from '../components/staffui'
+import ReadyCheck from '../components/ReadyCheck'
+import { RABBIT_READY_SLUG } from '../data/ohrr'
 
 function MoreTopics({ items }: { items: { id: string; title: string; icon: IconName }[] }) {
   if (items.length === 0) return null
@@ -75,6 +77,8 @@ function ArticleView({ article, all }: { article: CareArticle; all: CareArticle[
         >
           <Icon name="arrowLeft" size={16} /> Rabbit Care
         </Link>
+        {/* "Is a rabbit right for us?" — the two-minute check comes first */}
+        {article.slug === RABBIT_READY_SLUG && <ReadyCheck />}
         <Card>
           <ArticleBody body={article.body} />
         </Card>
@@ -117,5 +121,16 @@ export default function LearnTopic() {
       </Screen>
     )
   }
+  // The two-minute check needs nothing from the network, so Home's "Take the
+  // two-minute check" still lands somewhere useful if the article can't load.
+  if (id === RABBIT_READY_SLUG)
+    return (
+      <>
+        <PageHeader icon="help" title="Is a rabbit right for us?" />
+        <Screen className="space-y-4">
+          <ReadyCheck />
+        </Screen>
+      </>
+    )
   return <NotFound />
 }

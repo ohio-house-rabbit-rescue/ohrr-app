@@ -10,6 +10,7 @@ import { tails } from './tails'
 import { volunteerWays, otherVolunteerNeeds } from './volunteer'
 import { givingOptions } from './giving'
 import { sessions } from './sessions'
+import { RABBIT_READY } from './ohrr'
 
 export interface SearchItem {
   title: string
@@ -34,6 +35,12 @@ const screens: { title: string; subtitle: string; to: string; extra?: string }[]
   { title: 'Happy Tails', subtitle: 'Adoption stories', to: '/tails', extra: 'follow updates' },
   { title: 'Bunny Services', subtitle: 'Bonding & vet clinic', to: '/services', extra: 'appointment' },
   { title: 'Rabbit Care', subtitle: 'Learn', to: '/learn', extra: 'diet housing health litter toys' },
+  {
+    title: 'Is a rabbit right for us?',
+    subtitle: 'The two-minute check before you get a rabbit',
+    to: RABBIT_READY,
+    extra: 'thinking about getting a rabbit buy pet store easter gift kids children ready cost lifespan should i',
+  },
   { title: 'Find a Vet', subtitle: 'Rabbit-savvy vets in Ohio', to: '/vets', extra: 'veterinarian emergency exotic spay neuter medvet' },
   { title: 'Found a Rabbit?', subtitle: 'Strays, field rescue & surrender', to: '/found', extra: 'stray lost abandoned catch surrender admissions' },
   { title: 'Volunteer', subtitle: 'Ways to help', to: '/volunteer', extra: 'socialization buncare transport field rescue' },

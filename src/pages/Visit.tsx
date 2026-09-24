@@ -2,9 +2,10 @@ import { Link } from 'react-router-dom'
 import { event } from '../data/event'
 import { useEventInfo } from '../features/bunfest/thisYear'
 import { ohrr } from '../data/ohrr'
-import { useBunfestEvent, eventDate, eventTime, mapsUrl } from '../lib/events'
+import { useBunfestEvent, eventDate, eventTime, mapsUrl, isUpcoming } from '../lib/events'
 import { PageHeader, Screen, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
+import AddEventToCalendar from '../components/AddEventToCalendar'
 
 export default function Visit() {
   // Admission, parking and the links OHRR keeps up to date (Staff → BunFest)
@@ -30,6 +31,9 @@ export default function Visit() {
               <p className="text-sm text-slate-500">{eventTime(bunfest)}</p>
             </div>
           </div>
+          {isUpcoming(bunfest) && (
+            <AddEventToCalendar event={bunfest} className={`${btn.outline} mt-3 min-h-[44px] w-full`} />
+          )}
         </Card>
 
         {/* Where */}

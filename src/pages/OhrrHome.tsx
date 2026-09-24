@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom'
-import { ohrr } from '../data/ohrr'
+import { ohrr, RABBIT_READY } from '../data/ohrr'
+import { easterAhead } from '../lib/season'
 import { useOrgProfile } from '../lib/orgProfile'
 import { event } from '../data/event'
 import { OHRR_HUB, OHRR_QUICK_ACTIONS } from '../data/content'
 import { slideVisual, appPath, type HeroSlide } from '../data/heroSlides'
 import { useHeroSlides } from '../lib/heroSlides'
 import { useBunfestEvent, eventDate } from '../lib/events'
-import { Screen, SectionLabel, ActionCard, Card } from '../components/ui'
+import { Screen, SectionLabel, ActionCard, Card, btn } from '../components/ui'
 import { PhotoCard, IconPhotoTile } from '../components/PhotoCard'
 import { Icon } from '../components/icons'
 import AnnouncementsBanner from '../components/AnnouncementsBanner'
@@ -76,6 +77,43 @@ function HeroCard({ slide }: { slide: HeroSlide }) {
   )
 }
 
+// Before anyone buys or adopts: OHRR's two-minute check (2026-09-24, OHRR's
+// research: rabbits are given up almost always for human reasons).
+function ThinkingAboutARabbit() {
+  return (
+    <div className="rounded-2xl border border-brand-orange/40 bg-brand-orange-50 p-4">
+      <h2 className="font-display text-lg font-black leading-tight text-ink">Thinking about getting a rabbit?</h2>
+      <p className="mt-1 text-sm leading-relaxed text-slate-700">
+        Read this before Easter, before the pet store, before the kids ask twice. Seven honest questions, two minutes.
+      </p>
+      <Link to={RABBIT_READY} className={`${btn.primary} mt-3 min-h-[44px] w-full`}>
+        Take the two-minute check
+      </Link>
+    </div>
+  )
+}
+
+// Shows by itself in the seven weeks before Easter (lib/season.ts) — surrender
+// requests rise two to three months after Easter.
+function EasterReminder() {
+  const easter = easterAhead()
+  if (!easter) return null
+  return (
+    <Link
+      to={RABBIT_READY}
+      className="flex min-h-[44px] items-center gap-3 rounded-2xl border border-brand-orange/40 bg-brand-orange-50 px-4 py-3 text-sm text-slate-800 transition hover:border-brand-orange"
+    >
+      <span className="min-w-0 flex-1">
+        <strong className="text-ink">
+          Easter is {easter.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}. Thinking about a bunny?
+        </strong>{' '}
+        Read this first.
+      </span>
+      <Icon name="chevron" size={18} className="shrink-0 text-brand-orange" />
+    </Link>
+  )
+}
+
 export default function OhrrHome() {
   // Hours / phone / address staff can change (Staff → Settings → OHRR details)
   const org = useOrgProfile()
@@ -96,6 +134,7 @@ export default function OhrrHome() {
       </section>
 
       <Screen className="space-y-6">
+        <EasterReminder />
         {/* Live staff-posted notices (hidden when there are none) */}
         <AnnouncementsBanner />
         <PresentedBy surface="home" />
@@ -131,6 +170,8 @@ export default function OhrrHome() {
             )}
           </div>
         </div>
+
+        <ThinkingAboutARabbit />
 
         {/* OHRR sections */}
         <div className="space-y-2.5">

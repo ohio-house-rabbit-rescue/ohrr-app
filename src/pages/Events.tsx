@@ -9,11 +9,11 @@ import {
   eventTime,
   isUpcoming,
   mapsUrl,
-  eventCalendarUrl,
 } from '../lib/events'
 import { BUNFEST_EVENT_SLUG, type EventItem } from '../data/events'
 import { ohrr } from '../data/ohrr'
 import PresentedBy from '../features/sponsors/PresentedBy'
+import AddEventToCalendar from '../components/AddEventToCalendar'
 
 function EventCard({ event: e, past = false }: { event: EventItem; past?: boolean }) {
   const [open, setOpen] = useState(false)
@@ -97,15 +97,12 @@ function EventCard({ event: e, past = false }: { event: EventItem; past?: boolea
             {open ? 'Show less' : 'Read more'}
           </button>
         )}
+        {/* .ics + Google on the web; a phone reminder + Google in the app */}
         {!past && (
-          <a
-            href={eventCalendarUrl(e)}
-            target="_blank"
-            rel="noopener noreferrer"
+          <AddEventToCalendar
+            event={e}
             className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
-          >
-            <Icon name="calendar" size={14} /> Add to calendar
-          </a>
+          />
         )}
         {e.url && (
           <a

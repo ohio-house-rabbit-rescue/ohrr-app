@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ohrr, adoptRequirements } from '../data/ohrr'
+import { ohrr, adoptRequirements, RABBIT_READY } from '../data/ohrr'
 import { getAdoptables, teaser, type AdoptSource } from '../lib/adopt'
 import type { AgeGroup, Rabbit } from '../data/adoptables'
 import {
@@ -11,6 +11,7 @@ import {
   SectionLabel,
   SampleNote,
   SegTabs,
+  ActionCard,
 } from '../components/ui'
 import { Icon } from '../components/icons'
 import { RabbitPhoto } from '../components/RabbitPhoto'
@@ -65,6 +66,15 @@ export default function Adopt() {
             {rabbits?.length ?? 0} bunnies looking for homes
           </p>
         )}
+
+        {/* Before deciding: OHRR's two-minute check */}
+        <ActionCard
+          to={RABBIT_READY}
+          title="Is a rabbit right for us?"
+          subtitle="The two-minute check, before you decide"
+          icon="help"
+          tone="orange"
+        />
 
         {ageFilters.length > 1 && (
           <SegTabs options={ageFilters} value={filter} onChange={setFilter} />

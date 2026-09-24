@@ -74,6 +74,12 @@ export const ohrr = {
   },
 }
 
+// OHRR's "Is a rabbit right for us?" page (a staff-edited article, section
+// 'adopt') with the two-minute check on top. Flyers and QR codes already print
+// this path — keep it. /thinking-about-a-rabbit is an easy alias.
+export const RABBIT_READY_SLUG = 'is-a-rabbit-right-for-us'
+export const RABBIT_READY = `/info/${RABBIT_READY_SLUG}`
+
 // Adoption requirements (from OHRR's Adoption Policy, revised January 31, 2022).
 export const adoptRequirements = [
   'Rabbits live indoors — never outside, in a garage, or in an unfinished basement.',

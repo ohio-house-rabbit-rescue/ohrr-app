@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { CARE_DISCLAIMER } from '../data/careArticles'
-import { ohrr } from '../data/ohrr'
+import { ohrr, RABBIT_READY } from '../data/ohrr'
 import { useCareArticles, asIconName, fallbackArticles } from '../lib/careContent'
 import { PageHeader, Screen, ActionCard, SectionLabel, Card } from '../components/ui'
 import { Icon } from '../components/icons'
@@ -39,6 +39,7 @@ export default function Learn() {
         </Link>
 
         <ActionCard to="/learn/breeds" title="What kind of bunny do I have?" subtitle="Ears, size, coat → the breeds that fit. Most are a mix — and that’s fine" icon="search" tone="orange" />
+        <ActionCard to={RABBIT_READY} title="Thinking about getting a rabbit?" subtitle="The two-minute check first" icon="heart" tone="orange" />
 
         <div className="space-y-2.5">
           <SectionLabel>Articles on bunny care</SectionLabel>

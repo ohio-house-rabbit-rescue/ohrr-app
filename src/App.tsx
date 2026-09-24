@@ -12,6 +12,7 @@ import Vets from './pages/Vets'
 import FoundRabbit from './pages/FoundRabbit'
 import FoundReport from './pages/FoundReport'
 import PageTitle from './components/PageTitle'
+import { RABBIT_READY } from './data/ohrr'
 import Tails from './pages/Tails'
 import TailDetail from './pages/TailDetail'
 import ShareTail from './pages/ShareTail'
@@ -150,6 +151,8 @@ export default function App() {
         <Route path="/learn/:id" element={<LearnTopic />} />
         {/* Give / About / Adopt pages brought in from the old site (same table, other sections) */}
         <Route path="/info/:id" element={<LearnTopic />} />
+        {/* An easy address for "Is a rabbit right for us?" and its two-minute check */}
+        <Route path="/thinking-about-a-rabbit" element={<Navigate to={RABBIT_READY} replace />} />
         <Route path="/volunteer" element={<Volunteer />} />
         <Route path="/volunteer/signup" element={<VolunteerSignup />} />
         <Route path="/volunteer/foster" element={<FosterForm />} />
