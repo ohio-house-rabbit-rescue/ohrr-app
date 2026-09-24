@@ -13,7 +13,7 @@ import { Spinner, FormError, staffInput } from '../components/staffui'
 import StaffImageField from '../components/StaffImageField'
 import { slideVisual } from '../data/heroSlides'
 
-type Placement = 'hero' | 'featured'
+type Placement = 'hero' | 'featured' | 'happening'
 
 interface Row {
   id: string
@@ -156,6 +156,11 @@ export default function StaffHomeScreen() {
   const groups: { key: Placement; title: string; hint: string }[] = [
     { key: 'hero', title: 'Big cards', hint: 'The swipeable cards at the top of Home. Up to 3, highest number first.' },
     { key: 'featured', title: 'Featured cards', hint: 'The row after them. Up to 4, highest number first.' },
+    {
+      key: 'happening',
+      title: 'What’s happening (website)',
+      hint: 'Picture cards on the website’s home page: news, fundraisers, events. Up to 4, highest number first. Give each a picture; give an event an end date and its card hides itself afterwards.',
+    },
   ]
 
   return (
@@ -163,7 +168,7 @@ export default function StaffHomeScreen() {
       <div className="pt-1">
         <h1 className="font-display text-2xl font-black text-ink">Home screen</h1>
         <p className="mt-1 text-sm text-slate-600">
-          What the app opens on — and the website’s home page. Leave it empty and both show the built-in cards.
+          What the app opens on, and the picture cards on the website’s home page. Leave a group empty and it shows the built-in cards.
         </p>
       </div>
 
@@ -234,7 +239,7 @@ export default function StaffHomeScreen() {
                 </Card>
               ) : (
                 <button type="button" onClick={() => setCreating(g.key)} className={`${btn.outline} w-full`}>
-                  <Icon name="plus" size={16} /> Add {g.key === 'hero' ? 'a big card' : 'a featured card'}
+                  <Icon name="plus" size={16} /> Add {g.key === 'hero' ? 'a big card' : g.key === 'featured' ? 'a featured card' : 'a picture card'}
                 </button>
               )}
             </section>

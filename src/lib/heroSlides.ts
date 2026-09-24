@@ -44,8 +44,10 @@ async function fetchLive(): Promise<HeroSlide[] | null> {
       .select('*')
       .eq('is_published', true)
       .order('sort_order', { ascending: false })
-    if (error || !data || data.length === 0) return null
-    return data.map(rowToSlide)
+    // "happening" rows are the website home's picture cards, not the app's.
+    const mine = (data ?? []).filter((r) => r.placement === 'hero' || r.placement === 'featured')
+    if (error || mine.length === 0) return null
+    return mine.map(rowToSlide)
   } catch {
     return null
   }
