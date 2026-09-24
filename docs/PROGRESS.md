@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (website leads with the rescue’s purpose; app is one pill; update 21 waiting)
+- **Last updated:** 2026-09-24 (website nav audit: a clear way back from staff, a complete phone menu; update 21 waiting)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,7 +19,21 @@
 
 ## Current state (at a glance)
 
-- **The website leads with the rescue’s purpose (2026-09-24, latest; website live).** Sponsor:
+- **Website nav audit (2026-09-24, latest; website live, commit `c9c88ab`).** Sponsor: "I'm in
+  the staff and can not get back to the main site." The old staff screen had ~30 tool buttons in a
+  wrapping row, and the only way out was a small grey "View site" pill after them.
+  - **Staff:** a "← Back to the website" button on every staff screen, next to Sign out (also
+    on the signed-in-but-not-staff screen). The tools are grouped (Every day · Rabbits & care ·
+    Volunteers · Website & outreach · Hop Shop & BunFest · Settings), shown as a left sidebar on
+    laptops and behind a "Staff menu" button on phones that closes when a page opens. Same
+    capability checks as before; groups with nothing the person can use are hidden.
+  - **Public:** the phone menu now starts with Home and ends with an "Also at OHRR" group
+    (Events, Midwest BunFest, Hop Shop, News, Happy Tails, Contact us); "Contact" sits in the top
+    bar on tablet and laptop.
+  - **Route audit:** every public page is linked from somewhere. Staff pages missing from the menu
+    are tabs or sub-pages reached from their parent (Hop Shop reorder, BunFest tabs, hours letter,
+    item tags).
+- **The website leads with the rescue’s purpose (2026-09-24; website live).** Sponsor:
   "closer but still too overwhelming … focus on the purpose of the rescue and the rest is
   secondary"; the app should be "a standing pill at the top of the page … links to the app
   elsewhere is a waste". Built from OHRR’s own mission (About page: run the Adoption Center,
