@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (BunFest pages + sponsor logos + renewals list; update 24 applied and checked live; nothing to run)
+- **Last updated:** 2026-09-24 (volunteer approval + letters, mobile vet, post approval, vendor records + pack sizes, staff levels, Donate pill; **updates 25–28 to run**)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,46 @@
 ---
 
 ## Current state (at a glance)
+
+- **A long round, 2026-09-24 (latest; website `6fe33e4`…`8de568c`, app `5d06c6e`…`d384d45`; updates
+  25–28 to run, in order — Drive RUN-THIS and `Supabase history/APPLY-25…28.sql`).** Everything degrades
+  quietly until the SQL is run. OHRR asked, and got:
+  - **Vet new volunteers** (update 25): `/volunteer/apply` (the old "I'm interested" links land there too) →
+    the roster as "waiting" + the Inbox; Staff → Volunteers approves for everything or for kinds
+    (socialization, buncare, events, vet-transport, hop-shop) or declines, with email drafts. Shift types
+    and volunteer calls can be approved-only (`approval_role`; Bunny Socialization, Buncare and calls start
+    that way); the sign-up asks "the email you applied with", the database answers approved / waiting /
+    not yet and nothing more, and a trigger on bookings refuses unapproved emails (staff exempt). Everyone
+    already active was approved for everything — only new people are vetted.
+  - **The volunteer's private page** (`/volunteer/hours/:token`): Coming up (calendar, can't make it),
+    Approved for, hours (checked-in shifts now count), and **"Your hours letter"** — the database counts the
+    confirmed hours and records the letter under a code; the page paints it with Beverly May's name in a
+    handwriting face (Dancing Script, bundled; not an image of her signature) and makes a one-page PDF with
+    no library (`lib/pdf.ts`). `/verify/:code` (website) lets a school or employer check it.
+  - **Certificates are staff's** (OHRR): owners/admins (or `volunteers.certificates`) get "Certificates to
+    consider" when a volunteer makes a letter (once a month) or passes an hours mark they set
+    (`set_certificate_hours`); Appreciation / Achievement heading, optional signed name, PDF.
+  - **Mobile vet** on the home page: a third door (Mobile vet clinic) in the top section; `/mobile-vet`
+    shows clinic days or "Tell me when there are dates"; `/book/<unpublished>` offers the same. The
+    booking type `vet-clinic` stays hidden until OHRR publishes dates (Staff → Bookings).
+  - **Social posts** (update 26): permission `social.approve`; draft → waiting for approval → approved →
+    posted; nobody approves a post they wrote or last changed; editing an approved post sends it back; the
+    rules hold in the database (status only through `set_social_post_status`).
+  - **Vendors and ordering** (update 27): the company card (suppliers and BunFest vendors are one list,
+    staff-only) gains photo, socials, shop, mailing address, paperwork (agreement, insurance, licence),
+    booth needs, invite again?, per-year tables/fee/paid, and a "Given to OHRR" log (auction, raffle,
+    goods, money, sponsorship, services; thank-you sent). Silent-auction items can name the company.
+    Hop Shop products get pack sizes (single / box / case: units, cost, supplier SKU, minimum); the reorder
+    list suggests whole packs, groups by supplier with subtotal and minimum, and copies an order as text.
+  - **Staff levels** (update 28): founder > board > lead > worker (founder = owner, board = admin); only
+    people below you can be managed, always one founder, invites can't jump levels; certifications per
+    person (hop-shop, buncare, animal-handling, vet-transport or free text); presets Hop Shop Worker,
+    Content Approver. **Trusted volunteers**' self-logged hours count straight away (staff can un-confirm);
+    staff get "My volunteer hours" (their own volunteer page) to log time.
+  - **Donate** is an orange pill in the top bar on every page; on wide screens the bar also has Wish list,
+    Foster, Hop Shop, All ways to give. The home top still fits 1300×675.
+  - **Legacy fund**: researched, proposal sent; waiting on OHRR (one contact email; Guardians listed
+    separately or not; board/attorney look at the wording). IRS name: "Ohio House Rabbit Rescue Inc".
 
 - **BunFest topics open; sponsor logos; sponsor renewals list (2026-09-24, latest; website `ea1da23`,
   BunFest site `a736c4e` + `72f4961`, app `c920b0a` + `3fb45d1`; update 24 applied and checked live 2026-09-24).** Sponsor: the
