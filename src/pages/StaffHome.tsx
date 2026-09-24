@@ -339,6 +339,15 @@ export default function StaffHome() {
               tone="blue"
             />
           )}
+          {canManageSponsors && (
+            <ActionCard
+              to="/staff/sponsors/renewals"
+              title="Sponsor renewals"
+              subtitle="Whose sponsorship ends soon, who to ask, and where each ask stands"
+              icon="calendar"
+              tone="blue"
+            />
+          )}
           {canEditCare && (
             <ActionCard to="/staff/bunny-help" title="Bunny Help topics" subtitle="What “My bunny is…” answers with" icon="help" tone="blue" />
           )}

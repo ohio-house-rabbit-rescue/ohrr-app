@@ -114,6 +114,7 @@ const CallPage = lazy(() => import('./features/volunteers/pages/CallPage'))
 const StaffCalls = lazy(() => import('./features/volunteers/pages/StaffCalls'))
 const StaffCallRoute = lazy(() => import('./features/volunteers/pages/StaffCalls').then((m) => ({ default: m.StaffCallRoute })))
 const PostEditor = lazy(() => import('./features/share/pages/PostEditor'))
+const StaffSponsorRenewals = lazy(() => import('./pages/StaffSponsorRenewals'))
 
 export default function App() {
   return (
@@ -253,6 +254,7 @@ export default function App() {
           <Route path="raffle" element={<StaffRaffle />} />
           <Route path="raffle-tickets" element={<Suspense fallback={null}><RaffleDesk /></Suspense>} />
           <Route path="sponsors" element={<StaffSponsors />} />
+          <Route path="sponsors/renewals" element={<Suspense fallback={null}><StaffSponsorRenewals /></Suspense>} />
           <Route path="bunny-help" element={<StaffBunnyHelp />} />
           <Route path="team" element={<StaffTeam />} />
           <Route path="activity" element={<StaffActivity />} />

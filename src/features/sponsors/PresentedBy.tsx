@@ -7,25 +7,15 @@
 // hop-shop and my-bunny screens with the matching surface once those land.
 import { Link } from 'react-router-dom'
 import { Icon } from '../../components/icons'
-import { usePlacements, useSponsors } from './hooks'
+import { useSurfaceSponsors } from './hooks'
 import { SponsorLogo } from './SponsorLogo'
-import { tierRank, type Surface } from './types'
+import type { Surface } from './types'
 
 export default function PresentedBy({ surface }: { surface: Surface }) {
-  const placements = usePlacements(surface)
-  const sponsors = useSponsors()
+  // De-duped, public-visible sponsors placed here, highest tier first.
+  const shown = useSurfaceSponsors(surface)
 
-  if (!placements || !sponsors || placements.length === 0) return null
-
-  // De-dupe (a sponsor could be placed twice with different windows), keep only
-  // sponsors the public can see, and lead with the highest tier.
-  const ids = Array.from(new Set(placements.map((p) => p.sponsorId)))
-  const shown = ids
-    .map((id) => sponsors.find((s) => s.id === id))
-    .filter((s): s is NonNullable<typeof s> => Boolean(s))
-    .sort((a, b) => tierRank(a.tier) - tierRank(b.tier) || a.sortOrder - b.sortOrder)
-
-  if (shown.length === 0) return null
+  if (!shown || shown.length === 0) return null
 
   return (
     <Link

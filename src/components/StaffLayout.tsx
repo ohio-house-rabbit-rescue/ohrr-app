@@ -70,7 +70,8 @@ export default function StaffLayout() {
     { to: '/staff/tails', label: 'Happy Tails', show: can('content.education.edit') || can('inbox.manage') },
     { to: '/staff/raffle', label: 'Silent Auction', show: can('events.bunfest.manage') },
     { to: '/staff/raffle-tickets', label: 'Raffle tickets', show: can('events.bunfest.manage') || can('counter.use') },
-    { to: '/staff/sponsors', label: 'Sponsors & partners', show: can('events.bunfest.manage') },
+    { to: '/staff/sponsors', label: 'Sponsors & partners', end: true, show: can('events.bunfest.manage') },
+    { to: '/staff/sponsors/renewals', label: 'Sponsor renewals — who to ask next', show: can('events.bunfest.manage') },
     { to: '/staff/bunny-help', label: 'Bunny Help topics', show: can('content.education.edit') },
     {
       to: '/staff/team',
@@ -82,9 +83,12 @@ export default function StaffLayout() {
     { to: '/staff/details', label: 'OHRR details — hours, phone, address', show: can('settings.manage') },
   ].filter((i) => i.show)
 
-  // Which section are we in (for the menu button label)?
+  // Which section are we in (for the menu button label)? The longest match
+  // wins, so /staff/sponsors/renewals isn't labelled as /staff/sponsors.
   const current =
-    navItems.find((i) => i.to !== '/staff' && pathname.startsWith(i.to)) ?? navItems[0]
+    navItems
+      .filter((i) => i.to !== '/staff' && pathname.startsWith(i.to))
+      .sort((a, b) => b.to.length - a.to.length)[0] ?? navItems[0]
 
   return (
     <div className="min-h-screen bg-canvas">

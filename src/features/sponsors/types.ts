@@ -7,6 +7,9 @@ import type { Database } from '../../lib/database.types'
 
 export type SponsorRow = Database['public']['Tables']['sponsors']['Row']
 export type PlacementRow = Database['public']['Tables']['sponsor_placements']['Row']
+/** Staff-only: who to ask about renewing, and where that stands (update 24). */
+export type RenewalRow = Database['public']['Tables']['sponsor_renewals']['Row']
+export type RenewalStatus = RenewalRow['status']
 
 /* ---- tiers (display order = this order) ---- */
 export const TIERS = ['presenting', 'program', 'community', 'friend'] as const

@@ -887,6 +887,51 @@ export type Database = {
         }
         Relationships: []
       }
+      // Staff-only renewal contact + ask-status, one row per sponsor
+      // (mirrors supabase/migrations/20260924170000_sponsor_renewals_and_logos.sql)
+      sponsor_renewals: {
+        Row: {
+          sponsor_id: string
+          org_id: string
+          contact_name: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          status: 'not_asked' | 'asked' | 'renewing' | 'not_renewing'
+          /** The sponsor term_end this status is about; a new term starts at "not asked". */
+          status_for: string | null
+          asked_on: string | null
+          note: string | null
+          updated_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          sponsor_id: string
+          org_id: string
+          contact_name?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          status?: 'not_asked' | 'asked' | 'renewing' | 'not_renewing'
+          status_for?: string | null
+          asked_on?: string | null
+          note?: string | null
+          updated_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          sponsor_id?: string
+          org_id?: string
+          contact_name?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          status?: 'not_asked' | 'asked' | 'renewing' | 'not_renewing'
+          status_for?: string | null
+          asked_on?: string | null
+          note?: string | null
+          updated_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       // --- end Sponsors ---
       hopshop_products: {
         Row: {

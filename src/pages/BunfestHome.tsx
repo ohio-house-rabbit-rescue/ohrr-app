@@ -6,6 +6,7 @@ import { useBunfestEvent, eventDate, eventTime, isUpcoming } from '../lib/events
 import { Screen, SectionLabel, ActionCard, IconTile, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 import PresentedBy from '../features/sponsors/PresentedBy'
+import SponsorWall from '../features/sponsors/SponsorWall'
 import ShareButton, { appLink } from '../components/ShareButton'
 import AddEventToCalendar from '../components/AddEventToCalendar'
 
@@ -134,6 +135,9 @@ export default function BunfestHome() {
             ))}
           </div>
         </div>
+
+        {/* Every BunFest sponsor as a logo tile (same list as "Presented by") */}
+        <SponsorWall surface="bunfest" sponsorsTo="/bunfest/sponsors" />
 
         <Card className="border-slate-200 bg-white">
           <p className="text-[13px] leading-relaxed text-slate-500">

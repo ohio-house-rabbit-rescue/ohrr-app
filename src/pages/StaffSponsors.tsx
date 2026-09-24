@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
@@ -958,6 +959,12 @@ export default function StaffSponsors() {
           <p className="mt-1 text-sm text-slate-600">
             The roster on the public Our Partners page, partner perks, and “Presented by” strips.
           </p>
+          <Link
+            to="/staff/sponsors/renewals"
+            className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-brand-blue/40 px-4 text-sm font-bold text-brand-blue transition hover:bg-brand-blue-50"
+          >
+            <Icon name="calendar" size={15} /> Renewals list
+          </Link>
         </div>
         {!creating && (
           <button

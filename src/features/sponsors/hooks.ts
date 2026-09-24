@@ -10,6 +10,7 @@ import {
   rowToPlacement,
   rowToSponsor,
   sortSponsors,
+  tierRank,
   type Placement,
   type Sponsor,
   type Surface,
@@ -93,4 +94,21 @@ export function usePlacements(surface: Surface): Placement[] | null {
   }, [surface])
 
   return items
+}
+
+/**
+ * The sponsors placed on one surface, the way the public sees them: active,
+ * in-window placements joined to visible sponsors, de-duplicated (a sponsor can
+ * be placed twice with different windows), presenting tier first, then sort
+ * order. null while loading. Shared by <PresentedBy> and the BunFest logo wall.
+ */
+export function useSurfaceSponsors(surface: Surface): Sponsor[] | null {
+  const placements = usePlacements(surface)
+  const sponsors = useSponsors()
+  if (!placements || !sponsors) return null
+  const ids = Array.from(new Set(placements.map((p) => p.sponsorId)))
+  return ids
+    .map((id) => sponsors.find((s) => s.id === id))
+    .filter((s): s is Sponsor => Boolean(s))
+    .sort((a, b) => tierRank(a.tier) - tierRank(b.tier) || a.sortOrder - b.sortOrder)
 }

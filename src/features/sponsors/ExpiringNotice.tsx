@@ -62,9 +62,20 @@ export default function ExpiringNotice({ orgId }: { orgId: string }) {
             ))}
           </ul>
           {rows.length > 4 && <p className="mt-0.5 text-xs text-slate-500">+{rows.length - 4} more</p>}
-          <Link to="/staff/sponsors" className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-brand-blue">
-            Open Sponsors <Icon name="chevron" size={15} />
-          </Link>
+          <div className="mt-1 flex flex-wrap gap-x-4">
+            <Link
+              to="/staff/sponsors/renewals"
+              className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-brand-blue"
+            >
+              Open the renewals list <Icon name="chevron" size={15} />
+            </Link>
+            <Link
+              to="/staff/sponsors"
+              className="inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-slate-500"
+            >
+              Open Sponsors
+            </Link>
+          </div>
         </div>
       </div>
     </Card>
