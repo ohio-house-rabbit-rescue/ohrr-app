@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-23 (website audit: older-visitor pass + every app capability on the website)
+- **Last updated:** 2026-09-24 (website persona review → calmer pages)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,8 +19,40 @@
 
 ## Current state (at a glance)
 
-- **Website audit — the older visitor, and every app capability on the website (2026-09-23,
-  latest; website `89b1883`, live).** Sponsor: audit the website for its age group, implement
+- **Website persona review → calmer pages (2026-09-24, latest; website `5ebb3b4`, live).**
+  Sponsor: "the look and feel doesn't meet the user — links all over the pages, overwhelming."
+  The site was run past the brief's personas (four reviewers, two personas each, reading
+  full-page captures at 1280 and 500px plus per-page link counts —
+  `scratchpad/persona/`). They agreed: the home page opened on BunFest not the rescue and
+  offered BunFest up to eight times; "Explore →" ×10; 66 links on home, 30 in the footer;
+  the Volunteer page showed the same four positions twice (typed list + live list); Learn
+  showed five guides twice (live slug ≠ bundled slug); orange text on white 2.6:1; "Live —
+  synced" captions read as unfinished; Give was 14 equal cards; Events had three buttons per
+  card; the hours page said "This link isn't working".
+  - **Home:** `HomeHero` is OHRR first (kicker, "Rescued rabbits, looking for homes", one
+    sentence, See the rabbits / Bunny Help / Donate) with the staff `hero_slides` slide beside it
+    as "Happening now" (hand-rotated, 44px pager); then Bunny Help (one heading), This week,
+    three rabbits, two news items, four doors named for where they go, the app. The featured-card
+    strip and the stats band are gone (featured cards still drive the app's home; the editor says
+    so). Home: 25 → 18 main links, 66 → 48 total.
+  - **Shared:** footer is one 10-link "Find your way" + Connect (30 → 19 links, 44px rows);
+    `btn.outline` is blue, `btn.orange` carries dark text, `--color-brand-orange-ink` replaces
+    orange-dark for text; `LiveNote` renders nothing for live data and "Sample entries — real
+    ones replace these" otherwise; "Explore →" is gone.
+  - **Pages:** Volunteer = one live list of shifts (typed list only as fallback), one sign-up
+    path per kind (book / email / interest), hours as a button, other needs as one sentence;
+    Learn dedupes by title preferring the on-site guide; Help shows the emergency vet under the
+    search; Adopt merges a bonded pair into one card and points the undecided at "Is a rabbit
+    right for us?", the cost guide and a socialization shift; Give leads with Donate then plain
+    rows (Give while you shop / More ways); Events one button; BunFest shows admission + the
+    rabbit rule from `events.info` beside the date (`EventItem.info` added), sponsors after;
+    About hours from OHRR details; the booking form says what happens next; Impact shows the
+    three standing facts while a year is being counted; hours page says "You need your private
+    link".
+  - Still theirs to fix: the two Nimbus listings; the Buncare shift text in the database still
+    mentions COVID; `/impact` has no published year yet.
+
+- **Website audit — the older visitor, and every app capability on the website (2026-09-23; website `89b1883`, live).** Sponsor: audit the website for its age group, implement
   the app's details and design ideas on the website, make it appealing with reasons to return,
   represent every app capability including staff sign-in, and solve what's found.
   - **Against the brief's web rules:** body text was 14px with grey-on-white labels — the
