@@ -123,9 +123,9 @@ export default function StaffLayout() {
               <Link
                 to="/"
                 onClick={() => setMenuOpen(false)}
-                className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-50"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-full border-2 border-brand-blue/50 px-3 text-sm font-bold text-brand-blue transition hover:bg-brand-blue-50"
               >
-                <Icon name="home" size={13} /> App
+                <Icon name="home" size={16} /> App
               </Link>
               {user && (
                 <button
