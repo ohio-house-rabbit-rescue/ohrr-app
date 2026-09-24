@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (update 23 applied and checked live; nothing to run)
+- **Last updated:** 2026-09-24 (BunFest pages + sponsor logos + renewals list; **update 24 to run**)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,38 @@
 ---
 
 ## Current state (at a glance)
+
+- **BunFest topics open; sponsor logos; sponsor renewals list (2026-09-24, latest; website `ea1da23`,
+  BunFest site `a736c4e` + `72f4961`, app `c920b0a` + `3fb45d1`; update 24 to run).** Sponsor: the
+  website's BunFest topics "are not clickable to open for more details or lists like the app … next year
+  we update on the admin and this will reflect the changes"; the sponsor list "is a mass of words … logo
+  links … shows a logo if one is available"; sponsors expire, so "a list generator on sponsors that are
+  about to expire" to ask them to continue.
+  - **Website /bunfest:** the "At the festival" cards come from this year's `event_features` (Staff →
+    BunFest → Cards; the year is the BunFest event's), each opening its page, the schedule or the vendor
+    list (app paths translated by `lib/bunfestPublic.ts` `bunfestDest`). Pages no card opens show under
+    "Plan your visit". Phones get one short row per card. New pages on the same records:
+    `/bunfest/p/:slug` (prices "at a glance", sections, contact, related), `/bunfest/schedule` (talks, then
+    the speakers) and `/bunfest/vendors` (vendors by kind, then this year's rescue partners). **Next
+    year:** set the date in Events → "Copy 2026 into 2027" in Staff → BunFest → edit; every page follows.
+  - **Sponsor logo wall** (website BunFest page, app BunFest home, BunFest site home): equal tiles, each
+    linking to the sponsor's site; the name in the tile when there's no logo; the lead sponsor's tile is
+    bigger. Logos: the 2026 sponsors' own, from OHRR's midwestbunfest.org/2026-sponsors.html (ads cropped
+    to the logo; Borders' personal email/phone line cut off), bundled at `/img/sponsors/` in all three.
+    Supreme Pet Foods only had an advert there, so it shows its name until staff upload a logo.
+  - **Staff → Sponsor renewals** (app `/staff/sponsors/renewals`, website the same path): sponsorships
+    ending in the next 30 days / 90 days / 6 months (opens on 6 months) or all, plus those ended in the
+    last 90 days; contact, status (Not asked yet / Asked + date / Renewing / Not renewing — about the
+    current term only), note; "Email them" with a drafted note, "Renewed — add a year", copy list,
+    spreadsheet (.csv), print. Linked from Sponsors, the expiring-sponsors notice (now on the website
+    dashboard too) and the staff menu.
+  - **Update 24** (`supabase/migrations/20260924170000_sponsor_renewals_and_logos.sql`, Drive RUN-THIS +
+    `Supabase history/APPLY-24.sql`): staff-only `sponsor_renewals` table (contact details never public),
+    the 11 logos, four missing sponsor web addresses from the same page, and Norton Road's corrected
+    (nortonroadvet.com does not exist; nortonroadvethospital.com). Until it runs: name tiles, and the
+    renewals list works without contacts/status.
+  - Also: a link to a place on another page (`/bunfest/vendors#rescues`) now scrolls there, and a new
+    page always opens at the top (the site's smooth scrolling could leave it mid-page).
 
 - **Real photos lead on the website (2026-09-24, latest; website `659cac9`, `7763108`, `1a559bf`; app
   `8860f00`; update 23 applied and checked live 2026-09-24).** Sponsor compared with the current site: "lots of information, but very
