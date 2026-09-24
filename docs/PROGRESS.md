@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (real photos lead on the website: rabbit collage, What’s happening picture cards, OHRR photos on inner pages; update 23 waiting)
+- **Last updated:** 2026-09-24 (update 23 applied and checked live; nothing to run)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -20,7 +20,7 @@
 ## Current state (at a glance)
 
 - **Real photos lead on the website (2026-09-24, latest; website `659cac9`, `7763108`, `1a559bf`; app
-  `8860f00`; update 23 waiting).** Sponsor compared with the current site: "lots of information, but very
+  `8860f00`; update 23 applied and checked live 2026-09-24).** Sponsor compared with the current site: "lots of information, but very
   little … visually appealing"; keep the words, blend in imagery. Rule kept: photos only of real OHRR
   things (their rabbits, volunteers, shop, events/fundraiser artwork); icons stay on the function doors.
   - **Home hero:** a 2×2 collage of real adoptable rabbits (live RescueGroups photos, names on them, each
@@ -36,7 +36,8 @@
     runs, the five posts from the current OHRR home page show from `data/heroSlides.ts`. The BunFest card
     hides itself after Oct 25. Artwork also bundled in the app (`public/img/news`) for editor previews.
   - **Update 23** (`supabase/migrations/20260924150000_whats_happening_cards.sql`, Drive RUN-THIS +
-    `Supabase history/APPLY-23.sql`): opens the 'happening' placement and seeds the five cards. Waiting.
+    `Supabase history/APPLY-23 (applied 2026-09-24).sql`): opened the 'happening' placement and seeded the
+    five cards. Applied 2026-09-24: 5 rows live, the website home reads them, the app's Home does not.
   - **Inner pages** (`PhotoStrip.tsx`, `data/ohrrPhotos.ts`; 15 photos from OHRR's own site in
     `public/img/ohrr/`, ≈1.15 MB total, EXIF/GPS stripped, lazy-loaded): Volunteer (3 volunteers-with-
     rabbits), Hop Shop (2 shelves), About volunteer family (4 named squares + "Photos: Ohio House Rabbit
