@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (website persona review → calmer pages)
+- **Last updated:** 2026-09-24 (website leads with the rescue’s purpose; app is one pill; update 21 waiting)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,7 +19,33 @@
 
 ## Current state (at a glance)
 
-- **Website persona review → calmer pages (2026-09-24, latest; website `5ebb3b4`, live).**
+- **The website leads with the rescue’s purpose (2026-09-24, latest; website live).** Sponsor:
+  "closer but still too overwhelming … focus on the purpose of the rescue and the rest is
+  secondary"; the app should be "a standing pill at the top of the page … links to the app
+  elsewhere is a waste". Built from OHRR’s own mission (About page: run the Adoption Center,
+  rescue abandoned pet rabbits, adopt them out, teach care for rabbits as indoor companions).
+  - **Home:** H1 "Rescuing abandoned pet rabbits and finding them homes" + one sentence; three
+    doors (Adopt a rabbit / Help with my rabbit / Found or surrendering a rabbit); three rabbits;
+    Bunny Help; "Help us help them" (Volunteer / Foster / Donate, one button each + "Other ways to
+    give"); one quiet line for hours and the next event. Gone from home: the staff hero slide,
+    news, the doors grid, the app block (`ThisWeek.tsx`, `LatestTail.tsx` deleted). 12 links in
+    the main content.
+  - **Header:** a top bar with A−/A+, Search and the standing **"Get our app"** pill (visible on
+    phones too); the menu is the mission: Adopt · Bunny Help · Rabbit care · Found / surrender ·
+    Volunteer · Give · About (one row from 1280px, second row on smaller laptops, Menu button on
+    phones/tablets). Events left the menu.
+  - **Footer:** "Also at OHRR" holds the secondary things once: vets, Happy Tails, Events, BunFest,
+    Hop Shop, News, Rescues, Sponsors, Impact, Contact.
+  - **App links removed** everywhere but the pill (home block, footer, Help topic pitch, "BunFest in
+    the app"); the privacy policy still describes the app, and site search still finds /app.
+  - **Update 21 (waiting):** the Bunny Socialization shift said "Because of COVID, we must account
+    for all people in the building." Sponsor: drop the COVID portion but keep the care, as COVID is
+    still around. Now: "… you must sign up for a volunteer slot also, so we know everyone who is in
+    the building. COVID and other illnesses are still around: if you are feeling unwell, please
+    reschedule your shift." (`20260924100000_socialization_health_note.sql`; app fallback text
+    changed to match.)
+
+- **Website persona review → calmer pages (2026-09-24; website `5ebb3b4`, live).**
   Sponsor: "the look and feel doesn't meet the user — links all over the pages, overwhelming."
   The site was run past the brief's personas (four reviewers, two personas each, reading
   full-page captures at 1280 and 500px plus per-page link counts —
