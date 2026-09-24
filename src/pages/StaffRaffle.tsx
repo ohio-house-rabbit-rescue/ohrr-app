@@ -29,6 +29,7 @@ import {
   type AuctionItem,
   type AuctionSettings,
 } from '../features/raffle/types'
+import { GivenByCompany } from '../features/bunfest/GivenByCompany'
 
 const pill =
   'rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-60'
@@ -468,6 +469,8 @@ function ItemCard({
           onSubmit={saveEdit}
           onCancel={() => setEditing(false)}
         />
+        {/* Which company gave it — puts it on their card (update 27) */}
+        <GivenByCompany orgId={orgId} itemId={item.id} />
       </Card>
     )
   }
