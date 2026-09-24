@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (BunFest pages + sponsor logos + renewals list; **update 24 to run**)
+- **Last updated:** 2026-09-24 (BunFest pages + sponsor logos + renewals list; update 24 applied and checked live; nothing to run)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -20,7 +20,7 @@
 ## Current state (at a glance)
 
 - **BunFest topics open; sponsor logos; sponsor renewals list (2026-09-24, latest; website `ea1da23`,
-  BunFest site `a736c4e` + `72f4961`, app `c920b0a` + `3fb45d1`; update 24 to run).** Sponsor: the
+  BunFest site `a736c4e` + `72f4961`, app `c920b0a` + `3fb45d1`; update 24 applied and checked live 2026-09-24).** Sponsor: the
   website's BunFest topics "are not clickable to open for more details or lists like the app … next year
   we update on the admin and this will reflect the changes"; the sponsor list "is a mass of words … logo
   links … shows a logo if one is available"; sponsors expire, so "a list generator on sponsors that are
@@ -44,10 +44,10 @@
     spreadsheet (.csv), print. Linked from Sponsors, the expiring-sponsors notice (now on the website
     dashboard too) and the staff menu.
   - **Update 24** (`supabase/migrations/20260924170000_sponsor_renewals_and_logos.sql`, Drive RUN-THIS +
-    `Supabase history/APPLY-24.sql`): staff-only `sponsor_renewals` table (contact details never public),
+    `Supabase history/APPLY-24 (applied 2026-09-24).sql`): staff-only `sponsor_renewals` table (contact details never public),
     the 11 logos, four missing sponsor web addresses from the same page, and Norton Road's corrected
-    (nortonroadvet.com does not exist; nortonroadvethospital.com). Until it runs: name tiles, and the
-    renewals list works without contacts/status.
+    (nortonroadvet.com does not exist; nortonroadvethospital.com). Applied 2026-09-24: 11 logos + addresses live, logos load on
+    all three sites, `sponsor_renewals` refuses public reads.
   - Also: a link to a place on another page (`/bunfest/vendors#rescues`) now scrolls there, and a new
     page always opens at the top (the site's smooth scrolling could leave it mid-page).
 
