@@ -26,8 +26,8 @@
   for an email that never comes; the forms say invite codes come from a founder or board member (Staff →
   Team → Invite). App: signed in but not on the team goes to the invite-code screen (not the master-code
   one), and emailed links from inside the phone app point at ohrr-app.pages.dev, not localhost.
-  **For OHRR:** add `https://ohrr-app.pages.dev/**` and `https://ohrr-website.pages.dev/**` to Supabase →
-  Authentication → URL Configuration → Redirect URLs, so email links come back to the right screen.
+  OHRR added `https://ohrr-app.pages.dev/**` and `https://ohrr-website.pages.dev/**` to Supabase →
+  Authentication → Redirect URLs the same day, so email links come back to the right screen.
 
 - **Legacy Fund, 2026-09-24 (latest; website `f175ed8` + app `b253c67`; update 29 applied and checked live the same day —
   47 published 2026 names, anon insert refused; `Supabase history/APPLY-29 (applied 2026-09-24).sql`).** Updates 25–28 were run and checked live the same day (anon REST:
