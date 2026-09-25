@@ -63,8 +63,9 @@ export function FormError({ children }: { children?: ReactNode }) {
 }
 
 // Route guard: requires a configured backend, a signed-in user, and an active
-// OHRR membership. Otherwise routes to the right onboarding step. The DB still
-// enforces every action regardless of what the UI shows.
+// OHRR membership. Otherwise routes to the right onboarding step: sign in, or
+// the invite code (the one-time master code is a link from there). The DB
+// still enforces every action regardless of what the UI shows.
 export function RequireMembership() {
   const { configured, loading, user, membership } = useAuth()
   const location = useLocation()
@@ -73,6 +74,6 @@ export function RequireMembership() {
   // Remember where they were heading (a scanned tag's URL, say) so sign-in
   // can send them straight back there.
   if (!user) return <Navigate to="/staff/signin" replace state={{ from: location.pathname + location.search }} />
-  if (!membership) return <Navigate to="/staff/start" replace />
+  if (!membership) return <Navigate to="/staff/join" replace />
   return <Outlet />
 }

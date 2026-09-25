@@ -28,7 +28,7 @@ export function CounterGate() {
   if (loading) return <Spinner />
   if (membership || (dev.orgId && (!user || !navigator.onLine))) return <Outlet />
   if (!user) return <Navigate to="/staff/signin" replace state={{ from: location.pathname }} />
-  return <Navigate to="/staff/start" replace />
+  return <Navigate to="/staff/join" replace />
 }
 
 /** "All sent" / "3 waiting — no signal" — always in sight on counter screens. */

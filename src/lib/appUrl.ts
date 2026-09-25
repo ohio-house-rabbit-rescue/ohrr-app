@@ -6,11 +6,16 @@
 // the reset landed on software from weeks ago. Emails now always point at the
 // canonical app — except in local development, where the origin is what you
 // want.
+import { isNative } from '../native/platform'
+
 export const CANONICAL_ORIGIN = 'https://ohrr-app.pages.dev'
 
 /** The origin an emailed link should come back to. */
 export function authOrigin(): string {
   if (typeof window === 'undefined') return CANONICAL_ORIGIN
+  // Inside the phone app the origin is https://localhost (Android) or
+  // capacitor://localhost (iOS) — nothing an email link can open.
+  if (isNative) return CANONICAL_ORIGIN
   const origin = window.location.origin
   // Local development and Cloudflare preview builds keep their own origin so a
   // reset can be tested where it was started.

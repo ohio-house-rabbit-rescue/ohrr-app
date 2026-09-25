@@ -21,6 +21,8 @@ export default function StaffSignIn() {
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState<'idle' | 'submitting'>('idle')
   const [error, setError] = useState<string | null>(null)
+  // A plain note above the form, e.g. "That email already has an account."
+  const [info, setInfo] = useState<string | null>(null)
   const [checkEmail, setCheckEmail] = useState(false)
   const [resetSent, setResetSent] = useState(false)
 
@@ -35,6 +37,7 @@ export default function StaffSignIn() {
   const onSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault()
     setError(null)
+    setInfo(null)
     setStatus('submitting')
     try {
       if (mode === 'forgot') {
@@ -49,6 +52,18 @@ export default function StaffSignIn() {
       }
       if (mode === 'signup') {
         const { data, error } = await supabase.auth.signUp({ email, password })
+        // That email already has an account. Depending on the project's
+        // settings Supabase either says so, or hands back a user with no
+        // identities and no session — and then no email ever comes, so
+        // "Confirm your email" would be a dead end. Send them to sign in.
+        const taken =
+          (error && (error.code === 'user_already_exists' || /already (registered|exists)/i.test(error.message))) ||
+          (!error && data.user && data.user.identities?.length === 0)
+        if (taken) {
+          setMode('signin')
+          setInfo('That email already has an account. Sign in instead, or use Forgot password.')
+          return
+        }
         if (error) throw error
         // With "Confirm email" on, there's no session yet — tell them to confirm.
         if (!data.session) {
@@ -153,7 +168,18 @@ export default function StaffSignIn() {
         <h1 className="font-display text-2xl font-black text-ink">{heading}</h1>
         {notice && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{notice}</p>}
         <p className="mt-1 text-sm leading-relaxed text-slate-600">{sub}</p>
+        {mode === 'signup' && (
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            After you create your account, you’ll enter the invite code a founder or board member gave you.
+          </p>
+        )}
       </div>
+
+      {info && (
+        <p className="rounded-xl bg-brand-blue-50 px-3 py-2.5 text-sm font-semibold text-brand-blue-dark" role="status">
+          {info}
+        </p>
+      )}
 
       <Card>
         <form onSubmit={onSubmit} className="space-y-3">
@@ -187,6 +213,7 @@ export default function StaffSignIn() {
               onClick={() => {
                 setMode('forgot')
                 setError(null)
+                setInfo(null)
               }}
               className="text-sm font-semibold text-brand-blue hover:text-brand-blue-dark"
             >
@@ -213,6 +240,7 @@ export default function StaffSignIn() {
             onClick={() => {
               setMode('signin')
               setError(null)
+              setInfo(null)
             }}
             className="font-bold text-brand-blue hover:text-brand-blue-dark"
           >
@@ -227,6 +255,7 @@ export default function StaffSignIn() {
             onClick={() => {
               setMode(mode === 'signin' ? 'signup' : 'signin')
               setError(null)
+              setInfo(null)
             }}
             className="font-bold text-brand-blue hover:text-brand-blue-dark"
           >

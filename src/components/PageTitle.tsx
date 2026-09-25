@@ -49,6 +49,7 @@ const TITLES: [string, string][] = [
   ['/search', 'Search'],
   ['/appointment', 'Schedule a visit'],
   ['/t/', 'Scanned item'],
+  ['/staff/account', 'My account'],
   ['/staff', 'Staff'],
 ]
 

@@ -30,7 +30,8 @@ export default function StaffHome() {
   if (!configured) return <NotConfigured />
   if (loading) return <Spinner />
   if (!user) return <Navigate to="/staff/signin" replace />
-  if (!membership) return <Navigate to="/staff/start" replace />
+  // Signed in but not on the team yet: the invite code is the next step.
+  if (!membership) return <Navigate to="/staff/join" replace />
 
   const isAdminish = membership.role === 'owner' || membership.role === 'admin'
   // A counter volunteer goes straight to the Counter — the one screen they need.
@@ -91,7 +92,10 @@ export default function StaffHome() {
           <Badge tone={badge.tone}>{badge.label}</Badge>
         </div>
         <p className="mt-1 text-sm text-slate-600">
-          Signed in as <strong>{user.email}</strong>
+          Signed in as{' '}
+          <Link to="/staff/account" className="break-all font-bold text-brand-blue hover:text-brand-blue-dark">
+            {user.email}
+          </Link>
         </p>
       </div>
 
@@ -426,6 +430,15 @@ export default function StaffHome() {
           tone="blue"
         />
       )}
+
+      {/* Everyone's own profile, email and password. */}
+      <ActionCard
+        to="/staff/account"
+        title="My account"
+        subtitle="Your name, photo, email and password"
+        icon="settings"
+        tone="blue"
+      />
 
       {!isAdminish && (
         <div className="space-y-2">

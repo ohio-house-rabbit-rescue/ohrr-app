@@ -34,6 +34,8 @@ export default function StaffLayout() {
   const canCounter = can('counter.use') || can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.inventory.update')
   const navItems = [
     { to: '/staff', label: 'Dashboard', end: true, show: !counterOnly },
+    // Everyone's own name, photo, email and password — near the top, easy to find.
+    { to: '/staff/account', label: 'My account', show: Boolean(membership) },
     { to: '/staff/counter', label: 'Counter — sell, add items, door tickets', show: canCounter },
     { to: '/staff/my-hours', label: 'My volunteer hours', show: myLevel.ready },
     { to: '/staff/inbox', label: 'Inbox', show: can('inbox.manage') },
@@ -93,7 +95,7 @@ export default function StaffLayout() {
   const current =
     navItems
       .filter((i) => i.to !== '/staff' && pathname.startsWith(i.to))
-      .sort((a, b) => b.to.length - a.to.length)[0] ?? navItems[0]
+      .sort((a, b) => b.to.length - a.to.length)[0] ?? navItems.find((i) => i.to !== '/staff/account') ?? navItems[0]
 
   return (
     <div className="min-h-screen bg-canvas">

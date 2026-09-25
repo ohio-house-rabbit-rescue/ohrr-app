@@ -76,9 +76,10 @@ export default function StaffOnboard() {
       </Card>
 
       <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-[13px] leading-relaxed text-slate-600">
-        <p className="font-bold text-slate-700">Joining as a worker instead?</p>
+        <p className="font-bold text-slate-700">Joining the team?</p>
         <p className="mt-1">
-          Workers don't use the master code — an owner or admin sends you a personal invite code.{' '}
+          Use the invite code a founder or board member gave you (they make one in Staff → Team → Invite
+          someone).{' '}
           <a href="/staff/join" className="font-bold text-brand-blue hover:text-brand-blue-dark">
             Enter an invite code
           </a>

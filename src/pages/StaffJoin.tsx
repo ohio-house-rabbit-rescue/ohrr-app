@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Card, Screen } from '../components/ui'
@@ -9,6 +9,7 @@ import { NotConfigured, Spinner, FormError, staffInput } from '../components/sta
 export default function StaffJoin() {
   const { configured, loading, user, membership, refresh } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [params] = useSearchParams()
   // A QR code or an emailed link carries ?code=… — nothing to type.
   const [code, setCode] = useState(params.get('code') ?? '')
@@ -17,7 +18,9 @@ export default function StaffJoin() {
 
   if (!configured) return <NotConfigured />
   if (loading) return <Spinner />
-  if (!user) return <Navigate to="/staff/signin" replace />
+  // Not signed in yet: sign in (or create an account) and come straight back,
+  // with a QR code's ?code=… still filled in.
+  if (!user) return <Navigate to="/staff/signin" replace state={{ from: location.pathname + location.search }} />
   if (membership) return <Navigate to="/staff" replace />
 
   const onSubmit = async (e: { preventDefault(): void }) => {
@@ -43,8 +46,12 @@ export default function StaffJoin() {
         </span>
         <h1 className="mt-3 font-display text-2xl font-black text-ink">Enter your invite code</h1>
         <p className="mt-1 text-sm leading-relaxed text-slate-600">
-          Signed in as <strong>{user.email}</strong>. An OHRR owner or admin gave you a personal
-          invite code — redeeming it joins you to the team with the access they set up for you.
+          Signed in as <strong>{user.email}</strong>. You’re not on the OHRR team yet — one more step.
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
+          Ask a founder or board member for an invite code (they make one in{' '}
+          <strong>Staff → Team → Invite someone</strong>), and enter it here. It joins you to the team with the
+          access they set up for you.
         </p>
       </div>
 
