@@ -15,7 +15,8 @@ import { Spinner, FormError, PasswordInput, staffInput } from '../components/sta
 import StaffAvatar from '../components/StaffAvatar'
 import StaffImageField from '../components/StaffImageField'
 import { PERMISSION_CATALOG } from '../lib/capabilities'
-import { isFullAccess, levelFromRole, levelInfo, useMyLevel } from '../lib/staffLevels'
+import { Icon } from '../components/icons'
+import { accessDate, isFullAccess, levelFromRole, levelInfo, useMyLevel } from '../lib/staffLevels'
 import { authOrigin } from '../lib/appUrl'
 import type { MembershipRole } from '../lib/database.types'
 
@@ -75,8 +76,8 @@ export default function StaffAccount() {
   const levelLabel = level ? levelInfo(level).label : ROLE_INFO[membership.role].label
   const levelBlurb = level ? levelInfo(level).blurb : ROLE_INFO[membership.role].blurb
   const fullAccess = membership.role === 'owner' || membership.role === 'admin' || (level ? isFullAccess(level) : false)
-  // Founders can manage founders; everyone else is managed from above.
-  const isFounder = (level ?? levelFromRole(membership.role)) === 'founder'
+  // Founders and developers look after each other; everyone else is managed from above.
+  const isFounder = isFullAccess(level ?? levelFromRole(membership.role))
   const granted = PERMISSION_CATALOG.filter((p) => capabilities.has(p.key))
 
   const onSignOut = async () => {
@@ -148,6 +149,13 @@ export default function StaffAccount() {
             <Badge tone={fullAccess ? 'blue' : 'slate'}>{levelLabel}</Badge>
             <span className="text-sm text-slate-600">{levelBlurb}</span>
           </div>
+          {/* Access for a set time (update 30), e.g. BunFest weekend. */}
+          {membership.accessUntil && (
+            <p className="flex items-start gap-2 rounded-xl bg-brand-orange-50 px-3 py-2 text-sm font-semibold text-ink">
+              <Icon name="clock" size={16} className="mt-0.5 shrink-0 text-brand-orange-dark" />
+              Your access ends on {accessDate(membership.accessUntil)}.
+            </p>
+          )}
           <div>
             <p className="text-sm font-semibold text-slate-700">What you can do</p>
             {fullAccess ? (
@@ -169,7 +177,7 @@ export default function StaffAccount() {
           </div>
           <p className="text-xs leading-relaxed text-slate-500">
             {isFounder
-              ? 'Only another founder can change your level or access (Staff → Team).'
+              ? 'Only another founder or developer can change your level or access (Staff → Team).'
               : 'Only someone above your level can change your level or access (Staff → Team).'}
           </p>
         </Card>

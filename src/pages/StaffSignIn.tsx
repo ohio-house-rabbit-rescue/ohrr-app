@@ -170,7 +170,7 @@ export default function StaffSignIn() {
         <p className="mt-1 text-sm leading-relaxed text-slate-600">{sub}</p>
         {mode === 'signup' && (
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            After you create your account, you’ll enter the invite code a founder or board member gave you.
+            After you create your account, you’ll enter the invite code the person bringing you on gave you.
           </p>
         )}
       </div>

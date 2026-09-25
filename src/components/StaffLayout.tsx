@@ -19,7 +19,7 @@ export default function StaffLayout() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
-  // Update 28: show the level (Founder / Board / Lead / Worker) once it's in.
+  // Update 28: show the level (Volunteer 1 … Developer from update 30) once it's in.
   const myLevel = useMyLevel(user?.id, membership?.orgId)
 
   const onSignOut = async () => {

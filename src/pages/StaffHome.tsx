@@ -10,7 +10,7 @@ import { DeleteAccount } from '../components/DeleteAccount'
 import ExpiringNotice from '../features/sponsors/ExpiringNotice'
 import { ApplicationsNotice, CertificatesNotice } from '../features/volunteers/StaffNotices'
 import { PostsToApproveNotice } from '../features/share/PostsToApproveNotice'
-import { levelInfo, useMyLevel } from '../lib/staffLevels'
+import { isFullAccess, levelInfo, useMyLevel } from '../lib/staffLevels'
 
 const roleBadge: Record<string, { label: string; tone: 'blue' | 'orange' | 'slate' }> = {
   owner: { label: 'Owner', tone: 'blue' },
@@ -24,7 +24,7 @@ export default function StaffHome() {
   const newCount = useNewRequestCount(membership && can('inbox.manage') ? membership.orgId : null)
   const pendingCount = usePendingBookingCount(membership && can('bookings.manage') ? membership.orgId : null)
   const readyPosts = useReadyPostCount(membership && (can('announcements.post') || can('social.publish')) ? membership.orgId : null)
-  // Update 28: the person's level (Founder / Board / Lead / Worker), and whether it's in yet.
+  // Update 28: the person's level (Volunteer 1 … Developer from update 30), and whether it's in yet.
   const myLevel = useMyLevel(user?.id, membership?.orgId)
 
   if (!configured) return <NotConfigured />
@@ -41,7 +41,7 @@ export default function StaffHome() {
   const canBookings = can('bookings.manage')
   const canQueue = can('announcements.post') || can('social.publish') || can('social.approve')
   const badge = myLevel.level
-    ? { label: levelInfo(myLevel.level).label, tone: myLevel.level === 'founder' || myLevel.level === 'board' ? ('blue' as const) : ('slate' as const) }
+    ? { label: levelInfo(myLevel.level).label, tone: isAdminish || isFullAccess(myLevel.level) ? ('blue' as const) : ('slate' as const) }
     : (roleBadge[membership.role] ?? roleBadge.staff)
 
   // What this person can do in the Hop Shop (drives the dashboard subtitle).
@@ -414,8 +414,8 @@ export default function StaffHome() {
       ) : (
         <Card className="border-slate-200 bg-slate-50/80">
           <p className="text-sm leading-relaxed text-slate-600">
-            You're set up as staff, but no features have been turned on for you yet. An owner or
-            admin can grant you access from the Team screen.
+            You're on the team, but no tasks have been switched on for you yet. Someone above your level
+            can switch them on from the Team screen.
           </p>
         </Card>
       )}

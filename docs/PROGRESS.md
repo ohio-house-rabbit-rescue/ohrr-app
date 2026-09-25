@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-24 (Legacy Fund page + Rescue Rabbit Guardians list; updates 25–29 applied and checked live; nothing to run, next is 30)
+- **Last updated:** 2026-09-25 (staff tiers: ten levels, share-only-what-you-have, access end dates, invite fix; **update 30 to run**)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,35 @@
 ---
 
 ## Current state (at a glance)
+
+- **Staff tiers and sharing, 2026-09-25 (latest; update 30 to run — Drive RUN-THIS and
+  `Supabase history/APPLY-30.sql`).** OHRR hit "function gen_random_bytes(integer) does not exist" on Staff →
+  Team → Invite and asked for an audit of how people join and get access, more levels, and a way to share
+  some but not all tasks.
+  - **Found:**
+    - no invite could be made (pgcrypto is in the `extensions` schema; the function looks only in
+      `public`; codes now come from gen_random_uuid());
+    - anyone who could invite could put any task on an invite, and anyone who could manage people could
+      switch on tasks they didn't have themselves;
+    - an invite could switch back on access that had been switched off;
+    - the one-time owner code left the level behind;
+    - the invite level picker could start at Founder;
+    - both clients loaded "my membership" without filtering by user, so the screens could show another
+      person's level (the database still enforced the real one).
+  - **The levels OHRR set, lowest first:** Volunteer 1–3, Lead, Admin 1–3, Board, Founder, Developer.
+    - Only Founder and Developer hold every task (role owner). They can change anyone, each other
+      included; there is always one founder.
+    - Everyone else holds exactly the tasks switched on and changes only people below them.
+    - Worker became Volunteer 1. Board members (admins underneath) stay Board with every task switched on
+      explicitly.
+  - **The sharing rule (database-enforced):** give only levels below your own and share only tasks you
+    have (`create_staff_invite`, `set_membership_permission`).
+  - **Access can end on a date** (`access_until`, e.g. BunFest weekend helpers), and people can always
+    read their own membership row, to be told when access ended.
+  - **New presets:** Board, BunFest & Events, Inbox helper, Rabbit listings helper, Care pages helper.
+  - **Team screens (website and app):** "How access works", invite with level, preset or chosen tasks,
+    "Can bring on helpers", access until, and who it's for; waiting invites; per-person tasks (only
+    shareable ones switchable), level and end date. My account shows the end date.
 
 - **My account + clearer joining, 2026-09-25 (website `b0c5e69`, app `3b80d9c`; no SQL).** OHRR: "I don't
   have the ability to create an account or edit my account." Everyone signed in now has Staff → My account

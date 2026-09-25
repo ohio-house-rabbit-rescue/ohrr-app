@@ -9,6 +9,7 @@ import {
 import type { User } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from './supabase'
 import { CAPABILITIES, type Capability } from './capabilities'
+import { accessEnded, isMissingColumn } from './staffLevels'
 import type { MembershipRole, MembershipStatus } from './database.types'
 
 export interface Membership {
@@ -16,6 +17,8 @@ export interface Membership {
   orgId: string
   role: MembershipRole
   status: MembershipStatus
+  /** The last day of their access, YYYY-MM-DD (update 30); null = no end. */
+  accessUntil: string | null
 }
 
 interface AuthValue {
@@ -24,8 +27,10 @@ interface AuthValue {
   /** True until the initial session + membership load settles. */
   loading: boolean
   user: User | null
-  /** The signed-in user's OHRR membership, or null if they haven't onboarded yet. */
+  /** The signed-in user's OHRR membership, or null if they haven't onboarded yet (or their access ended). */
   membership: Membership | null
+  /** When their access ran out (YYYY-MM-DD), if that's why they aren't on the team. */
+  accessEndedOn: string | null
   /** Effective capabilities (owner/admin implicitly hold all). */
   capabilities: Set<Capability>
   /** UI gate — the DB still enforces every write regardless. */
@@ -62,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionLoaded, setSessionLoaded] = useState(false)
   const [membership, setMembership] = useState<Membership | null>(null)
   const [capabilities, setCapabilities] = useState<Set<Capability>>(new Set())
+  const [accessEndedOn, setAccessEndedOn] = useState<string | null>(null)
   const [loading, setLoading] = useState(isSupabaseConfigured)
 
   // 1) Track the auth session. The onAuthStateChange callback only sets state
@@ -88,29 +94,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isSupabaseConfigured || !userId) {
       setMembership(null)
       setCapabilities(new Set())
+      setAccessEndedOn(null)
       return
     }
-    // RLS lets a member read their own membership row (and only their org's).
-    const { data: rows, error } = await supabase
+    // Not on the team (any more): no membership, and why, when it's an end date.
+    const notOnTeam = (endedOn: string | null) => {
+      setMembership(null)
+      setCapabilities(new Set())
+      setAccessEndedOn(endedOn)
+    }
+    // Their OWN row: RLS lets a member read everyone's in their org, so without
+    // the user_id filter this could pick up someone else's (and their level).
+    // Update 30 also lets people read their own row after their access ends.
+    // access_until arrives with update 30; before it, read the row without it.
+    const withEnd = await supabase
       .from('memberships')
-      .select('id, org_id, role, status')
+      .select('id, org_id, role, status, access_until')
+      .eq('user_id', userId)
       .eq('status', 'active')
       .limit(1)
+    let rows: { id: string; org_id: string; role: MembershipRole; status: MembershipStatus; access_until: string | null }[] | null =
+      withEnd.data
+    let error = withEnd.error
+    if (error && isMissingColumn(error)) {
+      const plain = await supabase
+        .from('memberships')
+        .select('id, org_id, role, status')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .limit(1)
+      rows = plain.data ? plain.data.map((r) => ({ ...r, access_until: null })) : null
+      error = plain.error
+    }
     if (error) {
-      // No signal (or the server is unreachable): use what this device knew.
+      // No signal (or the server is unreachable): use what this device knew —
+      // unless the access it knew of has run out since.
       const cached = readCached(userId)
+      if (cached && accessEnded(cached.membership.accessUntil)) return notOnTeam(cached.membership.accessUntil)
       setMembership(cached?.membership ?? null)
       setCapabilities(new Set(cached?.capabilities ?? []))
+      setAccessEndedOn(null)
       return
     }
     if (!rows || rows.length === 0) {
-      writeCached(userId, null, [])
-      setMembership(null)
-      setCapabilities(new Set())
-      return
+      // No row. If this device knew of an end date that has passed (say the
+      // own-row policy isn't there), keep it so the join screen can say why.
+      const cached = readCached(userId)
+      const endedOn = cached && accessEnded(cached.membership.accessUntil) ? cached.membership.accessUntil : null
+      if (!endedOn) writeCached(userId, null, [])
+      return notOnTeam(endedOn)
     }
     const r = rows[0]
-    const m: Membership = { id: r.id, orgId: r.org_id, role: r.role, status: r.status }
+    const m: Membership = { id: r.id, orgId: r.org_id, role: r.role, status: r.status, accessUntil: r.access_until ?? null }
+    // Past their last day (America/New_York): not on the team. The database
+    // already refuses them; the join screen says when it ended.
+    if (accessEnded(m.accessUntil)) {
+      writeCached(userId, m, [])
+      return notOnTeam(m.accessUntil)
+    }
+    setAccessEndedOn(null)
     setMembership(m)
 
     if (m.role === 'owner' || m.role === 'admin') {
@@ -161,6 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setMembership(null)
     setCapabilities(new Set())
+    setAccessEndedOn(null)
   }, [])
 
   const value: AuthValue = {
@@ -168,6 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     user,
     membership,
+    accessEndedOn,
     capabilities,
     can,
     refresh: loadMembership,

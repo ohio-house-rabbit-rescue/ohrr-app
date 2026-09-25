@@ -15,19 +15,26 @@ import {
   type Capability,
   type PermissionMeta,
 } from '../lib/capabilities'
-import type { Database, MembershipRole, MembershipStatus } from '../lib/database.types'
+import type { Database, Json, MembershipRole, MembershipStatus } from '../lib/database.types'
 import {
+  ADMIN_LEVELS,
+  ALL_LEVELS,
   CERT_KINDS,
-  LEVELS,
+  HELPER_LEVELS,
   PRESET_SUGGESTED_LEVEL,
+  accessDate,
+  accessDay,
+  accessEnded,
   certExpiry,
   certLabel,
   isFullAccess,
+  isMissingFunction,
   levelFromRole,
   levelInfo,
   levelsICanGive,
   managedBy,
-  roleForLevel,
+  ohrrToday,
+  probeTiers,
   shortDate,
   todayIso,
   type StaffLevel,
@@ -39,16 +46,21 @@ function joinUrl(code: string): string {
   return code ? `${base}/staff/join?code=${encodeURIComponent(code)}` : `${base}/staff/join`
 }
 
+/** Shown wherever inviting needs update 30 and it hasn't been run. */
+const NEEDS_UPDATE_30 = 'Invites switch on with update 30 (RUN-THIS-IN-SUPABASE.sql in the Drive).'
+
 interface Member {
   id: string
   user_id: string
   email: string | null
   role: MembershipRole
   status: MembershipStatus
-  /** Founder / board / lead / worker (update 28); before it, worked out from the role. */
+  /** Founder / board / lead / worker (update 28; ten levels from update 30); before it, worked out from the role. */
   level: StaffLevel
   /** list_team's can_manage (update 28). null before it, when the old role rules apply. */
   manageable: boolean | null
+  /** The last day of their access (update 30); null = no end, or before it. */
+  access_until: string | null
   // Team profile — a photo is optional; a bunny stands in (20260922140000_*.sql)
   display_name: string | null
   title: string | null
@@ -57,14 +69,6 @@ interface Member {
 }
 
 type Cert = Database['public']['Tables']['member_certifications']['Row']
-
-/** "Make Bev a board member?" */
-const AS_LEVEL: Record<StaffLevel, string> = {
-  founder: 'a founder',
-  board: 'a board member',
-  lead: 'a lead',
-  worker: 'a worker',
-}
 
 const memberName = (m: Pick<Member, 'display_name' | 'email'>) => m.display_name || m.email || 'Team member'
 
@@ -82,6 +86,8 @@ const AREAS: { area: string; caps: PermissionMeta[] }[] = (() => {
   return order.map((area) => ({ area, caps: byArea.get(area)! }))
 })()
 
+const describe = (key: string) => PERMISSION_CATALOG.find((p) => p.key === key)?.description ?? key
+
 /* ---- A row of level buttons (only the levels on offer) ---- */
 function LevelPicker({
   value,
@@ -94,9 +100,17 @@ function LevelPicker({
   onChange: (l: StaffLevel) => void
   disabled?: boolean
 }) {
+  const cols =
+    choices.length >= 5
+      ? 'grid-cols-2 sm:grid-cols-3'
+      : choices.length === 4
+        ? 'grid-cols-2 sm:grid-cols-4'
+        : choices.length === 3
+          ? 'grid-cols-3'
+          : 'grid-cols-2'
   return (
-    <div className={`mt-1.5 grid gap-1.5 ${choices.length >= 4 ? 'grid-cols-2 sm:grid-cols-4' : choices.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
-      {LEVELS.filter((l) => choices.includes(l.value)).map((l) => {
+    <div className={`mt-1.5 grid gap-1.5 ${cols}`}>
+      {ALL_LEVELS.filter((l) => choices.includes(l.value)).map((l) => {
         const on = value === l.value
         return (
           <button
@@ -117,41 +131,131 @@ function LevelPicker({
   )
 }
 
+/* ---- "How access works", in plain words ---- */
+// The ten levels in groups, lowest first. Admins 1–3 share one line.
+const EXPLAINER_GROUPS: { label: string; levels: StaffLevel[] }[] = [
+  { label: 'Volunteers 1–3', levels: ['volunteer1', 'volunteer2', 'volunteer3'] },
+  { label: 'Lead', levels: ['lead'] },
+  { label: 'Admins 1–3', levels: ['admin1'] },
+  { label: 'Board', levels: ['board'] },
+  { label: 'Founder', levels: ['founder'] },
+  { label: 'Developer', levels: ['developer'] },
+]
+
+function HowAccessWorks({ tiersReady }: { tiersReady: boolean }) {
+  return (
+    <details className="group rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-1">
+      <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-2 font-display text-[15px] font-extrabold text-ink [&::-webkit-details-marker]:hidden">
+        How access works
+        <Icon name="chevron" size={16} className="rotate-90 text-slate-400 transition-transform group-open:-rotate-90" />
+      </summary>
+      <div className="space-y-3 pb-3 text-sm leading-relaxed text-slate-600">
+        <ul className="space-y-1">
+          {EXPLAINER_GROUPS.map((g) =>
+            g.levels.length === 1 ? (
+              <li key={g.label}>
+                <strong className="text-ink">{g.label}</strong> — {levelInfo(g.levels[0]).blurb}.
+              </li>
+            ) : (
+              <li key={g.label}>
+                <strong className="text-ink">{g.label}</strong>
+                <ul className="mt-0.5 space-y-0.5 pl-3">
+                  {g.levels.map((l) => (
+                    <li key={l}>
+                      {levelInfo(l).label} — {levelInfo(l).blurb}.
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ),
+          )}
+        </ul>
+        <p>
+          <strong className="text-ink">Sharing goes downwards.</strong> You can only give someone a level below your
+          own, and you can only share tasks you have yourself. Founders and developers have every task and can give
+          any level; everyone else, Board and Admins included, has the tasks switched on for them.
+        </p>
+        <p>
+          <strong className="text-ink">For a set time.</strong> Give someone an end date — BunFest weekend, say. After
+          that day the staff area stops working for them until someone extends it. A founder’s or developer’s access
+          never ends.
+        </p>
+        <p>
+          <strong className="text-ink">Switching someone off.</strong> “Switch off access” on their card stops everything
+          at once. An invite code won’t switch it back on; only someone who can change them can.
+        </p>
+        <p>
+          <strong className="text-ink">Volunteers don’t need an account</strong> to sign up for shifts and log hours —
+          they use their private volunteer link. Only people who work in the staff area (the Counter, check-in,
+          editing) need one.
+        </p>
+        {!tiersReady && <p className="text-xs text-slate-500">The ten levels and end dates arrive with update 30.</p>}
+      </div>
+    </details>
+  )
+}
+
 /* ---- Invite someone ---- */
+const CUSTOM = '__custom__'
+
 function InvitePanel({
   orgId,
+  tiersReady,
   levelChoices,
   onInvited,
 }: {
   orgId: string
-  /** The levels this person may invite at (update 28); null before it — the old role choice shows. */
-  levelChoices: StaffLevel[] | null
+  /** Update 30 is in (create_staff_invite). Before it, no invite can be made. */
+  tiersReady: boolean
+  /** The levels this person may invite at, highest first. */
+  levelChoices: StaffLevel[]
   onInvited: () => void
 }) {
-  const levelsMode = levelChoices !== null
-  const [role, setRole] = useState<MembershipRole>('staff')
-  const [level, setLevel] = useState<StaffLevel>(() =>
-    levelChoices?.includes('lead') ? 'lead' : (levelChoices?.[levelChoices.length - 1] ?? 'lead'),
+  const { can } = useAuth()
+  // Only presets whose tasks I all hold, and only tasks I hold (founders and developers: every one).
+  const presetNames = useMemo(() => Object.keys(PRESETS).filter((p) => PRESETS[p].every((k) => can(k))), [can])
+  const areas = useMemo(
+    () => AREAS.map(({ area, caps }) => ({ area, caps: caps.filter((c) => can(c.key)) })).filter((a) => a.caps.length > 0),
+    [can],
   )
-  const [preset, setPreset] = useState<string>('Hop Shop Manager')
+  // Start at the lowest level on offer (Volunteer 1), never Founder, with a preset that suits it.
+  const lowest: StaffLevel = levelChoices[levelChoices.length - 1] ?? 'volunteer1'
+  const [picked, setLevel] = useState<StaffLevel>(lowest)
+  const level = levelChoices.includes(picked) ? picked : lowest
+  const [preset, setPreset] = useState<string>(
+    () => presetNames.find((p) => PRESET_SUGGESTED_LEVEL[p] === lowest) ?? presetNames[0] ?? CUSTOM,
+  )
   const [customCaps, setCustomCaps] = useState<Set<Capability>>(new Set())
+  const [helpers, setHelpers] = useState(false)
+  const [accessUntil, setAccessUntil] = useState('')
   const [who, setWho] = useState({ name: '', email: '', phone: '', position: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [code, setCode] = useState<string | null>(null)
-  const [codeLevel, setCodeLevel] = useState<StaffLevel | null>(null)
+  const [made, setMade] = useState<{ level: StaffLevel; until: string | null } | null>(null)
   const [copied, setCopied] = useState(false)
   const setWhoField = (k: keyof typeof who) => (e: { target: { value: string } }) => setWho({ ...who, [k]: e.target.value })
 
-  const isCustom = preset === '__custom__'
-  // Founders and board members (or, before update 28, admins) hold every permission.
-  const fullAccess = levelsMode ? isFullAccess(level) : role === 'admin'
+  const isCustom = preset === CUSTOM || !presetNames.includes(preset)
+  // Founders and developers hold every task, so their invites carry none — and their access never ends.
+  const fullAccess = isFullAccess(level)
+  // A lead, admin or board member who may bring on helpers of their own.
+  const helpersOffered = can('staff.invite') && can('staff.permissions.manage') && HELPER_LEVELS.includes(level)
+  const until = fullAccess ? '' : accessUntil
+  const shareable = areas.flatMap((x) => x.caps.map((c) => c.key))
+  const allPicked = shareable.length > 0 && shareable.every((k) => customCaps.has(k))
+
+  const pickLevel = (l: StaffLevel) => {
+    setLevel(l)
+    // Admin 1–3 have no preset: their tasks are chosen one by one.
+    if (ADMIN_LEVELS.includes(l)) setPreset(CUSTOM)
+  }
 
   const pickPreset = (p: string) => {
     setPreset(p)
-    // e.g. "Hop Shop Worker" → the Worker level, when it's one this person may give.
+    // e.g. "Hop Shop Worker" → Volunteer 1, when it's a level this person may give.
     const suggested = PRESET_SUGGESTED_LEVEL[p]
-    if (suggested && levelChoices?.includes(suggested)) setLevel(suggested)
+    if (suggested && levelChoices.includes(suggested)) setLevel(suggested)
   }
 
   const toggleCustom = (key: Capability) =>
@@ -169,36 +273,27 @@ function InvitePanel({
     setCopied(false)
     setBusy(true)
     try {
-      const caps = !fullAccess && isCustom ? Array.from(customCaps) : []
-      const { data, error } = await supabase.rpc('create_invite_code', {
+      const caps = new Set<Capability>(fullAccess ? [] : isCustom ? customCaps : [])
+      if (!fullAccess && helpersOffered && helpers) {
+        caps.add('staff.invite')
+        caps.add('staff.permissions.manage')
+      }
+      // One call: level, tasks, end date and who it's for — the database checks each.
+      const { data, error } = await supabase.rpc('create_staff_invite', {
         p_org: orgId,
-        p_role: levelsMode ? roleForLevel(level) : role,
-        p_capabilities: caps,
+        p_level: level,
+        p_capabilities: Array.from(caps),
         p_preset: fullAccess || isCustom ? null : preset,
+        p_access_until: until || null,
+        p_name: who.name.trim() || null,
+        p_email: who.email.trim() || null,
+        p_phone: who.phone.trim() || null,
+        p_position: who.position.trim() || null,
         p_max_uses: 1,
       })
-      if (error) throw error
-      const newCode = data as string
-      // The level they join at. If the database won't have it, the invite goes.
-      if (levelsMode) {
-        const lv = await supabase.rpc('set_invite_level', { p_code: newCode, p_level: level })
-        if (lv.error) {
-          await supabase.rpc('revoke_invite', { p_code: newCode })
-          throw lv.error
-        }
-      }
-      // Remember who it was for, so a pending invite can be chased or re-sent.
-      if (who.name || who.email || who.phone || who.position) {
-        await supabase.rpc('set_invite_details', {
-          p_code: newCode,
-          p_name: who.name || null,
-          p_email: who.email || null,
-          p_phone: who.phone || null,
-          p_position: who.position || null,
-        })
-      }
-      setCode(newCode)
-      setCodeLevel(levelsMode ? level : null)
+      if (error) throw isMissingFunction(error) ? new Error(NEEDS_UPDATE_30) : error
+      setCode(data)
+      setMade({ level, until: until || null })
       onInvited()
     } catch (err) {
       setError(errMessage(err))
@@ -218,191 +313,379 @@ function InvitePanel({
     }
   }
 
-  if (levelChoices && levelChoices.length === 0) {
+  if (!tiersReady) {
+    return (
+      <Card className="space-y-1">
+        <h2 className="font-display text-[15px] font-extrabold text-ink">Invite someone</h2>
+        <p className="text-sm text-slate-600">{NEEDS_UPDATE_30}</p>
+      </Card>
+    )
+  }
+
+  if (levelChoices.length === 0) {
     return (
       <Card className="space-y-1">
         <h2 className="font-display text-[15px] font-extrabold text-ink">Invite someone</h2>
         <p className="text-sm text-slate-600">
-          You can invite people below your own level, and there isn’t one below yours. Ask the board to invite them.
+          You can invite people below your own level, and there isn’t one below yours. Ask someone above you to invite
+          them.
         </p>
       </Card>
     )
   }
 
-  const presetPicker = (
-    <label className="block flex-1 text-sm font-semibold text-slate-700">
-      Access preset
-      <select className={staffInput} value={preset} onChange={(e) => pickPreset(e.target.value)} disabled={fullAccess}>
-        {Object.keys(PRESETS).map((p) => (
-          <option key={p} value={p}>
-            {p}
-          </option>
-        ))}
-        <option value="__custom__">Custom…</option>
-      </select>
-    </label>
-  )
-
   return (
-    <Card className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Icon name="users" size={18} className="text-brand-blue" />
-        <h2 className="font-display text-[15px] font-extrabold text-ink">Invite someone</h2>
-      </div>
-
-      <form onSubmit={generate} className="space-y-3">
-        {/* Who it's for — so a pending invite isn't an anonymous code. */}
-        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-          <label className="block text-sm font-semibold text-slate-700">
-            Their name
-            <input className={staffInput} value={who.name} onChange={setWhoField('name')} placeholder="Bev" />
-          </label>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block text-sm font-semibold text-slate-700">
-              Email
-              <input className={staffInput} type="email" value={who.email} onChange={setWhoField('email')} />
-            </label>
-            <label className="block text-sm font-semibold text-slate-700">
-              Text / phone
-              <input className={staffInput} type="tel" value={who.phone} onChange={setWhoField('phone')} />
-            </label>
-          </div>
-          <label className="block text-sm font-semibold text-slate-700">
-            The position they asked about
-            <input className={staffInput} value={who.position} onChange={setWhoField('position')} placeholder="Hop Shop, Saturdays" />
-          </label>
-          <p className="text-xs text-slate-500">
-            Optional, but it means you can see who an unused invite belongs to — and send it to them in a tap.
-          </p>
+    <>
+      <Card className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Icon name="users" size={18} className="text-brand-blue" />
+          <h2 className="font-display text-[15px] font-extrabold text-ink">Invite someone</h2>
         </div>
 
-        {levelsMode ? (
-          <>
-            <div>
-              <p className="text-sm font-semibold text-slate-700">Level</p>
-              <LevelPicker value={level} choices={levelChoices} onChange={setLevel} />
-              <p className="mt-1.5 text-xs text-slate-500">{levelInfo(level).blurb}.</p>
-            </div>
-            {presetPicker}
-          </>
-        ) : (
-          <div className="flex gap-3">
-            <label className="block flex-1 text-sm font-semibold text-slate-700">
-              Role
-              <select className={staffInput} value={role} onChange={(e) => setRole(e.target.value as MembershipRole)}>
-                <option value="staff">Staff (scoped)</option>
-                <option value="admin">Admin (full access)</option>
-              </select>
+        <form onSubmit={generate} className="space-y-3">
+          {/* Who it's for — so a pending invite isn't an anonymous code. */}
+          <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+            <label className="block text-sm font-semibold text-slate-700">
+              Their name
+              <input className={staffInput} value={who.name} onChange={setWhoField('name')} placeholder="Bev" />
             </label>
-            {presetPicker}
-          </div>
-        )}
-
-        {fullAccess ? (
-          <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
-            {levelsMode
-              ? `${levelInfo(level).plural === 'Board' ? 'Board members' : levelInfo(level).plural} hold every permission — no preset needed.`
-              : 'Admins implicitly hold every capability — no preset needed.'}
-          </p>
-        ) : isCustom ? (
-          <div className="rounded-xl border border-slate-200 p-3">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Pick capabilities</p>
-            <div className="space-y-2">
-              {AREAS.map(({ area, caps }) => (
-                <div key={area}>
-                  <p className="text-xs font-bold text-slate-500">{area}</p>
-                  <div className="mt-1 grid grid-cols-1">
-                    {caps.map((c) => (
-                      <label key={c.key} className="flex min-h-[44px] items-center gap-2.5 text-sm text-slate-700">
-                        <input
-                          type="checkbox"
-                          className="h-5 w-5 shrink-0 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30"
-                          checked={customCaps.has(c.key)}
-                          onChange={() => toggleCustom(c.key)}
-                        />
-                        {c.description}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-semibold text-slate-700">
+                Email
+                <input className={staffInput} type="email" value={who.email} onChange={setWhoField('email')} />
+              </label>
+              <label className="block text-sm font-semibold text-slate-700">
+                Text / phone <span className="font-normal text-slate-400">(optional)</span>
+                <input className={staffInput} type="tel" value={who.phone} onChange={setWhoField('phone')} />
+              </label>
             </div>
-          </div>
-        ) : (
-          <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-500">
-            Grants: {PRESETS[preset]?.map((k) => k.split('.').slice(-2).join(' ')).join(', ')}
-          </p>
-        )}
-
-        <FormError>{error}</FormError>
-
-        <button
-          type="submit"
-          disabled={busy || (!fullAccess && isCustom && customCaps.size === 0)}
-          className={`${btn.blue} w-full disabled:opacity-60`}
-        >
-          {busy ? 'Generating…' : 'Generate invite code'}
-        </button>
-      </form>
-
-      {code && (
-        <div className="space-y-3 rounded-xl border border-brand-blue/30 bg-brand-blue-50/60 p-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-brand-blue">
-            Invite {who.name ? `for ${who.name}` : '— share with them'}
-            {codeLevel ? ` · joins as ${levelInfo(codeLevel).label}` : ''}
-          </p>
-
-          {/* Show the code to a phone camera — no typing, no transcription. */}
-          <div className="flex flex-col items-center gap-2">
-            <QrCode value={joinUrl(code)} size={188} alt="QR code to join the OHRR staff app" />
-            <p className="text-center text-xs text-slate-600">
-              Hold this up — their camera opens the sign-up with the code already in it.
+            <label className="block text-sm font-semibold text-slate-700">
+              The position they asked about <span className="font-normal text-slate-400">(optional)</span>
+              <input className={staffInput} value={who.position} onChange={setWhoField('position')} placeholder="Hop Shop, Saturdays" />
+            </label>
+            <p className="text-xs text-slate-500">
+              Optional, but it means you can see who an unused invite belongs to — and send it to them in a tap.
             </p>
           </div>
 
-          <div className="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2">
-            <code className="font-mono text-lg font-black tracking-wider text-ink">{code}</code>
-            <button type="button" onClick={copy} className="min-h-[44px] rounded-full bg-brand-blue px-4 text-xs font-bold text-white">
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
+          <div>
+            <p className="text-sm font-semibold text-slate-700">Level</p>
+            <LevelPicker value={level} choices={levelChoices} onChange={pickLevel} />
+            <p className="mt-1.5 text-xs text-slate-500">{levelInfo(level).blurb}.</p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {who.email && (
-              <a
-                href={`mailto:${who.email}?subject=${encodeURIComponent('Your OHRR staff invite')}&body=${encodeURIComponent(
-                  `Hi${who.name ? ` ${who.name}` : ''},\n\nHere's your invite to the OHRR staff app${who.position ? ` for ${who.position}` : ''}. Open this link, create your sign-in, and you're in:\n\n${joinUrl(code)}\n\nOr enter the code ${code} at ${joinUrl('')}\n\nIt's single-use and expires in 14 days.\n\nOhio House Rabbit Rescue`,
-                )}`}
-                className="inline-flex min-h-[44px] items-center rounded-full bg-brand-blue px-4 text-xs font-bold text-white"
-              >
-                Email it
-              </a>
-            )}
-            {who.phone && (
-              <a
-                href={`sms:${who.phone.replace(/[^0-9+]/g, '')}?&body=${encodeURIComponent(
-                  `Your OHRR staff invite: ${joinUrl(code)} (code ${code})`,
-                )}`}
-                className="inline-flex min-h-[44px] items-center rounded-full bg-brand-blue px-4 text-xs font-bold text-white"
-              >
-                Text it
-              </a>
-            )}
-            <button
-              type="button"
-              onClick={() => shareText(`Your OHRR staff invite: ${joinUrl(code)} (code ${code})`, 'OHRR staff invite')}
-              className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600"
-            >
-              Share
-            </button>
-          </div>
+          {fullAccess ? (
+            <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">Holds every task — nothing to choose.</p>
+          ) : (
+            <>
+              <label className="block text-sm font-semibold text-slate-700">
+                Tasks
+                <select className={staffInput} value={isCustom ? CUSTOM : preset} onChange={(e) => pickPreset(e.target.value)}>
+                  {presetNames.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                  <option value={CUSTOM}>Choose tasks myself</option>
+                </select>
+              </label>
+              {isCustom ? (
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Pick their tasks</p>
+                    <button
+                      type="button"
+                      onClick={() => setCustomCaps(allPicked ? new Set() : new Set(shareable))}
+                      className="min-h-[44px] text-xs font-bold text-brand-blue"
+                    >
+                      {allPicked ? 'Clear them all' : 'Select all the tasks I can share'}
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {areas.map(({ area, caps }) => (
+                      <div key={area}>
+                        <p className="text-xs font-bold text-slate-500">{area}</p>
+                        <div className="mt-1 grid grid-cols-1">
+                          {caps.map((c) => (
+                            <label key={c.key} className="flex min-h-[44px] items-center gap-2.5 text-sm text-slate-700">
+                              <input
+                                type="checkbox"
+                                className="h-5 w-5 shrink-0 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30"
+                                checked={customCaps.has(c.key)}
+                                onChange={() => toggleCustom(c.key)}
+                              />
+                              {c.description}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">Only the tasks you have yourself are listed.</p>
+                </div>
+              ) : (
+                <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-500">
+                  <p className="font-bold text-slate-600">Gives them:</p>
+                  <ul className="mt-0.5 list-disc pl-4">
+                    {PRESETS[preset]?.map((k) => <li key={k}>{describe(k)}</li>)}
+                  </ul>
+                </div>
+              )}
+              {helpersOffered && (
+                <label className="flex min-h-[44px] items-start gap-2.5 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-5 w-5 shrink-0 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30"
+                    checked={helpers}
+                    onChange={(e) => setHelpers(e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-semibold">Can bring on helpers</span>
+                    <span className="block text-xs text-slate-500">
+                      They can invite people below them and share only the tasks they have.
+                    </span>
+                  </span>
+                </label>
+              )}
+            </>
+          )}
 
-          <p className="text-xs leading-relaxed text-slate-500">
-            Single-use, expires in 14 days. They sign in (or create a sign-in) and the code joins them to the team with
-            the access you chose.
-          </p>
-        </div>
-      )}
+          {!fullAccess && (
+            <div>
+              <label className="block text-sm font-semibold text-slate-700">
+                Access until <span className="font-normal text-slate-400">(optional)</span>
+                <input
+                  type="date"
+                  className={staffInput}
+                  value={accessUntil}
+                  min={ohrrToday()}
+                  onChange={(e) => setAccessUntil(e.target.value)}
+                />
+              </label>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <p className="text-xs text-slate-500">For a set time, e.g. BunFest weekend. Leave empty for no end.</p>
+                {accessUntil && (
+                  <button type="button" onClick={() => setAccessUntil('')} className="min-h-[36px] shrink-0 text-xs font-bold text-brand-blue">
+                    No end date
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          <FormError>{error}</FormError>
+
+          <button
+            type="submit"
+            disabled={busy || (!fullAccess && isCustom && customCaps.size === 0)}
+            className={`${btn.blue} w-full disabled:opacity-60`}
+          >
+            {busy ? 'Generating…' : 'Generate invite code'}
+          </button>
+        </form>
+
+        {code && made && (
+          <div className="space-y-3 rounded-xl border border-brand-blue/30 bg-brand-blue-50/60 p-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-blue">
+                Invite {who.name ? `for ${who.name}` : '— share with them'} · joins as {levelInfo(made.level).label}
+              </p>
+              {made.until && <p className="mt-0.5 text-xs font-semibold text-slate-600">Access until {accessDate(made.until)}</p>}
+            </div>
+
+            {/* Show the code to a phone camera — no typing, no transcription. */}
+            <div className="flex flex-col items-center gap-2">
+              <QrCode value={joinUrl(code)} size={188} alt="QR code to join the OHRR staff app" />
+              <p className="text-center text-xs text-slate-600">
+                Hold this up — their camera opens the sign-up with the code already in it.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2">
+              <code className="font-mono text-lg font-black tracking-wider text-ink">{code}</code>
+              <button type="button" onClick={copy} className="min-h-[44px] rounded-full bg-brand-blue px-4 text-xs font-bold text-white">
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {who.email && (
+                <a
+                  href={`mailto:${who.email}?subject=${encodeURIComponent('Your OHRR staff invite')}&body=${encodeURIComponent(
+                    `Hi${who.name ? ` ${who.name}` : ''},\n\nHere's your invite to the OHRR staff app${who.position ? ` for ${who.position}` : ''}. Open this link, create your sign-in, and you're in:\n\n${joinUrl(code)}\n\nOr enter the code ${code} at ${joinUrl('')}\n\nIt's single-use and expires in 14 days.${made.until ? ` Your access runs until ${accessDate(made.until)}.` : ''}\n\nOhio House Rabbit Rescue`,
+                  )}`}
+                  className="inline-flex min-h-[44px] items-center rounded-full bg-brand-blue px-4 text-xs font-bold text-white"
+                >
+                  Email it
+                </a>
+              )}
+              {who.phone && (
+                <a
+                  href={`sms:${who.phone.replace(/[^0-9+]/g, '')}?&body=${encodeURIComponent(
+                    `Your OHRR staff invite: ${joinUrl(code)} (code ${code})`,
+                  )}`}
+                  className="inline-flex min-h-[44px] items-center rounded-full bg-brand-blue px-4 text-xs font-bold text-white"
+                >
+                  Text it
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => shareText(`Your OHRR staff invite: ${joinUrl(code)} (code ${code})`, 'OHRR staff invite')}
+                className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600"
+              >
+                Share
+              </button>
+            </div>
+
+            <p className="text-xs leading-relaxed text-slate-500">
+              Single-use, expires in 14 days. They sign in (or create a sign-in) and the code joins them to the team with
+              the access you chose.
+            </p>
+          </div>
+        )}
+      </Card>
+
+      <WaitingInvites orgId={orgId} reloadKey={code ?? ''} />
+    </>
+  )
+}
+
+/* ---- Invites not used yet (open_invites) ---- */
+interface WaitingInvite {
+  code: string
+  level: StaffLevel | null
+  preset: string | null
+  capabilities: string[]
+  access_until: string | null
+  invitee_name: string | null
+  invitee_email: string | null
+  position_note: string | null
+  expires_at: string | null
+}
+
+const jsonText = (v: Json | undefined): string | null => (typeof v === 'string' && v ? v : null)
+
+/** open_invites() returns jsonb; level, capabilities and access_until only from update 30. */
+function parseInvites(data: Json | null): WaitingInvite[] {
+  if (!Array.isArray(data)) return []
+  const out: WaitingInvite[] = []
+  for (const row of data) {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) continue
+    const code = jsonText(row.code)
+    if (!code) continue
+    const level = jsonText(row.level)
+    const caps = row.capabilities
+    out.push({
+      code,
+      level: ALL_LEVELS.find((l) => l.value === level)?.value ?? null,
+      preset: jsonText(row.preset),
+      capabilities: Array.isArray(caps) ? caps.filter((c): c is string => typeof c === 'string') : [],
+      access_until: jsonText(row.access_until),
+      invitee_name: jsonText(row.invitee_name),
+      invitee_email: jsonText(row.invitee_email),
+      position_note: jsonText(row.position_note),
+      expires_at: jsonText(row.expires_at),
+    })
+  }
+  return out
+}
+
+function WaitingInvites({ orgId, reloadKey }: { orgId: string; reloadKey: string }) {
+  const [invites, setInvites] = useState<WaitingInvite[]>([])
+  const [confirm, setConfirm] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    const { data, error } = await supabase.rpc('open_invites', { p_org: orgId })
+    if (!error) setInvites(parseInvites(data))
+  }, [orgId])
+  useEffect(() => {
+    void load()
+  }, [load, reloadKey])
+
+  const revoke = async (code: string) => {
+    setBusy(true)
+    setError(null)
+    const { error } = await supabase.rpc('revoke_invite', { p_code: code })
+    setBusy(false)
+    if (error) return setError(errMessage(error))
+    setConfirm(null)
+    await load()
+  }
+
+  if (invites.length === 0) return null
+  return (
+    <Card className="space-y-2">
+      <p className="font-display text-[15px] font-extrabold text-ink">
+        Waiting invites <span className="font-bold text-slate-400">({invites.length})</span>
+      </p>
+      <ul className="divide-y divide-slate-100">
+        {invites.map((i) => {
+          const tasks =
+            i.level && isFullAccess(i.level)
+              ? 'Every task'
+              : i.preset
+                ? i.preset
+                : `${i.capabilities.length} task${i.capabilities.length === 1 ? '' : 's'}`
+          return (
+            <li key={i.code} className="space-y-1.5 py-2.5">
+              <div className="flex items-start justify-between gap-2">
+                <span className="min-w-0">
+                  <span className="block break-all text-sm font-bold text-ink">{i.invitee_name || i.invitee_email || 'No name given'}</span>
+                  {i.invitee_name && i.invitee_email && <span className="block break-all text-xs text-slate-400">{i.invitee_email}</span>}
+                  {i.position_note && <span className="block text-xs text-slate-500">{i.position_note}</span>}
+                </span>
+                {i.level && <Badge tone={isFullAccess(i.level) ? 'blue' : 'slate'}>{levelInfo(i.level).label}</Badge>}
+              </div>
+              <p className="text-xs text-slate-500">
+                {tasks}
+                {i.access_until ? ` · access until ${accessDay(i.access_until)}` : ''}
+                {i.expires_at ? ` · code expires ${shortDate(i.expires_at.slice(0, 10))}` : ''}
+                <span className="font-mono"> · {i.code}</span>
+              </p>
+              {confirm === i.code ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void revoke(i.code)}
+                    disabled={busy}
+                    className="min-h-[44px] flex-1 rounded-full bg-red-600 px-4 text-xs font-bold text-white disabled:opacity-60"
+                  >
+                    {busy ? 'Cancelling…' : 'Cancel this invite'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirm(null)}
+                    className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600"
+                  >
+                    Keep
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => shareText(`Your OHRR staff invite: ${joinUrl(i.code)} (code ${i.code})`, 'OHRR staff invite')}
+                    className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600"
+                  >
+                    Send again
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirm(i.code)}
+                    className="min-h-[44px] rounded-full border border-red-200 px-4 text-xs font-bold text-red-600"
+                  >
+                    Cancel invite
+                  </button>
+                </div>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      <FormError>{error}</FormError>
     </Card>
   )
 }
@@ -699,6 +982,73 @@ function Certifications({
   )
 }
 
+/* ---- Access until a date (update 30) ---- */
+function AccessUntilField({
+  member,
+  onSave,
+}: {
+  member: Member
+  onSave: (member: Member, until: string | null) => Promise<string | null>
+}) {
+  const [value, setValue] = useState(member.access_until ?? '')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const current = member.access_until ?? ''
+
+  const save = async (until: string | null) => {
+    setBusy(true)
+    setError(null)
+    const err = await onSave(member, until)
+    setBusy(false)
+    if (err) setError(err)
+    else setValue(until ?? '')
+  }
+
+  return (
+    <div className="space-y-1.5 rounded-xl border border-slate-200 p-3">
+      <label className="block text-xs font-bold uppercase tracking-wide text-slate-400">
+        Access until
+        <input
+          type="date"
+          className={`${staffInput} font-sans text-sm font-normal normal-case tracking-normal`}
+          value={value}
+          min={ohrrToday()}
+          disabled={busy}
+          onChange={(e) => setValue(e.target.value)}
+        />
+      </label>
+      <p className="text-xs text-slate-500">
+        {current
+          ? accessEnded(current)
+            ? `Their access ended on ${accessDate(current)}. Pick a later day to extend it.`
+            : `Their access ends after ${accessDate(current)}.`
+          : 'No end date. For a set time (e.g. BunFest weekend), pick the last day.'}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => void save(value)}
+          disabled={busy || !value || value === current}
+          className="min-h-[44px] flex-1 rounded-full bg-brand-blue px-4 text-sm font-bold text-white disabled:opacity-50"
+        >
+          {busy ? 'Saving…' : 'Save'}
+        </button>
+        {current && (
+          <button
+            type="button"
+            onClick={() => void save(null)}
+            disabled={busy}
+            className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 disabled:opacity-50"
+          >
+            No end date
+          </button>
+        )}
+      </div>
+      <FormError>{error}</FormError>
+    </div>
+  )
+}
+
 /* ---- One member row ---- */
 function MemberCard({
   orgId,
@@ -708,11 +1058,13 @@ function MemberCard({
   grants,
   manage,
   levelChoices,
+  tiersReady,
   certs,
   nameOf,
   onToggleCap,
   onToggleStatus,
   onSetLevel,
+  onSetAccessUntil,
   onProfileSaved,
   onCertsChanged,
 }: {
@@ -721,19 +1073,24 @@ function MemberCard({
   isSelf: boolean
   userId: string | null
   grants: Set<string>
-  /** May the signed-in person change this person's level, permissions and access? */
+  /** May the signed-in person change this person's level, tasks and access? */
   manage: boolean
   /** The levels on offer (update 28); null before it. */
   levelChoices: StaffLevel[] | null
+  /** Update 30 is in: six levels, end dates. */
+  tiersReady: boolean
   /** Their certifications; null before update 28 (hidden). */
   certs: Cert[] | null
   nameOf: (userId: string | null) => string | null
   onToggleCap: (memId: string, key: Capability, grant: boolean) => Promise<void>
   onToggleStatus: (member: Member) => Promise<void>
   onSetLevel: (member: Member, level: StaffLevel) => Promise<string | null>
+  onSetAccessUntil: (member: Member, until: string | null) => Promise<string | null>
   onProfileSaved: () => Promise<void>
   onCertsChanged: () => Promise<void>
 }) {
+  // What the signed-in person holds: only those tasks can be shared (update 30).
+  const { can } = useAuth()
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [statusBusy, setStatusBusy] = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)
@@ -741,10 +1098,13 @@ function MemberCard({
   const [levelBusy, setLevelBusy] = useState(false)
   const [levelError, setLevelError] = useState<string | null>(null)
   const levelsMode = levelChoices !== null
-  const fullAccess = member.role === 'owner' || member.role === 'admin' || (levelsMode && isFullAccess(member.level))
+  // Every task: founders and developers — and, before update 30, Board (then an admin).
+  const everything = (l: StaffLevel) => isFullAccess(l) || (!tiersReady && l === 'board')
+  const fullAccess = member.role === 'owner' || member.role === 'admin' || (levelsMode && everything(member.level))
   const name = memberName(member)
   // Before update 28 admins and owners can't be switched off from here, as before.
   const canSwitchOff = manage && !isSelf && (levelsMode || !fullAccess)
+  const cantShare = !fullAccess && manage && PERMISSION_CATALOG.some((p) => !can(p.key))
 
   const handleCap = async (key: Capability, grant: boolean) => {
     setBusyKey(key)
@@ -800,7 +1160,13 @@ function MemberCard({
           <Badge tone={fullAccess ? 'blue' : 'slate'}>
             {levelsMode ? levelInfo(member.level).label : member.role[0].toUpperCase() + member.role.slice(1)}
           </Badge>
-          {member.status === 'disabled' && <Badge tone="orange">Disabled</Badge>}
+          {member.status === 'disabled' && <Badge tone="orange">Switched off</Badge>}
+          {member.access_until &&
+            (accessEnded(member.access_until) ? (
+              <Badge tone="slate">Access ended {accessDay(member.access_until)}</Badge>
+            ) : (
+              <Badge tone="orange">Access ends {accessDay(member.access_until)}</Badge>
+            ))}
         </div>
       </div>
 
@@ -830,9 +1196,11 @@ function MemberCard({
           {pendingLevel && (
             <div className="mt-2 space-y-2 rounded-xl bg-brand-blue-50/60 p-3">
               <p className="text-sm text-ink">
-                Make {name} <strong>{AS_LEVEL[pendingLevel]}</strong>? {levelInfo(pendingLevel).blurb}.
-                {fullAccess && !isFullAccess(pendingLevel)
-                  ? ' They’ll keep only the permissions ticked below, so check those next.'
+                Make {name} <strong>{levelInfo(pendingLevel).asA}</strong>? {levelInfo(pendingLevel).blurb}.
+                {fullAccess && !everything(pendingLevel)
+                  ? tiersReady && pendingLevel === 'board'
+                    ? ' If they have no tasks switched on, they get the Board set — check the tasks below next.'
+                    : ' They’ll keep only the tasks ticked below, so check those next.'
                   : ''}
               </p>
               <div className="flex gap-2">
@@ -842,7 +1210,7 @@ function MemberCard({
                   disabled={levelBusy}
                   className="min-h-[44px] flex-1 rounded-full bg-brand-blue px-4 text-sm font-bold text-white disabled:opacity-60"
                 >
-                  {levelBusy ? 'Saving…' : `Make ${levelInfo(pendingLevel).label === 'Board' ? 'board member' : levelInfo(pendingLevel).label.toLowerCase()}`}
+                  {levelBusy ? 'Saving…' : `Make ${levelInfo(pendingLevel).label}`}
                 </button>
                 <button
                   type="button"
@@ -859,22 +1227,32 @@ function MemberCard({
       )}
 
       {fullAccess ? (
-        <p className="text-sm text-slate-500">Full access — holds every permission.</p>
+        <p className="text-sm text-slate-500">Holds every task.</p>
       ) : manage ? (
         <div className="space-y-2">
+          {cantShare && (
+            <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
+              Greyed-out tasks: only someone who has this task can share it.
+            </p>
+          )}
           {AREAS.map(({ area, caps }) => (
             <div key={area}>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{area}</p>
               <div className="mt-0.5 grid grid-cols-1">
                 {caps.map((c) => {
                   const on = grants.has(c.key)
+                  const mine = can(c.key)
                   return (
-                    <label key={c.key} className="flex min-h-[44px] items-center gap-2.5 text-sm text-slate-700">
+                    <label
+                      key={c.key}
+                      title={mine ? undefined : 'Only someone who has this task can share it.'}
+                      className={`flex min-h-[44px] items-center gap-2.5 text-sm ${mine ? 'text-slate-700' : 'text-slate-400'}`}
+                    >
                       <input
                         type="checkbox"
                         className="h-5 w-5 shrink-0 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30 disabled:opacity-50"
                         checked={on}
-                        disabled={busyKey === c.key}
+                        disabled={!mine || busyKey === c.key}
                         onChange={(e) => handleCap(c.key, e.target.checked)}
                       />
                       {c.description}
@@ -888,10 +1266,13 @@ function MemberCard({
       ) : (
         <p className="text-sm text-slate-500">
           {grants.size === 0
-            ? 'No capabilities granted.'
-            : `${grants.size} ${grants.size === 1 ? 'capability' : 'capabilities'} granted.`}
+            ? 'No tasks switched on.'
+            : `${grants.size} ${grants.size === 1 ? 'task' : 'tasks'} switched on.`}
         </p>
       )}
+
+      {/* Access for a set time — not for founders or developers, whose access never ends. */}
+      {manage && tiersReady && !isFullAccess(member.level) && <AccessUntilField member={member} onSave={onSetAccessUntil} />}
 
       {levelsMode && !manage && (
         <p className="text-xs font-semibold text-slate-400">
@@ -922,7 +1303,7 @@ function MemberCard({
               : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
           }`}
         >
-          {statusBusy ? '…' : member.status === 'active' ? 'Disable access' : 'Re-enable'}
+          {statusBusy ? '…' : member.status === 'active' ? 'Switch off access' : 'Switch back on'}
         </button>
       )}
     </Card>
@@ -937,8 +1318,9 @@ export default function StaffTeam() {
 
   const [members, setMembers] = useState<Member[]>([])
   const [grantMap, setGrantMap] = useState<Map<string, Set<string>>>(new Map())
-  // Update 28 (levels, certifications): known after the first load.
+  // Update 28 (levels, certifications) and update 30 (ten levels, sharing, end dates): known after the first load.
   const [levelsReady, setLevelsReady] = useState(false)
+  const [tiersReady, setTiersReady] = useState(false)
   const [certMap, setCertMap] = useState<Map<string, Cert[]> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -948,12 +1330,13 @@ export default function StaffTeam() {
     setError(null)
     // list_team() (update 28) brings levels and who may manage whom. Before it
     // runs, fall back to list_org_members(), then to the memberships table (IDs only).
-    const [teamRes, grantRes, profileRes, certRes] = await Promise.all([
+    const [teamRes, grantRes, profileRes, certRes, tiers] = await Promise.all([
       supabase.rpc('list_team', { p_org: orgId }),
       supabase.from('membership_permissions').select('membership_id, permission_key'),
       // Photos and titles live on the memberships row and are merged in.
       supabase.from('memberships').select('id, display_name, title, photo_url, show_on_about').eq('org_id', orgId),
       supabase.from('member_certifications').select('*').eq('org_id', orgId).order('certified_on', { ascending: false }),
+      probeTiers(),
     ])
     const profiles = new Map(
       (profileRes.data ?? []).map((r) => [
@@ -973,6 +1356,8 @@ export default function StaffTeam() {
         status: r.status,
         level: r.level,
         manageable: Boolean(r.can_manage),
+        // Only from update 30.
+        access_until: r.access_until ?? null,
         ...blankProfile,
         display_name: r.display_name ?? null,
         title: r.title ?? null,
@@ -989,6 +1374,7 @@ export default function StaffTeam() {
           status: r.status,
           level: levelFromRole(r.role),
           manageable: null,
+          access_until: null,
           ...(profiles.get(r.membership_id) ?? blankProfile),
         }))
       } else {
@@ -1010,6 +1396,7 @@ export default function StaffTeam() {
           status: r.status,
           level: levelFromRole(r.role),
           manageable: null,
+          access_until: null,
           display_name: r.display_name ?? null,
           title: r.title ?? null,
           photo_url: r.photo_url ?? null,
@@ -1039,6 +1426,7 @@ export default function StaffTeam() {
     setMembers(mem)
     setGrantMap(map)
     setLevelsReady(!teamRes.error)
+    setTiersReady(!teamRes.error && tiers)
     setCertMap(certs)
     setLoading(false)
   }, [orgId])
@@ -1092,9 +1480,16 @@ export default function StaffTeam() {
     [load],
   )
 
+  const setAccessUntil = useCallback(async (member: Member, until: string | null): Promise<string | null> => {
+    const { error } = await supabase.rpc('set_member_access_until', { p_membership: member.id, p_until: until })
+    if (error) return errMessage(error)
+    setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, access_until: until } : m)))
+    return null
+  }, [])
+
   const me = members.find((m) => m.user_id === user?.id) ?? null
-  // The levels the signed-in person may give; null before update 28.
-  const levelChoices = levelsReady ? levelsICanGive(me?.level) : null
+  // The levels the signed-in person may give; null before update 28, the old four before update 30.
+  const levelChoices = levelsReady ? levelsICanGive(me?.level, tiersReady) : null
 
   const nameOf = useCallback(
     (uid: string | null) => {
@@ -1105,10 +1500,10 @@ export default function StaffTeam() {
     [members],
   )
 
-  // Everyone, grouped by level (founders first); within a level, in the order they joined.
+  // Everyone, grouped by level (highest first); within a level, in the order they joined.
   const groups = useMemo(
     () =>
-      LEVELS.map((l) => ({ ...l, people: members.filter((m) => m.level === l.value) })).filter((g) => g.people.length > 0),
+      ALL_LEVELS.map((l) => ({ ...l, people: members.filter((m) => m.level === l.value) })).filter((g) => g.people.length > 0),
     [members],
   )
 
@@ -1134,8 +1529,8 @@ export default function StaffTeam() {
         <h1 className="font-display text-2xl font-black text-ink">Team</h1>
         <Card className="border-slate-200 bg-slate-50/80">
           <p className="text-sm leading-relaxed text-slate-600">
-            You don't have access to manage the team. Ask {levelsReady ? 'a founder or the board' : 'an owner or admin'} if you
-            need it.
+            You don't have access to manage the team. Ask {levelsReady ? 'someone above your level' : 'an owner or admin'} if
+            you need it.
           </p>
         </Card>
       </Screen>
@@ -1148,12 +1543,16 @@ export default function StaffTeam() {
         <h1 className="font-display text-2xl font-black text-ink">Team</h1>
         <p className="mt-1 text-sm text-slate-600">
           {levelsReady
-            ? 'Everyone on the team, by level. You can change people below your own level. Changes take effect immediately and are logged.'
+            ? 'Everyone on the team, by level. You can change people below your own level and share the tasks you have. Changes take effect immediately and are logged.'
             : 'Invite staff and control what each person can do. Changes take effect immediately and are logged.'}
         </p>
       </div>
 
-      {canInvite && !loading && <InvitePanel orgId={orgId} levelChoices={levelChoices} onInvited={load} />}
+      {!loading && levelsReady && <HowAccessWorks tiersReady={tiersReady} />}
+
+      {canInvite && !loading && (
+        <InvitePanel orgId={orgId} tiersReady={tiersReady} levelChoices={levelChoices ?? []} onInvited={load} />
+      )}
 
       <FormError>{error}</FormError>
 
@@ -1185,7 +1584,11 @@ export default function StaffTeam() {
                 {levelsReady ? g.plural : g.value === 'founder' ? 'Owners' : g.value === 'board' ? 'Admins' : 'Staff'}{' '}
                 <span className="font-bold text-slate-400">({g.people.length})</span>
               </p>
-              {levelsReady && <p className="text-xs text-slate-500">{g.blurb}</p>}
+              {levelsReady && (
+                <p className="text-xs text-slate-500">
+                  {!tiersReady && g.value === 'board' ? 'Every task' : g.blurb}
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-1 gap-3">
               {g.people.map((m) => {
@@ -1202,12 +1605,14 @@ export default function StaffTeam() {
                     grants={grantMap.get(m.id) ?? new Set()}
                     manage={manage}
                     levelChoices={levelChoices}
+                    tiersReady={tiersReady}
                     certs={certMap ? (certMap.get(m.id) ?? []) : null}
                     nameOf={nameOf}
                     onProfileSaved={load}
                     onToggleCap={toggleCap}
                     onToggleStatus={toggleStatus}
                     onSetLevel={setLevel}
+                    onSetAccessUntil={setAccessUntil}
                     onCertsChanged={load}
                   />
                 )

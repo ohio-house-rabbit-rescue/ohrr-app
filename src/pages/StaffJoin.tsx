@@ -5,9 +5,10 @@ import { useAuth } from '../lib/auth'
 import { btn, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { NotConfigured, Spinner, FormError, staffInput } from '../components/staffui'
+import { accessDate } from '../lib/staffLevels'
 
 export default function StaffJoin() {
-  const { configured, loading, user, membership, refresh } = useAuth()
+  const { configured, loading, user, membership, accessEndedOn, refresh } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [params] = useSearchParams()
@@ -45,12 +46,19 @@ export default function StaffJoin() {
           <Icon name="ticket" size={22} />
         </span>
         <h1 className="mt-3 font-display text-2xl font-black text-ink">Enter your invite code</h1>
-        <p className="mt-1 text-sm leading-relaxed text-slate-600">
-          Signed in as <strong>{user.email}</strong>. You’re not on the OHRR team yet — one more step.
-        </p>
+        {accessEndedOn ? (
+          // Access that ran until a date (update 30) — the database already refuses them.
+          <p className="mt-2 rounded-xl bg-brand-orange-50 px-3 py-2.5 text-sm font-semibold leading-relaxed text-ink" role="status">
+            Your access ended on {accessDate(accessEndedOn)}. Ask a founder or admin to extend it.
+          </p>
+        ) : (
+          <p className="mt-1 text-sm leading-relaxed text-slate-600">
+            Signed in as <strong>{user.email}</strong>. You’re not on the OHRR team yet — one more step.
+          </p>
+        )}
         <p className="mt-2 text-sm leading-relaxed text-slate-600">
-          Ask a founder or board member for an invite code (they make one in{' '}
-          <strong>Staff → Team → Invite someone</strong>), and enter it here. It joins you to the team with the
+          Ask the person bringing you on (a founder, an admin or a lead) for an invite code — they make one in{' '}
+          <strong>Staff → Team → Invite someone</strong> — and enter it here. It joins you to the team with the
           access they set up for you.
         </p>
       </div>

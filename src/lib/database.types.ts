@@ -9,8 +9,25 @@
 // file so it stays authoritative. Keep it in sync with the migration until then.
 
 export type MembershipRole = 'owner' | 'admin' | 'staff'
-/** Staff levels, highest first (20260924220000_staff_levels_and_volunteer_trust.sql). founder = owner, board = admin. */
-export type StaffLevel = 'founder' | 'board' | 'lead' | 'worker'
+/**
+ * Staff levels, highest first (20260924220000_*.sql, widened to ten by update 30 —
+ * 20260925100000_staff_tiers_and_sharing.sql). Developers and founders are owners
+ * with every task; everyone else holds the tasks switched on for them.
+ * 'worker' exists only BEFORE update 30 (then the levels were founder, board —
+ * an admin underneath — lead and worker); the update turns it into volunteer1.
+ */
+export type StaffLevel =
+  | 'developer'
+  | 'founder'
+  | 'board'
+  | 'admin3'
+  | 'admin2'
+  | 'admin1'
+  | 'lead'
+  | 'volunteer3'
+  | 'volunteer2'
+  | 'volunteer1'
+  | 'worker'
 export type MembershipStatus = 'active' | 'disabled'
 export type InviteKind = 'master' | 'worker'
 
@@ -39,6 +56,9 @@ export type Database = {
           show_on_about: boolean
           // Staff level (20260924220000_*.sql) — change it with set_member_level(), never directly.
           level: StaffLevel
+          // The last day of access, America/New_York (update 30); null = no end.
+          // Change it with set_member_access_until().
+          access_until: string | null
           created_at: string
         }
         Insert: {
@@ -48,6 +68,7 @@ export type Database = {
           role?: MembershipRole
           status?: MembershipStatus
           level?: StaffLevel
+          access_until?: string | null
           created_at?: string
         }
         Update: {
@@ -57,6 +78,7 @@ export type Database = {
           role?: MembershipRole
           status?: MembershipStatus
           level?: StaffLevel
+          access_until?: string | null
           created_at?: string
         }
         Relationships: []
@@ -150,6 +172,8 @@ export type Database = {
           note: string | null
           // The level the new person joins at (20260924220000_*.sql); null = from the role.
           level: StaffLevel | null
+          // Their access ends after this day (update 30); null = no end.
+          access_until: string | null
           created_by: string | null
           created_at: string
         }
@@ -170,6 +194,7 @@ export type Database = {
           position_note?: string | null
           note?: string | null
           level?: StaffLevel | null
+          access_until?: string | null
           created_by?: string | null
           created_at?: string
         }
@@ -190,6 +215,7 @@ export type Database = {
           position_note?: string | null
           note?: string | null
           level?: StaffLevel | null
+          access_until?: string | null
           created_by?: string | null
           created_at?: string
         }
@@ -2734,9 +2760,11 @@ export type Database = {
           title: string | null
           created_at: string
           can_manage: boolean
+          /** Update 30: the last day of their access (null = no end). Missing before it. */
+          access_until: string | null
         }[]
       }
-      /** Only for people below your own level (founders: anyone but themselves); keeps role in step. */
+      /** Only for people below your own level (founders and developers: anyone but themselves); keeps role in step. */
       set_member_level: { Args: { p_membership: string; p_level: StaffLevel }; Returns: undefined }
       /** After create_invite_code: the level the new person joins at (never above the inviter's). */
       set_invite_level: { Args: { p_code: string; p_level: StaffLevel | null }; Returns: undefined }
@@ -2745,6 +2773,35 @@ export type Database = {
       can_manage_member: { Args: { p_membership: string }; Returns: boolean }
       /** The signed-in staff member's own volunteer access_token — the record is made the first time. */
       my_staff_volunteer_page: { Args: { p_org: string }; Returns: string }
+      // Staff tiers and sharing (supabase/migrations/20260925100000_staff_tiers_and_sharing.sql)
+      /** developer 10 … volunteer1 1 (unknown 0). level_rank('developer') = 10 means update 30 is in (it was 0 before). */
+      level_rank: { Args: { p_level: string }; Returns: number }
+      /**
+       * One call makes the whole invite: level, tasks, end date and who it's for.
+       * Only levels below your own (founders and developers: any) and only tasks
+       * you hold; founder and developer invites carry no tasks. Returns the code.
+       */
+      create_staff_invite: {
+        Args: {
+          p_org: string
+          p_level: StaffLevel
+          p_capabilities?: string[]
+          p_preset?: string | null
+          p_access_until?: string | null
+          p_name?: string | null
+          p_email?: string | null
+          p_phone?: string | null
+          p_position?: string | null
+          p_note?: string | null
+          p_max_uses?: number
+          p_expires_at?: string
+        }
+        Returns: string
+      }
+      /** May the signed-in person give this level? Founders and developers: any; others: below their own. */
+      can_give_level: { Args: { p_org: string; p_level: StaffLevel }; Returns: boolean }
+      /** The last day of someone's access (null = no end). Not for founders or developers; only people you may change. */
+      set_member_access_until: { Args: { p_membership: string; p_until: string | null }; Returns: undefined }
     }
     Enums: {
       membership_role: MembershipRole
