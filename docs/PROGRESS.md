@@ -19,6 +19,16 @@
 
 ## Current state (at a glance)
 
+- **My account + clearer joining, 2026-09-25 (website `b0c5e69`, app `3b80d9c`; no SQL).** OHRR: "I don't
+  have the ability to create an account or edit my account." Everyone signed in now has Staff → My account
+  (`/staff/account`): name, title, photo, show on About, sign-in email (link to the new address), password,
+  and their level and access. Sign-up with an email that already has an account says so instead of waiting
+  for an email that never comes; the forms say invite codes come from a founder or board member (Staff →
+  Team → Invite). App: signed in but not on the team goes to the invite-code screen (not the master-code
+  one), and emailed links from inside the phone app point at ohrr-app.pages.dev, not localhost.
+  **For OHRR:** add `https://ohrr-app.pages.dev/**` and `https://ohrr-website.pages.dev/**` to Supabase →
+  Authentication → URL Configuration → Redirect URLs, so email links come back to the right screen.
+
 - **Legacy Fund, 2026-09-24 (latest; website `f175ed8` + app `b253c67`; update 29 applied and checked live the same day —
   47 published 2026 names, anon insert refused; `Supabase history/APPLY-29 (applied 2026-09-24).sql`).** Updates 25–28 were run and checked live the same day (anon REST:
   `volunteer_check` answers with a role, `count_posts_to_approve`, `level_rank`, and the new staff tables
