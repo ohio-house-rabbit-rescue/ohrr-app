@@ -36,6 +36,9 @@ import StaffImpact from './features/impact/pages/StaffImpact'
 // The OHRR Legacy Fund + its Rescue Rabbit Guardians list (update 29)
 import LegacyFund from './features/giving/pages/LegacyFund'
 import StaffGuardians from './features/giving/pages/StaffGuardians'
+// Update 32: the Amazon wish list's own items, and phone notifications
+import StaffWishList from './features/giving/pages/StaffWishList'
+import StaffNotifications from './pages/StaffNotifications'
 import Learn from './pages/Learn'
 import LearnTopic from './pages/LearnTopic'
 import Volunteer from './pages/Volunteer'
@@ -297,6 +300,8 @@ export default function App() {
           <Route path="hours-letter" element={<ServiceLetter />} />
           <Route path="impact" element={<StaffImpact />} />
           <Route path="guardians" element={<StaffGuardians />} />
+          <Route path="wish-list" element={<StaffWishList />} />
+          <Route path="notifications" element={<StaffNotifications />} />
           <Route path="scan" element={<Suspense fallback={null}><ScanFlow /></Suspense>} />
           <Route path="share" element={<Suspense fallback={null}><StaffShare /></Suspense>} />
           <Route path="posts" element={<Suspense fallback={null}><PostQueue /></Suspense>} />

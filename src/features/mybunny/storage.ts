@@ -6,9 +6,10 @@
 // rescue or foster can keep up to MAX_BUNNIES rabbits without hitting
 // localStorage's ~5 MB ceiling. Signed out, nothing is transmitted. Signed in
 // (update 31), the account sync (features/account/sync.ts) also keeps a copy of
-// the JSON — never the photos — on the person's OHRR account; the pure merge it
-// uses is `mergeSynced()` below, and every edit stamps `updatedAt` so the
-// newest copy of a bunny, reminder or note wins.
+// the JSON — without the photos — on the person's OHRR account; the pure merge
+// it uses is `mergeSynced()` below, and every edit stamps `updatedAt` so the
+// newest copy of a bunny, reminder or note wins. The photos follow separately
+// (update 32, features/account/photoSync.ts).
 //
 // v1 (`ohrr.mybunny.v1`) embedded each photo as `photoDataUrl` in the JSON. On
 // first load after the upgrade the v1 blob is read, the photos are copied into
@@ -745,6 +746,24 @@ export async function setBunnyPhoto(id: string, dataUrl: string | undefined): Pr
   return ok
 }
 
+/**
+ * The photo came from (or was removed on) the account (update 32): flip
+ * `hasPhoto` WITHOUT stamping `updatedAt` — `hasPhoto` is this phone's
+ * business, so nothing about the bunny itself changed.
+ */
+export function markPhotoHere(id: string, has: boolean): void {
+  const b = findBunny(data, id)
+  if (!b || Boolean(b.hasPhoto) === has) return
+  commit({
+    ...data,
+    bunnies: data.bunnies.map((x) => {
+      if (x.id !== id) return x
+      const { hasPhoto: _drop, ...rest } = x
+      return has ? { ...rest, hasPhoto: true } : rest
+    }),
+  })
+}
+
 /** Removes the bunny plus its reminders, weight log, health notes and photo. */
 export function deleteBunny(id: string): void {
   const weights = { ...data.weights }
@@ -1116,10 +1135,12 @@ export function backupFilename(today: string = todayIso()): string {
 
 /* ------------------------------------------------------- account sync */
 //
-// Signed in, the account keeps the same JSON minus the photos (they stay in
-// this phone's IndexedDB; `hasPhoto` is this phone's business, so it isn't
-// sent). The sync engine (features/account/sync.ts) calls these; they're pure
-// apart from applySynced(), so scripts/mybunny-check.ts exercises them.
+// Signed in, the account keeps the same JSON minus the photos (`hasPhoto` is
+// this phone's business, so it isn't sent). Since update 32 the photos go to
+// the account separately, as files in a private folder — see
+// features/account/photoSync.ts. The sync engine (features/account/sync.ts)
+// calls these; they're pure apart from applySynced(), so
+// scripts/mybunny-check.ts exercises them.
 
 /** What the account stores: the data without `hasPhoto`. */
 export function forAccount(d: MyBunnyData): MyBunnyData {

@@ -9,6 +9,10 @@
 // cache + useSyncExternalStore hook means the avatars re-render the moment a
 // photo is loaded, saved or removed. No top-level browser access, so this file
 // is safe to import from the node check script.
+//
+// Signed in (update 32), the account keeps a copy of each photo too; the
+// account sync (features/account/photoSync.ts) hears about every photo stored
+// or removed here through onPhotoChange().
 
 import { useEffect, useSyncExternalStore } from 'react'
 
@@ -96,6 +100,17 @@ function subscribe(cb: () => void) {
   }
 }
 
+// Which bunny's photo was stored (true) or removed (false) — for the account sync.
+type PhotoChange = (id: string, stored: boolean) => void
+const changeListeners = new Set<PhotoChange>()
+
+export function onPhotoChange(cb: PhotoChange): () => void {
+  changeListeners.add(cb)
+  return () => {
+    changeListeners.delete(cb)
+  }
+}
+
 /** The photo for a bunny id — from the cache when warm, else from IndexedDB. */
 export function getPhoto(id: string): Promise<string | undefined> {
   const hit = cache.get(id)
@@ -128,6 +143,7 @@ export async function putPhoto(id: string, dataUrl: string): Promise<boolean> {
   if (!isDataUrl(dataUrl)) return false
   cache.set(id, dataUrl)
   notify()
+  changeListeners.forEach((l) => l(id, true))
   const db = await openDb()
   if (!db) return false
   return new Promise<boolean>((resolve) => {
@@ -146,6 +162,7 @@ export async function putPhoto(id: string, dataUrl: string): Promise<boolean> {
 export async function deletePhoto(id: string): Promise<void> {
   cache.set(id, null)
   notify()
+  changeListeners.forEach((l) => l(id, false))
   await request('readwrite', (s) => s.delete(id))
 }
 

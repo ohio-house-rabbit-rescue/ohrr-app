@@ -138,8 +138,9 @@ export default function OhrrHome() {
         <EasterReminder />
         {/* Live staff-posted notices (hidden when there are none) */}
         <AnnouncementsBanner />
-        {/* What's new for the things they ticked, since they last looked (hidden when nothing is) */}
-        <ForYou />
+        {/* What's new for the things they ticked, since they last looked (hidden when nothing is),
+            and — once, for people who haven't decided — the question about volunteer notifications */}
+        <ForYou notifyPrompt />
         <PresentedBy surface="home" />
 
         {/* My Bunny first — the user's own rabbit is the daily reason to open the app —

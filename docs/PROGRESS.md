@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-26 (one account for everyone, email list, On hold; update 31 applied and checked; nothing to run, next is 32)
+- **Last updated:** 2026-09-26 (wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 WRITTEN, NOT YET RUN — the ohrr-jobs Edge Function goes in first)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,32 @@
 ---
 
 ## Current state (at a glance)
+
+- **Update 32, 2026-09-26 (latest; website `c5d97c9` + app the same day; update 32 NOT YET RUN).** OHRR: "build
+  the things you can and then lets also do 2 [phone notifications] and 7 [Cloudflare Web Analytics]".
+  - **Order for OHRR:** (1) Supabase → Edge Functions → Deploy a new function → Via Editor, name `ohrr-jobs`, paste
+    Drive `OHRR App Design/OHRR-JOBS-FUNCTION.ts` (= `supabase/functions/ohrr-jobs/PASTE-INTO-SUPABASE.ts`),
+    **Verify JWT OFF**; (2) run update 32 (RUN-THIS / six chat blocks). Every new screen stays quiet until then.
+  - **Wish-list items** (`wish_list_items`, task `giving.wishlist`): staff paste each item's own Amazon link
+    (Amazon blocks programs reading the list); Give / Hop Shop list them, "Most needed" first, each "Buy on
+    Amazon"; the whole-list button stays. Staff → Wish list items in both.
+  - **Rabbits from RescueGroups:** the `ohrr-jobs` function reads OHRR's listing (org 6091; port of
+    `scripts/rescuegroups-rabbits.py` in `supabase/functions/ohrr-jobs/rescuegroups.ts`) every morning at 11:15
+    UTC (pg_cron) and on Staff → Adoptable rabbits → "Check RescueGroups now". New rabbits are added; one no
+    longer listed is hidden with a badge (`auto_hidden`), **never marked adopted**; staff "Mark adopted" or
+    "Show it again until tomorrow's check". An empty listing changes nothing. Each run leaves a `job_runs` row.
+  - **Phone notifications (web push, web app only):** My OHRR → "Notifications on this phone" (topics
+    volunteer / events / adoptions / bunfest / news, "Send me a test" signed in), a one-time Home prompt,
+    `public/sw.js` push + tap handlers, `public/manifest.webmanifest` (iPhone needs Add to Home Screen). New
+    volunteer calls, events and hand-added rabbits send one by themselves; the RescueGroups check sends one a
+    day for new rabbits. Staff → Send a notification (task `notifications.send`, 10 an hour) in both. VAPID keys
+    are made by the function and kept in `push_config` (no policies). Endpoints are limited to the browsers' push
+    services. The phone app (Capacitor) still says notifications come with the app-store version.
+  - **My Bunny photos on the account:** private bucket `my-bunny-photos`, `<user id>/<bunny id>.jpg`, own folder
+    only; `src/features/account/photoSync.ts` (stamps per account; an empty folder never deletes phone photos);
+    Delete account empties the folder first.
+  - **Cloudflare Web Analytics (item 7):** OHRR switches it on in the Cloudflare dashboard (no code); then add a
+    privacy-page line.
 
 - **One account for everyone, 2026-09-26 (latest; website `b0145e8` + app the same day; update 31 applied and checked
   live the same day — new tables refuse anon, save_my_data needs sign-in; `APPLY-31 (applied 2026-09-26).sql`).** OHRR: supporters "enter your information and save things like

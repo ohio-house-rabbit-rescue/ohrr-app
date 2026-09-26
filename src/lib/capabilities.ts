@@ -33,6 +33,9 @@ export const CAPABILITIES = [
   'counter.use',
   // Update 31: the supporter email list (founders and developers already can).
   'supporters.view',
+  // Update 32: the Amazon wish list items, and phone notifications.
+  'giving.wishlist',
+  'notifications.send',
 ] as const
 
 export type Capability = (typeof CAPABILITIES)[number]
@@ -77,6 +80,8 @@ export const PERMISSION_CATALOG: PermissionMeta[] = [
   { key: 'social.approve', area: 'Content', description: 'Approve social-media posts written by someone else' },
   { key: 'counter.use', area: 'Counter', description: 'The Counter: add items, ring up sales, take tickets at the door, sell raffle tickets' },
   { key: 'supporters.view', area: 'Supporters', description: 'See and download the supporter email list' },
+  { key: 'giving.wishlist', area: 'Giving', description: 'Keep the Amazon wish list items' },
+  { key: 'notifications.send', area: 'Supporters', description: 'Send phone notifications to people who asked for them' },
 ]
 
 // The preset → capabilities bundles, mirroring `permission_presets` in the seed

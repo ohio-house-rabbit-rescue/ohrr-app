@@ -10,6 +10,10 @@
 //   mybunny   My Bunny WITHOUT photos        the ohrr.mybunny.v2 JSON
 //   seen      For you's "last looked"        { volunteer: iso, … }
 //
+// My Bunny's photos follow too (update 32), as files in a private storage
+// folder rather than a document: photoSync.ts, run after each full pull and a
+// moment after a photo changes on the phone, in the same queue.
+//
 // How it runs:
 //   - On sign-in and on app start (and when the app comes back to the front,
 //     at most once a minute), every document is read and merged with the
@@ -49,6 +53,7 @@ import { cancelReminders, resyncReminder } from '../../native/notifications'
 import { isNative } from '../../native/platform'
 import { mergeSeen, seenStore } from './forYouCounts'
 import { isMissing, loadMyEmailPrefs, setDeviceInterests } from './emailList'
+import { forgetPhotoSync, syncBunnyPhotos, watchPhotoChanges } from './photoSync'
 
 type Kind = Exclude<UserSaveKind, 'settings'>
 
@@ -236,6 +241,7 @@ let started = false
 let lastPull = 0
 let queue: Promise<void> = Promise.resolve()
 const timers = new Map<Kind, ReturnType<typeof setTimeout>>()
+let photoTimer: ReturnType<typeof setTimeout> | null = null
 
 function enqueue(op: () => Promise<void>): Promise<void> {
   queue = queue.then(op).catch(() => setStatus('offline'))
@@ -246,6 +252,18 @@ function start() {
   if (started) return
   started = true
   for (const ch of CHANNELS) ch.subscribe(() => onLocalChange(ch))
+  watchPhotoChanges(onPhotoChanged)
+}
+
+/** A photo stored or removed on the phone: bring the account's copy into step shortly. */
+function onPhotoChanged() {
+  if (!uid || unavailable) return
+  if (photoTimer) clearTimeout(photoTimer)
+  photoTimer = setTimeout(() => {
+    photoTimer = null
+    const me = uid
+    if (me && !unavailable) void enqueue(() => syncBunnyPhotos(me))
+  }, 2000)
 }
 
 function onLocalChange(ch: Channel) {
@@ -337,7 +355,12 @@ async function pullInterests(me: string) {
 export function pullAll(): Promise<void> {
   if (!uid || unavailable) return Promise.resolve()
   lastPull = Date.now()
-  return enqueue(() => syncKinds(CHANNELS))
+  return enqueue(async () => {
+    await syncKinds(CHANNELS)
+    // The photos last, once the bunnies they belong to are on the phone.
+    const me = uid
+    if (me && !unavailable) await syncBunnyPhotos(me)
+  })
 }
 
 /** Called with the signed-in user's id (null when signed out). */
@@ -347,6 +370,8 @@ export function setSyncUser(next: string | null) {
   uid = next
   for (const t of timers.values()) clearTimeout(t)
   timers.clear()
+  if (photoTimer) clearTimeout(photoTimer)
+  photoTimer = null
   if (!next || !isSupabaseConfigured) {
     setStatus('off', null)
     return
@@ -380,9 +405,12 @@ export async function flushAccountSync(): Promise<void> {
 export function forgetAccountSync() {
   for (const t of timers.values()) clearTimeout(t)
   timers.clear()
+  if (photoTimer) clearTimeout(photoTimer)
+  photoTimer = null
   try {
     localStorage.removeItem(STATE_KEY)
   } catch {
     /* private mode */
   }
+  forgetPhotoSync()
 }

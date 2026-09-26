@@ -5,9 +5,11 @@
 // `?create=1` opens on Create account.
 //
 // Signed in, phone first, in this order: their name; what's saved on the
-// account; the emails they want; phone reminders (in the app); sign-in email
-// and password; staff (an invite code, or their level and the way in);
-// delete the account; sign out.
+// account; the emails they want; notifications on this phone (update 32 —
+// web push on the web; in the app, a note) and phone reminders (in the app);
+// sign-in email and password; staff (an invite code, or their level and the
+// way in); delete the account; sign out. Signed out, notifications on this
+// phone sit under the sign-in form: they don't need an account.
 //
 // Until update 31 is run each part degrades on its own: the name can't be
 // saved, saving to the account says it hasn't started, and the email choices
@@ -31,6 +33,7 @@ import ForYou from './ForYou'
 import InterestPicker from './InterestPicker'
 import { EmailForm, PasswordForm } from './AccountForms'
 import { PhoneRemindersSection } from './PhoneReminders'
+import { PhoneNotificationsSection } from './PhoneNotifications'
 import { firstName, saveMyName, useMyName } from './profile'
 import { useSyncStatus } from './sync'
 import { getDeviceInterests, loadMyEmailPrefs, saveMyEmailPrefs, type Interest } from './emailList'
@@ -65,6 +68,11 @@ export default function MyOhrr() {
           </Link>{' '}
           · You can use the app without one.
         </p>
+        {!forStaff && (
+          <div className="px-5 pb-6">
+            <PhoneNotificationsSection signedIn={false} />
+          </div>
+        )}
       </>
     )
   }
@@ -92,6 +100,8 @@ function SignedIn({ user }: { user: User }) {
         <SavedOnAccount />
 
         <EmailChoices userId={user.id} name={name} />
+
+        <PhoneNotificationsSection signedIn />
 
         <PhoneRemindersSection />
 

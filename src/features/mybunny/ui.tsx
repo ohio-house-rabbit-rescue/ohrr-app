@@ -11,6 +11,7 @@ import { EMERGENCY_VET, VET_DIRECTORY } from './links'
 import { useBunnyPhoto } from './photos'
 import { useAuth } from '../../lib/auth'
 import { useSyncStatus } from '../account/sync'
+import { usePhotoSyncState } from '../account/photoSync'
 import {
   dueStatus,
   describeDue,
@@ -464,11 +465,13 @@ export function VetNote({ className = '' }: { className?: string }) {
 
 /**
  * The one-line privacy promise, with a lock icon. Signed in (update 31), My
- * Bunny is also kept on their OHRR account — never the photos — so it says so.
+ * Bunny is also kept on their OHRR account, so it says so — and, once the
+ * account's photo folder has been reached (update 32), that the photos come too.
  */
 export function PrivacyLine({ className = '' }: { className?: string }) {
   const { user } = useAuth()
   const { state } = useSyncStatus()
+  const photos = usePhotoSyncState()
   const onAccount = Boolean(user) && state !== 'unavailable'
   return (
     <p className={`flex items-start gap-2 text-xs leading-relaxed text-slate-500 ${className}`}>
@@ -476,7 +479,10 @@ export function PrivacyLine({ className = '' }: { className?: string }) {
       {onAccount ? (
         <span>
           Saved on this phone and on your OHRR account, where only you can see it — sign in on any phone and it’s
-          there. Photos stay on this phone. Use Backup to keep them.
+          there.{' '}
+          {photos === 'on'
+            ? 'Photos come too. Backup still makes a copy you keep yourself.'
+            : 'Photos stay on this phone. Use Backup to keep them.'}
         </span>
       ) : (
         <span>

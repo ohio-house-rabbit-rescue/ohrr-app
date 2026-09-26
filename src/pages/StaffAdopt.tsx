@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
@@ -6,10 +6,11 @@ import { Icon } from '../components/icons'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { isNative } from '../native/platform'
 import { pickPhoto } from '../native/camera'
-import type { Database } from '../lib/database.types'
+import type { Database, Json } from '../lib/database.types'
 import BreedInput from '../components/BreedInput'
 
 type Rabbit = Database['public']['Tables']['rabbits']['Row']
+type JobRun = Pick<Database['public']['Tables']['job_runs']['Row'], 'finished_at' | 'ok' | 'detail'>
 
 const STATUSES = ['Available', 'Pending', 'Adopted']
 const SEXES = ['', 'Male', 'Female', 'Unknown']
@@ -71,6 +72,172 @@ const splitTags = (s: string) =>
     .split(',')
     .map((t) => t.trim())
     .filter(Boolean)
+
+/* ------------------------------------------- the RescueGroups check */
+// Update 32: every morning (and on "Check RescueGroups now") the ohrr-jobs
+// function reads OHRR's RescueGroups listing. New rabbits are added; one no
+// longer listed is hidden (auto_hidden) — never marked adopted, staff decide —
+// and shown again by itself if it comes back. Each check leaves a job_runs row.
+
+/** What the last check said. */
+interface RabbitCheck {
+  at: string
+  ok: boolean
+  listed: number | null
+  added: string[]
+  back: string[]
+  hidden: string[]
+  error: string | null
+}
+
+function readCheck(r: JobRun): RabbitCheck {
+  const d = r.detail && typeof r.detail === 'object' && !Array.isArray(r.detail) ? r.detail : {}
+  const names = (v: Json | undefined) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
+  return {
+    at: r.finished_at,
+    ok: r.ok,
+    listed: typeof d.listed === 'number' ? d.listed : null,
+    added: names(d.added),
+    back: names(d.back),
+    hidden: names(d.hidden),
+    error: typeof d.error === 'string' ? d.error : null,
+  }
+}
+
+/** PostgREST: the table or function isn't there (update 32 not run yet). */
+function update32Missing(e: { code?: string; message?: string }) {
+  return (
+    e.code === 'PGRST205' ||
+    e.code === 'PGRST202' ||
+    e.code === '42P01' ||
+    /schema cache|does not exist|could not find the (table|function)/i.test(e.message ?? '')
+  )
+}
+
+const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
+
+/** "today 7:15 AM", "yesterday 7:15 AM", "Mon, Sep 21 7:15 AM". */
+function checkedWhen(iso: string): string {
+  const d = new Date(iso)
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const now = new Date()
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (sameDay(d, now)) return `today ${time}`
+  if (sameDay(d, yesterday)) return `yesterday ${time}`
+  return `${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} ${time}`
+}
+
+/** "Sep 24, 2026" */
+const usDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+function checkSummary(c: RabbitCheck): string {
+  if (!c.ok) return `The RescueGroups check ${checkedWhen(c.at)} didn’t work${c.error ? `: ${c.error}` : ''}. Nothing was changed.`
+  const parts = [`${c.listed ?? '?'} listed`]
+  if (c.added.length) parts.push(`added ${c.added.join(', ')}`)
+  if (c.back.length) parts.push(`back ${c.back.join(', ')}`)
+  if (c.hidden.length) parts.push(`hidden ${c.hidden.join(', ')}`)
+  if (parts.length === 1) parts.push('no changes')
+  return `Checked RescueGroups ${checkedWhen(c.at)}: ${parts.join(' · ')}`
+}
+
+/**
+ * The line at the top of the list: when RescueGroups was last checked and what
+ * changed, and "Check RescueGroups now" (the check runs in the background, so
+ * it looks again after about 20 seconds).
+ */
+function RescueGroupsCheck({ orgId, canRefresh, onRefreshed }: { orgId: string; canRefresh: boolean; onRefreshed: () => void }) {
+  const [check, setCheck] = useState<RabbitCheck | null | 'missing' | 'loading'>('loading')
+  const [phase, setPhase] = useState<'idle' | 'asking' | 'waiting' | 'late'>('idle')
+  const [error, setError] = useState<string | null>(null)
+  const askedAt = useRef(0)
+
+  const load = useCallback(async (): Promise<RabbitCheck | null> => {
+    const { data, error } = await supabase
+      .from('job_runs')
+      .select('finished_at, ok, detail')
+      .eq('job', 'rabbits')
+      .order('finished_at', { ascending: false })
+      .limit(1)
+    if (error) {
+      setCheck(update32Missing(error) ? 'missing' : null)
+      return null
+    }
+    const c = data?.[0] ? readCheck(data[0]) : null
+    setCheck(c)
+    return c
+  }, [])
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const lookAgain = useCallback(async () => {
+    const c = await load()
+    onRefreshed()
+    setPhase(c && new Date(c.at).getTime() >= askedAt.current ? 'idle' : 'late')
+  }, [load, onRefreshed])
+
+  // After asking: look again in about 20 seconds.
+  useEffect(() => {
+    if (phase !== 'waiting') return
+    const t = setTimeout(() => void lookAgain(), 20_000)
+    return () => clearTimeout(t)
+  }, [phase, lookAgain])
+
+  const ask = async () => {
+    setError(null)
+    setPhase('asking')
+    const { error } = await supabase.rpc('request_rabbit_refresh', { p_org: orgId })
+    if (error) {
+      if (update32Missing(error)) setCheck('missing')
+      else setError(errMessage(error))
+      setPhase('idle')
+      return
+    }
+    // A few seconds' grace between the phone's clock and the database's.
+    askedAt.current = Date.now() - 5_000
+    setPhase('waiting')
+  }
+
+  if (check === 'loading') return null
+  if (check === 'missing')
+    return (
+      <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-500">
+        Keeping this list up to date from RescueGroups every morning switches on with update 32.
+      </p>
+    )
+
+  return (
+    <Card className="space-y-2 !py-3">
+      <p className="text-sm leading-relaxed text-slate-700">
+        {check ? checkSummary(check) : 'RescueGroups hasn’t been checked yet.'}{' '}
+        <span className="text-slate-500">It’s checked every morning.</span>
+      </p>
+      {phase === 'waiting' && (
+        <p className="text-sm font-semibold text-brand-blue">Checking RescueGroups — this takes about 20 seconds…</p>
+      )}
+      {phase === 'late' && (
+        <p className="text-sm text-slate-600">
+          Not finished yet.{' '}
+          <button type="button" onClick={() => void lookAgain()} className="min-h-[40px] font-bold text-brand-blue underline underline-offset-2">
+            Check again
+          </button>
+        </p>
+      )}
+      <FormError>{error}</FormError>
+      {canRefresh && phase !== 'waiting' && (
+        <button
+          type="button"
+          disabled={phase === 'asking'}
+          onClick={() => void ask()}
+          className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-slate-200 px-4 text-sm font-bold text-brand-blue hover:bg-slate-50 disabled:opacity-60"
+        >
+          {phase === 'asking' ? 'Asking…' : 'Check RescueGroups now'}
+        </button>
+      )}
+    </Card>
+  )
+}
 
 async function uploadPhoto(file: File, userId: string): Promise<string> {
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
@@ -409,6 +576,17 @@ function RabbitCard({
     if (!error) onChanged()
   }
 
+  // Hidden by the RescueGroups check: show it until tomorrow's check (which
+  // hides it again if it still isn't listed).
+  const showAgain = async () => {
+    setBusy(true)
+    setError(null)
+    const { error } = await supabase.from('rabbits').update({ is_published: true, auto_hidden: false }).eq('id', item.id)
+    if (error) setError(errMessage(error))
+    setBusy(false)
+    if (!error) onChanged()
+  }
+
   const doDelete = async () => {
     setBusy(true)
     const { error } = await supabase.from('rabbits').delete().eq('id', item.id)
@@ -459,6 +637,43 @@ function RabbitCard({
           </div>
         </div>
       </div>
+
+      {/* Update 32: no longer on RescueGroups — adopted, or listed again? Staff decide. */}
+      {item.auto_hidden && item.status !== 'Adopted' && (
+        <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+          <p className="text-sm font-bold text-amber-900">
+            Hidden — no longer on RescueGroups{item.source_missing_since ? ` since ${usDate(item.source_missing_since)}` : ''}
+          </p>
+          <p className="text-xs leading-relaxed text-amber-900/80">
+            Adopted? Mark it so. Still here? Show it again — until tomorrow’s check, which hides it again if RescueGroups
+            still doesn’t list it.
+          </p>
+          {(canStatus || canEdit) && (
+            <div className="flex flex-wrap gap-2">
+              {canStatus && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void changeStatus('Adopted')}
+                  className="min-h-[40px] rounded-full bg-brand-blue px-4 text-sm font-bold text-white disabled:opacity-60"
+                >
+                  Mark adopted
+                </button>
+              )}
+              {canEdit && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void showAgain()}
+                  className="min-h-[40px] rounded-full border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 disabled:opacity-60"
+                >
+                  Show it again
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {canStatus && (
         <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-400">
@@ -562,6 +777,8 @@ export default function StaffAdopt() {
   useEffect(() => {
     load()
   }, [load])
+  // Stable, so the RescueGroups line's timer isn't reset by every render.
+  const reload = useCallback(() => void load(), [load])
 
   const create = async (d: Draft) => {
     const { error } = await supabase.from('rabbits').insert({
@@ -620,6 +837,8 @@ export default function StaffAdopt() {
           </button>
         )}
       </div>
+
+      {orgId && <RescueGroupsCheck orgId={orgId} canRefresh={canCreate || canEdit} onRefreshed={reload} />}
 
       {creating && (
         <Card>

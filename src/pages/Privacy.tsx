@@ -4,10 +4,16 @@
 // until the OHRR board has read it. Keep every claim true to the code:
 //   - account: Supabase Auth (email + hashed password), user_profiles (name),
 //     user_saves (follows, sessions, My Bunny without photos, "last looked"),
-//     mailing_list (email choices) — readable only by the person; staff with
-//     supporters.view (and founders / developers) read the email list only;
-//   - delete: My OHRR → Delete my account → delete_own_account();
-//   - photos, bookings, added events and phone reminders stay on the phone.
+//     My Bunny photos in the private my-bunny-photos bucket (update 32, own
+//     folder only), mailing_list (email choices) — readable only by the
+//     person; staff with supporters.view (and founders / developers) read the
+//     email list only;
+//   - notifications (update 32): push_subscriptions — the browser's push
+//     endpoint + keys and the topics, with or without an account; removed when
+//     turned off;
+//   - delete: My OHRR → Delete my account → the photos folder, then
+//     delete_own_account();
+//   - bookings, added events and phone reminders stay on the phone.
 import { Link } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { PageHeader, Screen } from '../components/ui'
@@ -49,14 +55,20 @@ export default function Privacy() {
             provider (Supabase) in protected, scrambled form — nobody at OHRR can see it.
           </li>
           <li>
-            <strong>What you save:</strong> your favourite rabbits, the BunFest sessions you save, and My Bunny —
-            without the photos. Photos stay on your phone; use Backup in My Bunny to keep a copy of them.
+            <strong>What you save:</strong> your favourite rabbits, the BunFest sessions you save, and My Bunny,
+            with its photos — kept in a private folder only you can reach. Backup in My Bunny still makes a copy you
+            keep yourself.
           </li>
           <li>
             <strong>Your email choices:</strong> what you'd like OHRR to email you about, and whether you want emails
             at all. Every email has a link to change this or stop.
           </li>
         </UL>
+        <P>
+          <strong>Notifications on your phone</strong> (My OHRR, with or without an account): if you turn them on, the
+          app keeps your phone's notification address — made by your phone's browser, not your number — and what you
+          ticked, so OHRR can send them. Turning them off removes it.
+        </P>
         <P>
           Only you can see what your account keeps. OHRR staff can see only the email list — the names, email
           addresses and choices of people who asked for emails — never your favourites, sessions or My Bunny.
@@ -70,13 +82,12 @@ export default function Privacy() {
 
         <H>Kept only on your phone</H>
         <UL>
-          <li>My Bunny photos.</li>
           <li>Bookings you make, with their private cancel link, and events you add to your calendar.</li>
           <li>
             Reminders. "Remind me on this phone" and My Bunny's care reminders are scheduled by your phone itself —
             nothing about them is sent to us.
           </li>
-          <li>Without an account: your favourites, saved sessions and My Bunny too.</li>
+          <li>Without an account: your favourites, saved sessions and My Bunny, photos and all.</li>
         </UL>
 
         <H>Everything else</H>

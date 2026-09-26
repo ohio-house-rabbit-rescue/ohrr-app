@@ -1,0 +1,13 @@
+{
+  "name": "Ohio House Rabbit Rescue",
+  "short_name": "OHRR",
+  "description": "Adopt, volunteer, care for your rabbit, and Midwest BunFest — from Ohio House Rabbit Rescue.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0669ac",
+  "icons": [
+    { "src": "/ohrr-mark.png", "sizes": "526x526", "type": "image/png", "purpose": "any" }
+  ]
+}

@@ -63,6 +63,8 @@ export default function StaffHome() {
   const canViewActivity = can('audit.view')
   const canManageSettings = can('settings.manage')
   const canSupporters = can('supporters.view')
+  const canNotify = can('notifications.send')
+  const canWishList = can('giving.wishlist')
   const canScan = can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update')
   const showTiles =
     canCounter ||
@@ -81,7 +83,9 @@ export default function StaffHome() {
     canManageTeam ||
     canViewActivity ||
     canManageSettings ||
-    canSupporters
+    canSupporters ||
+    canNotify ||
+    canWishList
 
   // For a staff member, list the granted capabilities so they know their access.
   const grantedList = PERMISSION_CATALOG.filter((p) => capabilities.has(p.key))
@@ -136,6 +140,15 @@ export default function StaffHome() {
               title="Supporters"
               subtitle="The email list: who wants emails and about what — copy or download"
               icon="mail"
+              tone="blue"
+            />
+          )}
+          {canNotify && (
+            <ActionCard
+              to="/staff/notifications"
+              title="Send a notification"
+              subtitle="To the phones of people who asked — volunteers, events, new rabbits, BunFest, news"
+              icon="device"
               tone="blue"
             />
           )}
@@ -254,6 +267,15 @@ export default function StaffHome() {
               subtitle="The Legacy Fund thank-you list, a year at a time"
               icon="heart"
               tone="blue"
+            />
+          )}
+          {canWishList && (
+            <ActionCard
+              to="/staff/wish-list"
+              title="Wish list items"
+              subtitle="Amazon wish list items, each with its own “Buy on Amazon” button"
+              icon="gift"
+              tone="orange"
             />
           )}
           {canPostAnnouncements && (

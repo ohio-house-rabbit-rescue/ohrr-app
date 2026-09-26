@@ -9,6 +9,8 @@ import { isNative } from '../../../native/platform'
 import { pickPhoto, type PhotoSource } from '../../../native/camera'
 import { cancelReminders } from '../../../native/notifications'
 import BreedInput from '../../../components/BreedInput'
+import { useAuth } from '../../../lib/auth'
+import { usePhotoSyncState } from '../../account/photoSync'
 import {
   useMyBunny,
   findBunny,
@@ -90,6 +92,10 @@ function Form({
   const [photoBusy, setPhotoBusy] = useState(false)
   const [photoErr, setPhotoErr] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // Signed in, once the account's photo folder is there (update 32), photos follow the account.
+  const { user } = useAuth()
+  const photoSync = usePhotoSyncState()
+  const photoHome = user && photoSync === 'on' ? 'on this phone and your OHRR account' : 'on this phone only'
 
   const [name, setName] = useState(existing?.name ?? '')
   const [role, setRole] = useState<BunnyRole>(existing?.role ?? 'pet')
@@ -251,8 +257,8 @@ function Form({
               )}
               <p className="text-xs leading-relaxed text-slate-400">
                 {shownPhoto
-                  ? `Shrunk to ${PHOTO_MAX_PX}px (about ${dataUrlKb(shownPhoto)} KB) and kept on this phone only.`
-                  : `Photos are shrunk to ${PHOTO_MAX_PX}px and kept on this phone only.`}
+                  ? `Shrunk to ${PHOTO_MAX_PX}px (about ${dataUrlKb(shownPhoto)} KB) and kept ${photoHome}.`
+                  : `Photos are shrunk to ${PHOTO_MAX_PX}px and kept ${photoHome}.`}
               </p>
               {photoErr && <p className="text-xs font-semibold text-red-600">{photoErr}</p>}
               {/* `capture` opens the phone's camera directly; without it the picker shows the library. */}

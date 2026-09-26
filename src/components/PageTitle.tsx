@@ -53,6 +53,8 @@ const TITLES: [string, string][] = [
   ['/t/', 'Scanned item'],
   ['/staff/account', 'My account'],
   ['/staff/supporters', 'Supporters'],
+  ['/staff/notifications', 'Send a notification'],
+  ['/staff/wish-list', 'Wish list items'],
   ['/staff', 'Staff'],
 ]
 

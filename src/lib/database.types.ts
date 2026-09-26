@@ -32,6 +32,17 @@ export type MembershipStatus = 'active' | 'disabled'
 /** What an account keeps in user_saves (update 31), one JSON document each. */
 export type UserSaveKind = 'follows' | 'sessions' | 'mybunny' | 'seen' | 'settings'
 export type InviteKind = 'master' | 'worker'
+/** What a phone can ask to be notified about (update 32 — clean_push_topics()). 'test' is only ever a message's topic. */
+export type PushTopic = 'volunteer' | 'events' | 'adoptions' | 'bunfest' | 'news'
+
+/**
+ * Storage (update 32): each person's My Bunny photos, in a PRIVATE bucket, one
+ * folder per person — `<user id>/<bunny id>.jpg`, at most 1 MB, JPEG, WebP or
+ * PNG. Only the owner can list, read, write or remove their folder; the
+ * database can't delete storage files, so deleting an account removes the
+ * folder from the app first (DeleteAccount.tsx).
+ */
+export const MY_BUNNY_PHOTOS_BUCKET = 'my-bunny-photos'
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
@@ -619,6 +630,13 @@ export type Database = {
           created_by: string | null
           created_at: string
           updated_at: string
+          // Update 32 — the daily RescueGroups check (absent until it's run).
+          /** The last time OHRR's RescueGroups listing had this rabbit. */
+          source_seen_at: string | null
+          /** When it first went missing from the listing (null while listed). */
+          source_missing_since: string | null
+          /** Hidden automatically because RescueGroups no longer lists it (never marked adopted — staff decide). */
+          auto_hidden: boolean
         }
         Insert: {
           id?: string
@@ -641,6 +659,9 @@ export type Database = {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+          source_seen_at?: string | null
+          source_missing_since?: string | null
+          auto_hidden?: boolean
         }
         Update: {
           id?: string
@@ -663,6 +684,9 @@ export type Database = {
           created_by?: string | null
           created_at?: string
           updated_at?: string
+          source_seen_at?: string | null
+          source_missing_since?: string | null
+          auto_hidden?: boolean
         }
         Relationships: []
       }
@@ -2287,6 +2311,107 @@ export type Database = {
         Update: never
         Relationships: []
       }
+      // Update 32 (20260926150000_wishlist_photos_rabbits_push.sql).
+      // Items from OHRR's Amazon wish list, each with its own Amazon link. The
+      // public reads published rows; staff with giving.wishlist write directly.
+      wish_list_items: {
+        Row: {
+          id: string
+          org_id: string
+          name: string
+          /** https on amazon.com, a.co or amzn.to (the database checks). */
+          amazon_url: string
+          note: string | null
+          most_needed: boolean
+          sort_order: number
+          is_published: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          name: string
+          amazon_url: string
+          note?: string | null
+          most_needed?: boolean
+          sort_order?: number
+          is_published?: boolean
+          created_by?: string | null
+        }
+        Update: {
+          name?: string
+          amazon_url?: string
+          note?: string | null
+          most_needed?: boolean
+          sort_order?: number
+          is_published?: boolean
+        }
+        Relationships: []
+      }
+      // Background jobs' results, newest first — readable by any active member.
+      // job 'rabbits': detail { listed, added: [names], back: [names], hidden: [names] }, or { error }.
+      job_runs: {
+        Row: {
+          id: string
+          job: string
+          started_at: string
+          finished_at: string
+          ok: boolean
+          detail: Json
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      // Which phone asked for which notifications. Written ONLY through
+      // save_push_subscription() / remove_push_subscription(); a select returns
+      // only the signed-in person's own phones.
+      push_subscriptions: {
+        Row: {
+          id: string
+          user_id: string | null
+          endpoint: string
+          p256dh: string
+          auth: string
+          topics: string[]
+          user_agent: string | null
+          created_at: string
+          updated_at: string
+          last_sent_at: string | null
+          fail_count: number
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      // The notifications: automatic ones (a new volunteer call, event or rabbit),
+      // staff-written ones (send_notification) and tests. Staff with
+      // notifications.send read their org's; the ohrr-jobs function sends them
+      // and fills in sent_at / sent_count.
+      push_messages: {
+        Row: {
+          id: string
+          org_id: string | null
+          /** A PushTopic, or 'test'. */
+          topic: string
+          title: string
+          body: string | null
+          url: string | null
+          dedupe_key: string | null
+          only_user: string | null
+          /** Null for the automatic ones. */
+          created_by: string | null
+          created_at: string
+          sent_at: string | null
+          sent_count: number | null
+          failed_count: number | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -2879,6 +3004,30 @@ export type Database = {
         Args: { p_token: string; p_interests: string[]; p_subscribed: boolean }
         Returns: undefined
       }
+      // Update 32 (20260926150000_wishlist_photos_rabbits_push.sql) — phone notifications.
+      /** The web-push (VAPID) public key, base64url; null until the ohrr-jobs function has made one. */
+      push_public_key: { Args: Record<string, never>; Returns: string | null }
+      /** Asks the function to make the keys; true when they're already there. */
+      init_push: { Args: Record<string, never>; Returns: boolean }
+      /** Anyone (signed in or not): this phone's subscription and topics; signed in, it's tied to the account. */
+      save_push_subscription: {
+        Args: { p_endpoint: string; p_p256dh: string; p_auth: string; p_topics: string[]; p_user_agent?: string | null }
+        Returns: undefined
+      }
+      /** This phone's topics, or null when the database doesn't know the phone. */
+      push_subscription_topics: { Args: { p_endpoint: string }; Returns: string[] | null }
+      remove_push_subscription: { Args: { p_endpoint: string }; Returns: undefined }
+      /** Signed in: a test to the person's own phones (3 in 10 minutes at most). */
+      send_test_notification: { Args: Record<string, never>; Returns: undefined }
+      /** Staff (notifications.send): to every phone that picked the topic. Returns the message id. */
+      send_notification: {
+        Args: { p_org: string; p_topic: string; p_title: string; p_body: string | null; p_url?: string | null }
+        Returns: string
+      }
+      /** Staff: { phones, volunteer, events, adoptions, bunfest, news, ready } — null without notifications.send. */
+      push_counts: { Args: { p_org: string }; Returns: Json }
+      /** Staff: "Check RescueGroups now" (the function runs in the background; refused within 3 minutes of a check). */
+      request_rabbit_refresh: { Args: { p_org: string }; Returns: undefined }
     }
     Enums: {
       membership_role: MembershipRole

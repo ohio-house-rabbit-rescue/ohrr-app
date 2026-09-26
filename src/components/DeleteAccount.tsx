@@ -3,13 +3,16 @@
 // for everyone and on the staff dashboard. delete_own_account() takes the
 // sign-in, their name, what the account saved and their place on the email
 // list (update 31), and any staff access; content they created for the rescue
-// stays, unattributed. What's on this phone stays on this phone. The only
-// active owner of the org is refused until someone else is an owner.
+// stays, unattributed. The database can't delete storage files, so their My
+// Bunny photos folder (update 32) is emptied from here first. What's on this
+// phone stays on this phone. The only active owner of the org is refused until
+// someone else is an owner.
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { forgetAccountSync } from '../features/account/sync'
+import { removeAllMyBunnyPhotos } from '../features/account/photoSync'
 import { Card, btn } from './ui'
 import { staffInput } from './staffui'
 
@@ -25,6 +28,9 @@ export function DeleteAccount({ label = 'Your account' }: { label?: string }) {
     setBusy(true)
     setError(null)
     try {
+      // Their photos folder first; if the deletion is then refused, the next
+      // sync puts this phone's photos back.
+      if (user) await removeAllMyBunnyPhotos(user.id)
       const { error } = await supabase.rpc('delete_own_account')
       if (error) throw error
       // Nothing left to write to: drop anything waiting to sync.
