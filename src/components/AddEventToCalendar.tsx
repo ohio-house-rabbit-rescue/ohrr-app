@@ -2,6 +2,8 @@
 // where BunFest says the date / "Mark your calendars", people should be able to
 // add it). Everything comes from the shared `events` row the screen already
 // reads (start, end, venue, address), so it follows staff edits.
+// Whichever way they add it, the event is remembered on this phone
+// (features/account/addedEvents.ts) for My OHRR's "Remind me on this phone".
 //
 // One button opens a small sheet, like the schedule's CalendarSheet:
 // - on the web: a calendar file (.ics — Apple, Outlook and most calendars) and
@@ -16,6 +18,7 @@ import { eventCalendarUrl, eventDate, eventTime } from '../lib/eventFormat'
 import { isNative } from '../native/platform'
 import { ensureNotificationPermission } from '../native/notifications'
 import { notificationBase } from '../native/reminderSchedule'
+import { rememberAddedEvent } from '../features/account/addedEvents'
 import { Icon } from './icons'
 
 /** Native: the evening before at 6 pm, and one hour ahead (same shape as booking reminders). */
@@ -84,12 +87,13 @@ function Sheet({ event: e, onClose }: { event: EventItem; onClose: () => void })
             <button
               type="button"
               disabled={reminder === 'scheduled'}
-              onClick={() =>
+              onClick={() => {
+                rememberAddedEvent(e)
                 scheduleEventReminders(e).then(
                   (r) => setReminder(r),
                   () => setReminder('failed'),
                 )
-              }
+              }}
               className={row}
             >
               <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-blue text-white">
@@ -106,6 +110,7 @@ function Sheet({ event: e, onClose }: { event: EventItem; onClose: () => void })
             <button
               type="button"
               onClick={() => {
+                rememberAddedEvent(e)
                 downloadEventIcs(e)
                 onClose()
               }}
@@ -127,7 +132,7 @@ function Sheet({ event: e, onClose }: { event: EventItem; onClose: () => void })
           )}
           {reminder === 'failed' && <p className="px-1 text-xs text-slate-500">Couldn’t set that reminder. Please try again.</p>}
 
-          <a href={eventCalendarUrl(e)} target="_blank" rel="noopener noreferrer" className={row}>
+          <a href={eventCalendarUrl(e)} target="_blank" rel="noopener noreferrer" onClick={() => rememberAddedEvent(e)} className={row}>
             <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-blue-50 text-brand-blue">
               <Icon name="calendar" size={22} />
             </span>

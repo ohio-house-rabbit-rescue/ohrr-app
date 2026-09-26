@@ -53,6 +53,10 @@ import {
   LIMIT_MESSAGE,
   STORAGE_KEY,
   LEGACY_STORAGE_KEY,
+  forAccount,
+  syncBaseOf,
+  readSyncBase,
+  mergeSynced,
   type Bunny,
   type Reminder,
   type MyBunnyData,
@@ -494,5 +498,114 @@ eq(dailyToday.length, OCCURRENCES, 'daily still fills every slot')
 const yearly = occurrenceTimes({ nextDue: '2027-03-01', intervalDays: 365 }, at8)
 eq(yearly[1].getFullYear(), 2028, 'yearly second occurrence is a year on')
 eq(occurrenceTimes({ nextDue: 'bad', intervalDays: 7 }, at8), [], 'bad date → nothing to schedule')
+
+/* ------------------------------------------------ account sync merge */
+// mergeSynced(device, account, base): base null = the first sign-in on a phone.
+
+const B = (id: string, name: string, extra: Partial<Bunny> = {}): Bunny => ({
+  id,
+  name,
+  role: 'pet',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  ...extra,
+})
+const R = (id: string, bunnyId: string, extra: Partial<Reminder> = {}): Reminder => ({
+  id,
+  bunnyId,
+  type: 'nails',
+  title: 'Nail trim',
+  intervalDays: 42,
+  nextDue: '2026-10-01',
+  ...extra,
+})
+const D = (over: Partial<MyBunnyData>): MyBunnyData => ({
+  version: 2,
+  bunnies: [],
+  weights: {},
+  reminders: [],
+  health: [],
+  prefs: { weightUnit: 'lb' },
+  ...over,
+})
+const names = (d: MyBunnyData) => d.bunnies.map((b) => b.name).sort()
+
+// First sign-in: the union, nothing lost.
+const phoneA = D({ bunnies: [B('a', 'Clover')], reminders: [R('r1', 'a')], weights: { a: [{ date: '2026-09-01', grams: 1800 }] } })
+const acctB = D({ bunnies: [B('b', 'Thumper')], reminders: [R('r2', 'b')], weights: { b: [{ date: '2026-09-02', grams: 2100 }] } })
+const union = mergeSynced(phoneA, acctB, null)
+eq(names(union), ['Clover', 'Thumper'], 'first sign-in: bunnies from both sides')
+eq(union.reminders.map((r) => r.id).sort(), ['r1', 'r2'], 'first sign-in: reminders from both sides')
+eq(Object.keys(union.weights).sort(), ['a', 'b'], 'first sign-in: weights from both sides')
+eq(mergeSynced(phoneA, phoneA, null), phoneA, 'the same data on both sides merges to itself')
+
+// Same bunny on both sides: the newest updatedAt wins; a stamped copy beats an unstamped one.
+const older = B('x', 'Pepper', { updatedAt: '2026-09-01T10:00:00.000Z', notes: 'old' })
+const newer = B('x', 'Pepper', { updatedAt: '2026-09-20T10:00:00.000Z', notes: 'new' })
+eq(mergeSynced(D({ bunnies: [newer] }), D({ bunnies: [older] }), null).bunnies[0].notes, 'new', 'newer copy on the phone wins')
+eq(mergeSynced(D({ bunnies: [older] }), D({ bunnies: [newer] }), null).bunnies[0].notes, 'new', 'newer copy on the account wins')
+const unstamped = B('x', 'Pepper', { notes: 'from before update 31' })
+eq(mergeSynced(D({ bunnies: [unstamped] }), D({ bunnies: [older] }), null).bunnies[0].notes, 'old', 'a stamped copy beats an unstamped one')
+
+// Two unstamped copies that differ: both kept, the account's as a second bunny.
+const tie = mergeSynced(D({ bunnies: [B('y', 'Mochi', { breed: 'Holland Lop' })] }), D({ bunnies: [B('y', 'Mochi', { breed: 'Mini Rex' })] }), null)
+eq(tie.bunnies.length, 2, 'no way to tell which is newer → both kept')
+eq(tie.bunnies[0], B('y', 'Mochi', { breed: 'Holland Lop' }), '…this phone’s keeps its id')
+ok(tie.bunnies[1].id !== 'y' && tie.bunnies[1].name === 'Mochi (from your account)', '…the account’s gets a new id and says where it came from')
+
+// Reminders with no stamps: the one done most recently, never both.
+const rTie = mergeSynced(
+  D({ bunnies: [B('a', 'Clover')], reminders: [R('r', 'a', { lastDone: '2026-09-10', nextDue: '2026-10-22' })] }),
+  D({ bunnies: [B('a', 'Clover')], reminders: [R('r', 'a', { lastDone: '2026-09-20', nextDue: '2026-11-01' })] }),
+  null,
+)
+eq(rTie.reminders.length, 1, 'a reminder is never doubled up')
+eq(rTie.reminders[0].lastDone, '2026-09-20', '…the one done most recently wins')
+
+// Health notes with no stamps that differ: both kept.
+const note = { id: 'h', bunnyId: 'a', date: '2026-09-01', noticed: 'Sneezing', resolved: false, createdAt: '2026-09-01T00:00:00.000Z' }
+const hTie = mergeSynced(
+  D({ bunnies: [B('a', 'Clover')], health: [note] }),
+  D({ bunnies: [B('a', 'Clover')], health: [{ ...note, did: 'Called the vet' }] }),
+  null,
+)
+eq(hTie.health.length, 2, 'two different copies of a note → both kept')
+
+// Weights: same date, different grams, first sign-in → this phone's.
+eq(
+  mergeSynced(
+    D({ bunnies: [B('a', 'Clover')], weights: { a: [{ date: '2026-09-01', grams: 1800 }] } }),
+    D({ bunnies: [B('a', 'Clover')], weights: { a: [{ date: '2026-09-01', grams: 1900 }] } }),
+    null,
+  ).weights.a,
+  [{ date: '2026-09-01', grams: 1800 }],
+  'same-day weight: this phone’s on a first sign-in',
+)
+
+// After the first sync the phone knows the base, so deletions travel.
+const synced = D({
+  bunnies: [B('a', 'Clover', { updatedAt: 't1' }), B('b', 'Thumper', { updatedAt: 't1' })],
+  reminders: [R('r1', 'a', { updatedAt: 't1' }), R('r2', 'b', { updatedAt: 't1' })],
+  weights: { a: [{ date: '2026-09-01', grams: 1800 }], b: [{ date: '2026-09-02', grams: 2100 }] },
+})
+const base = readSyncBase(JSON.parse(JSON.stringify(syncBaseOf(synced))))
+eq(base, syncBaseOf(synced), 'the base survives a JSON round trip')
+const acctDeletedB = D({ ...synced, bunnies: [synced.bunnies[0]], reminders: [synced.reminders[0]], weights: { a: synced.weights.a } })
+const afterDelete = mergeSynced(synced, acctDeletedB, base)
+eq(names(afterDelete), ['Clover'], 'deleted on another phone, untouched here → gone here too')
+eq(afterDelete.reminders.map((r) => r.id), ['r1'], '…with its reminders')
+eq(Object.keys(afterDelete.weights), ['a'], '…and its weights')
+const editedHere = D({ ...synced, bunnies: [synced.bunnies[0], B('b', 'Thumper', { updatedAt: 't2', notes: 'edited' })] })
+eq(names(mergeSynced(editedHere, acctDeletedB, base)), ['Clover', 'Thumper'], 'deleted elsewhere but edited here → kept (an edit beats a delete)')
+const phoneDeletedB = D({ ...synced, bunnies: [synced.bunnies[0]], reminders: [synced.reminders[0]], weights: { a: synced.weights.a } })
+eq(names(mergeSynced(phoneDeletedB, synced, base)), ['Clover'], 'deleted on this phone, untouched on the account → stays deleted')
+const acctEdited = D({ ...synced, bunnies: [synced.bunnies[0], B('b', 'Thumper', { updatedAt: 't2', notes: 'edited there' })] })
+eq(names(mergeSynced(phoneDeletedB, acctEdited, base)), ['Clover', 'Thumper'], 'deleted here but edited on the account → kept')
+eq(mergeSynced(synced, acctEdited, base).bunnies.find((b) => b.id === 'b')?.notes, 'edited there', 'only the account changed → the account’s copy')
+eq(mergeSynced(editedHere, synced, base).bunnies.find((b) => b.id === 'b')?.notes, 'edited', 'only this phone changed → this phone’s copy')
+eq(mergeSynced(synced, D({ ...synced, prefs: { weightUnit: 'g' } }), base).prefs.weightUnit, 'g', 'weight unit changed elsewhere → follows')
+eq(mergeSynced(synced, D({ ...synced, weights: { a: synced.weights.a } }), base).weights.b, undefined, 'a weight deleted elsewhere → gone here')
+
+// Photos never go to the account.
+eq(forAccount(D({ bunnies: [B('a', 'Clover', { hasPhoto: true })] })).bunnies[0].hasPhoto, undefined, 'forAccount drops hasPhoto')
 
 console.log(`OK — ${checks} checks passed`)

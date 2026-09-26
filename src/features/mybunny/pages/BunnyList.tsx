@@ -371,8 +371,8 @@ function BackupRestore({
       <SectionLabel>Backup &amp; restore</SectionLabel>
       <Card className="space-y-3">
         <p className="text-sm leading-relaxed text-slate-600">
-          Because this data lives only on this phone, a backup file is how you keep a copy or move
-          it to a new phone. Restoring adds anything from the backup that isn’t already here.
+          A backup file keeps a copy of everything here, photos included, and moves it to a new
+          phone. Restoring adds anything from the backup that isn’t already here.
         </p>
         <div className="flex flex-wrap gap-2">
           {/* In the app the backup goes out through the share sheet (src/native/share.ts). */}

@@ -21,6 +21,11 @@ import AdoptionApplication from './pages/AdoptionApplication'
 import MailingList from './pages/MailingList'
 import BecomeSupporter from './pages/BecomeSupporter'
 import FosterForm from './pages/FosterForm'
+// One account for everyone (update 31): My OHRR, the account sync, phone reminders
+import MyOhrr from './features/account/MyOhrr'
+import AccountSync from './features/account/AccountSync'
+import { PhoneReminderScheduler } from './features/account/PhoneReminders'
+import Privacy from './pages/Privacy'
 // Bookings — shifts & appointments (replaces SignUp.com links and the old appointment form)
 import BookPage from './features/bookings/pages/BookPage'
 import BookingCancel from './features/bookings/pages/BookingCancel'
@@ -88,6 +93,7 @@ import StaffFeatures from './pages/StaffFeatures'
 import StaffOrgDetails from './pages/StaffOrgDetails'
 import StaffBunnyHelp from './pages/StaffBunnyHelp'
 import StaffInbox from './pages/StaffInbox'
+import StaffSupporters from './pages/StaffSupporters'
 // My Bunny (local-first care companion) — lazy so it stays out of the main bundle
 const MyBunnyRoutes = lazy(() => import('./features/mybunny/routes'))
 // Scan an item (camera + tag printer) — lazy: the barcode reader is big
@@ -127,6 +133,10 @@ export default function App() {
     <>
       {/* The browser tab / shared-link title for the current screen */}
       <PageTitle />
+      {/* Signed in: favourites, sessions, My Bunny and "last looked" follow the account */}
+      <AccountSync />
+      {/* Inside the phone app: My OHRR's "Remind me on this phone" */}
+      <PhoneReminderScheduler />
       <Routes>
       {/* OHRR host app */}
       <Route element={<OhrrLayout />}>
@@ -188,6 +198,11 @@ export default function App() {
         <Route path="/surrender/form" element={<SurrenderForm />} />
         <Route path="/about" element={<About />} />
         <Route path="/settings" element={<Settings />} />
+        {/* My OHRR — sign in / create account, and everything the account keeps */}
+        <Route path="/account" element={<MyOhrr />} />
+        {/* The emailed "reset your password" link, in the public app's look (the old /staff/reset still works) */}
+        <Route path="/account/reset" element={<StaffResetPassword />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route path="/help" element={<Help />} />
         <Route path="/search" element={<Search />} />
         {/* Sponsors — Phase 1 */}
@@ -276,6 +291,8 @@ export default function App() {
           {/* The old combined screen — anyone with it bookmarked lands on Features. */}
           <Route path="settings" element={<Navigate to="/staff/features" replace />} />
           <Route path="inbox" element={<StaffInbox />} />
+          {/* Update 31: the supporter email list */}
+          <Route path="supporters" element={<StaffSupporters />} />
           <Route path="bookings" element={<StaffBookings />} />
           <Route path="hours-letter" element={<ServiceLetter />} />
           <Route path="impact" element={<StaffImpact />} />

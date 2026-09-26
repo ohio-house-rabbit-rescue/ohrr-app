@@ -7,8 +7,10 @@ import { Icon } from '../components/icons'
 import { build, buildLabel } from '../data/version'
 import { PHOTO_CREDITS } from '../data/photos'
 import { BREED_PHOTO_CREDITS } from '../data/breeds'
-import { useProfile, saveProfile, clearProfile } from '../lib/profile'
 import { useAuth } from '../lib/auth'
+import { firstName, useMyName } from '../features/account/profile'
+import InterestPicker from '../features/account/InterestPicker'
+import { getDeviceInterests, joinMailingList, type Interest } from '../features/account/emailList'
 
 function fmtDate(iso: string): string {
   try {
@@ -36,105 +38,57 @@ const inputClass =
   'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
 
 export default function Settings() {
-  const profile = useProfile()
-  const { membership } = useAuth()
+  const { configured, user, membership } = useAuth()
+  const name = firstName(useMyName(user?.id))
   const textSize = useTextSize()
-  const [email, setEmail] = useState(profile?.email ?? '')
-  const [name, setName] = useState(profile?.name ?? '')
-  const [justSaved, setJustSaved] = useState(false)
 
   const savedSessions = countList('ohrr:bunfest:saved-sessions:v1')
   const following = countList('ohrr:following:v1')
-
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    if (!email.trim()) return
-    saveProfile({ email, name })
-    setJustSaved(true)
-    window.setTimeout(() => setJustSaved(false), 2500)
-  }
-
-  const onRemove = () => {
-    clearProfile()
-    setEmail('')
-    setName('')
-    setJustSaved(false)
-  }
 
   return (
     <>
       <PageHeader
         icon="settings"
         title="Settings"
-        subtitle="Your info, your saved data, and which version of the app you're on."
+        subtitle="Your account, text size, your saved data, and which version of the app you're on."
       />
       <Screen className="space-y-6">
-        {/* ---- Your info (optional email identity) ---- */}
-        <section className="space-y-2">
-          <SectionLabel>Your info</SectionLabel>
-          <Card className="space-y-3">
-            <p className="text-sm leading-relaxed text-slate-600">
-              Add your email so your saved sessions and followed bunnies stay tied to you — and so
-              OHRR can reach you about a bunny you're interested in. It's optional, and for now it's
-              stored only on this device.
-            </p>
-
-            <form onSubmit={onSubmit} className="space-y-3">
-              <label className="block">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Email
-                </span>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className={inputClass}
-                />
-              </label>
-              <label className="block">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Name <span className="font-semibold normal-case text-slate-300">(optional)</span>
-                </span>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                  className={inputClass}
-                />
-              </label>
-
-              <div className="flex flex-wrap items-center gap-3 pt-1">
-                <button type="submit" className={btn.primary}>
-                  {profile ? 'Update' : 'Save'}
-                </button>
-                {profile && (
-                  <button type="button" onClick={onRemove} className={btn.outline}>
-                    Remove
-                  </button>
-                )}
-                {justSaved && (
-                  <span className="text-sm font-bold text-emerald-600">Saved ✓</span>
-                )}
-              </div>
-            </form>
-
-            {profile && (
-              <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                Saved as <strong className="font-bold text-slate-700">{profile.email}</strong> · ID{' '}
-                {profile.id.slice(0, 8)} · updated {fmtDate(profile.updatedAt)}
-              </p>
-            )}
-
-            <p className="text-xs leading-relaxed text-slate-400">
-              <strong className="font-bold">Privacy:</strong> nothing is sent anywhere yet — this
-              stays on your device. A secure database to save this and sync it across devices is
-              coming.
-            </p>
-          </Card>
-        </section>
+        {/* ---- Your account (update 31). The old device-only "Your info" box is gone. ---- */}
+        {configured &&
+          (user ? (
+            <section className="space-y-2">
+              <SectionLabel>Your account</SectionLabel>
+              <ActionCard
+                to="/account"
+                title={name ? `My OHRR · ${name}` : 'My OHRR'}
+                subtitle="Your name, what you’ve saved, your emails and password"
+                icon="user"
+                tone="blue"
+              />
+            </section>
+          ) : (
+            <section className="space-y-2">
+              <SectionLabel>Your account</SectionLabel>
+              <Card className="space-y-3">
+                <p className="font-display text-[15px] font-extrabold text-ink">
+                  Save your favourites and My Bunny to an account
+                </p>
+                <p className="text-sm leading-relaxed text-slate-600">
+                  Sign in on any phone and they’re there — and choose what OHRR emails you about. It’s free, and the
+                  app works without one.
+                </p>
+                <div className="grid gap-2 min-[400px]:grid-cols-2">
+                  <Link to="/account" className={`${btn.blue} min-h-[44px]`}>
+                    Sign in
+                  </Link>
+                  <Link to="/account?create=1" className={`${btn.outline} min-h-[44px]`}>
+                    Create account
+                  </Link>
+                </div>
+              </Card>
+              <JustEmails />
+            </section>
+          ))}
 
         {/* ---- Text size ---- */}
         <section className="space-y-2">
@@ -180,7 +134,9 @@ export default function Settings() {
               <span className="font-display text-lg font-extrabold text-brand-blue">{following}</span>
             </div>
             <p className="pt-1 text-xs text-slate-400">
-              Stored on this device — it's still here when you reopen the app.
+              {user
+                ? 'On this phone, and on your OHRR account so it’s there on any phone you sign in on.'
+                : 'Stored on this device — it’s still here when you reopen the app.'}
             </p>
           </Card>
         </section>
@@ -216,25 +172,23 @@ export default function Settings() {
             OHRR App · Ohio House Rabbit Rescue. Built to support rescue, adoption, education, and
             Midwest BunFest.
           </p>
-          <a
-            href="https://ohrr-website.pages.dev/privacy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-1 text-sm font-bold text-brand-blue"
-          >
-            Privacy policy <Icon name="external" size={12} />
-          </a>
+          {/* The in-app page says what an account keeps and links to the full policy. */}
+          <Link to="/privacy" className="inline-flex min-h-[44px] items-center gap-1 px-1 text-sm font-bold text-brand-blue">
+            Privacy <Icon name="chevron" size={14} />
+          </Link>
         </section>
 
         {/* Staff sign-in, one quiet line — a visitor scrolls past it, and
-             someone who works at OHRR can find it without being told. */}
+             someone who works at OHRR can find it without being told. Staff
+             use the same account; signed in, what's left is the invite code. */}
         {!membership && (
           <Link
             to="/staff"
             className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
           >
             <span className="inline-flex items-center gap-2">
-              <Icon name="users" size={18} className="text-slate-400" /> OHRR staff &amp; volunteer sign-in
+              <Icon name="users" size={18} className="text-slate-400" />
+              {user ? 'OHRR staff? Enter your invite code' : <>OHRR staff &amp; volunteer sign-in</>}
             </span>
             <Icon name="chevron" size={18} className="shrink-0 text-slate-300" />
           </Link>
@@ -269,6 +223,78 @@ export default function Settings() {
         </details>
       </Screen>
     </>
+  )
+}
+
+/**
+ * "Just want emails?" — the list without an account: name, email, what about,
+ * and the consent line. join_mailing_list (source 'app'); before update 31 it
+ * falls back to the Inbox's mailing-list request.
+ */
+function JustEmails() {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [interests, setInterests] = useState<Interest[]>(() => {
+    const ticked = getDeviceInterests()
+    return ticked.length > 0 ? ticked : ['newsletter']
+  })
+  const [status, setStatus] = useState<'idle' | 'sending' | 'done'>('idle')
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    if (interests.length === 0) {
+      setError('Tick at least one.')
+      return
+    }
+    setStatus('sending')
+    try {
+      await joinMailingList({ name, email, interests, source: 'app' })
+      setStatus('done')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not sign you up right now.')
+      setStatus('idle')
+    }
+  }
+
+  return (
+    <details className="group rounded-2xl border border-slate-200/80 bg-white">
+      <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-2 px-4 py-3.5 text-sm font-semibold text-slate-600">
+        Just want emails?
+        <Icon name="chevron" size={18} className="shrink-0 text-slate-300 transition group-open:rotate-90" />
+      </summary>
+      <div className="border-t border-slate-100 px-4 py-3">
+        {status === 'done' ? (
+          <p className="text-sm font-semibold text-green-700">Thanks{name.trim() ? `, ${name.trim().split(/\s+/)[0]}` : ''} — you’re on OHRR’s email list.</p>
+        ) : (
+          <form onSubmit={submit} className="space-y-3">
+            <label className="block text-sm font-semibold text-slate-700">
+              Name
+              <input className={inputClass} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
+            </label>
+            <label className="block text-sm font-semibold text-slate-700">
+              Email
+              <input
+                className={inputClass}
+                type="email"
+                required
+                autoComplete="email"
+                autoCapitalize="none"
+                inputMode="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
+            <InterestPicker value={interests} onChange={setInterests} />
+            {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+            <button type="submit" disabled={status === 'sending'} className={`${btn.primary} w-full disabled:opacity-60`}>
+              {status === 'sending' ? 'Signing you up…' : 'Email me'}
+            </button>
+          </form>
+        )}
+      </div>
+    </details>
   )
 }
 

@@ -7,6 +7,7 @@ import { PageHeader, Screen, Card, SampleNote, SegTabs, btn } from '../component
 import { Icon } from '../components/icons'
 import { useSavedSessions, toggleSavedSession } from '../lib/savedSessions'
 import CalendarSheet from '../components/CalendarSheet'
+import { useMarkSeen } from '../features/account/forYouCounts'
 
 const toMin = (t: string) => {
   const [h, m] = t.split(':').map(Number)
@@ -20,6 +21,8 @@ const ALL = 'All'
 const shortTrack = (t: string) => t.replace(/\s*Sessions$/i, '')
 
 export default function Schedule() {
+  // The whole programme is here, so "New for you" counts new talks as seen.
+  useMarkSeen('bunfest')
   const [calOpen, setCalOpen] = useState(false)
   const saved = useSavedSessions()
   const { items: sessions, source } = useBunfestSessions()

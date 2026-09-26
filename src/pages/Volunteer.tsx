@@ -16,6 +16,7 @@ import MyBookingsCard from '../features/bookings/MyBookingsCard'
 import MyHoursCard from '../features/volunteers/MyHoursCard'
 import { Icon } from '../components/icons'
 import PresentedBy from '../features/sponsors/PresentedBy'
+import { useMarkSeen } from '../features/account/forYouCounts'
 
 function signupHref(role: string, code: string, item?: string) {
   const params = new URLSearchParams({ role, code })
@@ -24,6 +25,8 @@ function signupHref(role: string, code: string, item?: string) {
 }
 
 export default function Volunteer() {
+  // The open calls are listed here, so "New for you" counts them as seen.
+  useMarkSeen('volunteer')
   // Staff-posted one-off needs (events & fundraising) show here when present.
   const eventNeeds = useVolunteerOpportunities('events')
 

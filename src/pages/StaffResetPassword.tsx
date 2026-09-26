@@ -1,4 +1,7 @@
-// /staff/reset — setting a new password from the emailed link.
+// /account/reset (and the older /staff/reset) — setting a new password from
+// the emailed link. Since update 31 everyone has an account, so the link comes
+// back to /account/reset, in the public app's look; staff go on to their
+// dashboard afterwards, everyone else to My OHRR.
 //
 // Supabase sends that link in one of three shapes depending on how the project
 // is configured, and only one of them signs you in by itself:
@@ -23,8 +26,7 @@ import { authOrigin } from '../lib/appUrl'
 type LinkState = 'checking' | 'ready' | 'bad'
 
 export default function StaffResetPassword() {
-  const { configured, loading, user, refresh } = useAuth()
-  const navigate = useNavigate()
+  const { configured, loading, user, membership, refresh } = useAuth()
   const [params] = useSearchParams()
   const [linkState, setLinkState] = useState<LinkState>('checking')
   const [linkError, setLinkError] = useState<string | null>(null)
@@ -108,7 +110,6 @@ export default function StaffResetPassword() {
       if (error) throw error
       await refresh()
       setStatus('done')
-      setTimeout(() => navigate('/staff', { replace: true }), 1400)
     } catch (err) {
       setError(errMessage(err))
       setStatus('idle')
@@ -123,8 +124,9 @@ export default function StaffResetPassword() {
         </span>
         <h1 className="font-display text-xl font-extrabold text-ink">Password updated</h1>
         <p className="text-sm leading-relaxed text-slate-600">
-          You’re signed in. Taking you to your dashboard…
+          You’re signed in. Taking you to {membership ? 'your dashboard' : 'My OHRR'}…
         </p>
+        <GoOn to={membership ? '/staff' : '/account'} />
       </Screen>
     )
   }
@@ -197,6 +199,19 @@ export default function StaffResetPassword() {
 }
 
 /**
+ * After a new password: on to the staff dashboard for staff, My OHRR for
+ * everyone else (update 31 — anyone with an account can reset a password).
+ */
+function GoOn({ to }: { to: string }) {
+  const navigate = useNavigate()
+  useEffect(() => {
+    const t = setTimeout(() => navigate(to, { replace: true }), 1400)
+    return () => clearTimeout(t)
+  }, [navigate, to])
+  return null
+}
+
+/**
  * The link didn't work — say why, and let them start again from here. A dead
  * end with a "back to sign in" button made people give up.
  */
@@ -211,7 +226,7 @@ function BadLink({ reason }: { reason: string | null }) {
     setStatus('sending')
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${authOrigin()}/staff/reset`,
+        redirectTo: `${authOrigin()}/account/reset`,
       })
       if (error) throw error
       setStatus('sent')
@@ -232,7 +247,7 @@ function BadLink({ reason }: { reason: string | null }) {
           A new link is on its way to <strong>{email}</strong>. It works once, and only for a short
           while — open it on this device if you can.
         </p>
-        <Link to="/staff/signin" className={`${btn.outline} mx-auto`}>
+        <Link to="/account" className={`${btn.outline} mx-auto`}>
           Back to sign in
         </Link>
       </Screen>
@@ -275,7 +290,7 @@ function BadLink({ reason }: { reason: string | null }) {
         </form>
       </Card>
 
-      <Link to="/staff/signin" className={`${btn.outline} w-full`}>
+      <Link to="/account" className={`${btn.outline} w-full`}>
         Back to sign in
       </Link>
     </Screen>

@@ -39,6 +39,8 @@ export default function StaffLayout() {
     { to: '/staff/counter', label: 'Counter — sell, add items, door tickets', show: canCounter },
     { to: '/staff/my-hours', label: 'My volunteer hours', show: myLevel.ready },
     { to: '/staff/inbox', label: 'Inbox', show: can('inbox.manage') },
+    // Update 31: who asked for emails, and about what.
+    { to: '/staff/supporters', label: 'Supporters — the email list', show: can('supporters.view') },
     { to: '/staff/share', label: 'Share kit', show: can('announcements.post') },
     { to: '/staff/posts', label: 'Post queue', show: can('announcements.post') || can('social.publish') || can('social.approve') },
     { to: '/staff/flyers', label: 'Flyers', show: can('announcements.post') },

@@ -29,6 +29,8 @@ export type StaffLevel =
   | 'volunteer1'
   | 'worker'
 export type MembershipStatus = 'active' | 'disabled'
+/** What an account keeps in user_saves (update 31), one JSON document each. */
+export type UserSaveKind = 'follows' | 'sessions' | 'mybunny' | 'seen' | 'settings'
 export type InviteKind = 'master' | 'worker'
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
@@ -2229,6 +2231,62 @@ export type Database = {
         }
         Relationships: []
       }
+      // One account for everyone (20260926100000_accounts_for_everyone.sql, update 31).
+      // A person's own name. RLS: only their own row.
+      user_profiles: {
+        Row: {
+          user_id: string
+          name: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          name?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          name?: string | null
+        }
+        Relationships: []
+      }
+      // What they saved, one JSON document per kind. Read with a select (only
+      // their own rows); written ONLY through save_my_data().
+      user_saves: {
+        Row: {
+          user_id: string
+          kind: UserSaveKind
+          data: Json
+          updated_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      // Who wants OHRR's emails and about what. Staff with supporters.view read
+      // the whole list; everyone else only their own row (user_id = them).
+      mailing_list: {
+        Row: {
+          id: string
+          org_id: string
+          email: string
+          name: string | null
+          /** Any of EmailInterest ('volunteer', 'events', 'bunfest', 'adoptions', 'hopshop', 'newsletter'). */
+          interests: string[]
+          /** 'website', 'app', 'account', 'inbox' … */
+          source: string | null
+          user_id: string | null
+          consent_at: string
+          unsubscribed_at: string | null
+          unsubscribe_token: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -2802,6 +2860,25 @@ export type Database = {
       can_give_level: { Args: { p_org: string; p_level: StaffLevel }; Returns: boolean }
       /** The last day of someone's access (null = no end). Not for founders or developers; only people you may change. */
       set_member_access_until: { Args: { p_membership: string; p_until: string | null }; Returns: undefined }
+      // One account for everyone (supabase/migrations/20260926100000_accounts_for_everyone.sql, update 31)
+      /** Replace one of your own saved documents (≈1 MB cap). Returns its new updated_at. */
+      save_my_data: { Args: { p_kind: UserSaveKind; p_data: Json }; Returns: string }
+      /** Not signed in (website form, app): adds interests, never removes them; says nothing about whether the address was on the list. */
+      join_mailing_list: {
+        Args: { p_name: string | null; p_email: string; p_interests: string[]; p_source?: string | null }
+        Returns: undefined
+      }
+      /** Signed in: the account's own address; replaces their choices. */
+      save_my_email_prefs: {
+        Args: { p_interests: string[]; p_subscribed: boolean; p_name?: string | null }
+        Returns: undefined
+      }
+      /** The unsubscribe link: { email (half-hidden), interests, subscribed } or null. */
+      email_prefs_by_token: { Args: { p_token: string }; Returns: Json }
+      set_email_prefs_by_token: {
+        Args: { p_token: string; p_interests: string[]; p_subscribed: boolean }
+        Returns: undefined
+      }
     }
     Enums: {
       membership_role: MembershipRole

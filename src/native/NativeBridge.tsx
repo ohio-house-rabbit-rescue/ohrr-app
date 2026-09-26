@@ -3,7 +3,8 @@
 //   - paints the status bar brand blue and hides the splash after first render
 //   - sends external http(s) links to the system browser
 //   - makes Android's back button walk the in-app history (and leave from Home)
-//   - opens the right bunny when a care-reminder notification is tapped
+//   - opens the right bunny when a care-reminder notification is tapped (or
+//     the session, event or booking for My OHRR's phone reminders)
 
 import { useEffect } from 'react'
 import type { PluginListenerHandle } from '@capacitor/core'
@@ -30,6 +31,13 @@ export default function NativeBridge() {
     return listen(async () => {
       const { LocalNotifications } = await import('@capacitor/local-notifications')
       return LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+        // "Remind me on this phone" (My OHRR) says where it belongs: a session,
+        // an event or a booking. Care reminders carry their bunny.
+        const to = action.notification.extra?.to
+        if (typeof to === 'string' && to.startsWith('/') && !to.startsWith('//')) {
+          navigate(to)
+          return
+        }
         const bunnyId = action.notification.extra?.bunnyId
         navigate(typeof bunnyId === 'string' && bunnyId ? `/my-bunny/${bunnyId}` : '/my-bunny')
       })

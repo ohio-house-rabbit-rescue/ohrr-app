@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-26 (staff tiers live: update 30 applied and checked; the sponsor becomes Developer; nothing to run, next is 31)
+- **Last updated:** 2026-09-26 (one account for everyone, email list with interests, On hold; **update 31 to run**)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,36 @@
 ---
 
 ## Current state (at a glance)
+
+- **One account for everyone, 2026-09-26 (latest; website `b0145e8` + app the same day; update 31 to run — Drive
+  RUN-THIS and `Supabase history/APPLY-31.sql`).** OHRR: supporters "enter your information and save things like
+  favorites, my bunny etc.", get told about volunteering and events, use a password they can change, and staff
+  are the same accounts — "nothing is different on my login except the features I can see".
+  - **App:**
+    - **Sign-in for everyone and My OHRR** (`/account`, and `/staff/signin` redirects to it): name; what's
+      saved on the account; email choices (six interests, consent); phone reminders; sign-in email and
+      password; "Have a staff invite code?"; delete account; sign out.
+    - **Sync of saved things:** favourites, saved sessions and My Bunny (no photos; merged by id, newest
+      edit wins, nothing silently dropped, deletions carry across) go to `user_saves`.
+    - **"New for you":** a home card and badge for new volunteer calls, events, rabbits and BunFest talks
+      matching the person's interests.
+    - **Phone reminders:** local notifications for saved sessions, events added and bookings made on the
+      phone.
+    - **Settings:** the device-only "Your info" box is gone; its place is the account card plus "Just want
+      emails?".
+    - **Other:** Staff → Supporters, and an app privacy page.
+  - **Website:** "Get emails from OHRR" with interests (Volunteer and Events link to it pre-ticked);
+    `/emails/:token` to change or stop; Staff → Supporters (search, filter, counts, copy emails, spreadsheet
+    with each person's link); privacy section.
+  - **Update 31:**
+    - `user_profiles`, `user_saves` (written only via `save_my_data`, ~1 MB cap) and `mailing_list`;
+    - `join_mailing_list` (public, only adds), `save_my_email_prefs`, and the by-token choices functions;
+    - the `supporters.view` task;
+    - Inbox mailing-list sign-ups copied onto the list;
+    - `delete_own_account` also takes you off the list.
+    - Sign-up emails aren't confirmed, so nothing is ever looked up by an account's email.
+  - **Stage 2 (needs OHRR accounts):** automatic emails need a free email-sending account; push needs web-push
+    keys stored as a Supabase secret; iPhone store push needs Apple's paid account.
 
 - **On hold, 2026-09-26 (no SQL).** OHRR: a BunFest-only helper shouldn’t have working access all year but
   shouldn’t need setting up again each year. Team (website and app): **Put on hold / Turn back on** on each

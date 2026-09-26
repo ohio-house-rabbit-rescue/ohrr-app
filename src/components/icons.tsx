@@ -47,6 +47,7 @@ export type IconName =
   | 'box'
   | 'eye'
   | 'eyeOff'
+  | 'user'
 
 const paths: Record<IconName, ReactNode> = {
   home: <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />,
@@ -277,6 +278,13 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M6.3 7.4A17 17 0 0 0 2.5 12s3.5 6.5 9.5 6.5a9.5 9.5 0 0 0 4.3-1" />
       <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
       <path d="M3 3l18 18" />
+    </>
+  ),
+  // One person — My OHRR (the account).
+  user: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21v-1a7 7 0 0 1 7-7h2a7 7 0 0 1 7 7v1" />
     </>
   ),
 }

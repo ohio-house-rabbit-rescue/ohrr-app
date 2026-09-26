@@ -15,6 +15,7 @@ import PresentedBy from '../features/sponsors/PresentedBy'
 import MyBunnyHomeCard from '../features/mybunny/HomeCard'
 import MyBookingsCard from '../features/bookings/MyBookingsCard'
 import HomeSearch from '../features/bunnyhelp/HomeSearch'
+import ForYou from '../features/account/ForYou'
 
 // One top card, in the existing "big BunFest button" styling. The BunFest slide
 // keeps BunFest's own palette + logo and shows the live event date; any other
@@ -137,6 +138,8 @@ export default function OhrrHome() {
         <EasterReminder />
         {/* Live staff-posted notices (hidden when there are none) */}
         <AnnouncementsBanner />
+        {/* What's new for the things they ticked, since they last looked (hidden when nothing is) */}
+        <ForYou />
         <PresentedBy surface="home" />
 
         {/* My Bunny first — the user's own rabbit is the daily reason to open the app —

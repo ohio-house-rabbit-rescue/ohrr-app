@@ -16,10 +16,13 @@ import {
 import { Icon } from '../components/icons'
 import { RabbitPhoto } from '../components/RabbitPhoto'
 import { AdoptionStepsCard } from './AdoptHowItWorks'
+import { useMarkSeen } from '../features/account/forYouCounts'
 
 const AGE_ORDER: AgeGroup[] = ['Baby', 'Young', 'Adult', 'Senior']
 
 export default function Adopt() {
+  // Every listed rabbit is here, so "New for you" counts them as seen.
+  useMarkSeen('adoptions')
   const [rabbits, setRabbits] = useState<Rabbit[] | null>(null)
   const [source, setSource] = useState<AdoptSource>('sample')
   const [filter, setFilter] = useState<string>('All')

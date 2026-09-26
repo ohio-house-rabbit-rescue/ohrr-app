@@ -14,6 +14,7 @@ import { BUNFEST_EVENT_SLUG, type EventItem } from '../data/events'
 import { ohrr } from '../data/ohrr'
 import PresentedBy from '../features/sponsors/PresentedBy'
 import AddEventToCalendar from '../components/AddEventToCalendar'
+import { useMarkSeen } from '../features/account/forYouCounts'
 
 function EventCard({ event: e, past = false }: { event: EventItem; past?: boolean }) {
   const [open, setOpen] = useState(false)
@@ -121,6 +122,8 @@ function EventCard({ event: e, past = false }: { event: EventItem; past?: boolea
 
 export default function Events() {
   const { events, source } = useEvents()
+  // Every event is listed here, so "New for you" counts them as seen.
+  useMarkSeen('events')
   const upcoming = events.filter((e) => isUpcoming(e))
   const past = events.filter((e) => !isUpcoming(e)).reverse()
 

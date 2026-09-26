@@ -11,6 +11,7 @@ import { supabase, isSupabaseConfigured } from './supabase'
 import { CAPABILITIES, type Capability } from './capabilities'
 import { accessEnded, isMissingColumn } from './staffLevels'
 import type { MembershipRole, MembershipStatus } from './database.types'
+import { flushAccountSync } from '../features/account/sync'
 
 export interface Membership {
   id: string
@@ -209,6 +210,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const signOut = useCallback(async () => {
+    // Anything saved in the last couple of seconds reaches the account first;
+    // the phone's own copy stays as it is.
+    await flushAccountSync().catch(() => undefined)
     await supabase.auth.signOut()
     try {
       localStorage.removeItem(MEMBER_CACHE)

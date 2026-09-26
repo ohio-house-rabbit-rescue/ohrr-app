@@ -9,6 +9,8 @@ import { Icon } from '../../components/icons'
 import { MbIcon } from './icons'
 import { EMERGENCY_VET, VET_DIRECTORY } from './links'
 import { useBunnyPhoto } from './photos'
+import { useAuth } from '../../lib/auth'
+import { useSyncStatus } from '../account/sync'
 import {
   dueStatus,
   describeDue,
@@ -460,15 +462,33 @@ export function VetNote({ className = '' }: { className?: string }) {
   return <p className={`text-xs leading-relaxed text-slate-500 ${className}`}>{VET_NOTE}</p>
 }
 
-/** The one-line privacy promise, with a lock icon. */
+/**
+ * The one-line privacy promise, with a lock icon. Signed in (update 31), My
+ * Bunny is also kept on their OHRR account — never the photos — so it says so.
+ */
 export function PrivacyLine({ className = '' }: { className?: string }) {
+  const { user } = useAuth()
+  const { state } = useSyncStatus()
+  const onAccount = Boolean(user) && state !== 'unavailable'
   return (
     <p className={`flex items-start gap-2 text-xs leading-relaxed text-slate-500 ${className}`}>
       <MbIcon name="lock" size={14} className="mt-0.5 shrink-0 text-slate-400" />
-      <span>
-        Everything in My Bunny stays on this phone — nothing is uploaded or shared. Use Backup to
-        keep a copy.
-      </span>
+      {onAccount ? (
+        <span>
+          Saved on this phone and on your OHRR account, where only you can see it — sign in on any phone and it’s
+          there. Photos stay on this phone. Use Backup to keep them.
+        </span>
+      ) : (
+        <span>
+          Everything in My Bunny stays on this phone — nothing is uploaded or shared. Use Backup to
+          keep a copy.{' '}
+          {!user && (
+            <Link to="/account" className="font-semibold text-brand-blue">
+              Or sign in to keep it on your account.
+            </Link>
+          )}
+        </span>
+      )}
     </p>
   )
 }

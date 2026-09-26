@@ -31,6 +31,8 @@ export const CAPABILITIES = [
   'social.publish',
   'social.approve',
   'counter.use',
+  // Update 31: the supporter email list (founders and developers already can).
+  'supporters.view',
 ] as const
 
 export type Capability = (typeof CAPABILITIES)[number]
@@ -74,6 +76,7 @@ export const PERMISSION_CATALOG: PermissionMeta[] = [
   { key: 'social.publish', area: 'Content', description: 'Release queued social-media posts (the one person who posts as OHRR)' },
   { key: 'social.approve', area: 'Content', description: 'Approve social-media posts written by someone else' },
   { key: 'counter.use', area: 'Counter', description: 'The Counter: add items, ring up sales, take tickets at the door, sell raffle tickets' },
+  { key: 'supporters.view', area: 'Supporters', description: 'See and download the supporter email list' },
 ]
 
 // The preset → capabilities bundles, mirroring `permission_presets` in the seed

@@ -4,7 +4,11 @@
 // notes) is one versioned JSON blob in localStorage under `ohrr.mybunny.v2`;
 // photos live in IndexedDB (see photos.ts), one record per bunny id, so a
 // rescue or foster can keep up to MAX_BUNNIES rabbits without hitting
-// localStorage's ~5 MB ceiling. No account, no backend, nothing is transmitted.
+// localStorage's ~5 MB ceiling. Signed out, nothing is transmitted. Signed in
+// (update 31), the account sync (features/account/sync.ts) also keeps a copy of
+// the JSON — never the photos — on the person's OHRR account; the pure merge it
+// uses is `mergeSynced()` below, and every edit stamps `updatedAt` so the
+// newest copy of a bunny, reminder or note wins.
 //
 // v1 (`ohrr.mybunny.v1`) embedded each photo as `photoDataUrl` in the JSON. On
 // first load after the upgrade the v1 blob is read, the photos are copied into
@@ -79,6 +83,8 @@ export interface Bunny {
   archived?: BunnyArchive
   /** ISO timestamp */
   createdAt: string
+  /** ISO timestamp of the last edit (update 31) — how the account sync picks the newest copy. */
+  updatedAt?: string
 }
 
 export interface WeightEntry {
@@ -101,6 +107,8 @@ export interface Reminder {
   /** YYYY-MM-DD */
   lastDone?: string
   notes?: string
+  /** ISO timestamp of the last edit (update 31). */
+  updatedAt?: string
 }
 
 export type WeightUnit = 'lb' | 'g'
@@ -122,6 +130,8 @@ export interface HealthNote {
   resolved: boolean
   /** ISO timestamp */
   createdAt: string
+  /** ISO timestamp of the last edit (update 31). */
+  updatedAt?: string
 }
 
 export interface MyBunnyData {
@@ -447,6 +457,7 @@ function sanitizeBunny(v: unknown): Bunny | null {
     ...(str(v.notes) ? { notes: v.notes as string } : {}),
     ...(archived ? { archived } : {}),
     createdAt: typeof v.createdAt === 'string' ? v.createdAt : new Date().toISOString(),
+    ...(str(v.updatedAt) ? { updatedAt: v.updatedAt as string } : {}),
   }
 }
 
@@ -480,6 +491,7 @@ function sanitizeReminder(v: unknown, bunnyIds: Set<string>): Reminder | null {
     nextDue: v.nextDue,
     ...(isIsoDate(v.lastDone) ? { lastDone: v.lastDone } : {}),
     ...(str(v.notes) ? { notes: v.notes as string } : {}),
+    ...(str(v.updatedAt) ? { updatedAt: v.updatedAt as string } : {}),
   }
 }
 
@@ -520,6 +532,7 @@ function sanitizeHealthNote(v: unknown, bunnyIds: Set<string>): HealthNote | nul
     ...(str(v.followUp) ? { followUp: (v.followUp as string).trim() } : {}),
     resolved: v.resolved === true,
     createdAt: typeof v.createdAt === 'string' ? v.createdAt : new Date().toISOString(),
+    ...(str(v.updatedAt) ? { updatedAt: v.updatedAt as string } : {}),
   }
 }
 
@@ -644,6 +657,11 @@ function subscribe(cb: () => void) {
 
 const getSnapshot = () => data
 
+/** Every change to the data (the account sync listens here). */
+export function subscribeMyBunny(cb: () => void): () => void {
+  return subscribe(cb)
+}
+
 export function useMyBunny(): MyBunnyData {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
@@ -673,15 +691,19 @@ export function newId(prefix = 'b'): string {
 
 /* ------------------------------------------------------------- mutations */
 
-export type BunnyInput = Omit<Bunny, 'id' | 'createdAt'>
+export type BunnyInput = Omit<Bunny, 'id' | 'createdAt' | 'updatedAt'>
+
+const nowIso = () => new Date().toISOString()
 
 /** Throws with LIMIT_MESSAGE when the phone already has MAX_BUNNIES active bunnies. */
 export function addBunny(input: BunnyInput): Bunny {
   if (atBunnyLimit(data)) throw new Error(LIMIT_MESSAGE)
+  const at = nowIso()
   const bunny: Bunny = {
     ...cleanBunnyInput(input),
     id: newId('b'),
-    createdAt: new Date().toISOString(),
+    createdAt: at,
+    updatedAt: at,
   }
   commit({ ...data, bunnies: [...data.bunnies, bunny] })
   return bunny
@@ -691,9 +713,15 @@ export function updateBunny(id: string, patch: Partial<BunnyInput>): void {
   commit({
     ...data,
     bunnies: data.bunnies.map((b) =>
-      b.id === id ? { id: b.id, createdAt: b.createdAt, ...cleanBunnyInput({ ...b, ...patch }) } : b,
+      b.id === id ? { id: b.id, createdAt: b.createdAt, ...cleanBunnyInput({ ...b, ...patch }), updatedAt: nowIso() } : b,
     ),
   })
+}
+
+/** The dataset with one bunny's `updatedAt` set to now. */
+function touchBunny(d: MyBunnyData, id: string): MyBunnyData {
+  const at = nowIso()
+  return { ...d, bunnies: d.bunnies.map((b) => (b.id === id ? { ...b, updatedAt: at } : b)) }
 }
 
 /**
@@ -754,13 +782,13 @@ export function applyRestore(d: MyBunnyData, id: string): MyBunnyData {
 }
 
 export function archiveBunny(id: string, archive: BunnyArchive): void {
-  commit(applyArchive(data, id, archive))
+  commit(touchBunny(applyArchive(data, id, archive), id))
 }
 
 /** Throws with LIMIT_MESSAGE when restoring would exceed MAX_BUNNIES active bunnies. */
 export function restoreBunny(id: string): void {
   if (findBunny(data, id)?.archived && atBunnyLimit(data)) throw new Error(LIMIT_MESSAGE)
-  commit(applyRestore(data, id))
+  commit(touchBunny(applyRestore(data, id), id))
 }
 
 // Drop empty optional fields so the stored record stays tidy. Note: a patch
@@ -803,10 +831,10 @@ export function setWeightUnit(unit: WeightUnit): void {
   commit({ ...data, prefs: { ...data.prefs, weightUnit: unit } })
 }
 
-export type ReminderInput = Omit<Reminder, 'id'>
+export type ReminderInput = Omit<Reminder, 'id' | 'updatedAt'>
 
 export function addReminder(input: ReminderInput): Reminder {
-  const r: Reminder = { ...cleanReminderInput(input), id: newId('r') }
+  const r: Reminder = { ...cleanReminderInput(input), id: newId('r'), updatedAt: nowIso() }
   commit({ ...data, reminders: [...data.reminders, r] })
   return r
 }
@@ -815,7 +843,7 @@ export function updateReminder(id: string, patch: Partial<ReminderInput>): void 
   commit({
     ...data,
     reminders: data.reminders.map((r) =>
-      r.id === id ? { id: r.id, ...cleanReminderInput({ ...r, ...patch }) } : r,
+      r.id === id ? { id: r.id, ...cleanReminderInput({ ...r, ...patch }), updatedAt: nowIso() } : r,
     ),
   })
 }
@@ -830,7 +858,7 @@ export function markReminderDone(id: string, doneOn: string = todayIso()): Remin
     ...data,
     reminders: data.reminders.map((r) => {
       if (r.id !== id) return r
-      updated = advance(r, doneOn)
+      updated = { ...advance(r, doneOn), updatedAt: nowIso() }
       return updated
     }),
   })
@@ -853,10 +881,11 @@ function cleanReminderInput(input: ReminderInput): ReminderInput {
   return out
 }
 
-export type HealthNoteInput = Omit<HealthNote, 'id' | 'createdAt'>
+export type HealthNoteInput = Omit<HealthNote, 'id' | 'createdAt' | 'updatedAt'>
 
 export function addHealthNote(input: HealthNoteInput): HealthNote {
-  const note: HealthNote = { ...cleanHealthInput(input), id: newId('h'), createdAt: new Date().toISOString() }
+  const at = nowIso()
+  const note: HealthNote = { ...cleanHealthInput(input), id: newId('h'), createdAt: at, updatedAt: at }
   commit({ ...data, health: [...data.health, note] })
   return note
 }
@@ -865,7 +894,7 @@ export function updateHealthNote(id: string, patch: Partial<HealthNoteInput>): v
   commit({
     ...data,
     health: data.health.map((h) =>
-      h.id === id ? { id: h.id, createdAt: h.createdAt, ...cleanHealthInput({ ...h, ...patch }) } : h,
+      h.id === id ? { id: h.id, createdAt: h.createdAt, ...cleanHealthInput({ ...h, ...patch }), updatedAt: nowIso() } : h,
     ),
   })
 }
@@ -1083,4 +1112,191 @@ export async function importBackup(text: string): Promise<ImportResult & { photo
 
 export function backupFilename(today: string = todayIso()): string {
   return `ohrr-my-bunny-backup-${today}.json`
+}
+
+/* ------------------------------------------------------- account sync */
+//
+// Signed in, the account keeps the same JSON minus the photos (they stay in
+// this phone's IndexedDB; `hasPhoto` is this phone's business, so it isn't
+// sent). The sync engine (features/account/sync.ts) calls these; they're pure
+// apart from applySynced(), so scripts/mybunny-check.ts exercises them.
+
+/** What the account stores: the data without `hasPhoto`. */
+export function forAccount(d: MyBunnyData): MyBunnyData {
+  return {
+    ...d,
+    bunnies: d.bunnies.map((b) => {
+      const { hasPhoto: _drop, ...rest } = b
+      return rest
+    }),
+  }
+}
+
+/**
+ * What the account held after the last sync on this phone — ids with their
+ * `updatedAt` (weights: grams by bunny|date). Small, so it's kept per phone;
+ * with it a later merge can tell "deleted over there" from "added here".
+ */
+export interface SyncBase {
+  bunnies: Record<string, string>
+  reminders: Record<string, string>
+  health: Record<string, string>
+  weights: Record<string, number>
+  unit: WeightUnit
+}
+
+const stampOf = (x: { updatedAt?: string }) => x.updatedAt ?? ''
+
+export function syncBaseOf(d: MyBunnyData): SyncBase {
+  const weights: Record<string, number> = {}
+  for (const [bunnyId, list] of Object.entries(d.weights)) for (const w of list) weights[`${bunnyId}|${w.date}`] = w.grams
+  return {
+    bunnies: Object.fromEntries(d.bunnies.map((b) => [b.id, stampOf(b)])),
+    reminders: Object.fromEntries(d.reminders.map((r) => [r.id, stampOf(r)])),
+    health: Object.fromEntries(d.health.map((h) => [h.id, stampOf(h)])),
+    weights,
+    unit: d.prefs.weightUnit,
+  }
+}
+
+/** A stored base back from JSON; null when it isn't one. */
+export function readSyncBase(raw: unknown): SyncBase | null {
+  if (!isRecord(raw)) return null
+  const strings = (v: unknown): Record<string, string> =>
+    isRecord(v) ? Object.fromEntries(Object.entries(v).filter((e): e is [string, string] => typeof e[1] === 'string')) : {}
+  const numbers = isRecord(raw.weights)
+    ? Object.fromEntries(Object.entries(raw.weights).filter((e): e is [string, number] => typeof e[1] === 'number'))
+    : {}
+  return {
+    bunnies: strings(raw.bunnies),
+    reminders: strings(raw.reminders),
+    health: strings(raw.health),
+    weights: numbers,
+    unit: raw.unit === 'g' ? 'g' : 'lb',
+  }
+}
+
+/** Key-order-free JSON, for "is this the same record?". */
+function canonical(v: unknown): string {
+  return JSON.stringify(v, (_k, val: unknown) =>
+    isRecord(val) ? Object.fromEntries(Object.keys(val).sort().map((k) => [k, val[k]])) : val,
+  )
+}
+
+/**
+ * One list merged by id. `base` null = the first sign-in on this phone: the
+ * union, and for an id on both sides the newer `updatedAt` (a stamped copy
+ * beats an unstamped one). With a base, an id missing on one side was deleted
+ * there — it goes, unless the other side edited it since (an edit beats a
+ * delete). When nothing says which copy is newer, `onTie` decides.
+ */
+function mergeById<T extends { id: string; updatedAt?: string }>(
+  device: T[],
+  account: T[],
+  base: Record<string, string> | null,
+  onTie: (d: T, a: T) => T[],
+): T[] {
+  const onAccount = new Map(account.map((x) => [x.id, x]))
+  const onDevice = new Set(device.map((x) => x.id))
+  const out: T[] = []
+  for (const d of device) {
+    const a = onAccount.get(d.id)
+    if (!a) {
+      // Deleted on another phone, and not touched here since: let it go.
+      if (base && d.id in base && stampOf(d) === base[d.id]) continue
+      out.push(d)
+      continue
+    }
+    if (canonical(d) === canonical(a)) {
+      out.push(d)
+      continue
+    }
+    const sd = stampOf(d)
+    const sa = stampOf(a)
+    if (base && d.id in base) {
+      if (sd === base[d.id]) {
+        out.push(a) // only the account's copy changed
+        continue
+      }
+      if (sa === base[d.id]) {
+        out.push(d) // only this phone's copy changed
+        continue
+      }
+    }
+    if (sd !== sa && (sd || sa)) {
+      out.push(sd > sa ? d : a)
+      continue
+    }
+    out.push(...onTie(d, a))
+  }
+  for (const a of account) {
+    if (onDevice.has(a.id)) continue
+    // Deleted on this phone, and not touched on the account since.
+    if (base && a.id in base && stampOf(a) === base[a.id]) continue
+    out.push(a)
+  }
+  return out
+}
+
+/**
+ * This phone's My Bunny and the account's, as one. Both in account form
+ * (forAccount); `base` from syncBaseOf() after the last sync here, or null on
+ * the first sign-in on this phone. Bunnies, reminders and health notes merge
+ * by id, keeping the newest `updatedAt`; with no way to tell (two copies of a
+ * bunny from before update 31 that differ), both are kept — the account's as a
+ * second bunny, "(from your account)" — so a bunny is never silently dropped.
+ * Weights merge by bunny and date; the weight unit follows whichever side
+ * changed it.
+ */
+export function mergeSynced(device: MyBunnyData, account: MyBunnyData, base: SyncBase | null): MyBunnyData {
+  const bunnies = mergeById(device.bunnies, account.bunnies, base?.bunnies ?? null, (d, a) => [
+    d,
+    { ...a, id: newId('b'), name: `${a.name} (from your account)` },
+  ])
+  // A reminder isn't worth doubling up (it would fire twice): the one done
+  // most recently, else the one due later, else this phone's.
+  const reminders = mergeById(device.reminders, account.reminders, base?.reminders ?? null, (d, a) => {
+    const ld = d.lastDone ?? ''
+    const la = a.lastDone ?? ''
+    if (ld !== la) return [ld > la ? d : a]
+    return [a.nextDue > d.nextDue ? a : d]
+  })
+  // Notes are someone's own words: keep both.
+  const health = mergeById(device.health, account.health, base?.health ?? null, (d, a) => [d, { ...a, id: newId('h') }])
+
+  const dev = syncBaseOf(device).weights
+  const acc = syncBaseOf(account).weights
+  const was = base?.weights ?? null
+  const weights: Record<string, WeightEntry[]> = {}
+  for (const key of new Set([...Object.keys(dev), ...Object.keys(acc)])) {
+    const d = dev[key]
+    const a = acc[key]
+    let grams: number | undefined
+    if (d !== undefined && a !== undefined) grams = was && was[key] === d ? a : d
+    else if (d !== undefined) grams = was && was[key] === d ? undefined : d
+    else grams = was && was[key] === a ? undefined : a
+    if (grams === undefined) continue
+    const cut = key.lastIndexOf('|')
+    const bunnyId = key.slice(0, cut)
+    ;(weights[bunnyId] ??= []).push({ date: key.slice(cut + 1), grams })
+  }
+
+  const unit = base && device.prefs.weightUnit === base.unit ? account.prefs.weightUnit : device.prefs.weightUnit
+  // sanitize() drops anything left pointing at a bunny that went, and sorts the weights.
+  return sanitize({ version: 2, bunnies, reminders, health, weights, prefs: { weightUnit: unit } })
+}
+
+/**
+ * Put the account's (merged) copy on this phone. Photos stay as they are: a
+ * bunny keeps its picture here if it had one.
+ */
+export function applySynced(next: MyBunnyData): void {
+  const withPhoto = new Set(data.bunnies.filter((b) => b.hasPhoto).map((b) => b.id))
+  commit({
+    ...next,
+    bunnies: next.bunnies.map((b) => {
+      const { hasPhoto: _drop, ...rest } = b
+      return withPhoto.has(b.id) ? { ...rest, hasPhoto: true } : rest
+    }),
+  })
 }

@@ -18,8 +18,9 @@ export default function BunfestTopBar() {
               <Icon name="star" size={22} />
             </span>
             <span className={`min-w-0 leading-tight ${deep ? 'hidden min-[430px]:block' : ''}`}>
-              <span className="block truncate font-display text-xl font-extrabold">Midwest BunFest</span>
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-white/75">Presented by OHRR</span>
+              {/* Two lines on a narrow phone, as the OHRR bar does, so the four actions keep their size. */}
+              <span className="line-clamp-2 font-display text-[17px] font-extrabold leading-[1.1] min-[430px]:text-xl">Midwest BunFest</span>
+              <span className="hidden text-[10px] font-bold uppercase tracking-wider text-white/75 min-[430px]:block">Presented by OHRR</span>
             </span>
           </Link>
         </div>

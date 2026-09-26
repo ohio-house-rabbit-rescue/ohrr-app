@@ -1,23 +1,22 @@
-// Staff → My account: your own name, title and photo, your sign-in email and
-// password, and what your level lets you do. Open to everyone on the team.
+// Staff → My account: your own name, title and photo as the team sees them,
+// and what your level lets you do. Open to everyone on the team.
 //
 // Before this, your own profile could only be edited inside Staff → Team,
-// which is hidden unless you can invite or manage people, and a password could
-// only be changed through "Forgot password". Nothing here needs a database
-// change: save_member_profile() always lets a member save their own profile,
-// and the email and password go through Supabase's own updateUser().
+// which is hidden unless you can invite or manage people. Nothing here needs a
+// database change: save_member_profile() always lets a member save their own
+// profile. The sign-in email and password are the same for everyone with an
+// account, so since update 31 they live in My OHRR (/account), linked below.
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen, SectionLabel } from '../components/ui'
-import { Spinner, FormError, PasswordInput, staffInput } from '../components/staffui'
+import { Spinner, FormError, staffInput } from '../components/staffui'
 import StaffAvatar from '../components/StaffAvatar'
 import StaffImageField from '../components/StaffImageField'
 import { PERMISSION_CATALOG } from '../lib/capabilities'
 import { Icon } from '../components/icons'
 import { accessDate, isFullAccess, levelFromRole, levelInfo, useMyLevel } from '../lib/staffLevels'
-import { authOrigin } from '../lib/appUrl'
 import type { MembershipRole } from '../lib/database.types'
 
 interface Profile {
@@ -129,16 +128,19 @@ export default function StaffAccount() {
         )}
       </section>
 
-      {/* Sign-in email */}
+      {/* Sign-in email and password: the same for every account, so in My OHRR */}
       <section className="space-y-2">
-        <SectionLabel>Sign-in email</SectionLabel>
-        <EmailForm email={email} pending={user.new_email ?? null} />
-      </section>
-
-      {/* Password */}
-      <section className="space-y-2">
-        <SectionLabel>Password</SectionLabel>
-        <PasswordForm />
+        <SectionLabel>Sign-in email and password</SectionLabel>
+        <Link
+          to="/account"
+          className="flex min-h-[48px] items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 text-sm shadow-sm transition hover:bg-slate-50"
+        >
+          <span className="min-w-0">
+            <span className="block font-semibold text-ink">Change them in My OHRR</span>
+            <span className="block break-all text-slate-500">You sign in with {email}</span>
+          </span>
+          <Icon name="chevron" size={18} className="shrink-0 text-slate-300" />
+        </Link>
       </section>
 
       {/* Level and access — read-only; someone above you changes it */}
@@ -294,162 +296,6 @@ function ProfileForm({
         {saved && !busy && <p className="text-sm font-bold text-green-700">Saved.</p>}
         <button type="submit" disabled={busy || imageBusy} className={`${btn.primary} w-full disabled:opacity-60`}>
           {busy ? 'Saving…' : 'Save'}
-        </button>
-      </form>
-    </Card>
-  )
-}
-
-/**
- * Changing the sign-in email. Supabase emails a link to the new address and
- * only switches once it's opened, so until then the old one still signs in.
- */
-function EmailForm({ email, pending }: { email: string; pending: string | null }) {
-  const [next, setNext] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [sent, setSent] = useState<{ to: string; from: string } | null>(null)
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    const to = next.trim()
-    if (!to) return
-    if (to.toLowerCase() === email.toLowerCase()) {
-      setError('That’s already your sign-in email.')
-      return
-    }
-    setBusy(true)
-    try {
-      // The link comes back to the real app, as the password-reset link does.
-      const { error } = await supabase.auth.updateUser({ email: to }, { emailRedirectTo: `${authOrigin()}/staff` })
-      if (error) throw error
-      setSent({ to, from: email })
-      setNext('')
-    } catch (err) {
-      setError(errMessage(err))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <Card>
-      <form onSubmit={submit} className="space-y-3">
-        <p className="text-sm text-slate-600">
-          You sign in with <strong className="break-all text-ink">{email}</strong>.
-        </p>
-        {sent ? (
-          <div className="space-y-1 rounded-xl bg-green-50 px-3 py-2.5 text-sm text-green-800">
-            <p className="font-semibold">
-              We sent a link to <span className="break-all">{sent.to}</span>. Your sign-in email changes when you open it.
-              Until then, keep signing in with <span className="break-all">{sent.from}</span>.
-            </p>
-            <p className="text-xs">If a link comes to {sent.from} as well, open that one too.</p>
-          </div>
-        ) : (
-          pending && (
-            <p className="rounded-xl bg-brand-blue-50 px-3 py-2.5 text-sm text-slate-700">
-              Waiting for you to open the link sent to <strong className="break-all">{pending}</strong>.
-            </p>
-          )
-        )}
-        <label className="block text-sm font-semibold text-slate-700">
-          New email
-          <input
-            className={staffInput}
-            type="email"
-            autoComplete="email"
-            autoCapitalize="none"
-            required
-            value={next}
-            onChange={(e) => setNext(e.target.value)}
-            placeholder="you@example.com"
-          />
-        </label>
-        <FormError>{error}</FormError>
-        <button type="submit" disabled={busy || !next.trim()} className={`${btn.blue} w-full disabled:opacity-60`}>
-          {busy ? 'Sending…' : 'Change my email'}
-        </button>
-      </form>
-    </Card>
-  )
-}
-
-/** A new password while signed in — no email round trip. */
-function PasswordForm() {
-  const [password, setPassword] = useState('')
-  const [again, setAgain] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [done, setDone] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setDone(false)
-    if (password.length < 8) {
-      setError('Use at least 8 characters.')
-      return
-    }
-    if (password !== again) {
-      setError('The two passwords don’t match.')
-      return
-    }
-    setBusy(true)
-    try {
-      const { error } = await supabase.auth.updateUser({ password })
-      if (error) throw error
-      setDone(true)
-      setPassword('')
-      setAgain('')
-    } catch (err) {
-      const msg = errMessage(err)
-      // "Secure password change" wants a recent sign-in.
-      setError(
-        /reauthenticat/i.test(msg)
-          ? 'For safety this needs a fresh sign-in: sign out, sign back in, then change your password here.'
-          : msg,
-      )
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <Card>
-      <form onSubmit={submit} className="space-y-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          New password
-          <PasswordInput
-            autoComplete="new-password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => {
-              setDone(false)
-              setPassword(e.target.value)
-            }}
-          />
-        </label>
-        <label className="block text-sm font-semibold text-slate-700">
-          Type it again
-          <PasswordInput
-            autoComplete="new-password"
-            required
-            minLength={8}
-            value={again}
-            onChange={(e) => {
-              setDone(false)
-              setAgain(e.target.value)
-            }}
-          />
-        </label>
-        <p className="text-xs text-slate-500">At least 8 characters.</p>
-        <FormError>{error}</FormError>
-        {done && <p className="text-sm font-bold text-green-700">Password changed.</p>}
-        <button type="submit" disabled={busy || !password || !again} className={`${btn.blue} w-full disabled:opacity-60`}>
-          {busy ? 'Saving…' : 'Change my password'}
         </button>
       </form>
     </Card>

@@ -62,6 +62,7 @@ export default function StaffHome() {
   const canManageTeam = can('staff.invite') || can('staff.permissions.manage')
   const canViewActivity = can('audit.view')
   const canManageSettings = can('settings.manage')
+  const canSupporters = can('supporters.view')
   const canScan = can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update')
   const showTiles =
     canCounter ||
@@ -79,7 +80,8 @@ export default function StaffHome() {
     canManageSponsors ||
     canManageTeam ||
     canViewActivity ||
-    canManageSettings
+    canManageSettings ||
+    canSupporters
 
   // For a staff member, list the granted capabilities so they know their access.
   const grantedList = PERMISSION_CATALOG.filter((p) => capabilities.has(p.key))
@@ -127,6 +129,15 @@ export default function StaffHome() {
               </span>
               <Icon name="chevron" size={18} className="shrink-0 text-slate-300" />
             </Link>
+          )}
+          {canSupporters && (
+            <ActionCard
+              to="/staff/supporters"
+              title="Supporters"
+              subtitle="The email list: who wants emails and about what — copy or download"
+              icon="mail"
+              tone="blue"
+            />
           )}
           {canBookings && (
             <ActionCard
@@ -431,11 +442,11 @@ export default function StaffHome() {
         />
       )}
 
-      {/* Everyone's own profile, email and password. */}
+      {/* Everyone's own profile as the team sees it (email and password are in My OHRR). */}
       <ActionCard
         to="/staff/account"
         title="My account"
-        subtitle="Your name, photo, email and password"
+        subtitle="Your name, title and photo, your level and access"
         icon="settings"
         tone="blue"
       />

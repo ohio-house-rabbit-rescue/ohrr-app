@@ -45,11 +45,14 @@ const TITLES: [string, string][] = [
   ['/raffle/tickets', 'Your raffle tickets'],
   ['/about', 'About OHRR'],
   ['/settings', 'Settings'],
+  ['/account', 'My OHRR'],
+  ['/privacy', 'Privacy'],
   ['/help', 'Help & FAQ'],
   ['/search', 'Search'],
   ['/appointment', 'Schedule a visit'],
   ['/t/', 'Scanned item'],
   ['/staff/account', 'My account'],
+  ['/staff/supporters', 'Supporters'],
   ['/staff', 'Staff'],
 ]
 
