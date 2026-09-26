@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-26 (wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 WRITTEN, NOT YET RUN — the ohrr-jobs Edge Function goes in first)
+- **Last updated:** 2026-09-26 (wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,7 +19,7 @@
 
 ## Current state (at a glance)
 
-- **Update 32, 2026-09-26 (latest; website `c5d97c9` + app the same day; update 32 NOT YET RUN).** OHRR: "build
+- **Update 32, 2026-09-26 (latest; website `c5d97c9` + app the same day; update 32 SQL applied and checked live 2026-09-26 — new tables/RPCs answer with their rules, `APPLY-32 (applied 2026-09-26).sql`; the `ohrr-jobs` function answered "not found", so `push_public_key` is still null until it is deployed under that exact name).** OHRR: "build
   the things you can and then lets also do 2 [phone notifications] and 7 [Cloudflare Web Analytics]".
   - **Order for OHRR:** (1) Supabase → Edge Functions → Deploy a new function → Via Editor, name `ohrr-jobs`, paste
     Drive `OHRR App Design/OHRR-JOBS-FUNCTION.ts` (= `supabase/functions/ohrr-jobs/PASTE-INTO-SUPABASE.ts`),
@@ -42,8 +42,8 @@
   - **My Bunny photos on the account:** private bucket `my-bunny-photos`, `<user id>/<bunny id>.jpg`, own folder
     only; `src/features/account/photoSync.ts` (stamps per account; an empty folder never deletes phone photos);
     Delete account empties the folder first.
-  - **Cloudflare Web Analytics (item 7):** OHRR switches it on in the Cloudflare dashboard (no code); then add a
-    privacy-page line.
+  - **Cloudflare Web Analytics (item 7):** OHRR switched it on in the Cloudflare dashboard 2026-09-26 (Pages injects
+    the cookie-free beacon on the next deploy, so all three sites were redeployed); both privacy pages say so.
 
 - **One account for everyone, 2026-09-26 (latest; website `b0145e8` + app the same day; update 31 applied and checked
   live the same day — new tables refuse anon, save_my_data needs sign-in; `APPLY-31 (applied 2026-09-26).sql`).** OHRR: supporters "enter your information and save things like
