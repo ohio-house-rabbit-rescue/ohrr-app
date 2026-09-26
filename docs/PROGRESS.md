@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-25 (staff tiers: ten levels, share-only-what-you-have, access end dates, invite fix; **update 30 to run**)
+- **Last updated:** 2026-09-26 (staff tiers live: update 30 applied and checked; the sponsor becomes Developer; nothing to run, next is 31)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,8 +19,10 @@
 
 ## Current state (at a glance)
 
-- **Staff tiers and sharing, 2026-09-25 (latest; update 30 to run — Drive RUN-THIS and
-  `Supabase history/APPLY-30.sql`).** OHRR hit "function gen_random_bytes(integer) does not exist" on Staff →
+- **Staff tiers and sharing, 2026-09-25 (latest; website `d6912fc`, app `27f2f12`; update 30 applied and
+  checked live 2026-09-26 — `level_rank('developer')` = 10, `create_staff_invite` refuses outsiders;
+  `Supabase history/APPLY-30 (applied 2026-09-26).sql`).** The sponsor asked to be Developer (given a
+  one-line SQL, since nobody can change their own level). OHRR hit "function gen_random_bytes(integer) does not exist" on Staff →
   Team → Invite and asked for an audit of how people join and get access, more levels, and a way to share
   some but not all tasks.
   - **Found:**
