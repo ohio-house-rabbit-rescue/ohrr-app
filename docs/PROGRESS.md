@@ -21,8 +21,8 @@
 
 - **Staff tiers and sharing, 2026-09-25 (latest; website `d6912fc`, app `27f2f12`; update 30 applied and
   checked live 2026-09-26 — `level_rank('developer')` = 10, `create_staff_invite` refuses outsiders;
-  `Supabase history/APPLY-30 (applied 2026-09-26).sql`).** The sponsor asked to be Developer (given a
-  one-line SQL, since nobody can change their own level). OHRR hit "function gen_random_bytes(integer) does not exist" on Staff →
+  `Supabase history/APPLY-30 (applied 2026-09-26).sql`).** The sponsor is now Developer (one-line SQL
+  run 2026-09-26, since nobody can change their own level); OHRR has no Founder until one is invited. OHRR hit "function gen_random_bytes(integer) does not exist" on Staff →
   Team → Invite and asked for an audit of how people join and get access, more levels, and a way to share
   some but not all tasks.
   - **Found:**
