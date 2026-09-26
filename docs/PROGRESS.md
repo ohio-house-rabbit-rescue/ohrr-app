@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-26 (one account for everyone, email list with interests, On hold; **update 31 to run**)
+- **Last updated:** 2026-09-26 (one account for everyone, email list, On hold; update 31 applied and checked; nothing to run, next is 32)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,8 +19,8 @@
 
 ## Current state (at a glance)
 
-- **One account for everyone, 2026-09-26 (latest; website `b0145e8` + app the same day; update 31 to run — Drive
-  RUN-THIS and `Supabase history/APPLY-31.sql`).** OHRR: supporters "enter your information and save things like
+- **One account for everyone, 2026-09-26 (latest; website `b0145e8` + app the same day; update 31 applied and checked
+  live the same day — new tables refuse anon, save_my_data needs sign-in; `APPLY-31 (applied 2026-09-26).sql`).** OHRR: supporters "enter your information and save things like
   favorites, my bunny etc.", get told about volunteering and events, use a password they can change, and staff
   are the same accounts — "nothing is different on my login except the features I can see".
   - **App:**
