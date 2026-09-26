@@ -14,7 +14,7 @@ const ACTION_LABELS: Record<string, string> = {
   redeem_invite_code: 'joined the team',
   grant_permission: 'granted a capability',
   revoke_permission: 'revoked a capability',
-  set_membership_status: 'changed a member’s status',
+  set_membership_status: 'put a member on hold or back on',
 }
 
 function actionLabel(action: string) {
@@ -26,7 +26,10 @@ function detailSummary(e: Entry): string | null {
   const d = (e.detail ?? null) as Record<string, unknown> | null
   if (!d) return null
   if (typeof d.key === 'string') return d.key
-  if (typeof d.status === 'string') return d.status
+  if (typeof d.status === 'string') {
+    if (e.action === 'set_membership_status') return d.status === 'disabled' ? 'on hold' : d.status === 'active' ? 'back on' : d.status
+    return d.status
+  }
   if (typeof d.preset === 'string') return `preset: ${d.preset}`
   if (Array.isArray(d.capabilities) && d.capabilities.length) return d.capabilities.join(', ')
   return null

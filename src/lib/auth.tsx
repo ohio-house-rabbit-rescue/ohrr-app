@@ -27,10 +27,12 @@ interface AuthValue {
   /** True until the initial session + membership load settles. */
   loading: boolean
   user: User | null
-  /** The signed-in user's OHRR membership, or null if they haven't onboarded yet (or their access ended). */
+  /** The signed-in user's OHRR membership, or null if they haven't onboarded yet (or their access ended or is on hold). */
   membership: Membership | null
   /** When their access ran out (YYYY-MM-DD), if that's why they aren't on the team. */
   accessEndedOn: string | null
+  /** Their own membership exists but is on hold (status 'disabled'): someone turns it back on, no invite needed. */
+  accessOnHold: boolean
   /** Effective capabilities (owner/admin implicitly hold all). */
   capabilities: Set<Capability>
   /** UI gate — the DB still enforces every write regardless. */
@@ -68,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [membership, setMembership] = useState<Membership | null>(null)
   const [capabilities, setCapabilities] = useState<Set<Capability>>(new Set())
   const [accessEndedOn, setAccessEndedOn] = useState<string | null>(null)
+  const [accessOnHold, setAccessOnHold] = useState(false)
   const [loading, setLoading] = useState(isSupabaseConfigured)
 
   // 1) Track the auth session. The onAuthStateChange callback only sets state
@@ -95,24 +98,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setMembership(null)
       setCapabilities(new Set())
       setAccessEndedOn(null)
+      setAccessOnHold(false)
       return
     }
-    // Not on the team (any more): no membership, and why, when it's an end date.
-    const notOnTeam = (endedOn: string | null) => {
+    // Not on the team (any more): no membership, and why — an end date that
+    // has passed, or someone put them on hold (status 'disabled').
+    const notOnTeam = (endedOn: string | null, onHold = false) => {
       setMembership(null)
       setCapabilities(new Set())
       setAccessEndedOn(endedOn)
+      setAccessOnHold(onHold)
     }
     // Their OWN row: RLS lets a member read everyone's in their org, so without
     // the user_id filter this could pick up someone else's (and their level).
-    // Update 30 also lets people read their own row after their access ends.
+    // A policy lets people read their own row whatever its status, so a row
+    // that's on hold comes back too — and the join screen can say so instead
+    // of asking for an invite code (which never switches anyone back on).
     // access_until arrives with update 30; before it, read the row without it.
     const withEnd = await supabase
       .from('memberships')
       .select('id, org_id, role, status, access_until')
       .eq('user_id', userId)
-      .eq('status', 'active')
-      .limit(1)
+      .limit(10)
     let rows: { id: string; org_id: string; role: MembershipRole; status: MembershipStatus; access_until: string | null }[] | null =
       withEnd.data
     let error = withEnd.error
@@ -121,19 +128,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('memberships')
         .select('id, org_id, role, status')
         .eq('user_id', userId)
-        .eq('status', 'active')
-        .limit(1)
+        .limit(10)
       rows = plain.data ? plain.data.map((r) => ({ ...r, access_until: null })) : null
       error = plain.error
     }
     if (error) {
       // No signal (or the server is unreachable): use what this device knew —
-      // unless the access it knew of has run out since.
+      // unless the access it knew of has run out or been put on hold since.
       const cached = readCached(userId)
-      if (cached && accessEnded(cached.membership.accessUntil)) return notOnTeam(cached.membership.accessUntil)
+      const cachedEnded = cached && accessEnded(cached.membership.accessUntil) ? cached.membership.accessUntil : null
+      const cachedOnHold = cached?.membership.status === 'disabled'
+      if (cachedEnded || cachedOnHold) return notOnTeam(cachedEnded, cachedOnHold)
       setMembership(cached?.membership ?? null)
       setCapabilities(new Set(cached?.capabilities ?? []))
       setAccessEndedOn(null)
+      setAccessOnHold(false)
       return
     }
     if (!rows || rows.length === 0) {
@@ -144,15 +153,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!endedOn) writeCached(userId, null, [])
       return notOnTeam(endedOn)
     }
-    const r = rows[0]
+    // An active row first; otherwise the one on hold.
+    const r = rows.find((x) => x.status === 'active') ?? rows[0]
     const m: Membership = { id: r.id, orgId: r.org_id, role: r.role, status: r.status, accessUntil: r.access_until ?? null }
-    // Past their last day (America/New_York): not on the team. The database
-    // already refuses them; the join screen says when it ended.
-    if (accessEnded(m.accessUntil)) {
+    // On hold, or past their last day (America/New_York): not on the team.
+    // The database already refuses them; the join screen says why. Kept on
+    // this device (with no tasks) so an offline phone says the same.
+    const endedOn = accessEnded(m.accessUntil) ? m.accessUntil : null
+    const onHold = m.status !== 'active'
+    if (endedOn || onHold) {
       writeCached(userId, m, [])
-      return notOnTeam(m.accessUntil)
+      return notOnTeam(endedOn, onHold)
     }
     setAccessEndedOn(null)
+    setAccessOnHold(false)
     setMembership(m)
 
     if (m.role === 'owner' || m.role === 'admin') {
@@ -204,6 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setMembership(null)
     setCapabilities(new Set())
     setAccessEndedOn(null)
+    setAccessOnHold(false)
   }, [])
 
   const value: AuthValue = {
@@ -212,6 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     membership,
     accessEndedOn,
+    accessOnHold,
     capabilities,
     can,
     refresh: loadMembership,

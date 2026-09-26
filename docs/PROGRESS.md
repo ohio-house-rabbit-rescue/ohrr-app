@@ -19,6 +19,12 @@
 
 ## Current state (at a glance)
 
+- **On hold, 2026-09-26 (no SQL).** OHRR: a BunFest-only helper shouldn’t have working access all year but
+  shouldn’t need setting up again each year. Team (website and app): **Put on hold / Turn back on** on each
+  person (was Disable access / Re-enable) keeps their account, level and tasks; turning back on also clears a
+  passed end date. Everyone on hold (switched off, or past “Put on hold automatically after”) sits in one
+  “On hold” section at the bottom. Someone on hold who signs in is told so instead of being asked for a code.
+
 - **Staff tiers and sharing, 2026-09-25 (latest; website `d6912fc`, app `27f2f12`; update 30 applied and
   checked live 2026-09-26 — `level_rank('developer')` = 10, `create_staff_invite` refuses outsiders;
   `Supabase history/APPLY-30 (applied 2026-09-26).sql`).** The sponsor is now Developer (one-line SQL

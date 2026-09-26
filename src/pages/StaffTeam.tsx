@@ -72,6 +72,13 @@ type Cert = Database['public']['Tables']['member_certifications']['Row']
 
 const memberName = (m: Pick<Member, 'display_name' | 'email'>) => m.display_name || m.email || 'Team member'
 
+/**
+ * On hold: someone put them on hold (status 'disabled'), or their end date has
+ * passed (America/New_York). Either way the database refuses them everything,
+ * and they keep their account, level and tasks for when they're turned back on.
+ */
+const isOnHold = (m: Pick<Member, 'status' | 'access_until'>) => m.status === 'disabled' || accessEnded(m.access_until)
+
 // Capabilities grouped by area, for the per-member toggle UI.
 const AREAS: { area: string; caps: PermissionMeta[] }[] = (() => {
   const order: string[] = []
@@ -181,8 +188,9 @@ function HowAccessWorks({ tiersReady }: { tiersReady: boolean }) {
           never ends.
         </p>
         <p>
-          <strong className="text-ink">Switching someone off.</strong> “Switch off access” on their card stops everything
-          at once. An invite code won’t switch it back on; only someone who can change them can.
+          <strong className="text-ink">On hold.</strong> Put someone on hold when you don’t need them for a while (e.g.
+          BunFest helpers after the festival). They keep their account, level and tasks but can’t use anything until you
+          turn them back on, with no new invite needed. An end date puts someone on hold automatically.
         </p>
         <p>
           <strong className="text-ink">Volunteers don’t need an account</strong> to sign up for shifts and log hours —
@@ -1007,7 +1015,7 @@ function AccessUntilField({
   return (
     <div className="space-y-1.5 rounded-xl border border-slate-200 p-3">
       <label className="block text-xs font-bold uppercase tracking-wide text-slate-400">
-        Access until
+        Put on hold automatically after
         <input
           type="date"
           className={`${staffInput} font-sans text-sm font-normal normal-case tracking-normal`}
@@ -1020,7 +1028,7 @@ function AccessUntilField({
       <p className="text-xs text-slate-500">
         {current
           ? accessEnded(current)
-            ? `Their access ended on ${accessDate(current)}. Pick a later day to extend it.`
+            ? `Their access ended on ${accessDate(current)}, so they’re on hold. Pick a later day to extend it.`
             : `Their access ends after ${accessDate(current)}.`
           : 'No end date. For a set time (e.g. BunFest weekend), pick the last day.'}
       </p>
@@ -1061,8 +1069,10 @@ function MemberCard({
   tiersReady,
   certs,
   nameOf,
+  notice,
   onToggleCap,
-  onToggleStatus,
+  onPutOnHold,
+  onTurnBackOn,
   onSetLevel,
   onSetAccessUntil,
   onProfileSaved,
@@ -1082,8 +1092,11 @@ function MemberCard({
   /** Their certifications; null before update 28 (hidden). */
   certs: Cert[] | null
   nameOf: (userId: string | null) => string | null
+  /** A line to show on the card, e.g. just after they were turned back on. */
+  notice: string | null
   onToggleCap: (memId: string, key: Capability, grant: boolean) => Promise<void>
-  onToggleStatus: (member: Member) => Promise<void>
+  onPutOnHold: (member: Member) => Promise<string | null>
+  onTurnBackOn: (member: Member) => Promise<string | null>
   onSetLevel: (member: Member, level: StaffLevel) => Promise<string | null>
   onSetAccessUntil: (member: Member, until: string | null) => Promise<string | null>
   onProfileSaved: () => Promise<void>
@@ -1093,6 +1106,8 @@ function MemberCard({
   const { can } = useAuth()
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [statusBusy, setStatusBusy] = useState(false)
+  const [statusError, setStatusError] = useState<string | null>(null)
+  const [confirmHold, setConfirmHold] = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)
   const [pendingLevel, setPendingLevel] = useState<StaffLevel | null>(null)
   const [levelBusy, setLevelBusy] = useState(false)
@@ -1102,8 +1117,9 @@ function MemberCard({
   const everything = (l: StaffLevel) => isFullAccess(l) || (!tiersReady && l === 'board')
   const fullAccess = member.role === 'owner' || member.role === 'admin' || (levelsMode && everything(member.level))
   const name = memberName(member)
-  // Before update 28 admins and owners can't be switched off from here, as before.
-  const canSwitchOff = manage && !isSelf && (levelsMode || !fullAccess)
+  const onHold = isOnHold(member)
+  // Before update 28 admins and owners can't be put on hold from here, as before.
+  const canHold = manage && !isSelf && (levelsMode || !fullAccess)
   const cantShare = !fullAccess && manage && PERMISSION_CATALOG.some((p) => !can(p.key))
 
   const handleCap = async (key: Capability, grant: boolean) => {
@@ -1112,10 +1128,14 @@ function MemberCard({
     setBusyKey(null)
   }
 
-  const handleStatus = async () => {
+  // Both move the card to another part of the list, so this one unmounts on success.
+  const runStatus = async (action: (m: Member) => Promise<string | null>) => {
     setStatusBusy(true)
-    await onToggleStatus(member)
+    setStatusError(null)
+    const err = await action(member)
     setStatusBusy(false)
+    if (err) setStatusError(err)
+    else setConfirmHold(false)
   }
 
   const saveLevel = async () => {
@@ -1129,7 +1149,7 @@ function MemberCard({
   }
 
   return (
-    <Card className={`space-y-2.5 ${member.status === 'disabled' ? 'bg-slate-50/80' : ''}`}>
+    <Card className={`space-y-2.5 ${onHold ? 'bg-slate-50/80' : ''}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-start gap-3">
           <StaffAvatar name={name} photoUrl={member.photo_url} size={52} />
@@ -1160,7 +1180,7 @@ function MemberCard({
           <Badge tone={fullAccess ? 'blue' : 'slate'}>
             {levelsMode ? levelInfo(member.level).label : member.role[0].toUpperCase() + member.role.slice(1)}
           </Badge>
-          {member.status === 'disabled' && <Badge tone="orange">Switched off</Badge>}
+          {member.status === 'disabled' && <Badge tone="orange">On hold</Badge>}
           {member.access_until &&
             (accessEnded(member.access_until) ? (
               <Badge tone="slate">Access ended {accessDay(member.access_until)}</Badge>
@@ -1169,6 +1189,12 @@ function MemberCard({
             ))}
         </div>
       </div>
+
+      {notice && (
+        <p role="status" className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
+          {notice}
+        </p>
+      )}
 
       {editingProfile && (
         <ProfileForm
@@ -1292,20 +1318,55 @@ function MemberCard({
         />
       )}
 
-      {canSwitchOff && (
-        <button
-          type="button"
-          onClick={handleStatus}
-          disabled={statusBusy}
-          className={`min-h-[44px] rounded-full border px-4 text-xs font-bold transition disabled:opacity-60 ${
-            member.status === 'active'
-              ? 'border-red-200 text-red-600 hover:bg-red-50'
-              : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
-          }`}
-        >
-          {statusBusy ? '…' : member.status === 'active' ? 'Switch off access' : 'Switch back on'}
-        </button>
-      )}
+      {/* On hold: they keep their account, level and tasks; turning back on needs no new invite. */}
+      {canHold &&
+        (onHold ? (
+          <button
+            type="button"
+            onClick={() => void runStatus(onTurnBackOn)}
+            disabled={statusBusy}
+            className="min-h-[44px] rounded-full border border-emerald-200 px-4 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-60"
+          >
+            {statusBusy ? 'Turning back on…' : 'Turn back on'}
+          </button>
+        ) : confirmHold ? (
+          <div className="space-y-2 rounded-xl bg-brand-orange-50/70 p-3">
+            <p className="text-sm text-ink">
+              Put {name} on hold? They keep their account, level and tasks, but can’t use anything in the staff area until
+              someone turns them back on.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void runStatus(onPutOnHold)}
+                disabled={statusBusy}
+                className="min-h-[44px] flex-1 rounded-full bg-brand-orange-dark px-4 text-sm font-bold text-white disabled:opacity-60"
+              >
+                {statusBusy ? 'Putting on hold…' : 'Put on hold'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmHold(false)
+                  setStatusError(null)
+                }}
+                disabled={statusBusy}
+                className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmHold(true)}
+            className="min-h-[44px] rounded-full border border-brand-orange/40 px-4 text-xs font-bold text-brand-orange-dark transition hover:bg-brand-orange-50"
+          >
+            Put on hold
+          </button>
+        ))}
+      <FormError>{statusError}</FormError>
     </Card>
   )
 }
@@ -1455,20 +1516,41 @@ export default function StaffTeam() {
     })
   }, [])
 
-  const toggleStatus = useCallback(async (member: Member) => {
-    const nextStatus = member.status === 'active' ? 'disabled' : 'active'
-    const { error } = await supabase.rpc('set_membership_status', {
-      p_membership: member.id,
-      p_status: nextStatus,
-    })
-    if (error) {
-      setError(errMessage(error))
-      return
-    }
-    setMembers((prev) =>
-      prev.map((m) => (m.id === member.id ? { ...m, status: nextStatus } : m)),
-    )
+  // "<name> is back on…", shown on that person's card after turning them back on.
+  const [backOn, setBackOn] = useState<{ id: string; text: string } | null>(null)
+
+  const putOnHold = useCallback(async (member: Member): Promise<string | null> => {
+    const { error } = await supabase.rpc('set_membership_status', { p_membership: member.id, p_status: 'disabled' })
+    if (error) return errMessage(error)
+    setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, status: 'disabled' } : m)))
+    setBackOn((b) => (b?.id === member.id ? null : b))
+    return null
   }, [])
+
+  // On hold can mean put on hold, a passed end date, or both: undo whichever applies.
+  const turnBackOn = useCallback(async (member: Member): Promise<string | null> => {
+    if (member.status === 'disabled') {
+      const { error } = await supabase.rpc('set_membership_status', { p_membership: member.id, p_status: 'active' })
+      if (error) return errMessage(error)
+      setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, status: 'active' } : m)))
+    }
+    if (accessEnded(member.access_until)) {
+      const { error } = await supabase.rpc('set_member_access_until', { p_membership: member.id, p_until: null })
+      if (error) return errMessage(error)
+      setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, access_until: null } : m)))
+    }
+    setBackOn({ id: member.id, text: `${memberName(member)} is back on. Add an end date if their help is for a set time.` })
+    return null
+  }, [])
+
+  // Their card moves from "On hold" up to their level: bring it into view.
+  useEffect(() => {
+    if (!backOn) return
+    const t = window.setTimeout(() => {
+      document.getElementById(`member-${backOn.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+    return () => window.clearTimeout(t)
+  }, [backOn])
 
   const setLevel = useCallback(
     async (member: Member, level: StaffLevel): Promise<string | null> => {
@@ -1484,6 +1566,8 @@ export default function StaffTeam() {
     const { error } = await supabase.rpc('set_member_access_until', { p_membership: member.id, p_until: until })
     if (error) return errMessage(error)
     setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, access_until: until } : m)))
+    // An end date added after turning them back on answers the "back on" note.
+    if (until) setBackOn((b) => (b?.id === member.id ? null : b))
     return null
   }, [])
 
@@ -1500,10 +1584,17 @@ export default function StaffTeam() {
     [members],
   )
 
-  // Everyone, grouped by level (highest first); within a level, in the order they joined.
+  // Everyone not on hold, grouped by level (highest first); within a level, in the order they joined.
   const groups = useMemo(
     () =>
-      ALL_LEVELS.map((l) => ({ ...l, people: members.filter((m) => m.level === l.value) })).filter((g) => g.people.length > 0),
+      ALL_LEVELS.map((l) => ({ ...l, people: members.filter((m) => m.level === l.value && !isOnHold(m)) })).filter(
+        (g) => g.people.length > 0,
+      ),
+    [members],
+  )
+  // Everyone on hold, in one section at the bottom: highest level first.
+  const onHold = useMemo(
+    () => ALL_LEVELS.flatMap((l) => members.filter((m) => m.level === l.value && isOnHold(m))),
     [members],
   )
 
@@ -1512,7 +1603,7 @@ export default function StaffTeam() {
     if (!certMap) return []
     const out: { who: string; what: string; text: string; expired: boolean }[] = []
     for (const m of members) {
-      if (m.status !== 'active') continue
+      if (isOnHold(m)) continue
       for (const c of certMap.get(m.id) ?? []) {
         const e = certExpiry(c.expires_on)
         if (e.state === 'expired' || e.state === 'soon') {
@@ -1522,6 +1613,36 @@ export default function StaffTeam() {
     }
     return out.sort((a, b) => Number(b.expired) - Number(a.expired))
   }, [certMap, members])
+
+  const renderCard = (m: Member) => {
+    const isSelf = m.user_id === user?.id
+    // After update 28 the database says who may manage whom; before it, the old rule.
+    const manage = levelsReady ? Boolean(m.manageable) : canManage
+    return (
+      <div key={m.id} id={`member-${m.id}`} className="scroll-mt-24">
+        <MemberCard
+          orgId={orgId}
+          member={m}
+          isSelf={isSelf}
+          userId={user?.id ?? null}
+          grants={grantMap.get(m.id) ?? new Set()}
+          manage={manage}
+          levelChoices={levelChoices}
+          tiersReady={tiersReady}
+          certs={certMap ? (certMap.get(m.id) ?? []) : null}
+          nameOf={nameOf}
+          notice={backOn?.id === m.id ? backOn.text : null}
+          onProfileSaved={load}
+          onToggleCap={toggleCap}
+          onPutOnHold={putOnHold}
+          onTurnBackOn={turnBackOn}
+          onSetLevel={setLevel}
+          onSetAccessUntil={setAccessUntil}
+          onCertsChanged={load}
+        />
+      </div>
+    )
+  }
 
   if (!canInvite && !canManage) {
     return (
@@ -1577,49 +1698,41 @@ export default function StaffTeam() {
       {loading ? (
         <Spinner label="Loading team…" />
       ) : (
-        groups.map((g) => (
-          <section key={g.value} className="space-y-2">
-            <div className="px-1">
-              <p className="font-display text-base font-extrabold text-ink">
-                {levelsReady ? g.plural : g.value === 'founder' ? 'Owners' : g.value === 'board' ? 'Admins' : 'Staff'}{' '}
-                <span className="font-bold text-slate-400">({g.people.length})</span>
-              </p>
-              {levelsReady && (
-                <p className="text-xs text-slate-500">
-                  {!tiersReady && g.value === 'board' ? 'Every task' : g.blurb}
+        <>
+          {groups.map((g) => (
+            <section key={g.value} className="space-y-2">
+              <div className="px-1">
+                <p className="font-display text-base font-extrabold text-ink">
+                  {levelsReady ? g.plural : g.value === 'founder' ? 'Owners' : g.value === 'board' ? 'Admins' : 'Staff'}{' '}
+                  <span className="font-bold text-slate-400">({g.people.length})</span>
                 </p>
-              )}
-            </div>
-            <div className="grid grid-cols-1 gap-3">
-              {g.people.map((m) => {
-                const isSelf = m.user_id === user?.id
-                // After update 28 the database says who may manage whom; before it, the old rule.
-                const manage = levelsReady ? Boolean(m.manageable) : canManage
-                return (
-                  <MemberCard
-                    key={m.id}
-                    orgId={orgId}
-                    member={m}
-                    isSelf={isSelf}
-                    userId={user?.id ?? null}
-                    grants={grantMap.get(m.id) ?? new Set()}
-                    manage={manage}
-                    levelChoices={levelChoices}
-                    tiersReady={tiersReady}
-                    certs={certMap ? (certMap.get(m.id) ?? []) : null}
-                    nameOf={nameOf}
-                    onProfileSaved={load}
-                    onToggleCap={toggleCap}
-                    onToggleStatus={toggleStatus}
-                    onSetLevel={setLevel}
-                    onSetAccessUntil={setAccessUntil}
-                    onCertsChanged={load}
-                  />
-                )
-              })}
-            </div>
-          </section>
-        ))
+                {levelsReady && (
+                  <p className="text-xs text-slate-500">
+                    {!tiersReady && g.value === 'board' ? 'Every task' : g.blurb}
+                  </p>
+                )}
+              </div>
+              <div className="grid grid-cols-1 gap-3">{g.people.map(renderCard)}</div>
+            </section>
+          ))}
+
+          {/* Everyone on hold, out of their level groups: closed until tapped. */}
+          {onHold.length > 0 && (
+            <details className="group space-y-2">
+              <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 [&::-webkit-details-marker]:hidden">
+                <span className="font-display text-base font-extrabold text-slate-600">
+                  On hold <span className="font-bold text-slate-400">({onHold.length})</span>
+                </span>
+                <Icon name="chevron" size={16} className="rotate-90 text-slate-400 transition-transform group-open:-rotate-90" />
+              </summary>
+              <p className="px-1 pt-1 text-xs text-slate-500">
+                They keep their level and tasks. Turn someone back on when you need them again, e.g. for next year’s
+                BunFest.
+              </p>
+              <div className="grid grid-cols-1 gap-3 opacity-90">{onHold.map(renderCard)}</div>
+            </details>
+          )}
+        </>
       )}
 
       <p className="px-1 text-xs leading-relaxed text-slate-400">

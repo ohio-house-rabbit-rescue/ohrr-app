@@ -8,7 +8,7 @@ import { NotConfigured, Spinner, FormError, staffInput } from '../components/sta
 import { accessDate } from '../lib/staffLevels'
 
 export default function StaffJoin() {
-  const { configured, loading, user, membership, accessEndedOn, refresh } = useAuth()
+  const { configured, loading, user, membership, accessEndedOn, accessOnHold, refresh } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [params] = useSearchParams()
@@ -16,6 +16,7 @@ export default function StaffJoin() {
   const [code, setCode] = useState(params.get('code') ?? '')
   const [status, setStatus] = useState<'idle' | 'submitting'>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [checking, setChecking] = useState(false)
 
   if (!configured) return <NotConfigured />
   if (loading) return <Spinner />
@@ -23,6 +24,44 @@ export default function StaffJoin() {
   // with a QR code's ?code=… still filled in.
   if (!user) return <Navigate to="/staff/signin" replace state={{ from: location.pathname + location.search }} />
   if (membership) return <Navigate to="/staff" replace />
+
+  // On hold: someone put them on hold, or their end date has passed (update 30).
+  // They're still on the team with their level and tasks, and an invite code
+  // never switches anyone back on — so there's no code to ask for here.
+  if (accessOnHold || accessEndedOn) {
+    const checkAgain = async () => {
+      setChecking(true)
+      await refresh()
+      setChecking(false)
+    }
+    return (
+      <Screen className="space-y-5">
+        <div className="pt-2">
+          <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-orange-50 text-brand-orange">
+            <Icon name="clock" size={22} />
+          </span>
+          <h1 className="mt-3 font-display text-2xl font-black text-ink">On hold</h1>
+          <p className="mt-2 rounded-xl bg-brand-orange-50 px-3 py-2.5 text-sm font-semibold leading-relaxed text-ink" role="status">
+            {accessEndedOn
+              ? `Your access ended on ${accessDate(accessEndedOn)}. It’s on hold until someone turns it back on.`
+              : 'Your access is on hold. Ask whoever looks after your access (a lead, admin, founder or developer) to turn it back on.'}
+          </p>
+          {accessEndedOn && (
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              Whoever looks after your access (a lead, admin, founder or developer) can turn it back on.
+            </p>
+          )}
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            Signed in as <strong>{user.email}</strong>. You keep your account, level and tasks, so no new invite code is
+            needed.
+          </p>
+        </div>
+        <button type="button" onClick={() => void checkAgain()} disabled={checking} className={`${btn.primary} w-full disabled:opacity-60`}>
+          {checking ? 'Checking…' : 'Check again'}
+        </button>
+      </Screen>
+    )
+  }
 
   const onSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault()
@@ -46,16 +85,9 @@ export default function StaffJoin() {
           <Icon name="ticket" size={22} />
         </span>
         <h1 className="mt-3 font-display text-2xl font-black text-ink">Enter your invite code</h1>
-        {accessEndedOn ? (
-          // Access that ran until a date (update 30) — the database already refuses them.
-          <p className="mt-2 rounded-xl bg-brand-orange-50 px-3 py-2.5 text-sm font-semibold leading-relaxed text-ink" role="status">
-            Your access ended on {accessDate(accessEndedOn)}. Ask a founder or admin to extend it.
-          </p>
-        ) : (
-          <p className="mt-1 text-sm leading-relaxed text-slate-600">
-            Signed in as <strong>{user.email}</strong>. You’re not on the OHRR team yet — one more step.
-          </p>
-        )}
+        <p className="mt-1 text-sm leading-relaxed text-slate-600">
+          Signed in as <strong>{user.email}</strong>. You’re not on the OHRR team yet — one more step.
+        </p>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">
           Ask the person bringing you on (a founder, an admin or a lead) for an invite code — they make one in{' '}
           <strong>Staff → Team → Invite someone</strong> — and enter it here. It joins you to the team with the
