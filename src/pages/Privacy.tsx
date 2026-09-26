@@ -13,7 +13,9 @@
 //     turned off;
 //   - delete: My OHRR → Delete my account → the photos folder, then
 //     delete_own_account();
-//   - bookings, added events and phone reminders stay on the phone.
+//   - bookings, added events and phone reminders stay on the phone;
+//   - visits: Cloudflare Web Analytics (cookie-free), switched on by OHRR
+//     2026-09-26.
 import { Link } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { PageHeader, Screen } from '../components/ui'
@@ -43,8 +45,9 @@ export default function Privacy() {
 
         <P>
           <strong>The short version:</strong> you can use the app without an account. We do not sell personal
-          information, and there are no advertising networks or tracking cookies. If you make an account, it keeps what
-          you save so it's there on any phone you sign in on — and only you can see it.
+          information, and there are no advertising networks or tracking cookies. To count visits we use Cloudflare
+          Web Analytics, which uses no cookies and doesn't identify you. If you make an account, it keeps what you save
+          so it's there on any phone you sign in on — and only you can see it.
         </P>
 
         <H>Your OHRR account</H>
