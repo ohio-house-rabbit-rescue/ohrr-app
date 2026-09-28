@@ -29,6 +29,9 @@
   icons stay one colour. **Volunteer is orange** (OHRR: volunteers are the top need): solid orange tile on
   the app's Home (quick actions + Explore), orange "See the shifts" on the website's Home. Next, if OHRR
   wants it: redraw the 43 icons in the bunny's rounder line, keeping the same orange parts.
+  - **Same day, OHRR clarified:** on the website the drawing is the title band's *background* — big, faint,
+    top right, faded out below the upper third (`BandArt`), Home included (the bunny); and the **Volunteer
+    section's band is orange** (website `brand-orange-100`, app solid orange with dark text).
 - **Still to do (OHRR parked it 2026-09-28):** deploy the `ohrr-jobs` Edge Function (update 32's
   notifications and the daily RescueGroups check wait on it).
 
