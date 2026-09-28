@@ -20,6 +20,39 @@ import { useMarkSeen } from '../features/account/forYouCounts'
 
 const AGE_ORDER: AgeGroup[] = ['Baby', 'Young', 'Adult', 'Senior']
 
+/** One card in the list: a rabbit, or a bonded pair (`mate` set) shown together. */
+type Listing = { rabbit: Rabbit; mate?: Rabbit }
+
+/**
+ * A bonded pair is two listings that must go home together, each tagged
+ * "Adopted together with <name>". The list shows them as one card, named for
+ * both and opening the first (as the website does). A partner is matched only
+ * when exactly one other listing has that name, so two rabbits sharing a name
+ * can never pair the wrong bunnies; a tag on just one side is enough.
+ */
+function pairUp(list: Rabbit[]): Listing[] {
+  const mateOf = new Map<string, Rabbit>()
+  for (const r of list) {
+    const want = (r.tags ?? [])
+      .map((t) => /adopted together with (.+)/i.exec(t)?.[1]?.trim().toLowerCase())
+      .find(Boolean)
+    if (!want || mateOf.has(r.id)) continue
+    const hits = list.filter((o) => o.id !== r.id && o.name.trim().toLowerCase() === want)
+    if (hits.length !== 1 || mateOf.has(hits[0].id)) continue
+    mateOf.set(r.id, hits[0])
+    mateOf.set(hits[0].id, r)
+  }
+  const out: Listing[] = []
+  const shown = new Set<string>()
+  for (const r of list) {
+    if (shown.has(r.id)) continue
+    const mate = mateOf.get(r.id)
+    if (mate) shown.add(mate.id)
+    out.push({ rabbit: r, mate })
+  }
+  return out
+}
+
 export default function Adopt() {
   // Every listed rabbit is here, so "New for you" counts them as seen.
   useMarkSeen('adoptions')
@@ -44,10 +77,11 @@ export default function Adopt() {
     return ['All', ...AGE_ORDER.filter((a) => present.has(a))]
   }, [rabbits])
 
-  const list = useMemo(
-    () => (filter === 'All' ? rabbits ?? [] : (rabbits ?? []).filter((r) => r.age === filter)),
-    [rabbits, filter],
-  )
+  // Pair up before filtering, so a pair shows under either partner's age group.
+  const list = useMemo(() => {
+    const all = pairUp(rabbits ?? [])
+    return filter === 'All' ? all : all.filter((l) => l.rabbit.age === filter || l.mate?.age === filter)
+  }, [rabbits, filter])
 
   return (
     <>
@@ -104,8 +138,8 @@ export default function Adopt() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 gap-3">
-            {list.map((r) => (
-              <RabbitCard key={r.id} rabbit={r} />
+            {list.map((l) => (
+              <RabbitCard key={l.rabbit.id} rabbit={l.rabbit} mate={l.mate} />
             ))}
           </div>
         )}
@@ -155,27 +189,33 @@ export default function Adopt() {
   )
 }
 
-function RabbitCard({ rabbit: r }: { rabbit: Rabbit }) {
+// "Adult", or "Female & Male" when a pair differ.
+function both(a?: string, b?: string): string | undefined {
+  return a && b && a !== b ? `${a} & ${b}` : a || b
+}
+
+function RabbitCard({ rabbit: r, mate }: { rabbit: Rabbit; mate?: Rabbit }) {
+  const name = mate ? `${r.name} & ${mate.name}` : r.name
+  const status = [r, mate].find((x) => x?.status && !/available|adoptable/i.test(x.status))?.status
   return (
     <Link
       to={`/adopt/${r.id}`}
       className="group flex gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:translate-y-0"
     >
+      {/* One photo, as on the website: a pair's first photo on RescueGroups is already the two together. */}
       <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl">
-        <RabbitPhoto name={r.name} photo={r.photo} />
+        <RabbitPhoto name={mate ? `${r.name} and ${mate.name}` : r.name} photo={r.photo ?? mate?.photo} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <h3 className="truncate font-display text-base font-extrabold text-ink">{r.name}</h3>
-          {r.bonded && <Badge tone="orange">Pair</Badge>}
-          {r.status && !/available|adoptable/i.test(r.status) && (
-            <Badge tone="slate">{r.status}</Badge>
-          )}
+          <h3 className="truncate font-display text-base font-extrabold text-ink">{name}</h3>
+          {(r.bonded || mate) && <Badge tone="orange">Pair</Badge>}
+          {status && <Badge tone="slate">{status}</Badge>}
         </div>
         <div className="mt-1 flex flex-wrap gap-1.5">
-          {r.age && <Badge tone="slate">{r.age}</Badge>}
-          {r.sex && <Badge tone="slate">{r.sex}</Badge>}
-          {r.breed && <Badge tone="slate">{r.breed}</Badge>}
+          {both(r.age, mate?.age) && <Badge tone="slate">{both(r.age, mate?.age)}</Badge>}
+          {both(r.sex, mate?.sex) && <Badge tone="slate">{both(r.sex, mate?.sex)}</Badge>}
+          {both(r.breed, mate?.breed) && <Badge tone="slate">{both(r.breed, mate?.breed)}</Badge>}
         </div>
         <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-slate-500">{teaser(r)}</p>
       </div>

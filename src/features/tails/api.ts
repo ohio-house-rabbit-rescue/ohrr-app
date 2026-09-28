@@ -3,11 +3,12 @@
 // Stories arrive through the app's "Share your Happy Tail" form and land in the
 // Inbox; publishing one turns it into a `happy_tails` row that the public page
 // reads (supabase/migrations/20260922130000_tails_uploads_profile.sql). Until
-// OHRR publishes the first one, the page keeps showing the bundled samples.
+// OHRR publishes the first one, the page shows one story labelled "Example"
+// (data/tails.ts), which goes away by itself with the first real one.
 import { useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
 import type { Database } from '../../lib/database.types'
-import { tails as seedTails, type Tail, type TailStatus } from '../../data/tails'
+import { exampleTail, type Tail, type TailStatus } from '../../data/tails'
 
 export type TailRow = Database['public']['Tables']['happy_tails']['Row']
 export type TailInput = Database['public']['Tables']['happy_tails']['Insert'] & { id?: string }
@@ -32,9 +33,16 @@ export interface TailsResult {
   loading: boolean
 }
 
-/** Published stories, falling back to the bundled samples. */
+/**
+ * Published stories; with none published, the one labelled example (source
+ * 'seed'). Empty while loading, so the example never flashes up before a real one.
+ */
 export function useHappyTails(): TailsResult {
-  const [state, setState] = useState<TailsResult>({ items: seedTails, source: 'seed', loading: isSupabaseConfigured })
+  const [state, setState] = useState<TailsResult>(() =>
+    isSupabaseConfigured
+      ? { items: [], source: 'seed', loading: true }
+      : { items: [exampleTail], source: 'seed', loading: false },
+  )
   useEffect(() => {
     if (!isSupabaseConfigured) return
     let active = true
@@ -47,7 +55,7 @@ export function useHappyTails(): TailsResult {
       .then(({ data, error }) => {
         if (!active) return
         if (error || !data || data.length === 0) {
-          setState({ items: seedTails, source: 'seed', loading: false })
+          setState({ items: [exampleTail], source: 'seed', loading: false })
           return
         }
         setState({ items: data.map(rowToTail), source: 'live', loading: false })

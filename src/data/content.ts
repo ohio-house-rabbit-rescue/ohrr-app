@@ -56,15 +56,12 @@ export const OHRR_QUICK_ACTIONS: QuickAction[] = [
   { to: '/events', title: 'Events', subtitle: 'What’s coming up', icon: 'calendar' },
 ]
 
+// Home "Explore": only the places the home screen doesn't already open. Adopt,
+// Volunteer, Events and Support are both a quick action and a tab, Find a Vet
+// and Found a Rabbit are quick actions, and Rabbit Care is the Learn tab — so
+// they're left out here (persona audit, 2026-09-28: Adopt showed four times).
 export const OHRR_HUB: HubItem[] = [
-  { to: '/adopt', title: 'Adopt a Rabbit', subtitle: 'Meet adoptable buns & how adopting works', icon: 'heart' },
   { to: '/tails', title: 'Happy Tails', subtitle: 'See where adopted bunnies are now', icon: 'sparkles' },
-  { to: '/learn', title: 'Rabbit Care', subtitle: 'Diet, litter, bonding, toys & more', icon: 'book' },
-  { to: '/vets', title: 'Find a Vet', subtitle: 'Rabbit-savvy vets across Ohio', icon: 'vet' },
-  { to: '/found', title: 'Found a Rabbit?', subtitle: 'Strays, field rescue & surrender', icon: 'mappin' },
-  { to: '/volunteer', title: 'Volunteer', subtitle: 'Socialization, Buncare, vet runs & rescue', icon: 'users', tone: 'action' },
-  { to: '/events', title: 'Events', subtitle: 'Midwest BunFest & OHRR hoppenings', icon: 'calendar' },
-  { to: '/support', title: 'Support OHRR', subtitle: 'Donate & every way to give', icon: 'gift', tone: 'orange' },
   { to: '/partners', title: 'Our Partners', subtitle: 'The businesses behind OHRR & BunFest', icon: 'award' },
   { to: '/hop-shop', title: 'Hop Shop', subtitle: 'Supplies & OHRR merch at the center', icon: 'bag' },
   { to: '/services', title: 'Bunny Services', subtitle: 'Bonding sessions & vet clinic days', icon: 'calendar' },

@@ -10,7 +10,8 @@
 // "I want to LEARN" pages, captured 2026-09-17. Bodies are light markdown:
 // blank-line paragraphs, `## ` headings, `- ` bullets; bare URLs are tappable.
 // The three articles OHRR links out to (House Rabbit Society, Small Pet Select,
-// Binkybunny.com) are summarized with a link rather than copied.
+// Binkybunny.com) are summarized with a link rather than copied — except the
+// cost article, now in OHRR's own words (2026-09-28).
 
 export const CARE_DISCLAIMER =
   'General guidance from Ohio House Rabbit Rescue — always consult a rabbit-savvy vet for medical concerns.'
@@ -398,19 +399,46 @@ You are the best toy your rabbit can have. Spend time down on the floor with you
     slug: 'cost-of-a-house-rabbit',
     title: 'How much does having a house rabbit really cost?',
     icon: 'info',
-    summary: 'Binkybunny.com breaks down the real cost of a house rabbit.',
+    // OHRR's own words (2026-09-28), replacing the link to Binkybunny.com: OHRR's
+    // fees and policy, prices from the Missouri House Rabbit Society (2022) and
+    // money-saving ideas from the House Rabbit Society, credited in the text.
+    summary: 'What a rabbit really costs — setting up, food and litter, and vet care over 8–12 years.',
     sort_order: 10,
-    source: 'https://www.binkybunny.com/BUNNYINFO/tabid/53/CategoryID/4/PID/940/Default.aspx',
     tip: 'Rabbits live 8–12 years, and vet care for an exotic pet is the biggest variable — budget for a yearly wellness check and an emergency fund.',
-    body: `OHRR points prospective bunny parents to Binkybunny.com, which breaks down what having a house rabbit really costs — the one-time setup and the ongoing supplies and care that add up over a rabbit’s 8–12-year life.
+    body: `A rabbit is not a starter pet, and not a small expense. Our buns live 8–12 years, and a happy house rabbit needs room to run, fresh food every day and a vet who knows rabbits — for every one of those years. We would much rather you know the real cost now than find out after you bring a bunny home.
 
-Before you adopt, plan for the essentials OHRR requires of every home: a minimum 4 ft × 4 ft indoor space (an exercise pen), a litter box and paper-based litter, unlimited grass hay, limited high-quality timothy pellets, a daily fresh salad, and yearly wellness checks with a rabbit-experienced vet. Two bonded rabbits are generally not more expensive than one — pellets, hay, greens and litter for two put little additional strain on the budget; the exception is medical care.
+## Adopting from OHRR
+Our adoption fee is $60 for a single rabbit and $75 for a bonded pair (Adoption Policy, revised January 2022). Every OHRR rabbit comes to you already spayed or neutered — one of the biggest vet bills a new bunny parent would otherwise face.
 
-OHRR’s current adoption fees are $60 for a single rabbit and $75 for a pair (Adoption Policy, revised January 2022).
+## Setting up, once
+- An exercise pen for the 4 ft × 4 ft indoor space we ask every home to have: $40 to $100
+- A litter box: $5 to $10
+- A water crock and a food crock: $6 to $10 each
+- Throw rugs, so your bun has grip on slippery floors: $5 to $15
+- Toys: $3 to $16 each (cardboard boxes are free, and much loved)
+- Bunny-proofing, such as cord covers: $10 to $45
+- Nail clippers: about $5
 
-Read the Binkybunny.com breakdown here:
+## Food and litter, all the time
+- Unlimited grass hay, the biggest part of your bunny's diet: $15 to $75, depending on how much you buy at once
+- High-quality timothy pellets, in small amounts: $8 to $15 a bag
+- A fresh salad every day: $10 to $25 a week
+- Paper-based litter: $8 to $20
 
-https://www.binkybunny.com/BUNNYINFO/tabid/53/CategoryID/4/PID/940/Default.aspx`,
+## Vet care
+Plan on a wellness check with a rabbit-savvy vet every year — twice a year once your bunny is 6 or older. A visit runs about $100. Rabbits hide illness well, and something like GI stasis can turn into an emergency overnight, so set aside an emergency fund or look into pet insurance that covers rabbits.
+
+## Two cost about the same as one
+Pellets, hay, greens and litter for two bonded rabbits put little extra strain on the budget. The exception is medical care.
+
+## Ways to keep costs down
+- Buy hay in bulk, from a local feed store or from our Hop Shop at the Adoption Center
+- Use a rabbit-safe, paper-based litter, and never clay litter
+- Look for a secondhand exercise pen or carrier
+- Make toys from cardboard boxes and paper-towel rolls
+- Keep up with yearly vet visits: catching a problem early costs far less than an emergency
+
+The supply and vet prices above come from our friends at the Missouri House Rabbit Society (2022), and the money-saving ideas from the House Rabbit Society. Prices vary by store and year. Questions before you adopt? Email us at ohrrcontact@ohiohouserabbitrescue.org — we're happy to help you plan.`,
   },
   {
     slug: 'bunny-living-space',

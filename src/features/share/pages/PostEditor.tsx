@@ -15,6 +15,7 @@ import { pickPhoto, type PhotoSource } from '../../../native/camera'
 import { HASHTAGS } from '../templates'
 import {
   APPROVE_CAP,
+  DEFAULT_PLATFORMS,
   PLATFORMS,
   STATUS_LABEL,
   createPost,
@@ -28,7 +29,7 @@ import {
   type SocialPost,
 } from '../queue'
 
-const empty: PostDraft = { title: '', caption: '', image_url: null, platforms: ['instagram', 'facebook'], scheduled_for: null, notes: '' }
+const empty: PostDraft = { title: '', caption: '', image_url: null, platforms: DEFAULT_PLATFORMS, scheduled_for: null, notes: '' }
 
 // Change these on an approved post and the database sends it back for approval.
 const wordsKey = (d: Pick<PostDraft, 'title' | 'caption' | 'image_url' | 'platforms'>) => JSON.stringify([d.title.trim(), d.caption, d.image_url, d.platforms])

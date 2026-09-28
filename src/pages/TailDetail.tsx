@@ -1,7 +1,8 @@
 import { Link, useParams } from 'react-router-dom'
 import { useHappyTails } from '../features/tails/api'
-import { BunnyPhoto, StatusPill, FollowButton } from '../components/tailbits'
-import { Screen, Card, Badge, btn } from '../components/ui'
+import { EXAMPLE_TAIL_NOTE, EXAMPLE_TAIL_PHOTO_NOTE } from '../data/tails'
+import { BunnyPhoto, StatusPill, FollowButton, ExampleBadge, withFamily } from '../components/tailbits'
+import { Screen, Card, Badge, SampleNote, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 import ShareButton, { appLink } from '../components/ShareButton'
 
@@ -47,6 +48,7 @@ export default function TailDetail() {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-display text-2xl font-black text-ink">{t.bunny}</h1>
+              {t.example && <ExampleBadge />}
               {t.bonded && <Badge tone="slate">Bonded pair</Badge>}
             </div>
             <div className="mt-2">
@@ -54,28 +56,37 @@ export default function TailDetail() {
             </div>
             {(t.family || t.since) && (
               <p className="mt-2 text-sm font-semibold text-slate-500">
-                {[t.family && `With the ${t.family} family`, t.since].filter(Boolean).join(' · ')}
+                {[t.family && withFamily(t.family), t.since].filter(Boolean).join(' · ')}
               </p>
             )}
           </div>
-          <FollowButton id={t.id} />
+          {!t.example && <FollowButton id={t.id} />}
         </div>
+
+        {t.example && (
+          <SampleNote>
+            {EXAMPLE_TAIL_NOTE} {EXAMPLE_TAIL_PHOTO_NOTE}
+          </SampleNote>
+        )}
 
         <p className="text-sm leading-relaxed text-slate-700">{t.summary}</p>
 
-        <ShareButton
-          label={`Share ${t.bunny}’s story`}
-          filename={`ohrr-happy-tail-${t.bunny.toLowerCase().replace(/\s+/g, '-')}.png`}
-          caption={`${t.bunny}'s happy tail, from Ohio House Rabbit Rescue. ${t.summary}`}
-          card={{
-            kicker: 'Happy Tail',
-            title: t.bunny,
-            subtitle: [t.family && `With the ${t.family} family`, t.since].filter(Boolean).join(' · ') || t.summary,
-            photoUrl: t.photo,
-            link: appLink(`/tails/${t.id}`),
-            cta: 'Adopt · foster · give',
-          }}
-        />
+        {/* The example is never shared as a card: it isn't a real adoption */}
+        {!t.example && (
+          <ShareButton
+            label={`Share ${t.bunny}’s story`}
+            filename={`ohrr-happy-tail-${t.bunny.toLowerCase().replace(/\s+/g, '-')}.png`}
+            caption={`${t.bunny}'s happy tail, from Ohio House Rabbit Rescue. ${t.summary}`}
+            card={{
+              kicker: 'Happy Tail',
+              title: t.bunny,
+              subtitle: [t.family && withFamily(t.family), t.since].filter(Boolean).join(' · ') || t.summary,
+              photoUrl: t.photo,
+              link: appLink(`/tails/${t.id}`),
+              cta: 'Adopt · foster · give',
+            }}
+          />
+        )}
 
         {/* Looking-for-a-home bunnies get a path straight to adoption */}
         {t.status === 'looking' && (
@@ -107,12 +118,18 @@ export default function TailDetail() {
                       <StatusPill status={e.status} />
                     </div>
                   )}
-                  <p className="mt-1 text-sm leading-relaxed text-slate-700">{e.text}</p>
+                  <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-slate-700">{e.text}</p>
                 </div>
               </li>
             ))}
           </ul>
         </Card>
+
+        {t.example && (
+          <Link to="/tails/share" className={`${btn.blue} w-full`}>
+            Share your bunny’s story <Icon name="chevron" size={16} />
+          </Link>
+        )}
       </Screen>
     </div>
   )

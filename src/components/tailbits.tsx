@@ -48,6 +48,18 @@ export function StatusPill({ status, className = '' }: { status: TailStatus; cla
   )
 }
 
+// "Example" chip for the built-in example story (data/tails.ts) — the same amber
+// as the sample-data note, so it never reads as a real adoption.
+export function ExampleBadge({ className = '' }: { className?: string }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-900 ${className}`}
+    >
+      Example
+    </span>
+  )
+}
+
 // Account-free follow toggle. `compact` renders a round icon button for cards;
 // otherwise a labelled pill for detail pages.
 export function FollowButton({ id, compact = false }: { id: string; compact?: boolean }) {
@@ -92,4 +104,10 @@ export function FollowButton({ id, compact = false }: { id: string; compact?: bo
       <Icon name="heart" size={16} /> {on ? 'Following' : 'Follow'}
     </button>
   )
+}
+
+/** "With the Patel family", whether staff typed "Patel" or "Patel family". */
+export function withFamily(name: string): string {
+  const n = name.trim().replace(/^the\s+/i, '')
+  return /\bfamily$/i.test(n) ? `With the ${n}` : `With the ${n} family`
 }

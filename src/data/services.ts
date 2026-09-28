@@ -16,5 +16,5 @@ export const bonding = {
 export const clinicInfo = {
   title: 'Mobile Vet Clinic Days',
   blurb:
-    'A rabbit-savvy vet visits OHRR on select weekends for nail trims, wellness checks, and microchipping — by appointment. Reserve a time below and bring your bunny in.',
+    'A rabbit-savvy vet is at the OHRR Adoption Center on Saturdays, noon to 4 PM, for nail trims, wellness checks and microchipping — by appointment. Pick a 15-minute time and bring your bunny in.',
 }

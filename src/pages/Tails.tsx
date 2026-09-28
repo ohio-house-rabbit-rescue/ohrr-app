@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { type Tail } from '../data/tails'
+import { EXAMPLE_TAIL_NOTE, type Tail } from '../data/tails'
 import { useHappyTails } from '../features/tails/api'
 import { useFollowing } from '../lib/follow'
-import { BunnyPhoto, StatusPill, FollowButton } from '../components/tailbits'
+import { BunnyPhoto, StatusPill, FollowButton, ExampleBadge, withFamily } from '../components/tailbits'
 import { PageHeader, Screen, Card, Badge, SampleNote, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
 import PresentedBy from '../features/sponsors/PresentedBy'
@@ -14,7 +14,9 @@ type Filter = (typeof FILTERS)[number]
 export default function Tails() {
   const [filter, setFilter] = useState<Filter>('All')
   const following = useFollowing()
-  const { items: tails, source } = useHappyTails()
+  const { items: tails, source, loading } = useHappyTails()
+  // Nothing published yet: the page shows the one labelled example instead.
+  const example = source === 'seed'
 
   const list = useMemo(() => {
     switch (filter) {
@@ -38,16 +40,12 @@ export default function Tails() {
       />
       <Screen className="space-y-4">
         <PresentedBy surface="happy-tails" />
-        {source === 'seed' && (
-          <SampleNote>
-            These are sample stories. Real Happy Tails appear here as soon as OHRR publishes one —
-            adopted from OHRR? Share yours below.
-          </SampleNote>
-        )}
+        {example && !loading && <SampleNote>{EXAMPLE_TAIL_NOTE}</SampleNote>}
 
-        <SegTabs options={FILTERS} value={filter} onChange={setFilter} />
+        {/* Filters only mean something once there are real stories */}
+        {!example && <SegTabs options={FILTERS} value={filter} onChange={setFilter} />}
 
-        {list.length === 0 ? (
+        {loading ? null : list.length === 0 ? (
           <Card className="text-center">
             <p className="py-2 text-sm text-slate-600">
               {filter === 'Following'
@@ -93,6 +91,7 @@ function TailCard({ tail: t }: { tail: Tail }) {
             <h3 className="truncate font-display text-base font-extrabold text-ink group-hover:text-brand-blue-dark">
               {t.bunny}
             </h3>
+            {t.example && <ExampleBadge className="shrink-0" />}
             {t.bonded && <Badge tone="slate">Pair</Badge>}
           </div>
           <div className="mt-1">
@@ -101,12 +100,13 @@ function TailCard({ tail: t }: { tail: Tail }) {
           <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-slate-500">{t.summary}</p>
           {(t.family || t.since) && (
             <p className="mt-1 truncate text-xs font-semibold text-slate-400">
-              {[t.family && `With the ${t.family} family`, t.since].filter(Boolean).join(' · ')}
+              {[t.family && withFamily(t.family), t.since].filter(Boolean).join(' · ')}
             </p>
           )}
         </div>
       </Link>
-      <FollowButton id={t.id} compact />
+      {/* Nothing to follow on the example */}
+      {!t.example && <FollowButton id={t.id} compact />}
     </div>
   )
 }

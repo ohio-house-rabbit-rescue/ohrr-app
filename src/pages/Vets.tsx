@@ -100,9 +100,11 @@ export default function Vets() {
   const rhdv2 = vets.filter((v) => v.givesRhdv2)
 
   // BunFest's rabbit rule links here with ?rhdv2=1 — go straight to the answer.
+  // The answer sits below the vet list, so scroll again once the live list
+  // replaces the bundled one (its length moves the section).
   useEffect(() => {
     if (params.get('rhdv2') && rhdv2.length > 0) rhdv2Ref.current?.scrollIntoView({ block: 'start' })
-  }, [params, rhdv2.length])
+  }, [params, rhdv2.length, source])
 
   // Regions that actually have vets (live data may add new ones — tolerate them).
   const regions = useMemo(() => {
@@ -150,31 +152,6 @@ export default function Vets() {
           <Icon name="chevron" size={18} className="shrink-0 text-red-300" />
         </a>
 
-        {/* The question BunFest's rabbit rule sends people to answer */}
-        {rhdv2.length > 0 && (
-          <section ref={rhdv2Ref} className="scroll-mt-24 space-y-2.5">
-            <SectionLabel>Where to get the RHDV2 vaccine</SectionLabel>
-            <p className="px-1 text-sm leading-relaxed text-slate-600">
-              Any rabbit coming to Midwest BunFest needs the RHDV2 vaccine and a current annual booster.
-              These practices give it; your own vet may too.
-            </p>
-            {rhdv2.map((v) => (
-              <Card key={v.id} className="border-green-200">
-                <h3 className="font-display text-base font-extrabold leading-tight text-ink">{v.name}</h3>
-                {v.rhdv2Note && <p className="mt-1 text-sm leading-relaxed text-slate-700">{v.rhdv2Note}</p>}
-                <div className="mt-2 space-y-1.5">
-                  {v.phone && <PhoneLink value={v.phone} />}
-                  {v.email && (
-                    <a href={`mailto:${v.email}`} className="flex items-center gap-2 break-all text-sm font-semibold text-brand-blue">
-                      <Icon name="mail" size={15} className="shrink-0" /> {v.email}
-                    </a>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </section>
-        )}
-
         <SegTabs options={regions} value={region} onChange={setRegion} wrap />
 
         {emergencies.length > 0 && (
@@ -202,6 +179,33 @@ export default function Vets() {
             </div>
           )}
         </section>
+
+        {/* The question BunFest's rabbit rule sends people to answer (?rhdv2=1 scrolls
+            here). Below the list, not above it: the emergency card and the vets come
+            first, and each practice that gives the vaccine carries a badge in the list. */}
+        {rhdv2.length > 0 && (
+          <section ref={rhdv2Ref} className="scroll-mt-24 space-y-2.5">
+            <SectionLabel>Where to get the RHDV2 vaccine</SectionLabel>
+            <p className="px-1 text-sm leading-relaxed text-slate-600">
+              Any rabbit coming to Midwest BunFest needs the RHDV2 vaccine and a current annual booster.
+              These practices give it; your own vet may too.
+            </p>
+            {rhdv2.map((v) => (
+              <Card key={v.id} className="border-green-200">
+                <h3 className="font-display text-base font-extrabold leading-tight text-ink">{v.name}</h3>
+                {v.rhdv2Note && <p className="mt-1 text-sm leading-relaxed text-slate-700">{v.rhdv2Note}</p>}
+                <div className="mt-2 space-y-1.5">
+                  {v.phone && <PhoneLink value={v.phone} />}
+                  {v.email && (
+                    <a href={`mailto:${v.email}`} className="flex items-center gap-2 break-all text-sm font-semibold text-brand-blue">
+                      <Icon name="mail" size={15} className="shrink-0" /> {v.email}
+                    </a>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </section>
+        )}
 
         {lowCost.length > 0 && (
           <section className="space-y-2.5">

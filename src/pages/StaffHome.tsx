@@ -10,6 +10,7 @@ import { DeleteAccount } from '../components/DeleteAccount'
 import ExpiringNotice from '../features/sponsors/ExpiringNotice'
 import { ApplicationsNotice, CertificatesNotice } from '../features/volunteers/StaffNotices'
 import { PostsToApproveNotice } from '../features/share/PostsToApproveNotice'
+import { EasterCampaignNotice } from '../features/share/EasterCampaignCard'
 import { isFullAccess, levelInfo, useMyLevel } from '../lib/staffLevels'
 
 const roleBadge: Record<string, { label: string; tone: 'blue' | 'orange' | 'slate' }> = {
@@ -109,6 +110,8 @@ export default function StaffHome() {
       {(canManageVolunteer || canBookings) && <ApplicationsNotice orgId={membership.orgId} />}
       {can('volunteers.certificates') && <CertificatesNotice orgId={membership.orgId} />}
       {can('social.approve') && <PostsToApproveNotice />}
+      {/* In the weeks before Easter, until this year's Easter posts are planned (Staff → Posts) */}
+      {can('announcements.post') && <EasterCampaignNotice />}
 
       {showTiles ? (
         <div className="space-y-3">

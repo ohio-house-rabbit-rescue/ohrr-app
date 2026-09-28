@@ -26,6 +26,8 @@ export const PLATFORMS: { value: Platform; label: string }[] = [
   { value: 'tiktok', label: 'TikTok' },
   { value: 'other', label: 'Other' },
 ]
+/** Where a new post goes unless someone changes it (the database's default too). */
+export const DEFAULT_PLATFORMS: Platform[] = ['instagram', 'facebook']
 
 export interface SocialPost {
   id: string

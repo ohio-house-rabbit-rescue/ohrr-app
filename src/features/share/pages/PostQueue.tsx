@@ -3,7 +3,8 @@
 // with a note (update 26); the one person with posting rights releases the
 // approved ones: tap Share (the phone's share sheet → Instagram / Facebook /
 // TikTok), then "Mark as posted". Approvers see what's waiting first; after
-// that, ready-today posts float to the top.
+// that, ready-today posts float to the top. Under the drafts, the Easter
+// campaign card (EasterCampaignCard.tsx) plans each spring's Easter posts.
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
@@ -28,6 +29,8 @@ import {
   type PostStatus,
   type SocialPost,
 } from '../queue'
+import { easterCampaign } from '../easterCampaign'
+import { EasterCampaignCard, EasterNudge } from '../EasterCampaignCard'
 
 /** Resolves to the error text, or null when it worked (the list has reloaded). */
 type OnStatus = (p: SocialPost, s: PostStatus, opts?: { postedTo?: Platform[]; note?: string }) => Promise<string | null>
@@ -77,6 +80,8 @@ export default function PostQueue() {
       posted: all.filter((p) => p.status === 'posted').sort((a, b) => (b.posted_at ?? '').localeCompare(a.posted_at ?? '')).slice(0, 30),
     }
   }, [posts, me])
+  // This Easter's campaign posts, found in the list by their `source` marker.
+  const campaign = useMemo(() => (posts ? easterCampaign(posts) : null), [posts])
 
   if (!canDraft && !canPublish && !canApprove) return <Screen><p className="text-sm text-slate-600">You don’t have access to the post queue.</p></Screen>
 
@@ -116,6 +121,7 @@ export default function PostQueue() {
           Write a post and send it for approval. Someone other than the writer approves it, then {canPublish ? 'you release it' : 'the person with posting rights releases it'}.
         </p>
       </div>
+      {canDraft && campaign && <EasterNudge campaign={campaign} />}
       {canDraft && (
         <div className="grid grid-cols-2 gap-2">
           <Link to="/staff/posts/new" className={`${btn.primary} w-full`}>
@@ -140,6 +146,7 @@ export default function PostQueue() {
       <Group title="Drafts" count={groups.drafts.length} empty="No drafts — add one above.">
         {groups.drafts.map((p) => card(p))}
       </Group>
+      {campaign && <EasterCampaignCard campaign={campaign} canDraft={canDraft} onPlanned={load} />}
       <div>
         <button type="button" onClick={() => setShowPosted((v) => !v)} className="text-sm font-bold text-brand-blue">
           {showPosted ? 'Hide' : 'Show'} posted ({groups.posted.length})

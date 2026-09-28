@@ -1,12 +1,11 @@
 // A simple in-app global search index, compiled from the app's content so the
 // header search can find screens, rabbits, vendors, care articles, vets, events,
-// tails, volunteer roles, giving options, and BunFest sessions.
+// volunteer roles, giving options, and BunFest sessions.
 import { sampleRabbits } from './adoptables'
 import { vendors } from './vendors'
 import { seedCareArticles } from './careArticles'
 import { seedVets } from './vets'
 import { seedEvents } from './events'
-import { tails } from './tails'
 import { volunteerWays, otherVolunteerNeeds } from './volunteer'
 import { givingOptions } from './giving'
 import { sessions } from './sessions'
@@ -91,7 +90,8 @@ export const searchIndex: SearchItem[] = [
   ),
   ...seedEvents.map((e) => mk(e.title, [e.venue, e.city].filter(Boolean).join(' · '), '/events', 'Events', `${e.theme ?? ''} ${e.summary ?? ''}`)),
   ...vendors.map((v) => mk(v.name, v.category, `/bunfest/vendors/${v.id}`, 'BunFest vendors', v.description)),
-  ...tails.map((t) => mk(t.bunny, 'Happy Tail', `/tails/${t.id}`, 'Happy Tails', t.summary)),
+  // Happy Tails stories aren't listed one by one: they live in the database, and
+  // the bundled one is only an example (the "Happy Tails" screen above finds the page).
   ...volunteerWays.map((w) => mk(w.title, w.tagline, `/volunteer/${w.slug}`, 'Volunteer', w.requirements.join(' '))),
   ...otherVolunteerNeeds.map((n) => mk(n, 'Other volunteer need', '/volunteer', 'Volunteer', '')),
   ...givingOptions.map((g) => mk(g.title, g.description, '/support', 'Ways to give', '')),

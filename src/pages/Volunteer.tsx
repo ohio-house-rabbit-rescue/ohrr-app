@@ -50,7 +50,7 @@ export default function Volunteer() {
           <ActionCard
             to="/volunteer/apply"
             title="Apply to volunteer"
-            subtitle="New? Start here — OHRR reads every application"
+            subtitle="New? Start here — OHRR reads every application as it comes in"
             icon="users"
             tone="orange"
           />
@@ -59,6 +59,13 @@ export default function Volunteer() {
           <p className="px-1 text-sm leading-relaxed text-slate-600">
             Once you’re approved, pick a shift with the same email and you’re booked, no account needed. Your hours are
             recorded when you check in, and your volunteer page has them, with a signed hours letter whenever you need one.
+          </p>
+          <p className="px-1 text-sm leading-relaxed text-slate-600">
+            OHRR replies to applications as quickly as we can. Coming as a family? Volunteers must be at least 6 years old,
+            and children 10 and under come with an adult. Questions?{' '}
+            <a href={`mailto:${OHRR_CONTACT_EMAIL}`} className="font-semibold text-brand-blue">
+              Email {OHRR_CONTACT_EMAIL}
+            </a>
           </p>
         </div>
         <PresentedBy surface="volunteer" />

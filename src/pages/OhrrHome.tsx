@@ -179,7 +179,7 @@ export default function OhrrHome() {
 
         <ThinkingAboutARabbit />
 
-        {/* OHRR sections */}
+        {/* OHRR sections that aren't already a quick action or a tab (see OHRR_HUB) */}
         <div className="space-y-2.5">
           <SectionLabel>Explore</SectionLabel>
           <div className="space-y-2.5">
