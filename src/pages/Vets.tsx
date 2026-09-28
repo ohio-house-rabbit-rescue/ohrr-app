@@ -124,7 +124,7 @@ export default function Vets() {
   return (
     <>
       <PageHeader
-        icon="phone"
+        icon="vet"
         title="Find a rabbit-savvy vet"
         subtitle="Rabbits are exotic pets — these vets know bunnies. Tap to call, tap the address for directions."
       />

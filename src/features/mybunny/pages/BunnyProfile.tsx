@@ -141,13 +141,13 @@ export default function BunnyProfile() {
             tone="orange"
           />
           {VET_DIRECTORY.to ? (
-            <ActionCard to={VET_DIRECTORY.to} title="Find a rabbit-savvy vet" subtitle="OHRR’s vet directory" icon="phone" />
+            <ActionCard to={VET_DIRECTORY.to} title="Find a rabbit-savvy vet" subtitle="OHRR’s vet directory" icon="vet" />
           ) : (
             <ExternalCard
               href={VET_DIRECTORY.href}
               title="Find a rabbit-savvy vet"
               description="OHRR’s vet directory"
-              icon="phone"
+              icon="vet"
             />
           )}
           <ActionCard

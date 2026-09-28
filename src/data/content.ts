@@ -47,7 +47,7 @@ export type QuickAction = {
 } & ({ icon: IconName; photo?: undefined } | { photo: string; icon?: undefined })
 
 export const OHRR_QUICK_ACTIONS: QuickAction[] = [
-  { to: '/vets', title: 'Find a vet', subtitle: 'Rabbit-savvy vets · 24/7 emergency', icon: 'phone' },
+  { to: '/vets', title: 'Find a vet', subtitle: 'Rabbit-savvy vets · 24/7 emergency', icon: 'vet' },
   { to: '/found', title: 'Found a stray?', subtitle: 'Catch it safely & who to call', icon: 'mappin' },
   { to: '/adopt', title: 'Adopt', subtitle: 'Meet the bunnies & how it works', photo: BUNNY_PHOTOS.caramelLop },
   // Orange: volunteers are what OHRR needs most (OHRR, 2026-09-28).
@@ -60,7 +60,7 @@ export const OHRR_HUB: HubItem[] = [
   { to: '/adopt', title: 'Adopt a Rabbit', subtitle: 'Meet adoptable buns & how adopting works', icon: 'heart' },
   { to: '/tails', title: 'Happy Tails', subtitle: 'See where adopted bunnies are now', icon: 'sparkles' },
   { to: '/learn', title: 'Rabbit Care', subtitle: 'Diet, litter, bonding, toys & more', icon: 'book' },
-  { to: '/vets', title: 'Find a Vet', subtitle: 'Rabbit-savvy vets across Ohio', icon: 'phone' },
+  { to: '/vets', title: 'Find a Vet', subtitle: 'Rabbit-savvy vets across Ohio', icon: 'vet' },
   { to: '/found', title: 'Found a Rabbit?', subtitle: 'Strays, field rescue & surrender', icon: 'mappin' },
   { to: '/volunteer', title: 'Volunteer', subtitle: 'Socialization, Buncare, vet runs & rescue', icon: 'users', tone: 'action' },
   { to: '/events', title: 'Events', subtitle: 'Midwest BunFest & OHRR hoppenings', icon: 'calendar' },

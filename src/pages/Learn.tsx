@@ -27,7 +27,7 @@ export default function Learn() {
           className="group flex items-center gap-4 rounded-2xl border border-brand-blue/20 bg-brand-blue-50/60 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
         >
           <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-blue text-white">
-            <Icon name="phone" size={22} />
+            <Icon name="vet" size={22} />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block font-display text-[15px] font-extrabold text-ink">Find a rabbit-savvy vet</span>

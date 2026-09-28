@@ -328,7 +328,7 @@ export default function StaffHome() {
               to="/staff/vets"
               title="Vet directory"
               subtitle="Rabbit-savvy vets shown in Find a vet"
-              icon="phone"
+              icon="vet"
               tone="blue"
             />
           )}

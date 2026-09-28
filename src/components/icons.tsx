@@ -3,12 +3,14 @@ import type { ReactNode } from 'react'
 // The shared OHRR line-icon set. The website (ohrr-website/src/components/icons.tsx)
 // carries a copy so the same icon means the same thing on both surfaces:
 // calendar = events, gift = ways to give, award = silent auction, users = volunteer,
-// book = care guides, phone = vets, mappin = found a rabbit / surrender, bag = Hop Shop,
+// book = care guides, vet = vets (a broad cross in a circle), phone = calling, mappin = found a rabbit / surrender, bag = Hop Shop,
 // sparkles = news / Happy Tails, star = partners, mail = contact, device = the app.
 // Keep the two files in sync.
 
 export type IconName =
   | 'home'
+  // Vets and the vet clinic (OHRR, 2026-09-28): a broad cross in a thin circle.
+  | 'vet'
   | 'calendar'
   | 'bag'
   | 'heart'
@@ -50,6 +52,7 @@ export type IconName =
   | 'user'
 
 const paths: Record<IconName, ReactNode> = {
+  vet: <circle cx="12" cy="12" r="9.5" />,
   home: <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />,
   calendar: (
     <>
@@ -292,6 +295,12 @@ const paths: Record<IconName, ReactNode> = {
 // Two-tone (OHRR, 2026-09-28): on the big tiles each icon gets ONE small part
 // filled in orange, under its lines (the calendar's top, the gift's lid, the
 // pin's centre…). Icons with nothing here stay one colour.
+// Parts drawn ON TOP in the accent colour (or the icon's own colour without
+// one): the vet cross is solid, so it can't sit under the lines.
+const accentParts: Partial<Record<IconName, ReactNode>> = {
+  vet: <path d="M9.75 6.75h4.5v3h3v4.5h-3v3h-4.5v-3h-3v-4.5h3z" fill="currentColor" strokeWidth={1.2} />,
+}
+
 const accents: Partial<Record<IconName, ReactNode>> = {
   home: <path d="M9 21v-7h6v7z" />,
   calendar: <path d="M3 7a2.5 2.5 0 0 1 2.5-2.5h13A2.5 2.5 0 0 1 21 7v2.5H3z" />,
@@ -350,6 +359,7 @@ export function Icon({
         </g>
       )}
       {paths[name]}
+      {accentParts[name] && <g color={accent ?? 'currentColor'} stroke="currentColor">{accentParts[name]}</g>}
     </svg>
   )
 }
