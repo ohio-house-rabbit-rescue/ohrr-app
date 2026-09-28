@@ -32,6 +32,9 @@
   - **Same day, OHRR clarified:** on the website the drawing is the title band's *background* — big, faint,
     top right, faded out below the upper third (`BandArt`), Home included (the bunny); and the **Volunteer
     section's band is orange** (website `brand-orange-100`, app solid orange with dark text).
+  - **Vet + hand, same day:** new icon `vet` (thin circle + solid broad cross; orange cross on tiles) on every
+    find-a-vet / vet-clinic button and as the vets background — the veterinary V-and-staff symbol was tried
+    and dropped. Volunteer background = Tabler "hand-stop" (MIT; `THIRD-PARTY-NOTICES.md`).
 - **Still to do (OHRR parked it 2026-09-28):** deploy the `ohrr-jobs` Edge Function (update 32's
   notifications and the daily RescueGroups check wait on it).
 
