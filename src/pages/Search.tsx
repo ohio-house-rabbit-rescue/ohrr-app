@@ -87,7 +87,7 @@ export default function Search() {
               onClick={startVoice}
               aria-label="Search by voice"
               className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition ${
-                listening ? 'bg-brand-orange text-white' : 'bg-brand-blue-50 text-brand-blue hover:bg-brand-blue hover:text-white'
+                listening ? 'bg-brand-orange text-ink' : 'bg-brand-blue-50 text-brand-blue hover:bg-brand-blue hover:text-white'
               }`}
             >
               <Icon name="mic" size={15} />

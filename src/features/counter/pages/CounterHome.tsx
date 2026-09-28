@@ -88,7 +88,7 @@ export default function CounterHome() {
             key={t.to}
             to={t.to}
             className={`flex min-h-[88px] items-center gap-4 rounded-2xl p-4 shadow-md transition active:scale-[.98] ${
-              t.tone === 'orange' ? 'bg-brand-orange text-white hover:bg-brand-orange-dark' : 'bg-brand-blue text-white hover:bg-brand-blue-dark'
+              t.tone === 'orange' ? 'bg-brand-orange text-ink hover:bg-brand-orange-dark' : 'bg-brand-blue text-white hover:bg-brand-blue-dark'
             }`}
           >
             <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20">

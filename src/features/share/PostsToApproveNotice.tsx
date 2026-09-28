@@ -30,7 +30,7 @@ export function PostsToApproveNotice({ className = '' }: { className?: string })
   if (n <= 0) return null
   return (
     <Link to="/staff/posts" className={`flex items-center gap-3 rounded-2xl border border-brand-orange/40 bg-brand-orange-50 px-4 py-3 shadow-sm ${className}`}>
-      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-orange text-white">
+      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-orange text-ink">
         <Icon name="check" size={20} />
       </span>
       <span className="min-w-0 flex-1 font-display text-[15px] font-extrabold text-ink">

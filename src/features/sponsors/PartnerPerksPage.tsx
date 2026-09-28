@@ -47,7 +47,7 @@ function PerkCard({ s }: { s: Sponsor }) {
           <button
             type="button"
             onClick={() => setRevealed(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-orange px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-orange-dark active:scale-[.98]"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-orange px-5 py-2.5 text-sm font-bold text-ink shadow-sm transition hover:bg-brand-orange-dark active:scale-[.98]"
           >
             <Icon name="ticket" size={15} /> Show code
           </button>

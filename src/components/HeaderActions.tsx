@@ -58,7 +58,7 @@ function AccountButton({ deep }: { deep: boolean }) {
       )}
       <span className={`${words} max-w-[6.5rem] truncate`}>{label}</span>
       {total > 0 && (
-        <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand-orange px-1 text-[11px] font-black text-white shadow-sm">
+        <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand-orange px-1 text-[11px] font-black text-ink shadow-sm">
           {total > 9 ? '9+' : total}
         </span>
       )}

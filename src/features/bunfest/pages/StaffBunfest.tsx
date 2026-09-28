@@ -96,7 +96,7 @@ function YearChips({ value, onChange }: { value: number[]; onChange: (years: num
             aria-pressed={value.includes(y)}
             className={`min-h-[40px] rounded-full px-4 text-sm font-bold ${
               value.includes(y)
-                ? 'bg-brand-orange text-white'
+                ? 'bg-brand-orange text-ink'
                 : 'border border-slate-200 bg-white text-slate-600'
             }`}
           >

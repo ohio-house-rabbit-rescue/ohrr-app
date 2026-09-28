@@ -66,7 +66,7 @@ export default function ItemsList() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Link to="/staff/scan" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-brand-orange font-display text-base font-extrabold text-white shadow-sm">
+        <Link to="/staff/scan" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-brand-orange font-display text-base font-extrabold text-ink shadow-sm">
           <Icon name="scan" size={20} /> Scan
         </Link>
         <Link to="/staff/items/tags" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-brand-blue/50 bg-white font-display text-base font-extrabold text-brand-blue">

@@ -583,7 +583,7 @@ export function CompanyForm({
                         ? v === 'no'
                           ? 'bg-slate-700 text-white'
                           : v === 'maybe'
-                            ? 'bg-brand-orange text-white'
+                            ? 'bg-brand-orange text-ink'
                             : 'bg-green-600 text-white'
                         : 'border border-slate-200 bg-white text-slate-600'
                     }`}

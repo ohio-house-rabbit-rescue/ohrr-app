@@ -1161,7 +1161,7 @@ function Suppliers({
             key={k}
             type="button"
             onClick={() => setFilter(k)}
-            className={`min-h-[44px] rounded-full px-3.5 text-sm font-bold ${filter === k ? 'bg-brand-orange text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
+            className={`min-h-[44px] rounded-full px-3.5 text-sm font-bold ${filter === k ? 'bg-brand-orange text-ink' : 'border border-slate-200 bg-white text-slate-600'}`}
           >
             {label}
           </button>

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import {
   volunteerWays,
   volunteerIntro,
@@ -8,7 +8,7 @@ import {
   OHRR_CONTACT_EMAIL,
 } from '../data/volunteer'
 import { isFull, remainingLabel, useVolunteerOpportunities } from '../lib/volunteerOpps'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { listOpenCalls, type OpenCall } from '../features/volunteers/callsApi'
 import { fmtClock, fmtDay } from '../features/volunteers/calls'
 import { PageHeader, Screen, SectionLabel, ActionCard, Card, btn } from '../components/ui'
@@ -29,6 +29,12 @@ export default function Volunteer() {
   useMarkSeen('volunteer')
   // Staff-posted one-off needs (events & fundraising) show here when present.
   const eventNeeds = useVolunteerOpportunities('events')
+  // "Pick a shift" jumps to the positions (the app scrolls inside its shell, so do it by hand).
+  const { hash, key } = useLocation()
+  const shifts = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (hash === '#shifts') shifts.current?.scrollIntoView({ block: 'start' })
+  }, [hash, key])
 
   return (
     <>
@@ -38,14 +44,23 @@ export default function Volunteer() {
         subtitle="We truly are one big, happy volunteer family and we would love to have you join us."
       />
       <Screen className="space-y-6">
-        {/* New volunteers apply first; OHRR approves them for the shifts they'll do. */}
-        <ActionCard
-          to="/volunteer/apply"
-          title="New? Apply to volunteer"
-          subtitle="Tell OHRR about you. Once you’re approved, you can sign up for shifts here."
-          icon="users"
-          tone="orange"
-        />
+        {/* The same three doors as the website's Volunteer page (persona audit 2026-09-28:
+            a returning volunteer couldn't find her shifts or hours here). */}
+        <div className="space-y-2.5">
+          <ActionCard
+            to="/volunteer/apply"
+            title="Apply to volunteer"
+            subtitle="New? Start here — OHRR reads every application"
+            icon="users"
+            tone="orange"
+          />
+          <ActionCard to="/volunteer#shifts" title="Pick a shift" subtitle="Approved volunteers: socialization, Buncare and more" icon="calendar" />
+          <ActionCard to="/volunteer/hours" title="My volunteer page" subtitle="What you’re signed up for, your hours, your letter" icon="clock" />
+          <p className="px-1 text-sm leading-relaxed text-slate-600">
+            Once you’re approved, pick a shift with the same email and you’re booked, no account needed. Your hours are
+            recorded when you check in, and your volunteer page has them, with a signed hours letter whenever you need one.
+          </p>
+        </div>
         <PresentedBy surface="volunteer" />
         <OpenCalls />
         <MyBookingsCard />
@@ -53,7 +68,7 @@ export default function Volunteer() {
         <p className="px-1 text-sm leading-relaxed text-slate-600">{volunteerIntro}</p>
 
         {/* The four real positions */}
-        <div className="space-y-2.5">
+        <div ref={shifts} className="scroll-mt-20 space-y-2.5">
           <SectionLabel>Available volunteer positions</SectionLabel>
           <div className="space-y-2.5">
             {volunteerWays.map((w, i) => (

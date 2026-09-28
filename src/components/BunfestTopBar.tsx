@@ -14,7 +14,7 @@ export default function BunfestTopBar() {
         <div className="flex min-w-0 items-center gap-1.5">
           <BackButton className="bg-white/15 hover:bg-white/25" />
           <Link to="/bunfest" className="flex min-w-0 items-center gap-2.5 pl-1">
-            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-orange text-white shadow-sm">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-orange text-ink shadow-sm">
               <Icon name="star" size={22} />
             </span>
             <span className={`min-w-0 leading-tight ${deep ? 'hidden min-[430px]:block' : ''}`}>

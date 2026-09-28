@@ -142,14 +142,14 @@ export default function Give() {
             href={g.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="block rounded-2xl bg-gradient-to-br from-brand-orange to-brand-orange-dark px-6 py-7 text-white shadow-sm transition active:scale-[.99]"
+            className="block rounded-2xl bg-gradient-to-br from-brand-orange to-brand-orange-dark px-6 py-7 text-ink shadow-sm transition active:scale-[.99]"
           >
             <div className="flex items-center gap-2">
               <Icon name="heart" size={20} />
               <h2 className="font-display text-xl font-extrabold">{g.title}</h2>
             </div>
-            <p className="mt-2 text-sm text-white/90">{g.description}</p>
-            <span className="mt-4 inline-flex items-center gap-1 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-orange-dark">
+            <p className="mt-2 text-sm text-slate-900/90">{g.description}</p>
+            <span className="mt-4 inline-flex items-center gap-1 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-ink">
               {g.cta} →
             </span>
           </a>

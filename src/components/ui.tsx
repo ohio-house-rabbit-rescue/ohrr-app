@@ -10,7 +10,7 @@ type Tone = 'blue' | 'orange' | 'action'
 /* ---- buttons (pill style, like the reference apps) ---- */
 export const btn = {
   primary:
-    'inline-flex items-center justify-center gap-2 rounded-full bg-brand-orange px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-orange-dark active:scale-[.98]',
+    'inline-flex items-center justify-center gap-2 rounded-full bg-brand-orange px-5 py-3 text-sm font-bold text-ink shadow-sm transition hover:bg-brand-orange-dark active:scale-[.98]',
   blue: 'inline-flex items-center justify-center gap-2 rounded-full bg-brand-blue px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-blue-dark active:scale-[.98]',
   white:
     'inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-brand-blue shadow-sm transition hover:bg-brand-blue-50 active:scale-[.98]',
@@ -55,7 +55,9 @@ export function PageHeader({
       {drawing && (
         <PageArt
           name={drawing}
-          className={`right-4 top-3 h-[min(6rem,calc(100%-1.5rem))] w-28 ${orange ? 'text-white/40' : 'text-white/20'}`}
+          className={`right-4 top-3 h-[min(6rem,calc(100%-1.5rem))] w-28 ${
+            orange ? 'text-white/25' : drawing === 'vets' ? 'text-white/[.12]' : 'text-white/20'
+          }`}
         />
       )}
       <div className="relative flex items-center gap-3">

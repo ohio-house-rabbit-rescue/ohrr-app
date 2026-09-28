@@ -8,7 +8,7 @@ import { KIND_META, formatMoney, statusLabel, type TaggedItem } from './types'
 type BigTone = 'orange' | 'blue' | 'outline' | 'plain' | 'danger'
 
 const bigTones: Record<BigTone, string> = {
-  orange: 'bg-brand-orange text-white shadow-sm hover:bg-brand-orange-dark',
+  orange: 'bg-brand-orange text-ink shadow-sm hover:bg-brand-orange-dark',
   blue: 'bg-brand-blue text-white shadow-sm hover:bg-brand-blue-dark',
   outline: 'border-2 border-brand-blue/50 bg-white text-brand-blue hover:bg-brand-blue-50',
   plain: 'bg-slate-100 text-ink hover:bg-slate-200',
@@ -133,7 +133,7 @@ export function KindTile({
         <span className="mt-0.5 block text-[15px] leading-snug text-slate-600">{m.hint}</span>
       </span>
       {selected && (
-        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-orange text-white">
+        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-orange text-ink">
           <Icon name="check" size={18} />
         </span>
       )}

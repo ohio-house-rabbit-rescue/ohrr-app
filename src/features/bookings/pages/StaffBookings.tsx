@@ -151,7 +151,7 @@ function Roster({ orgId }: { orgId: string }) {
             key={n}
             type="button"
             onClick={() => setDays(n)}
-            className={`min-h-[40px] rounded-full px-3.5 text-sm font-bold ${days === n ? 'bg-brand-orange text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
+            className={`min-h-[40px] rounded-full px-3.5 text-sm font-bold ${days === n ? 'bg-brand-orange text-ink' : 'border border-slate-200 bg-white text-slate-600'}`}
           >
             {n === 1 ? 'Today' : `Next ${n} days`}
           </button>
@@ -245,7 +245,7 @@ function Roster({ orgId }: { orgId: string }) {
                           Email
                         </a>
                         {r.status === 'requested' && (
-                          <button type="button" onClick={() => void act(r, 'confirmed')} className="rounded-full bg-brand-orange px-3 py-1.5 text-xs font-bold text-white">
+                          <button type="button" onClick={() => void act(r, 'confirmed')} className="rounded-full bg-brand-orange px-3 py-1.5 text-xs font-bold text-ink">
                             Confirm
                           </button>
                         )}

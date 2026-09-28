@@ -76,7 +76,7 @@ const card =
   'rounded-3xl border border-brand-blue/15 bg-white p-3 shadow-sm transition hover:border-brand-blue/40 hover:shadow-md'
 const label = 'text-[11px] font-extrabold uppercase tracking-wider text-brand-blue'
 const openPill =
-  'shrink-0 rounded-full bg-brand-orange px-3.5 py-2 text-[13px] font-extrabold text-white shadow-sm transition group-hover:bg-brand-orange-dark hover:bg-brand-orange-dark'
+  'shrink-0 rounded-full bg-brand-orange px-3.5 py-2 text-[13px] font-extrabold text-ink shadow-sm transition group-hover:bg-brand-orange-dark hover:bg-brand-orange-dark'
 
 export default function MyBunnyHomeCard() {
   const data = useMyBunny()

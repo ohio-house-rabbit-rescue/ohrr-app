@@ -334,7 +334,7 @@ function AddByHand({ onAdd }: { onAdd: (row: { code: string; name: string; adult
             setF({ code: '', name: '', adults: '1', children: '0', under5: '0' })
             setOpen(false)
           }}
-          className="rounded-full bg-brand-orange px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40"
+          className="rounded-full bg-brand-orange px-5 py-2.5 text-sm font-bold text-ink disabled:opacity-40"
         >
           Add it
         </button>
@@ -407,7 +407,7 @@ function Prices({ initial, onSave }: { initial: { event_key: string; event_name:
             await onSave({ event_key: f.event_key.trim(), event_name: f.event_name.trim(), prices: { adult: cents.adult ?? 0, child: cents.child ?? 0, under5: cents.under5 ?? 0 } })
             setOpen(false)
           }}
-          className="rounded-full bg-brand-orange px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40"
+          className="rounded-full bg-brand-orange px-5 py-2.5 text-sm font-bold text-ink disabled:opacity-40"
         >
           Save
         </button>

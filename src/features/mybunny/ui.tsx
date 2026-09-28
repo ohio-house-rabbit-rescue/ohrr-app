@@ -267,7 +267,7 @@ export function DuePill({ nextDue, today = todayIso() }: { nextDue: string; toda
 export function CountBadge({ overdue, today }: { overdue: number; today: number }) {
   const total = overdue + today
   if (total === 0) return null
-  const tone = overdue > 0 ? 'bg-red-600 text-white' : 'bg-brand-orange text-white'
+  const tone = overdue > 0 ? 'bg-red-600 text-white' : 'bg-brand-orange text-ink'
   return (
     <span
       className={`inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-extrabold leading-none ${tone}`}

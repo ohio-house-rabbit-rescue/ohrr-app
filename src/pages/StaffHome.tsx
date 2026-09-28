@@ -120,7 +120,7 @@ export default function StaffHome() {
               <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-blue-50 text-brand-blue">
                 <Icon name="mail" size={22} />
                 {newCount > 0 && (
-                  <span className="absolute -right-1.5 -top-1.5 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-brand-orange px-1.5 text-xs font-black text-white">
+                  <span className="absolute -right-1.5 -top-1.5 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-brand-orange px-1.5 text-xs font-black text-ink">
                     {newCount > 99 ? '99+' : newCount}
                   </span>
                 )}
@@ -178,16 +178,16 @@ export default function StaffHome() {
           {canScan && (
             <Link
               to="/staff/scan"
-              className="flex items-center gap-4 rounded-2xl bg-brand-orange p-4 text-white shadow-md transition hover:-translate-y-0.5 hover:bg-brand-orange-dark active:translate-y-0"
+              className="flex items-center gap-4 rounded-2xl bg-brand-orange p-4 text-ink shadow-md transition hover:-translate-y-0.5 hover:bg-brand-orange-dark active:translate-y-0"
             >
               <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20">
                 <Icon name="scan" size={30} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block font-display text-xl font-black">Scan an item</span>
-                <span className="mt-0.5 block text-sm text-white/90">Silent Auction, raffle prizes & Hop Shop stock — point the camera at the tag</span>
+                <span className="mt-0.5 block text-sm text-slate-900/85">Silent Auction, raffle prizes & Hop Shop stock — point the camera at the tag</span>
               </span>
-              <Icon name="chevron" size={20} className="shrink-0 text-white/80" />
+              <Icon name="chevron" size={20} className="shrink-0 text-slate-900/70" />
             </Link>
           )}
           {canScan && (

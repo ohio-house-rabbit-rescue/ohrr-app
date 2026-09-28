@@ -67,7 +67,7 @@ export default function HoursTab() {
             ['lastyear', 'Last year'],
           ] as [Period, string][]
         ).map(([p, label]) => (
-          <button key={p} type="button" onClick={() => setPeriod(p)} className={`min-h-[40px] rounded-full px-3.5 text-sm font-bold ${period === p ? 'bg-brand-orange text-white' : 'border border-slate-200 bg-white text-slate-600'}`}>
+          <button key={p} type="button" onClick={() => setPeriod(p)} className={`min-h-[40px] rounded-full px-3.5 text-sm font-bold ${period === p ? 'bg-brand-orange text-ink' : 'border border-slate-200 bg-white text-slate-600'}`}>
             {label}
           </button>
         ))}

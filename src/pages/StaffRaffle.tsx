@@ -530,7 +530,7 @@ function ItemCard({
             type="button"
             disabled={busy}
             onClick={() => patch({ status: 'won' })}
-            className="rounded-full bg-brand-orange px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-orange-dark disabled:opacity-60"
+            className="rounded-full bg-brand-orange px-3 py-1.5 text-xs font-bold text-ink hover:bg-brand-orange-dark disabled:opacity-60"
           >
             Mark won
           </button>

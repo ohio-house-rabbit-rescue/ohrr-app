@@ -103,7 +103,7 @@ export default function RaffleCatalog() {
               className={[
                 'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold transition',
                 availableOnly
-                  ? 'bg-brand-orange text-white shadow-sm'
+                  ? 'bg-brand-orange text-ink shadow-sm'
                   : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50',
               ].join(' ')}
             >

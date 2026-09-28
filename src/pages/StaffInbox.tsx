@@ -244,7 +244,7 @@ export default function StaffInbox() {
                     <Notes row={r} onSave={(n) => setStatus(r, r.status, n)} />
                     <div className="grid grid-cols-2 gap-2">
                       {r.status !== 'done' ? (
-                        <button type="button" onClick={() => void setStatus(r, 'done')} className="inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-2xl bg-brand-orange font-display text-base font-extrabold text-white">
+                        <button type="button" onClick={() => void setStatus(r, 'done')} className="inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-2xl bg-brand-orange font-display text-base font-extrabold text-ink">
                           <Icon name="check" size={18} /> Done
                         </button>
                       ) : (
