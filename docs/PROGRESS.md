@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-28 (persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-09-28 (update 33 written; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,28 @@
 ---
 
 ## Current state (at a glance)
+
+- **Round after the audit, 2026-09-28 (latest; app `be11ce9`, website `34bab80`; update 33 WRITTEN, NOT YET RUN).**
+  OHRR's answers to the open list:
+  - **Happy Tails:** one clearly marked EXAMPLE story, "Dottie" (OHRR's own photo `img/ohrr/adoption-rescued-favorite-breed.jpg`,
+    "Example" badge and note, invented name/text said so), shown only while no real story is published; staff screen explains it.
+    Fixed "the Patel family family" (`withFamily`).
+  - **Cost article** in OHRR's own words (OHRR fees and policy; prices credited to the Missouri House Rabbit Society 2022;
+    savings ideas to the House Rabbit Society); Binkybunny.com link gone. Live row = update 33.
+  - **Mobile vet clinic: Saturdays noon–4 PM, 15-minute appointments** (OHRR, "Saturday-only… Four hours… 15-minute
+    increments"; noon–4 = the Adoption Center's weekend hours). Booking type `vet-clinic` = update 33; wording updated.
+  - **Volunteer approvals**: "as they come in… as quickly as possible" (OHRR); family age rule shown up front.
+  - **Footer** "modern preview" line removed. **Privacy** stays Draft (OHRR's choice).
+  - **Easter campaign** (Staff → Posts, both surfaces): plans the season's drafts from existing education cards
+    (7/5/3/1 weeks before, 3/7/11 after; `source` marker `easter:<year>:<slot>`, never duplicated), painted with the Share
+    kit; reminders on the queue, website dashboard and app staff home (63 days before Easter until planned).
+  - **Small fixes:** Home Explore no longer repeats quick actions/tabs; top-bar buttons labelled (Search/Help/Settings/Sign in);
+    Vets' RHDV2 block after the list; bonded pairs one card, one photo.
+  - **Update 33** (`20260928120000_rabbits_vetclinic_cost.sql`): rabbits from RescueGroups (new Mackenzie, Rachel, Tobias;
+    Edmund, Leo, Monty, older Nimbus hidden with the badge), the clinic booking type, the cost article.
+  - Correction: the "Ages 5â€“12" / Buncare "â€”" garbling was a Windows console misreading the dash — the stored text was
+    fine; the SQL given for it was harmless and not needed.
+  - OHRR's own to-dos: email-sending account, Apple/Google accounts, payments, a Founder (all understood by the sponsor).
 
 - **Persona audit + fixes, 2026-09-28 (latest; website `c3c619d`, app `d66c7fd`).** OHRR asked for an audit of the
   visuals and navigation against the brief's personas; three reviewers (Dana+Marcus, the Reillys+Cheryl,
