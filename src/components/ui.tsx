@@ -44,18 +44,31 @@ export function PageHeader({
 }) {
   const sectionArt = usePageArt()
   const drawing = art === undefined ? sectionArt : art
+  // The Volunteer section's band is orange, dark text on it (OHRR, 2026-09-28: "distinctly different").
+  const orange = sectionArt === 'volunteer'
   return (
-    <div className="relative overflow-hidden bg-gradient-to-b from-brand-blue to-brand-blue-dark px-5 pb-6 pt-5 text-white">
-      {drawing && <PageArt name={drawing} className="right-4 top-3 h-[min(6rem,calc(100%-1.5rem))] w-28 text-white/20" />}
+    <div
+      className={`relative overflow-hidden px-5 pb-6 pt-5 ${
+        orange ? 'bg-brand-orange text-ink' : 'bg-gradient-to-b from-brand-blue to-brand-blue-dark text-white'
+      }`}
+    >
+      {drawing && (
+        <PageArt
+          name={drawing}
+          className={`right-4 top-3 h-[min(6rem,calc(100%-1.5rem))] w-28 ${orange ? 'text-white/40' : 'text-white/20'}`}
+        />
+      )}
       <div className="relative flex items-center gap-3">
         {icon && (
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
+          <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${orange ? 'bg-white/35' : 'bg-white/15'}`}>
             <Icon name={icon} size={26} />
           </span>
         )}
         <h1 className="font-display text-2xl font-extrabold tracking-tight">{title}</h1>
       </div>
-      {subtitle && <p className="relative mt-2 text-sm leading-relaxed text-white/85">{subtitle}</p>}
+      {subtitle && (
+        <p className={`relative mt-2 text-sm leading-relaxed ${orange ? 'text-slate-900/90' : 'text-white/85'}`}>{subtitle}</p>
+      )}
     </div>
   )
 }
