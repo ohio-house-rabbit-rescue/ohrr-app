@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-26 (wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-09-28 (page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,19 @@
 ---
 
 ## Current state (at a glance)
+
+- **Page art + two-tone tiles, 2026-09-28 (latest; app + website).** OHRR: faint white line art in the page
+  tops instead of photos — the logo's bunny on Home only ("we're just duplicating the logo" otherwise, so no
+  house), one item per kind of page (Adopt heart, care carrot, Give gift, Events bunting, Hop Shop bag,
+  Contact envelope, Volunteer raised hand, Found pin, Vets cross, Happy Tails house-with-heart; About the
+  bunny). `public/art/*.svg` (same files in both repos), `components/PageArt.tsx` (section by URL prefix,
+  CSS mask, beside the title; website: only crumbs + title make room, so no band grows — checked at
+  1300/1024/375). Tiles: dark blue lines + ONE orange part (`Icon accent`), only on the big tiles; small
+  icons stay one colour. **Volunteer is orange** (OHRR: volunteers are the top need): solid orange tile on
+  the app's Home (quick actions + Explore), orange "See the shifts" on the website's Home. Next, if OHRR
+  wants it: redraw the 43 icons in the bunny's rounder line, keeping the same orange parts.
+- **Still to do (OHRR parked it 2026-09-28):** deploy the `ohrr-jobs` Edge Function (update 32's
+  notifications and the daily RescueGroups check wait on it).
 
 - **Update 32, 2026-09-26 (latest; website `c5d97c9` + app the same day; update 32 SQL applied and checked live 2026-09-26 — new tables/RPCs answer with their rules, `APPLY-32 (applied 2026-09-26).sql`; the `ohrr-jobs` function answered "not found", so `push_public_key` is still null until it is deployed under that exact name).** OHRR: "build
   the things you can and then lets also do 2 [phone notifications] and 7 [Cloudflare Web Analytics]".

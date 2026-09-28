@@ -289,14 +289,47 @@ const paths: Record<IconName, ReactNode> = {
   ),
 }
 
+// Two-tone (OHRR, 2026-09-28): on the big tiles each icon gets ONE small part
+// filled in orange, under its lines (the calendar's top, the gift's lid, the
+// pin's centre…). Icons with nothing here stay one colour.
+const accents: Partial<Record<IconName, ReactNode>> = {
+  home: <path d="M9 21v-7h6v7z" />,
+  calendar: <path d="M3 7a2.5 2.5 0 0 1 2.5-2.5h13A2.5 2.5 0 0 1 21 7v2.5H3z" />,
+  bag: <path d="M6 2.5 3.5 6.5h17L18 2.5z" />,
+  heart: <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />,
+  users: <circle cx="9" cy="7" r="4" />,
+  award: <circle cx="12" cy="8.5" r="6" />,
+  mappin: <circle cx="12" cy="10.5" r="2.8" />,
+  phone: <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />,
+  sparkles: <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" />,
+  book: <path d="M3 4.8A1.8 1.8 0 0 1 4.8 3H11v15.5H4.8A1.8 1.8 0 0 0 3 20.3z" />,
+  gift: <path d="M3.5 8.5A1.5 1.5 0 0 1 5 7h14a1.5 1.5 0 0 1 1.5 1.5V11a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1z" />,
+  ticket: <path d="M14 7h4.5A1.5 1.5 0 0 1 20 8.5v1.7a1.8 1.8 0 0 0 0 3.6v1.7a1.5 1.5 0 0 1-1.5 1.5H14z" />,
+  mail: <path d="m3.5 6.5 8.5 6 8.5-6z" />,
+  store: <path d="M4 9.3 5.2 4h13.6L20 9.3h-1.9a2.35 2.35 0 0 1-4.7 0 2.35 2.35 0 0 1-4.7 0 2.35 2.35 0 0 1-4.7 0z" />,
+  star: <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 17l-5.2 2.6 1-5.8-4.3-4.1 5.9-.9z" />,
+  settings: <circle cx="12" cy="12" r="3.2" />,
+  search: <circle cx="11" cy="11" r="7" />,
+  mic: <rect x="9" y="2.5" width="6" height="11.5" rx="3" />,
+  device: <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" />,
+  camera: <circle cx="12" cy="13" r="3.5" />,
+  box: <path d="M3.5 8 12 4l8.5 4L12 12z" />,
+  printer: <path d="M7 14h10v6H7z" />,
+  eye: <circle cx="12" cy="12" r="3" />,
+  user: <circle cx="12" cy="8" r="4" />,
+}
+
 export function Icon({
   name,
   size = 24,
   className = '',
+  accent,
 }: {
   name: IconName
   size?: number
   className?: string
+  /** Fill colour for the icon's one accent part (the big tiles); none = one colour. */
+  accent?: string
 }) {
   return (
     <svg
@@ -311,6 +344,11 @@ export function Icon({
       className={className}
       aria-hidden="true"
     >
+      {accent && accents[name] && (
+        <g fill={accent} stroke="none">
+          {accents[name]}
+        </g>
+      )}
       {paths[name]}
     </svg>
   )

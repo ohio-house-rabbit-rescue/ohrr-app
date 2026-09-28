@@ -9,6 +9,7 @@ import { useHeroSlides } from '../lib/heroSlides'
 import { useBunfestEvent, eventDate } from '../lib/events'
 import { Screen, SectionLabel, ActionCard, Card, btn } from '../components/ui'
 import { PhotoCard, IconPhotoTile } from '../components/PhotoCard'
+import { PageArt } from '../components/PageArt'
 import { Icon } from '../components/icons'
 import AnnouncementsBanner from '../components/AnnouncementsBanner'
 import PresentedBy from '../features/sponsors/PresentedBy'
@@ -126,12 +127,13 @@ export default function OhrrHome() {
 
   return (
     <div>
-      {/* Hero */}
-      <section className="bg-gradient-to-b from-brand-blue to-brand-blue-dark px-5 pb-4 pt-4 text-white">
-        <h1 className="font-display text-2xl font-black leading-tight">
+      {/* Hero, with the logo's bunny drawn faintly at the right (PageArt) */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-brand-blue to-brand-blue-dark px-5 pb-4 pt-4 text-white">
+        <PageArt name="bunny" className="inset-y-2 right-4 w-[26%] max-w-28 text-white/20" />
+        <h1 className="relative font-display text-2xl font-black leading-tight">
           Every bunny deserves a home
         </h1>
-        <p className="mt-1 text-[13px] leading-snug text-white/85">{ohrr.tagline}</p>
+        <p className="relative mt-1 text-[13px] leading-snug text-white/85">{ohrr.tagline}</p>
       </section>
 
       <Screen className="space-y-6">
@@ -167,7 +169,7 @@ export default function OhrrHome() {
           <div className="grid grid-cols-3 gap-2">
             {OHRR_QUICK_ACTIONS.map((q) =>
               q.icon ? (
-                <IconPhotoTile key={q.to} to={q.to} title={q.title} subtitle={q.subtitle} icon={q.icon} variant="tile" />
+                <IconPhotoTile key={q.to} to={q.to} title={q.title} subtitle={q.subtitle} icon={q.icon} tone={q.tone} variant="tile" />
               ) : (
                 <PhotoCard key={q.to} to={q.to} title={q.title} subtitle={q.subtitle} photo={q.photo} variant="tile" />
               ),

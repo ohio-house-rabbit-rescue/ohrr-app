@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon, type IconName } from './icons'
+import { PageArt, usePageArt, type ArtName } from './PageArt'
 import { SAMPLE_DATA_NOTE } from '../data/content'
 
-type Tone = 'blue' | 'orange'
+// 'action': solid orange — the one tile OHRR most wants tapped (Volunteer on Home).
+type Tone = 'blue' | 'orange' | 'action'
 
 /* ---- buttons (pill style, like the reference apps) ---- */
 export const btn = {
@@ -32,14 +34,20 @@ export function PageHeader({
   title,
   subtitle,
   icon,
+  art,
 }: {
   title: string
   subtitle?: string
   icon?: IconName
+  /** The faint drawing at the right; by default the page's section's (PageArt.tsx), `null` for none. */
+  art?: ArtName | null
 }) {
+  const sectionArt = usePageArt()
+  const drawing = art === undefined ? sectionArt : art
   return (
-    <div className="bg-gradient-to-b from-brand-blue to-brand-blue-dark px-5 pb-6 pt-5 text-white">
-      <div className="flex items-center gap-3">
+    <div className="relative overflow-hidden bg-gradient-to-b from-brand-blue to-brand-blue-dark px-5 pb-6 pt-5 text-white">
+      {drawing && <PageArt name={drawing} className="right-4 top-3 h-[min(6rem,calc(100%-1.5rem))] w-28 text-white/20" />}
+      <div className="relative flex items-center gap-3">
         {icon && (
           <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
             <Icon name={icon} size={26} />
@@ -47,7 +55,7 @@ export function PageHeader({
         )}
         <h1 className="font-display text-2xl font-extrabold tracking-tight">{title}</h1>
       </div>
-      {subtitle && <p className="mt-2 text-sm leading-relaxed text-white/85">{subtitle}</p>}
+      {subtitle && <p className="relative mt-2 text-sm leading-relaxed text-white/85">{subtitle}</p>}
     </div>
   )
 }
@@ -70,15 +78,19 @@ export function IconTile({
   tone?: Tone
   className?: string
 }) {
+  // Two-tone (OHRR, 2026-09-28): dark blue lines with one small orange part;
+  // the 'action' tile is solid orange with ink lines and a white part.
   const tones: Record<Tone, string> = {
-    blue: 'bg-brand-blue-50 text-brand-blue',
+    blue: 'bg-brand-blue-50 text-brand-blue-dark',
     orange: 'bg-brand-orange-50 text-brand-orange',
+    action: 'bg-brand-orange text-ink',
   }
+  const accent = tone === 'blue' ? 'var(--color-brand-orange)' : tone === 'action' ? '#fff' : undefined
   return (
     <span
       className={`inline-flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl ${tones[tone]} ${className}`}
     >
-      <Icon name={name} size={28} />
+      <Icon name={name} size={28} accent={accent} />
     </span>
   )
 }
@@ -149,7 +161,7 @@ export function Badge({
   tone = 'blue',
 }: {
   children: ReactNode
-  tone?: Tone | 'slate'
+  tone?: 'blue' | 'orange' | 'slate'
 }) {
   const tones = {
     blue: 'bg-brand-blue-50 text-brand-blue',

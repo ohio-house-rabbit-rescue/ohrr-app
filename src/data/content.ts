@@ -20,7 +20,8 @@ export interface HubItem {
   title: string
   subtitle: string
   icon: IconName
-  tone?: 'blue' | 'orange'
+  /** 'action' = solid orange: the one OHRR most wants tapped (Volunteer). */
+  tone?: 'blue' | 'orange' | 'action'
 }
 
 /* ---------- OHRR host app ---------- */
@@ -42,13 +43,15 @@ export type QuickAction = {
   to: string
   title: string
   subtitle: string
+  tone?: 'blue' | 'orange' | 'action'
 } & ({ icon: IconName; photo?: undefined } | { photo: string; icon?: undefined })
 
 export const OHRR_QUICK_ACTIONS: QuickAction[] = [
   { to: '/vets', title: 'Find a vet', subtitle: 'Rabbit-savvy vets · 24/7 emergency', icon: 'phone' },
   { to: '/found', title: 'Found a stray?', subtitle: 'Catch it safely & who to call', icon: 'mappin' },
   { to: '/adopt', title: 'Adopt', subtitle: 'Meet the bunnies & how it works', photo: BUNNY_PHOTOS.caramelLop },
-  { to: '/volunteer', title: 'Volunteer', subtitle: 'Four ways to help the buns', icon: 'users' },
+  // Orange: volunteers are what OHRR needs most (OHRR, 2026-09-28).
+  { to: '/volunteer', title: 'Volunteer', subtitle: 'Four ways to help the buns', icon: 'users', tone: 'action' },
   { to: '/support', title: 'Give', subtitle: 'Every way to support OHRR', icon: 'gift' },
   { to: '/events', title: 'Events', subtitle: 'What’s coming up', icon: 'calendar' },
 ]
@@ -59,7 +62,7 @@ export const OHRR_HUB: HubItem[] = [
   { to: '/learn', title: 'Rabbit Care', subtitle: 'Diet, litter, bonding, toys & more', icon: 'book' },
   { to: '/vets', title: 'Find a Vet', subtitle: 'Rabbit-savvy vets across Ohio', icon: 'phone' },
   { to: '/found', title: 'Found a Rabbit?', subtitle: 'Strays, field rescue & surrender', icon: 'mappin' },
-  { to: '/volunteer', title: 'Volunteer', subtitle: 'Socialization, Buncare, vet runs & rescue', icon: 'users' },
+  { to: '/volunteer', title: 'Volunteer', subtitle: 'Socialization, Buncare, vet runs & rescue', icon: 'users', tone: 'action' },
   { to: '/events', title: 'Events', subtitle: 'Midwest BunFest & OHRR hoppenings', icon: 'calendar' },
   { to: '/support', title: 'Support OHRR', subtitle: 'Donate & every way to give', icon: 'gift', tone: 'orange' },
   { to: '/partners', title: 'Our Partners', subtitle: 'The businesses behind OHRR & BunFest', icon: 'award' },

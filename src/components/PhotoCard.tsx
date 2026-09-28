@@ -44,9 +44,11 @@ export function PhotoCard({
   )
 }
 
-// The icon twin of PhotoCard: same size and shape, a large single-colour line icon
-// centred on a brand-tinted tile (blue by default), title bottom-left like the photo
-// tiles. The icon never changes, so the card is recognisable at a glance.
+// The icon twin of PhotoCard: same size and shape, a large line icon centred on a
+// brand-tinted tile, title bottom-left like the photo tiles. The icon never
+// changes, so the card is recognisable at a glance. Two-tone (OHRR, 2026-09-28):
+// dark blue lines with one small orange part; `action` is the solid orange tile
+// OHRR most wants tapped (Volunteer), ink lines with a white part.
 export function IconPhotoTile({
   to,
   title,
@@ -59,14 +61,17 @@ export function IconPhotoTile({
   title: string
   subtitle?: string
   icon: IconName
-  tone?: 'blue' | 'orange'
+  tone?: 'blue' | 'orange' | 'action'
   variant?: 'card' | 'tile'
 }) {
   const tile = variant === 'tile'
   const colors =
     tone === 'orange'
       ? 'bg-brand-orange-50 text-brand-orange-dark ring-brand-orange/10'
-      : 'bg-brand-blue-50 text-brand-blue ring-brand-blue/10'
+      : tone === 'action'
+        ? 'bg-brand-orange text-ink ring-brand-orange-dark/30'
+        : 'bg-brand-blue-50 text-brand-blue-dark ring-brand-blue/10'
+  const accent = tone === 'blue' ? 'var(--color-brand-orange)' : tone === 'action' ? '#fff' : undefined
   return (
     <Link to={to} className={`${shape(tile)} ring-1 ring-inset ${colors}`}>
       {/* icon: centred in the space above the label */}
@@ -74,6 +79,7 @@ export function IconPhotoTile({
         <Icon
           name={icon}
           size={64}
+          accent={accent}
           className={`${tile ? 'h-[48%] w-[48%]' : 'h-[42%] w-[42%]'} transition duration-300 group-hover:scale-[1.06]`}
         />
       </span>
