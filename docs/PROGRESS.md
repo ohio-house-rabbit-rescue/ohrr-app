@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-28 (page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-09-28 (persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,23 @@
 ---
 
 ## Current state (at a glance)
+
+- **Persona audit + fixes, 2026-09-28 (latest; website `c3c619d`, app `d66c7fd`).** OHRR asked for an audit of the
+  visuals and navigation against the brief's personas; three reviewers (Dana+Marcus, the Reillys+Cheryl,
+  Ruth+Alan) read live captures (`scratchpad/audit/`, Playwright phone emulation — headless Chrome can't go
+  below ~500px). Verdict: the drawings, two-tone tiles and orange Volunteer work; the problems were navigation.
+  Fixed: app Volunteer gets the website's three doors (Apply / Pick a shift / My volunteer page) + the
+  hours-and-letter line; website Bunny Help and Vets put the emergency first; Events' BunFest card shows
+  admission, the rabbit rule (+ RHDV2 vets link) and parking (`BunFestFacts`); Give's doors include "See what
+  your gift does"; the menu highlights the section on Legacy/Mobile vet/Found/Hop Shop/Contact; "All ways to
+  give" pill removed; text links blue; app orange buttons dark text (white was ~2.6:1); drawings fainter on
+  phones, hand + vet cross toned down, bunting redrawn. **Open, for OHRR:** cost + lifespan in OHRR's own words
+  (Rabbit care's cost card links to Binkybunny.com); a family path for socialization shifts (ages, who applies,
+  how long approval takes); real Happy Tails stories (sample ones use stock photos); Mobile vet copy ("Pick a
+  time" with no dates; vaccines?); the footer's "modern preview" line; BunFest admission "Ages 5â€“12" is
+  double-encoded in the events row (SQL given 2026-09-28). Not done (polish): app Home repeats its doors
+  (quick actions + Explore + tabs), app "?"/gear have no visible labels, app Vets lists the RHDV2 block before
+  the list.
 
 - **Page art + two-tone tiles, 2026-09-28 (latest; app + website).** OHRR: faint white line art in the page
   tops instead of photos — the logo's bunny on Home only ("we're just duplicating the logo" otherwise, so no
