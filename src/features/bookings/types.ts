@@ -65,11 +65,31 @@ export function fmtDays(days: number[]): string {
   return d.map((x) => WEEKDAY_SHORT[x]).join(d.length === 2 ? ' + ' : ', ')
 }
 
-/** One line per rule, for the Set up list and the public page. */
+/** One line per run of back-to-back times, for the Set up list and the public page. */
 export function fmtWeekly(rules: WeeklyRule[]): string[] {
-  return rules
-    .filter((r) => r && Array.isArray(r.days) && r.start && r.end)
-    .map((r) => `${fmtDays(r.days)} ${fmtClock(r.start)}–${fmtClock(r.end)}${r.label ? ` · ${r.label}` : ''}`)
+  // Back-to-back times on the same days read as one range with their length
+  // ("Sat 12:00 PM–4:00 PM, 15-minute times"), not a line for every time.
+  const mins = (hhmm: string) => {
+    const [h, m] = hhmm.split(':').map(Number)
+    return h * 60 + (m || 0)
+  }
+  const sameDays = (a: number[], b: number[]) => [...a].sort().join() === [...b].sort().join()
+  const runs: { rule: WeeklyRule; lengths: number[] }[] = []
+  for (const r of rules.filter((r) => r && Array.isArray(r.days) && r.start && r.end)) {
+    const prev = runs[runs.length - 1]
+    const len = mins(r.end) - mins(r.start)
+    if (prev && prev.rule.end === r.start && (prev.rule.label ?? '') === (r.label ?? '') && sameDays(prev.rule.days, r.days)) {
+      prev.rule = { ...prev.rule, end: r.end }
+      prev.lengths.push(len)
+    } else {
+      runs.push({ rule: r, lengths: [len] })
+    }
+  }
+  return runs.map(({ rule: r, lengths }) => {
+    const each = lengths.length > 1 && lengths.every((l) => l === lengths[0]) ? lengths[0] : 0
+    const size = each <= 0 ? '' : each % 60 === 0 ? `, ${each / 60}-hour times` : `, ${each}-minute times`
+    return `${fmtDays(r.days)} ${fmtClock(r.start)}–${fmtClock(r.end)}${size}${r.label ? ` · ${r.label}` : ''}`
+  })
 }
 
 export interface OpenSlot {
