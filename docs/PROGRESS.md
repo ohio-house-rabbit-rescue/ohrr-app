@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-28 (board comparison PDF, old sites vs the new three; update 33 written and left on OHRR's to-do list; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-09-29 (updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,18 @@
 ---
 
 ## Current state (at a glance)
+
+- **Database up to date, 2026-09-29 (app `c64abb2`, website `a40d2ff`).** OHRR ran update 33 (six small chat blocks) and
+  update 34. Checked live over REST: Mackenzie, Rachel, Tobias published; Edmund, Leo, Monty and the older Nimbus hidden
+  (16 published = RescueGroups' 16, re-read that morning); cost article in OHRR's words. **Update 33's vet-clinic insert was
+  skipped** — a hidden `vet-clinic` row already existed from the 2026-09-21 bookings seed (`on conflict do nothing`), and its
+  fill set `slots_filled_on`. **Update 34** (`20260929100000_vet_clinic_publish.sql`) updates that row (15-min Saturday
+  rules noon–4, staff-confirmed, published, `slots_filled_on = null`), clears unbooked future times and refills: 128 times,
+  Sat Oct 3 – Nov 21, bookable on both /book/vet-clinic pages. `fmtWeekly` (both repos) now merges back-to-back rules on the
+  same days into one range with their length ("Sat 12:00 PM–4:00 PM, 15-minute times"; socialization reads "Sat 1:30 PM–3:30
+  PM, 1-hour times"). Lesson: before seeding a booking type by slug, check for an existing (hidden) row — use an update or
+  `on conflict do update`. Still OHRR's own to-dos: the `ohrr-jobs` Edge Function (not SQL), email-sending account, Apple and
+  Google developer accounts, payments, a Founder.
 
 - **Board comparison, 2026-09-28 (document only; no code changes).** OHRR asked for a comparison a board member who knows
   only the old sites can follow: where the app, website and BunFest site could save volunteer time, reach more (and younger)
