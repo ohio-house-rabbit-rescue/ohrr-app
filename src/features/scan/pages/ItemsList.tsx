@@ -37,17 +37,17 @@ export default function ItemsList() {
     const needle = q.trim().toLowerCase()
     return (items ?? []).filter(
       (i) =>
-        (filter === 'all' || (filter === 'event' ? i.kind !== 'stock' : i.kind === filter)) &&
+        (filter === 'all' || (filter === 'event' ? i.kind === 'auction' || i.kind === 'raffle' : i.kind === filter)) &&
         (!needle || i.title.toLowerCase().includes(needle) || i.code.toLowerCase().includes(needle) || (i.donated_by ?? '').toLowerCase().includes(needle)),
     )
   }, [items, filter, q])
 
   const counts = useMemo(() => {
-    const c: Record<Filter, number> = { all: 0, event: 0, auction: 0, raffle: 0, stock: 0 }
+    const c: Record<Filter, number> = { all: 0, event: 0, auction: 0, raffle: 0, stock: 0, donation: 0 }
     for (const i of items ?? []) {
       c.all++
       c[i.kind]++
-      if (i.kind !== 'stock') c.event++
+      if (i.kind === 'auction' || i.kind === 'raffle') c.event++
     }
     return c
   }, [items])
@@ -55,9 +55,9 @@ export default function ItemsList() {
   return (
     <Screen className="space-y-4">
       <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Scanned items</h1>
+        <h1 className="font-display text-2xl font-black text-ink">Items</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Auction lots and raffle prizes with a tag — tap one to update it. Shop stock lives in{' '}
+          Donations to sort, auction lots and raffle prizes with a code — tap one to update it or decide where it goes. Shop stock lives in{' '}
           <Link to="/staff/hopshop" className="font-bold text-brand-blue">
             Hop Shop
           </Link>
@@ -66,19 +66,25 @@ export default function ItemsList() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Link to="/staff/scan" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-brand-orange font-display text-base font-extrabold text-ink shadow-sm">
+        <Link to="/staff/catalog" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-brand-orange font-display text-base font-extrabold text-ink shadow-sm">
+          <Icon name="camera" size={20} /> Catalog
+        </Link>
+        <Link to="/staff/scan" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-brand-blue font-display text-base font-extrabold text-white shadow-sm">
           <Icon name="scan" size={20} /> Scan
         </Link>
-        <Link to="/staff/items/tags" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-brand-blue/50 bg-white font-display text-base font-extrabold text-brand-blue">
-          <Icon name="printer" size={20} /> Print tags
+        <Link to="/staff/labels" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-brand-blue/50 bg-white font-display text-base font-extrabold text-brand-blue">
+          <Icon name="printer" size={20} /> Print labels
+        </Link>
+        <Link to="/staff/items/tags" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white font-display text-base font-extrabold text-slate-600">
+          <Icon name="printer" size={20} /> Blank tags
         </Link>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {(['event', ...ITEM_KINDS, 'all'] as Filter[]).map((f) => {
+        {(['donation', 'event', ...ITEM_KINDS, 'all'] as Filter[]).map((f) => {
           const active = f === filter
           const label =
-            f === 'all' ? 'Everything' : f === 'event' ? 'Auction & raffle' : KIND_META[f].label.replace('Hop Shop ', '')
+            f === 'all' ? 'Everything' : f === 'event' ? 'Auction & raffle' : f === 'donation' ? 'To sort' : KIND_META[f].label.replace('Hop Shop ', '')
           return (
             <button
               key={f}

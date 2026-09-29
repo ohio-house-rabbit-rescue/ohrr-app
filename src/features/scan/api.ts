@@ -18,10 +18,52 @@ export async function findByCode(orgId: string, code: string): Promise<TaggedIte
   return asItem(data)
 }
 
-export async function listItems(orgId: string, kind?: ItemKind | null): Promise<TaggedItem[]> {
-  const { data, error } = await supabase.rpc('list_tagged_items', { p_org: orgId, p_kind: kind ?? null })
+export async function listItems(orgId: string, kind?: ItemKind | null, unprinted = false): Promise<TaggedItem[]> {
+  const args: { p_org: string; p_kind: string | null; p_unprinted?: boolean } = { p_org: orgId, p_kind: kind ?? null }
+  if (unprinted) args.p_unprinted = true
+  const { data, error } = await supabase.rpc('list_tagged_items', args)
   if (error) throw error
   return ((data ?? []) as unknown[]).map(asItem).filter((x): x is TaggedItem => x !== null)
+}
+
+/**
+ * Catalog mode: save a new item in one call. The database makes the code
+ * (OHRR-XXXXX) unless a scanned tag's code is given. Update 36.
+ */
+export async function catalogNewItem(
+  orgId: string,
+  input: { title: string; kind?: ItemKind; donatedBy?: string; description?: string; valueCents?: number | null; photoUrl?: string | null; code?: string | null },
+): Promise<TaggedItem> {
+  const { data, error } = await supabase.rpc('catalog_new_item', {
+    p_org: orgId,
+    p_title: input.title.trim(),
+    p_kind: input.kind ?? 'donation',
+    p_description: input.description?.trim() || null,
+    p_donated_by: input.donatedBy?.trim() || null,
+    p_value_cents: input.valueCents ?? null,
+    p_photo_url: input.photoUrl ?? null,
+    p_price_cents: null,
+    p_quantity: null,
+    p_code: input.code ?? null,
+  })
+  if (error) throw error
+  const item = asItem(data)
+  if (!item) throw new Error('Saved, but the item could not be read back.')
+  return item
+}
+
+/** After printing labels: remember which are done (or undo with printed=false). */
+export async function markLabelsPrinted(orgId: string, codes: string[], printed = true): Promise<number> {
+  const { data, error } = await supabase.rpc('mark_labels_printed', { p_org: orgId, p_codes: codes, p_printed: printed })
+  if (error) throw error
+  return typeof data === 'number' ? data : 0
+}
+
+/** Donor names typed lately, newest first — for one-tap chips. */
+export async function recentDonors(orgId: string, limit = 12): Promise<string[]> {
+  const { data, error } = await supabase.rpc('recent_donors', { p_org: orgId, p_limit: limit })
+  if (error) throw error
+  return Array.isArray(data) ? (data as unknown[]).filter((x): x is string => typeof x === 'string') : []
 }
 
 export async function saveItem(orgId: string, d: ItemDraft): Promise<TaggedItem> {

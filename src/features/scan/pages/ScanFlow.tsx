@@ -83,6 +83,8 @@ export default function ScanFlow() {
 
   // The kinds this person may create (the DB checks for real on save).
   const allowedKinds = ITEM_KINDS.filter((k) => KIND_META[k].caps.some((c) => can(c)))
+  // "Donation — sort later" is offered to anyone who may add items (update 36).
+  const canDonation = KIND_META.donation.caps.some((c) => can(c))
 
   const update = useCallback((patch: Partial<ItemDraft>) => setDraft((d) => ({ ...d, ...patch })), [])
 
@@ -340,6 +342,10 @@ export default function ScanFlow() {
                 <Link to="/staff/items/tags" className="font-extrabold text-brand-blue underline-offset-2 hover:underline">
                   print tags
                 </Link>
+                . Lots of donations?{' '}
+                <Link to="/staff/catalog" className="font-extrabold text-brand-blue underline-offset-2 hover:underline">
+                  Catalog them one after another
+                </Link>
                 .
               </p>
             </div>
@@ -395,7 +401,19 @@ export default function ScanFlow() {
               </div>
             </div>
           )}
-          {canThis && item.kind !== 'stock' && (
+          {canThis && item.kind === 'donation' && (
+            <BigButton
+              tone="orange"
+              icon="gavel"
+              onClick={() => {
+                setEditing(true)
+                setStep('kind')
+              }}
+            >
+              Where does it go?
+            </BigButton>
+          )}
+          {canThis && item.kind !== 'stock' && item.kind !== 'donation' && (
             <BigButton
               tone={isDone ? 'plain' : 'orange'}
               icon={isDone ? 'x' : 'check'}
@@ -429,7 +447,7 @@ export default function ScanFlow() {
               </BigButton>
             </div>
           )}
-          {canThis && item.kind !== 'stock' && (
+          {canThis && item.kind !== 'stock' && item.kind !== 'donation' && (
             <BigButton
               tone="plain"
               disabled={busy}
@@ -438,7 +456,7 @@ export default function ScanFlow() {
               {item.is_published ? 'Hide from the public list' : 'Show on the public list'}
             </BigButton>
           )}
-          {canThis && allowedKinds.length > 1 && (
+          {canThis && item.kind !== 'donation' && (allowedKinds.length > 1 || canDonation) && (
             <BigButton
               tone="plain"
               onClick={() => {
@@ -464,10 +482,12 @@ export default function ScanFlow() {
 
   if (step === 'kind') {
     const { step: n, of } = stepNo('kind')
+    const sorting = editing && item?.kind === 'donation'
+    const choices: ItemKind[] = [...allowedKinds, ...(canDonation && !sorting ? (['donation'] as ItemKind[]) : [])]
     return (
-      <StepShell title="What is it?" help="Tap one." step={editing ? undefined : n} of={editing ? undefined : of} onBack={() => backTo('kind')}>
+      <StepShell title={sorting ? 'Where does it go?' : 'What is it?'} help="Tap one." step={editing ? undefined : n} of={editing ? undefined : of} onBack={() => backTo('kind')}>
         <div className="space-y-3">
-          {allowedKinds.map((k) => (
+          {choices.map((k) => (
             <KindTile
               key={k}
               kind={k}
@@ -479,7 +499,7 @@ export default function ScanFlow() {
               }}
             />
           ))}
-          {allowedKinds.length === 0 && (
+          {choices.length === 0 && (
             <ErrorBox>Your account can’t add items yet. Ask an admin to grant Silent Auction or Hop Shop access.</ErrorBox>
           )}
         </div>

@@ -1914,7 +1914,7 @@ export type Database = {
           id: string
           org_id: string
           code: string
-          kind: 'auction' | 'raffle' | 'stock'
+          kind: 'auction' | 'raffle' | 'stock' | 'donation'
           raffle_item_id: string | null
           raffle_prize_id: string | null
           product_id: string | null
@@ -1926,7 +1926,7 @@ export type Database = {
           id?: string
           org_id: string
           code: string
-          kind: 'auction' | 'raffle' | 'stock'
+          kind: 'auction' | 'raffle' | 'stock' | 'donation'
           raffle_item_id?: string | null
           raffle_prize_id?: string | null
           product_id?: string | null
@@ -2530,8 +2530,31 @@ export type Database = {
         Returns: Json
       }
       list_tagged_items: {
-        Args: { p_org: string; p_kind?: string | null }
+        Args: { p_org: string; p_kind?: string | null; p_unprinted?: boolean }
         Returns: Json[]
+      }
+      catalog_new_item: {
+        Args: {
+          p_org: string
+          p_title: string
+          p_kind?: string
+          p_description?: string | null
+          p_donated_by?: string | null
+          p_value_cents?: number | null
+          p_photo_url?: string | null
+          p_price_cents?: number | null
+          p_quantity?: number | null
+          p_code?: string | null
+        }
+        Returns: Json
+      }
+      mark_labels_printed: {
+        Args: { p_org: string; p_codes: string[]; p_printed?: boolean }
+        Returns: number
+      }
+      recent_donors: {
+        Args: { p_org: string; p_limit?: number }
+        Returns: Json
       }
       save_scanned_item: {
         Args: {

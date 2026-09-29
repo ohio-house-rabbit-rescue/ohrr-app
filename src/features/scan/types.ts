@@ -4,9 +4,13 @@
 import type { IconName } from '../../components/icons'
 import type { Capability } from '../../lib/capabilities'
 
-export type ItemKind = 'auction' | 'raffle' | 'stock'
+export type ItemKind = 'auction' | 'raffle' | 'stock' | 'donation'
 
+/** The kinds a thing can be sorted INTO (the "What is it?" tiles). */
 export const ITEM_KINDS: ItemKind[] = ['auction', 'raffle', 'stock']
+
+/** Every kind, including "donation" = cataloged, not sorted yet. */
+export const ALL_KINDS: ItemKind[] = ['donation', 'auction', 'raffle', 'stock']
 
 export interface KindMeta {
   kind: ItemKind
@@ -26,14 +30,17 @@ export interface KindMeta {
   openStatus: string
 }
 
+const EVENT_CAPS: Capability[] = ['events.bunfest.manage']
+const STOCK_CAPS: Capability[] = ['hopshop.products.create', 'hopshop.products.edit', 'hopshop.inventory.update']
+
 export const KIND_META: Record<ItemKind, KindMeta> = {
   auction: {
     kind: 'auction',
     label: 'Silent Auction',
-    hint: 'People write bids on a sheet. Highest bid wins.',
+    hint: 'People bid on it. Highest bid wins.',
     icon: 'gavel',
     tone: 'orange',
-    caps: ['events.bunfest.manage'],
+    caps: EVENT_CAPS,
     doneLabel: 'Mark as won',
     doneStatus: 'won',
     undoLabel: 'Not won yet',
@@ -45,7 +52,7 @@ export const KIND_META: Record<ItemKind, KindMeta> = {
     hint: 'People drop tickets in a bowl. One ticket is drawn.',
     icon: 'ticket',
     tone: 'orange',
-    caps: ['events.bunfest.manage'],
+    caps: EVENT_CAPS,
     doneLabel: 'Mark as drawn',
     doneStatus: 'drawn',
     undoLabel: 'Not drawn yet',
@@ -57,11 +64,23 @@ export const KIND_META: Record<ItemKind, KindMeta> = {
     hint: 'Something OHRR sells. We count how many there are.',
     icon: 'box',
     tone: 'blue',
-    caps: ['hopshop.products.create', 'hopshop.products.edit', 'hopshop.inventory.update'],
+    caps: STOCK_CAPS,
     doneLabel: 'Hide from the shop',
     doneStatus: 'inactive',
     undoLabel: 'Show in the shop',
     openStatus: 'active',
+  },
+  donation: {
+    kind: 'donation',
+    label: 'Donation — sort later',
+    hint: 'Just catalog it now. Decide auction, raffle or shop afterwards.',
+    icon: 'gift',
+    tone: 'blue',
+    caps: [...EVENT_CAPS, ...STOCK_CAPS],
+    doneLabel: '',
+    doneStatus: 'unsorted',
+    undoLabel: '',
+    openStatus: 'unsorted',
   },
 }
 
@@ -81,6 +100,10 @@ export interface TaggedItem {
   status: string
   is_published: boolean
   session: 'morning' | 'afternoon' | 'all-day' | null
+  /** Donations only: the day it came in. */
+  received_on?: string | null
+  /** Set once its label has been printed (update 36). */
+  label_printed_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -152,6 +175,7 @@ export function formatMoney(cents: number | null | undefined): string {
 
 /** Plain-words status for the item card and list rows. */
 export function statusLabel(item: TaggedItem): string {
+  if (item.kind === 'donation') return 'To be sorted'
   if (item.kind === 'stock') {
     const n = item.quantity ?? 0
     const count = n === 1 ? '1 in stock' : `${n} in stock`

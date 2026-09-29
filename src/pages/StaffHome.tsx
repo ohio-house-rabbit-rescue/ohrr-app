@@ -194,7 +194,10 @@ export default function StaffHome() {
             </Link>
           )}
           {canScan && (
-            <ActionCard to="/staff/items" title="Scanned items" subtitle="Everything with a tag · print new tags" icon="printer" tone="orange" />
+            <ActionCard to="/staff/catalog" title="Catalog donations" subtitle="Photo, say the name, Next — the app gives each item a code" icon="camera" tone="orange" />
+          )}
+          {canScan && (
+            <ActionCard to="/staff/items" title="Items" subtitle="Donations to sort, auction and raffle items · print labels" icon="printer" tone="orange" />
           )}
           {canManageAdopt && (
             <ActionCard

@@ -52,13 +52,18 @@ export default function StaffLayout() {
     { to: '/staff/wish-list', label: 'Wish list items', show: can('giving.wishlist') },
     { to: '/staff/bookings', label: 'Bookings', show: can('bookings.manage') },
     {
+      to: '/staff/catalog',
+      label: 'Catalog donations',
+      show: can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update'),
+    },
+    {
       to: '/staff/scan',
       label: 'Scan an item',
       show: can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update'),
     },
     {
       to: '/staff/items',
-      label: 'Scanned items',
+      label: 'Items',
       show: can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update'),
     },
     {
