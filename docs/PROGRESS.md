@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-29 evening (SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping — update 35 WRITTEN, NOT YET RUN; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-09-29 night (CATALOG DONATIONS + PRINT LABELS — update 36 written, pending; the silent auction is ON HOLD at OHRR's request since 2026-09-29, its update 35 still pending; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping — update 35 WRITTEN, NOT YET RUN; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,34 @@
 ---
 
 ## Current state (at a glance)
+
+- **Catalog donations fast + print labels, 2026-09-29 (app `c1be452`, website `be15ca2` + `40f9429`; update 36 WRITTEN, NOT RUN).**
+  OHRR: "a simple process for the staff to inventory, take a photo, label and provide a name, donor etc… print to a thermal
+  printer that can create barcodes… photo from phone camera, voice to name the item and then hit next." Decisions: label =
+  QR + barcode + code + name + donor; everything saved as "Donation — sort later"; OHRR's printer is a **Phomemo PM-249-WF**
+  (203 dpi, 1–4.6 in labels, Wi-Fi/USB, no AirPrint → phones print through the Labelife app's "PDF processing", laptops
+  through Phomemo's driver with a custom page size).
+  - **Update 36** (`20260930120000_donations_catalog.sql`): `donation_items`; `item_tags.kind` gains `donation`
+    (+ `donation_id`, `label_printed_at`); `catalog_new_item()` makes the OHRR code server-side and saves in one call;
+    `mark_labels_printed()`; `recent_donors()`; `list_tagged_items(p_org, p_kind, p_unprinted)` re-created; `save_scanned_item`
+    and the status/publish/delete RPCs learn the fourth kind (moving a donation into the auction/raffle/stock keeps its code).
+  - **App:** Staff → **Catalog donations** (`/staff/catalog`): camera → say (Web Speech mic) or type the name → recent-donor
+    chips → Next reopens the camera at once while the save runs in the background ("Saved · OHRR-7K3PX" line, retry on
+    failure); per-session kind chip; today's count; labels-to-print count. **Print labels** (`/staff/labels`): size presets
+    (2¼×1¼ default, 2×1, 62×29 mm, 3×2, 4×2, 4×3, 4×6 with photo) + custom, remembered per device; unprinted ticked by
+    default; preview; browser print (one label per page, `@page` at the label size) or a PDF (jsPDF) — on the phone the PDF
+    goes to the share sheet (Labelife); marks printed with undo. `labels.ts` painter: QR left, name shrinks to fit (never
+    cut first), donor + kind under it, Code 128 barcode across the bottom, code beneath; photos drawn via CORS. Items list:
+    "To sort" filter, Catalog/Scan/Print labels/Blank tags buttons; scan flow: "Where does it go?" on a donation. Deps:
+    jsbarcode, jspdf (MIT).
+  - **Website:** `/staff/items` gets "Add a donation" (title, donor chips, value, photo → `catalog_new_item`), "Move to…"
+    on donation rows (stock asks price + count), label-printed badge; `/staff/items/labels` (desktop two-column) with the
+    same painter (`src/lib/labels.ts`, keep in sync with the app's). Verified with stubbed RPCs: print pages at the exact
+    label size, 5-page PDF, graceful "run update 36" notes before the update.
+  - **Checked:** labels rendered at all presets through the app's own painter (Playwright + Vite), PDF page count, staff
+    routes load to the sign-in gate with no errors. **Not exercised:** the camera loop on a real phone and a real print on
+    the Phomemo — OHRR to calibrate the printer, set the label size once per device and try Labelife's PDF processing.
+  - **Silent auction: ON HOLD** (OHRR, 2026-09-29): nothing further until asked; update 35 stays in RUN-THIS with 36.
 
 - **Silent auction with online bidding, 2026-09-29 (app `5bcb17a`, website `cebb649`/`bc49180`, BunFest `a7c084b`; update 35 WRITTEN, NOT RUN).**
   OHRR: "a silent auction that has the ability to bid and also have a buy now option… take a credit card upfront, and
