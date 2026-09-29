@@ -47,3 +47,4 @@ ios/App/build/
 ios/App/Pods/
 ios/App/DerivedData/
 android/keystore.properties
+__pycache__/
