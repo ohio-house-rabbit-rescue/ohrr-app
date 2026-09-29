@@ -81,6 +81,7 @@ export default function StaffLayout() {
     { to: '/staff/bunfest', label: 'BunFest — schedule, vendors, rescues', show: can('events.bunfest.manage') },
     { to: '/staff/tails', label: 'Happy Tails', show: can('content.education.edit') || can('inbox.manage') },
     { to: '/staff/raffle', label: 'Silent Auction', show: can('events.bunfest.manage') },
+    { to: '/staff/auction-desk', label: 'Auction desk — close & charge, pickup, shipping', show: can('events.bunfest.manage') },
     { to: '/staff/raffle-tickets', label: 'Raffle tickets', show: can('events.bunfest.manage') || can('counter.use') },
     { to: '/staff/sponsors', label: 'Sponsors & partners', end: true, show: can('events.bunfest.manage') },
     { to: '/staff/sponsors/renewals', label: 'Sponsor renewals — who to ask next', show: can('events.bunfest.manage') },

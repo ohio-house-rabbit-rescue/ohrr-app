@@ -318,6 +318,19 @@ export type Database = {
           status: string
           is_published: boolean
           sort_order: number
+          // Update 35 (20260930100000_silent_auction_bidding.sql): online bidding.
+          // Absent until that update runs on the live database - read them with `?? null`.
+          starting_bid_cents: number | null
+          min_increment_cents: number | null
+          buy_now_cents: number | null
+          /** Flat shipping fee; null = pickup only. */
+          ship_fee_cents: number | null
+          closes_at_override: string | null
+          current_bid_cents: number | null
+          bid_count: number
+          high_bidder_id: string | null
+          high_bidder_no: number | null
+          won_kind: 'bid' | 'buy_now' | 'desk' | null
           created_by: string | null
           created_at: string
           updated_at: string
@@ -335,6 +348,16 @@ export type Database = {
           status?: string
           is_published?: boolean
           sort_order?: number
+          starting_bid_cents?: number | null
+          min_increment_cents?: number | null
+          buy_now_cents?: number | null
+          ship_fee_cents?: number | null
+          closes_at_override?: string | null
+          current_bid_cents?: number | null
+          bid_count?: number
+          high_bidder_id?: string | null
+          high_bidder_no?: number | null
+          won_kind?: 'bid' | 'buy_now' | 'desk' | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -352,6 +375,16 @@ export type Database = {
           status?: string
           is_published?: boolean
           sort_order?: number
+          starting_bid_cents?: number | null
+          min_increment_cents?: number | null
+          buy_now_cents?: number | null
+          ship_fee_cents?: number | null
+          closes_at_override?: string | null
+          current_bid_cents?: number | null
+          bid_count?: number
+          high_bidder_id?: string | null
+          high_bidder_no?: number | null
+          won_kind?: 'bid' | 'buy_now' | 'desk' | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -369,6 +402,15 @@ export type Database = {
           raffle_bundle_qty: number | null
           raffle_bundle_price_cents: number | null
           raffle_details: string | null
+          // Update 35: online bidding switches and notes (absent until it runs).
+          bidding_enabled: boolean
+          bidding_opens_at: string | null
+          extend_minutes: number
+          default_increment_cents: number
+          stripe_publishable_key: string | null
+          bidding_note: string | null
+          pickup_note: string | null
+          shipping_note: string | null
           updated_at: string
         }
         Insert: {
@@ -381,6 +423,14 @@ export type Database = {
           raffle_bundle_qty?: number | null
           raffle_bundle_price_cents?: number | null
           raffle_details?: string | null
+          bidding_enabled?: boolean
+          bidding_opens_at?: string | null
+          extend_minutes?: number
+          default_increment_cents?: number
+          stripe_publishable_key?: string | null
+          bidding_note?: string | null
+          pickup_note?: string | null
+          shipping_note?: string | null
           updated_at?: string
         }
         Update: {
@@ -393,6 +443,14 @@ export type Database = {
           raffle_bundle_qty?: number | null
           raffle_bundle_price_cents?: number | null
           raffle_details?: string | null
+          bidding_enabled?: boolean
+          bidding_opens_at?: string | null
+          extend_minutes?: number
+          default_increment_cents?: number
+          stripe_publishable_key?: string | null
+          bidding_note?: string | null
+          pickup_note?: string | null
+          shipping_note?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -2639,6 +2697,40 @@ export type Database = {
       raffle_desk: { Args: { p_org: string; p_event: string; p_query?: string | null }; Returns: Json }
       raffle_winners: { Args: { p_org: string; p_event: string }; Returns: Json }
       raffle_desk_summary: { Args: { p_org: string; p_event: string }; Returns: Json }
+      // Silent auction bidding (supabase/migrations/20260930100000_silent_auction_bidding.sql).
+      // Public reads and bids go through src/features/auction/client.ts; the staff screens call these directly.
+      auction_catalog: { Args: { p_event?: string }; Returns: Json }
+      auction_item_by_code: { Args: { p_code: string }; Returns: Json }
+      auction_item_bids: { Args: { p_item_id: string }; Returns: Json }
+      auction_bidder_by_token: { Args: { p_token: string }; Returns: Json }
+      auction_update_bidder: {
+        Args: { p_token: string; p_name: string; p_phone: string; p_fulfil: string; p_address?: Json | null }
+        Returns: Json
+      }
+      place_bid: { Args: { p_token: string; p_item_id: string; p_amount_cents: number }; Returns: Json }
+      auction_desk: { Args: { p_org: string; p_event: string }; Returns: Json }
+      auction_close_ready: { Args: { p_org: string; p_event: string }; Returns: Json }
+      auction_offer_next: { Args: { p_sale_id: string }; Returns: Json }
+      auction_desk_sale: {
+        Args: {
+          p_item_id: string
+          p_name: string
+          p_phone: string | null
+          p_email: string | null
+          p_amount_cents: number
+          p_fulfil?: string
+          p_paid?: boolean
+          p_ship_fee_cents?: number | null
+        }
+        Returns: Json
+      }
+      auction_update_sale: {
+        Args: { p_sale_id: string; p_payment_status?: string | null; p_fulfil_status?: string | null; p_tracking?: string | null; p_note?: string | null }
+        Returns: Json
+      }
+      auction_set_bidder_blocked: { Args: { p_bidder_id: string; p_blocked: boolean }; Returns: Json }
+      auction_save_settings: { Args: { p_org: string; p_event: string; p_patch: Json }; Returns: Json }
+      auction_set_item_prices: { Args: { p_item_id: string; p_patch: Json }; Returns: Json }
       delete_own_account: { Args: Record<string, never>; Returns: undefined }
       // Public Hop Shop shelf (supabase/migrations/20260921160000_public_shop.sql)
       hopshop_public_products: {

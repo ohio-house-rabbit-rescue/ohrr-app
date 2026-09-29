@@ -117,6 +117,10 @@ const PostQueue = lazy(() => import('./features/share/pages/PostQueue'))
 const Flyers = lazy(() => import('./features/share/pages/Flyers'))
 const BreedGuide = lazy(() => import('./features/breeds/pages/BreedGuide'))
 const RaffleDesk = lazy(() => import('./features/raffle/tickets/pages/RaffleDesk'))
+// Silent auction online bidding (update 35) — register, your bids, the staff desk. Stripe's form is big, so lazy.
+const AuctionRegister = lazy(() => import('./features/auction/pages/AuctionRegister'))
+const MyBids = lazy(() => import('./features/auction/pages/MyBids'))
+const AuctionDesk = lazy(() => import('./features/auction/pages/AuctionDesk'))
 const TicketPage = lazy(() => import('./features/raffle/tickets/pages/TicketPage'))
 const BreedDetail = lazy(() => import('./features/breeds/pages/BreedDetail'))
 const Outreach = lazy(() => import('./features/share/pages/Outreach'))
@@ -236,6 +240,10 @@ export default function App() {
         <Route path="map" element={<EventMap />} />
         <Route path="silent-auction" element={<Navigate to="/bunfest/auction" replace />} />
         <Route path="auction" element={<RaffleCatalog />} />
+        {/* Static auction routes come before auction/:id so "register" and "me" are never read as an item id */}
+        <Route path="auction/register" element={<Suspense fallback={null}><AuctionRegister /></Suspense>} />
+        <Route path="auction/me" element={<Suspense fallback={null}><MyBids /></Suspense>} />
+        <Route path="auction/me/:token" element={<Suspense fallback={null}><MyBids /></Suspense>} />
         <Route path="auction/:id" element={<RaffleItemDetail />} />
         <Route path="p/:id" element={<BunfestPage />} />
         <Route path="give" element={<Give />} />
@@ -280,6 +288,7 @@ export default function App() {
           <Route path="bunfest/partners" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
           <Route path="raffle" element={<StaffRaffle />} />
           <Route path="raffle-tickets" element={<Suspense fallback={null}><RaffleDesk /></Suspense>} />
+          <Route path="auction-desk" element={<Suspense fallback={null}><AuctionDesk /></Suspense>} />
           <Route path="sponsors" element={<StaffSponsors />} />
           <Route path="sponsors/renewals" element={<Suspense fallback={null}><StaffSponsorRenewals /></Suspense>} />
           <Route path="bunny-help" element={<StaffBunnyHelp />} />

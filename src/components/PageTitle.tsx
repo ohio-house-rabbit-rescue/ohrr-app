@@ -55,6 +55,7 @@ const TITLES: [string, string][] = [
   ['/staff/supporters', 'Supporters'],
   ['/staff/notifications', 'Send a notification'],
   ['/staff/wish-list', 'Wish list items'],
+  ['/staff/auction-desk', 'Auction desk'],
   ['/staff', 'Staff'],
 ]
 
@@ -66,6 +67,8 @@ const BUNFEST: [string, string][] = [
   ['/bunfest/sponsors', 'Sponsors'],
   ['/bunfest/visit', 'Plan your visit'],
   ['/bunfest/map', 'Event map'],
+  ['/bunfest/auction/register', 'Register to bid'],
+  ['/bunfest/auction/me', 'Your bids'],
   ['/bunfest/auction', 'Silent auction'],
   ['/bunfest/give', 'Support OHRR'],
   ['/bunfest', ''],

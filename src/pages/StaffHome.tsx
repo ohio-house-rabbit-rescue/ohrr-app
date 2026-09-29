@@ -382,6 +382,15 @@ export default function StaffHome() {
           )}
           {canManageAuction && (
             <ActionCard
+              to="/staff/auction-desk"
+              title="Auction desk"
+              subtitle="Close bidding & charge cards, walk-up sales, pickup and shipping, bidders"
+              icon="gavel"
+              tone="orange"
+            />
+          )}
+          {canManageAuction && (
+            <ActionCard
               to="/staff/raffle-tickets"
               title="Raffle tickets"
               subtitle="The raffle table: mark paid, sell at the table, draw winners"

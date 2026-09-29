@@ -1,18 +1,23 @@
-// One Silent Auction item: large photo, description, donor, value, session.
-// Won items stay visible with a "Won" badge (no winner is ever shown). If the
-// item is unpublished the query returns nothing and we show a neutral
-// "no longer listed" state.
+// One Silent Auction item: large photo, description, donor, value, session —
+// and, since update 35, the bidding box (running bid, next minimum, close
+// time, Place bid / Buy now for registered bidders) with the bid history.
+// Sold items stay visible with a "Sold" badge (no winner is ever named).
+// If the item is unpublished the catalog leaves it out and we show a neutral
+// "no longer listed" state. The catalog is polled every 15 s, so a rival bid
+// shows up without a refresh.
 import { Link, useParams } from 'react-router-dom'
 import { Screen, Card, Badge, btn } from '../../components/ui'
 import { Icon } from '../../components/icons'
-import { useAuctionItem } from './useRaffleItems'
+import ShareButton, { appLink } from '../../components/ShareButton'
 import { RafflePhoto } from './RafflePhoto'
-import { SessionBadge } from './RaffleCatalog'
+import { SessionBadge, soldLabel } from './RaffleCatalog'
 import { formatValue } from './types'
+import { useCatalogItem } from '../auction/useAuction'
+import { BidBox } from '../auction/BidBox'
 
 export default function RaffleItemDetail() {
   const { id } = useParams()
-  const item = useAuctionItem(id)
+  const { item, state } = useCatalogItem(id)
 
   if (item === undefined) {
     return (
@@ -37,7 +42,8 @@ export default function RaffleItemDetail() {
   }
 
   const value = formatValue(item.value_cents)
-  const won = item.status === 'won'
+  const sold = item.status === 'won'
+  const now = state.catalog?.now ?? new Date().toISOString()
 
   return (
     <div>
@@ -48,19 +54,19 @@ export default function RaffleItemDetail() {
             title={item.title}
             photo={item.photo_url}
             initialClassName="text-7xl"
-            className={won ? 'opacity-70' : ''}
+            className={sold ? 'opacity-70' : ''}
           />
         </div>
         <Link
           to="/bunfest/auction"
           aria-label="Back to the Silent Auction"
-          className="absolute left-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-ink shadow-md backdrop-blur transition hover:bg-white"
+          className="absolute left-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-ink shadow-md backdrop-blur transition hover:bg-white"
         >
           <Icon name="arrowLeft" size={20} />
         </Link>
-        {won && (
+        {sold && (
           <span className="absolute right-4 top-4 inline-flex items-center rounded-lg bg-ink/85 px-2.5 py-1 font-display text-xs font-black uppercase tracking-wide text-white shadow-sm">
-            Won
+            {soldLabel(item)}
           </span>
         )}
       </div>
@@ -78,9 +84,11 @@ export default function RaffleItemDetail() {
           )}
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
             <SessionBadge session={item.session} />
-            {won && <Badge tone="slate">Won</Badge>}
+            {sold && <Badge tone="slate">{soldLabel(item)}</Badge>}
           </div>
         </div>
+
+        <BidBox item={item} settings={state.catalog?.settings ?? null} now={now} onChanged={state.refresh} />
 
         {item.description && (
           <Card>
@@ -93,12 +101,27 @@ export default function RaffleItemDetail() {
           </Card>
         )}
 
-        <Link
-          to="/bunfest/auction"
-          className="inline-flex items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
-        >
-          <Icon name="arrowLeft" size={16} /> All auction items
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            to="/bunfest/auction"
+            className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
+          >
+            <Icon name="arrowLeft" size={16} /> All auction items
+          </Link>
+          <ShareButton
+            label="Share this item"
+            filename={`ohrr-auction-${item.id.slice(0, 8)}.png`}
+            caption={`${item.title} — Silent auction · Midwest BunFest. Bid in the OHRR app.`}
+            card={{
+              kicker: 'Silent auction',
+              title: item.title,
+              subtitle: 'Midwest BunFest · Ohio House Rabbit Rescue',
+              photoUrl: item.photo_url ?? undefined,
+              link: appLink(`/bunfest/auction/${item.id}`),
+              cta: 'Bid in the OHRR app',
+            }}
+          />
+        </div>
       </Screen>
     </div>
   )
