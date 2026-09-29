@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-29 (updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-09-29 evening (SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping — update 35 WRITTEN, NOT YET RUN; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,50 @@
 ---
 
 ## Current state (at a glance)
+
+- **Silent auction with online bidding, 2026-09-29 (app `5bcb17a`, website `cebb649`/`bc49180`, BunFest `a7c084b`; update 35 WRITTEN, NOT RUN).**
+  OHRR: "a silent auction that has the ability to bid and also have a buy now option… take a credit card upfront, and
+  allow… local pick up and shipping." Decisions (OHRR, 2026-09-29): Stripe; the server piece on Cloudflare Pages Functions
+  next to the website; card saved BEFORE the first bid; flat shipping fee per item set by staff (null = pickup only).
+  - **Database (update 35, `20260930100000_silent_auction_bidding.sql`):** `auction_settings` + bidding switch, opens-at,
+    "going once" `extend_minutes` (5), `default_increment_cents`, Stripe PUBLISHABLE key, notes; `raffle_items` + starting
+    bid, step, Buy Now, `ship_fee_cents`, `closes_at_override`, running bid/high bidder; new `auction_bidders` (private
+    `access_token`, Stripe customer/payment-method ids only), `auction_bids`, `auction_sales` (one live sale per item;
+    payment_status pending/paid/failed/cash/refunded/void; fulfil pickup/ship + status/tracking). Public RPCs:
+    `auction_catalog`, `auction_item_bids`, `auction_item_by_code`, `auction_bidder_by_token`, `auction_update_bidder`,
+    `place_bid` (locks the item, validates open/min/Buy Now, marks outbids, extends the close). service_role-only:
+    `auction_register_bidder`, `auction_set_card`, `auction_bidder_secure`, `auction_begin_sale` (locks; buy_now or
+    closing bid), `auction_finalize_sale`, `auction_sale_by_pi`, `auction_sale_get`. Staff (events.bunfest.manage):
+    `auction_desk`, `auction_close_ready`, `auction_offer_next`, `auction_desk_sale`, `auction_update_sale`,
+    `auction_set_bidder_blocked`, `auction_save_settings`, `auction_set_item_prices`. No new permission key.
+  - **Payment server** (`ohrr-website/functions/api/auction/*` + `server/auction/*`, `wrangler.toml`,
+    `public/_routes.json`): register → Stripe Customer + SetupIntent (card only, off_session); card-saved reads the PM
+    from Stripe; new-card; buy-now (begin sale → charge; failure voids so the item is back on sale); pay (winner retries);
+    complete (after 3-D Secure); charge (staff JWT → Postgres checks the permission: close & charge all / retry one /
+    offer to next bidder); webhook (constructEventAsync + SubtleCrypto; setup_intent.succeeded, payment_intent.succeeded /
+    payment_failed, charge.refunded); health. CORS for the three sites, the phone apps and localhost. Charges use an
+    idempotency key per attempt; `receipt_email` so Stripe emails receipts. **Live and verified** (health, CORS, 503 until
+    secrets); exercised locally in workerd with fake keys (bad signature → 400, fake service key → "Invalid API key").
+    Secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY` in Cloudflare → Settings →
+    Variables and Secrets (OHRR's step). Docs: `ohrr-website/docs/AUCTION.md` (= Drive `06-silent-auction-setup.md`).
+  - **Shared client** `src/features/auction/client.ts` + `CardSetup.tsx` (copies: website/BunFest `src/lib/auctionClient.ts`,
+    `src/components/CardSetup.tsx`; keep in sync). `AUCTION_API` = website `/api/auction` (VITE_AUCTION_API) or the
+    website's absolute URL from the app/BunFest.
+  - **Pages:** app `/bunfest/auction` (+ `/register`, `/me`, `/me/:token`, `/:id` with BidBox + Share), `/t/:code` now lands
+    the public on the item; website `/bunfest/silent-auction/…`; BunFest `/auction/…`. All fall back to today's preview
+    (no bidding) until update 35 runs, and Register says "hasn't opened yet" until staff switch bidding on with a
+    publishable key. Staff: item editor + setup panel (both surfaces), **Auction desk** (app `/staff/auction-desk`,
+    website `/staff/auction/desk` with CSV): close & charge, retry, offer to next bidder, table sale, paid at desk,
+    picked up / shipped + tracking, refund link + mark refunded, void, block bidder.
+  - **Facts for OHRR** (verified 2026-09-29): Stripe standard 2.9% + 30¢; the nonprofit discount needs ≥80% tax-deductible
+    donation volume and Stripe says auction payments don't count; Apple 3.1.3(e) / Google Play allow physical goods outside
+    IAP; Ohio R.C. 5739.02(B)(9) six-selling-days exemption — treasurer to confirm; Cloudflare Pages can't run cron
+    (closing is a staff button); outbid emails need the email-sending account (still OHRR's to-do).
+  - **Not yet exercised with real Stripe** (no account here; OHRR must create it): register/card/bid/buy/close flows are
+    type-checked, mocked on the BunFest site, and the server paths were probed; a test-mode dry run is in the guide.
+  - **OHRR's steps, in order:** run update 35 → Stripe account (keys, webhook to
+    `https://ohrr-website.pages.dev/api/auction/webhook`, receipts on) → three Cloudflare secrets + redeploy → paste the
+    publishable key, prices, close times → switch bidding on. BunFest is 2026-10-25.
 
 - **Database up to date, 2026-09-29 (app `c64abb2`, website `a40d2ff`).** OHRR ran update 33 (six small chat blocks) and
   update 34. Checked live over REST: Mackenzie, Rachel, Tobias published; Edmund, Leo, Monty and the older Nimbus hidden
