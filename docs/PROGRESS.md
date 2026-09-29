@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-28 (update 33 written; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-09-28 (board comparison PDF, old sites vs the new three; update 33 written and left on OHRR's to-do list; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,6 +19,17 @@
 
 ## Current state (at a glance)
 
+- **Board comparison, 2026-09-28 (document only; no code changes).** OHRR asked for a comparison a board member who knows
+  only the old sites can follow: where the app, website and BunFest site could save volunteer time, reach more (and younger)
+  people, or bring in money. Delivered as Drive root `OHRR Old and New - Board Comparison.pdf` (11 pages): summary, first
+  screens old vs new (live screenshots), two everyday tasks, task-by-task table, the seven personas + staff, behind-the-scenes
+  chores, a blank hours worksheet (no invented savings), BunFest old vs new, money, reach/next generation, limits + measures +
+  decisions, and QR codes to the three sites. Sources and build script: Drive `Research/board-comparison/` (`comparison.html`,
+  `build.py` = Playwright + installed Chrome, `shots.py`). Old-site facts come from read-only checks on 2026-09-28 of
+  ohiohouserabbitrescue.org (WordPress: 63 pages, 9 posts, 269 links; forms by Visual Form Builder/WPForms with unseen
+  destinations; SignUp.com shifts; PayPal donate; 65 outside domains) and midwestbunfest.org (Weebly: 23 menu pages; 2025 map;
+  2024 RHDV2 wording; paper agreement; handwritten raffle stubs). Flagged for the board, neutrally: an older donation form on
+  the old site uses a personal email as the PayPal receiver. **Update 33 is on hold at OHRR's request** ("probably tomorrow").
 - **Round after the audit, 2026-09-28 (latest; app `be11ce9`, website `34bab80`; update 33 WRITTEN, NOT YET RUN).**
   OHRR's answers to the open list:
   - **Happy Tails:** one clearly marked EXAMPLE story, "Dottie" (OHRR's own photo `img/ohrr/adoption-rescued-favorite-breed.jpg`,
