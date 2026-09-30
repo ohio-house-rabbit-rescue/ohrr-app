@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-29 night (CATALOG DONATIONS + PRINT LABELS — update 36 written, pending; the silent auction is ON HOLD at OHRR's request since 2026-09-29, its update 35 still pending; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping — update 35 WRITTEN, NOT YET RUN; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-09-30 (UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,7 +19,19 @@
 
 ## Current state (at a glance)
 
-- **Catalog donations fast + print labels, 2026-09-29 (app `c1be452`, website `be15ca2` + `40f9429`; update 36 WRITTEN, NOT RUN).**
+- **Database up to date, 2026-09-30.** OHRR ran updates 35 (silent auction, on hold) and 36 (cataloging + labels) from
+  RUN-THIS in one paste. Checked live over REST with the publishable key: `auction_catalog` answers with the sample items,
+  `auction_bidders`/`auction_sales` exist, `place_bid` answers with its own message; `donation_items`,
+  `item_tags.donation_id`/`label_printed_at`, the three-argument `list_tagged_items`, `catalog_new_item`,
+  `mark_labels_printed` and `recent_donors` all answer (permission messages for anon, as designed).
+  `APPLY-35`/`APPLY-36 (applied 2026-09-30).sql` filed; RUN-THIS says nothing to run (next is 37). **Still OHRR's own:**
+  test the catalog loop on a phone and a print on the Phomemo; deploy the `ohrr-jobs` Edge Function (phone notifications
+  wait on it); an email-sending account (outbid notices, automatic letters); Apple and Google developer accounts + the iOS
+  workflow file (the GitHub token lacks the `workflow` scope); the payments decision (Donate page, Counter card reader);
+  a Founder account; when the auction resumes, the Stripe account + three Cloudflare secrets + a test-mode dry run; the
+  privacy page stays Draft until the board reviews it.
+
+- **Catalog donations fast + print labels, 2026-09-29 (app `c1be452`, website `be15ca2` + `40f9429`; update 36 APPLIED and checked live 2026-09-30).**
   OHRR: "a simple process for the staff to inventory, take a photo, label and provide a name, donor etc… print to a thermal
   printer that can create barcodes… photo from phone camera, voice to name the item and then hit next." Decisions: label =
   QR + barcode + code + name + donor; everything saved as "Donation — sort later"; OHRR's printer is a **Phomemo PM-249-WF**
@@ -47,7 +59,7 @@
     the Phomemo — OHRR to calibrate the printer, set the label size once per device and try Labelife's PDF processing.
   - **Silent auction: ON HOLD** (OHRR, 2026-09-29): nothing further until asked; update 35 stays in RUN-THIS with 36.
 
-- **Silent auction with online bidding, 2026-09-29 (app `5bcb17a`, website `cebb649`/`bc49180`, BunFest `a7c084b`; update 35 WRITTEN, NOT RUN).**
+- **Silent auction with online bidding, 2026-09-29 (app `5bcb17a`, website `cebb649`/`bc49180`, BunFest `a7c084b`; update 35 APPLIED and checked live 2026-09-30; the feature stays ON HOLD).**
   OHRR: "a silent auction that has the ability to bid and also have a buy now option… take a credit card upfront, and
   allow… local pick up and shipping." Decisions (OHRR, 2026-09-29): Stripe; the server piece on Cloudflare Pages Functions
   next to the website; card saved BEFORE the first bid; flat shipping fee per item set by staff (null = pickup only).
