@@ -47,3 +47,24 @@ VITE_SUPABASE_ANON_KEY=<anon public key>
 
 The `service_role` key and DB password are **server-only** — never put them in
 any `VITE_`-prefixed var or in the repo.
+
+## Deploying the `ohrr-jobs` Edge Function
+
+The function lives in `supabase/functions/ohrr-jobs/` (`index.ts` +
+`rescuegroups.ts`; `PASTE-INTO-SUPABASE.ts` is the same code in one file for
+the dashboard editor). It was first deployed on 2026-09-30 from the repo root
+with the Supabase CLI:
+
+```bash
+npx supabase@2 functions deploy ohrr-jobs --project-ref ixxzebtzjgeimoijexwn --no-verify-jwt --use-api
+```
+
+`--no-verify-jwt` is required: the database calls the function with the shared
+secret in `push_config`, not a JWT. `--use-api` bundles on Supabase's side, so
+Docker is not needed, and no `supabase/config.toml` is needed either. The CLI
+must be signed in (`npx supabase@2 login`, a browser step the account owner
+does once). Re-run the same command after any change to the function.
+
+Check after a deploy: `POST /functions/v1/ohrr-jobs` without the secret
+answers `{"error":"not allowed"}`; anon `rpc/init_push` then makes
+`rpc/push_public_key` non-null within a few seconds.

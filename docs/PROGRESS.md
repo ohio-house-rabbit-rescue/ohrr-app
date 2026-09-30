@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-30 (UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-09-30 (OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,14 +19,23 @@
 
 ## Current state (at a glance)
 
+- **`ohrr-jobs` Edge Function deployed, 2026-09-30.** OHRR asked to clear this first. Deployed from the repo with the
+  Supabase CLI (`npx supabase@2 functions deploy ohrr-jobs --project-ref ixxzebtzjgeimoijexwn --no-verify-jwt --use-api`);
+  a Supabase CLI login saved on this PC since August let it through, so no dashboard step was needed, and no
+  `supabase/config.toml` is required. Checked live: the function answers `{"error":"not allowed"}` without the shared
+  secret (JWT check off; the secret guards it); anon `init_push` made the web-push keys within 5 s, so `push_public_key`
+  is set and phone notifications are switched on for the web app (iPhone: Add to Home Screen first). The 7:15 AM Ohio
+  RescueGroups check (pg_cron 11:15 UTC) now reaches the function; first proof = Staff → Adoptable rabbits → "Check
+  RescueGroups now" or tomorrow's run (`job_runs`). Not yet seen: a real push on a phone, a real RescueGroups run.
+  Deploy note added to `supabase/README.md`.
+
 - **Database up to date, 2026-09-30.** OHRR ran updates 35 (silent auction, on hold) and 36 (cataloging + labels) from
   RUN-THIS in one paste. Checked live over REST with the publishable key: `auction_catalog` answers with the sample items,
   `auction_bidders`/`auction_sales` exist, `place_bid` answers with its own message; `donation_items`,
   `item_tags.donation_id`/`label_printed_at`, the three-argument `list_tagged_items`, `catalog_new_item`,
   `mark_labels_printed` and `recent_donors` all answer (permission messages for anon, as designed).
   `APPLY-35`/`APPLY-36 (applied 2026-09-30).sql` filed; RUN-THIS says nothing to run (next is 37). **Still OHRR's own:**
-  test the catalog loop on a phone and a print on the Phomemo; deploy the `ohrr-jobs` Edge Function (phone notifications
-  wait on it); an email-sending account (outbid notices, automatic letters); Apple and Google developer accounts + the iOS
+  test the catalog loop on a phone and a print on the Phomemo; an email-sending account (outbid notices, automatic letters); Apple and Google developer accounts + the iOS
   workflow file (the GitHub token lacks the `workflow` scope); the payments decision (Donate page, Counter card reader);
   a Founder account; when the auction resumes, the Stripe account + three Cloudflare secrets + a test-mode dry run; the
   privacy page stays Draft until the board reviews it.
@@ -181,8 +190,8 @@
   - **Vet + hand, same day:** new icon `vet` (thin circle + solid broad cross; orange cross on tiles) on every
     find-a-vet / vet-clinic button and as the vets background — the veterinary V-and-staff symbol was tried
     and dropped. Volunteer background = Tabler "hand-stop" (MIT; `THIRD-PARTY-NOTICES.md`).
-- **Still to do (OHRR parked it 2026-09-28):** deploy the `ohrr-jobs` Edge Function (update 32's
-  notifications and the daily RescueGroups check wait on it).
+- **Done 2026-09-30:** the `ohrr-jobs` Edge Function was deployed from this PC with the Supabase CLI (see the
+  2026-09-30 entry at the top); update 32's notifications and the daily RescueGroups check are live.
 
 - **Update 32, 2026-09-26 (latest; website `c5d97c9` + app the same day; update 32 SQL applied and checked live 2026-09-26 — new tables/RPCs answer with their rules, `APPLY-32 (applied 2026-09-26).sql`; the `ohrr-jobs` function answered "not found", so `push_public_key` is still null until it is deployed under that exact name).** OHRR: "build
   the things you can and then lets also do 2 [phone notifications] and 7 [Cloudflare Web Analytics]".
