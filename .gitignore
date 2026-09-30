@@ -48,3 +48,6 @@ ios/App/Pods/
 ios/App/DerivedData/
 android/keystore.properties
 __pycache__/
+
+# Supabase CLI cache (created by npx supabase functions deploy)
+supabase/.temp/
