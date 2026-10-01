@@ -5,7 +5,10 @@
 // it in the staff backend", so the card is grouped into:
 //
 //   Contact · Where · Online · Photo · Paperwork · At BunFest · How we order ·
-//   Notes and "Invite again?"   — one Save for all of these
+//   Shipping · Notes and "Invite again?"   — one Save for all of these
+//
+// Every company has a vendor number (101, 102 …, update 41) that starts the
+// middle of every SKU bought from them: HAY-101-001.
 //   BunFest, year by year · Given to OHRR   — lists that save row by row
 //
 // Everything from update 27 (photo, socials, paperwork, the two lists) hides
@@ -16,7 +19,7 @@ import { btn } from '../../components/ui'
 import { Icon } from '../../components/icons'
 import { FormError, staffInput } from '../../components/staffui'
 import { saveVendorDetails } from '../bunfest/api'
-import { fromCents, money, ORDER_HOW_LABEL, toCents, type OrderHow } from './api'
+import { fromCents, money, ORDER_HOW_LABEL, SHIP_HOW_LABEL, toCents, vendorText, type OrderHow, type ShipHow } from './api'
 import {
   auctionItemsGivenBy,
   daysUntil,
@@ -133,6 +136,12 @@ interface Draft {
   order_notes: string
   lead_days: string
   min_order: string
+  // update 41: shipping
+  ship_how: ShipHow | ''
+  /** Flat shipping per order, in dollars as typed. */
+  ship: string
+  /** Free shipping from this order total, in dollars as typed. */
+  free_over: string
   notes: string
   is_active: boolean
   // update 27
@@ -170,6 +179,9 @@ function draftFrom(c: Company | null, mode: 'shop' | 'bunfest'): Draft {
     order_notes: c?.order_notes ?? '',
     lead_days: c?.lead_days == null ? '' : String(c.lead_days),
     min_order: c?.min_order ?? '',
+    ship_how: c?.ship_how ?? '',
+    ship: fromCents(c?.ship_cents),
+    free_over: fromCents(c?.free_ship_over_cents),
     notes: c?.notes ?? '',
     is_active: c?.is_active ?? true,
     photo_url: c?.photo_url ?? null,
@@ -286,6 +298,9 @@ export function CompanyForm({
                 order_notes: nul(d.order_notes),
                 lead_days: d.lead_days === '' ? null : Number(d.lead_days),
                 min_order: nul(d.min_order),
+                ship_how: d.ship_how || null,
+                ship_cents: d.ship_how === 'flat' ? toCents(d.ship) : null,
+                free_ship_over_cents: d.ship_how === 'free' || d.ship_how === 'pickup' ? null : toCents(d.free_over),
                 is_active: d.is_active,
               }),
         },
@@ -527,6 +542,16 @@ export function CompanyForm({
         {/* How we order */}
         {d.is_supplier && !bunfest && (
           <Section title="How we order">
+            <p className="text-sm text-slate-600">
+              {initial?.vendor_no != null ? (
+                <>
+                  Vendor number <span className="font-mono font-black text-ink">{vendorText(initial.vendor_no)}</span> — it’s in the SKU of everything bought from
+                  them, like HAY-{vendorText(initial.vendor_no)}-001.
+                </>
+              ) : (
+                'They get a vendor number when you save. It goes in the SKU of everything bought from them.'
+              )}
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <label className={label}>
                 How
@@ -556,8 +581,63 @@ export function CompanyForm({
             </div>
             <label className={label}>
               Ordering notes
-              <textarea className={staffInput} rows={2} value={d.order_notes} onChange={txt('order_notes')} placeholder="Free shipping over $75. Rescue discount code on file with Bev." />
+              <textarea className={staffInput} rows={2} value={d.order_notes} onChange={txt('order_notes')} placeholder="Rescue discount code on file with Bev." />
             </label>
+          </Section>
+        )}
+
+        {/* Shipping: what it adds to an order, and when it's free */}
+        {d.is_supplier && !bunfest && (
+          <Section title="Shipping" hint="Reorder adds it to each order’s total and says how much more makes shipping free.">
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="How they charge for shipping">
+              {(Object.keys(SHIP_HOW_LABEL) as ShipHow[]).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  role="radio"
+                  aria-checked={d.ship_how === k}
+                  onClick={() => setD({ ...d, ship_how: d.ship_how === k ? '' : k })}
+                  className={`min-h-[44px] rounded-full px-3.5 text-sm font-bold ${
+                    d.ship_how === k ? 'bg-brand-blue text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600'
+                  }`}
+                >
+                  {SHIP_HOW_LABEL[k]}
+                </button>
+              ))}
+            </div>
+            {d.ship_how !== 'free' && d.ship_how !== 'pickup' && (
+              <div className="grid grid-cols-2 gap-3">
+                {d.ship_how === 'flat' && (
+                  <label className={label}>
+                    Shipping per order (USD)
+                    <input className={staffInput} type="number" min="0" step="0.01" inputMode="decimal" value={d.ship} onChange={txt('ship')} placeholder="12.95" />
+                  </label>
+                )}
+                <label className={label}>
+                  Free shipping from (USD)
+                  <input className={staffInput} type="number" min="0" step="0.01" inputMode="decimal" value={d.free_over} onChange={txt('free_over')} placeholder="75.00" />
+                </label>
+              </div>
+            )}
+            {(() => {
+              const ship = toCents(d.ship)
+              const over = toCents(d.free_over)
+              const line =
+                d.ship_how === 'free'
+                  ? 'Every order ships free.'
+                  : d.ship_how === 'pickup'
+                    ? 'No shipping: we collect.'
+                    : d.ship_how === 'flat' && ship != null
+                      ? over != null
+                        ? `Orders under ${money(over)} pay ${money(ship)} shipping; ${money(over)} or more ship free.`
+                        : `Every order pays ${money(ship)} shipping.`
+                      : over != null
+                        ? `Orders of ${money(over)} or more ship free.`
+                        : d.ship_how === 'varies'
+                          ? 'Shipping changes order to order, so Reorder leaves it out of the total.'
+                          : null
+              return line ? <p className="text-sm text-slate-600">{line}</p> : null
+            })()}
           </Section>
         )}
 

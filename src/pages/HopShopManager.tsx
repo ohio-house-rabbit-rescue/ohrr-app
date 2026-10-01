@@ -1,9 +1,10 @@
-// Staff → Hop Shop: the stock cards (photo, code, price, supplier, reorder
-// point), the reorder list grouped by supplier, and the supplier list itself.
-// One screen, three tabs, phone first. Everything here goes live on the public
+// Staff → Hop Shop: the stock cards (photo, SKU, price, supplier, reorder
+// point), the reorder list grouped by supplier with its shipping, the supplier
+// list, and the product types whose letters start every SKU (HAY-101-001).
+// One screen, four tabs, phone first. Price labels print from Labels. Everything here goes live on the public
 // Hop Shop shelf (name, photo, price, in stock) the moment it is saved.
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
@@ -12,7 +13,7 @@ import { Spinner, FormError, staffInput } from '../components/staffui'
 import { isNative } from '../native/platform'
 import { pickPhoto, type PhotoSource } from '../native/camera'
 import { dataUrlToBlob, uploadItemPhoto } from '../features/scan/api'
-import { isRetailBarcode, isTagCode, newTagCode, normalizeCode } from '../features/scan/codes'
+import { isOhrrCode, isRetailBarcode, normalizeCode, skuParts } from '../features/scan/codes'
 import { copyText, shareText } from '../features/share/share'
 import {
   deleteProduct,
@@ -24,6 +25,7 @@ import {
   lineCost,
   listProducts,
   listSuppliers,
+  listTypes,
   minOrderCents,
   money,
   onOrderText,
@@ -40,18 +42,23 @@ import {
   setOrder,
   setOrderUrl,
   setStock,
+  shippingFor,
+  shippingSummary,
   suggestPacks,
   syncPacks,
   toCents,
   unitsWanted,
+  vendorText,
   type PackChoice,
   type ProductInput,
+  type ProductType,
   type StockCard,
   type Supplier,
 } from '../features/hopshop/api'
 import { giftTotals, withScheme, type GiftTotals } from '../features/hopshop/companies'
 import { CompanyForm, CompanySummary, CompanyThumb, useVendorRecordsReady } from '../features/hopshop/CompanyForm'
 import { PackEditor, packRowsFrom, packRowsToInput, type PackRow } from '../features/hopshop/PackEditor'
+import { NewTypeForm, TypesPanel } from '../features/hopshop/TypesPanel'
 
 const Scanner = lazy(() => import('../features/scan/Scanner'))
 
@@ -68,12 +75,13 @@ function usePacksReady(): boolean | null {
   return ready
 }
 
-type Tab = 'items' | 'reorder' | 'suppliers'
+type Tab = 'items' | 'reorder' | 'suppliers' | 'types'
 
 const TABS: [Tab, string][] = [
   ['items', 'Items'],
   ['reorder', 'Reorder'],
   ['suppliers', 'Suppliers'],
+  ['types', 'Types'],
 ]
 
 export default function HopShopManager() {
@@ -82,7 +90,7 @@ export default function HopShopManager() {
   const userId = user?.id ?? ''
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const tab: Tab = pathname.endsWith('/suppliers') ? 'suppliers' : pathname.endsWith('/reorder') ? 'reorder' : 'items'
+  const tab: Tab = pathname.endsWith('/suppliers') ? 'suppliers' : pathname.endsWith('/reorder') ? 'reorder' : pathname.endsWith('/types') ? 'types' : 'items'
   const setTab = (t: Tab) => navigate(t === 'items' ? '/staff/hopshop' : `/staff/hopshop/${t}`)
 
   const canCreate = can('hopshop.products.create')
@@ -104,6 +112,20 @@ export default function HopShopManager() {
   useEffect(() => {
     void reloadSuppliers()
   }, [reloadSuppliers])
+
+  // Product types: the letters that start every SKU (update 41).
+  const [types, setTypes] = useState<ProductType[]>([])
+  const reloadTypes = useCallback(async () => {
+    if (!orgId) return
+    try {
+      setTypes(await listTypes(orgId))
+    } catch (e) {
+      setError(errMessage(e))
+    }
+  }, [orgId])
+  useEffect(() => {
+    void reloadTypes()
+  }, [reloadTypes])
 
   return (
     <Screen className="space-y-4">
@@ -133,14 +155,17 @@ export default function HopShopManager() {
           orgId={orgId}
           userId={userId}
           suppliers={suppliers ?? []}
+          types={types}
           perms={{ canCreate, canEdit, canDelete, canInventory }}
           onAddSupplier={() => setTab('suppliers')}
+          onTypesChanged={reloadTypes}
         />
       )}
       {tab === 'reorder' && <Reorder orgId={orgId} suppliers={suppliers ?? []} canAct={canInventory || canEdit} />}
       {tab === 'suppliers' && (
         <Suppliers orgId={orgId} suppliers={suppliers} canWrite={canEdit || canCreate} canDelete={canDelete} onChanged={reloadSuppliers} />
       )}
+      {tab === 'types' && <TypesPanel orgId={orgId} types={types} canWrite={canEdit || canCreate} onChanged={reloadTypes} />}
     </Screen>
   )
 }
@@ -158,16 +183,22 @@ function Items({
   orgId,
   userId,
   suppliers,
+  types,
   perms,
   onAddSupplier,
+  onTypesChanged,
 }: {
   orgId: string
   userId: string
   suppliers: Supplier[]
+  types: ProductType[]
   perms: Perms
   onAddSupplier: () => void
+  onTypesChanged: () => Promise<void>
 }) {
   const [rows, setRows] = useState<StockCard[] | null>(null)
+  // The item just added, with its new SKU — and a way to print its labels.
+  const [justAdded, setJustAdded] = useState<StockCard | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [params, setParams] = useSearchParams()
   // "Add an item" from elsewhere (Scan an item, the Counter, the website) lands here with ?add=1.
@@ -205,7 +236,7 @@ function Items({
     const t = q.trim().toLowerCase()
     if (!t) return rows ?? []
     return (rows ?? []).filter((p) =>
-      [p.name, p.code, p.sku, p.category, p.supplier_name, p.supplier_sku, p.shelf].some((v) => v && v.toLowerCase().includes(t)),
+      [p.name, p.code, p.sku, p.barcode, p.type_name, p.category, p.supplier_name, p.supplier_sku, p.shelf].some((v) => v && v.toLowerCase().includes(t)),
     )
   }, [rows, q])
 
@@ -220,10 +251,15 @@ function Items({
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Find by name, code, supplier…"
+            placeholder="Name or SKU"
             className="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-[15px] text-ink outline-none focus:border-brand-blue"
           />
         </div>
+        {(perms.canCreate || perms.canEdit || perms.canInventory) && (
+          <Link to="/staff/hopshop/labels" className="inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white px-3.5 text-sm font-bold text-slate-600">
+            <Icon name="printer" size={16} /> Labels
+          </Link>
+        )}
         {perms.canCreate && !creating && (
           <button type="button" onClick={() => setCreating(true)} className={`${btn.primary} shrink-0 !px-4 !py-2.5`}>
             <Icon name="plus" size={16} /> Add
@@ -247,15 +283,31 @@ function Items({
             initial={null}
             startCode={startCode}
             suppliers={suppliers}
+            types={types}
             canCount={perms.canInventory || perms.canCreate}
             onAddSupplier={onAddSupplier}
-            onSaved={async () => {
+            onTypesChanged={onTypesChanged}
+            onSaved={async (card) => {
               setCreating(false)
+              setJustAdded(card ?? null)
               await load()
             }}
             onCancel={() => setCreating(false)}
           />
         </Card>
+      )}
+      {justAdded?.code && !creating && (
+        <div className="flex flex-wrap items-center gap-x-3 rounded-2xl border border-green-200 bg-green-50 px-4 py-2 text-sm text-slate-700">
+          <span className="min-w-0 flex-1 py-2">
+            Added <strong>{justAdded.name}</strong> as <span className="font-mono font-bold text-ink">{justAdded.code}</span>.
+          </span>
+          <Link
+            to={`/staff/hopshop/labels?code=${encodeURIComponent(justAdded.code)}${(justAdded.quantity ?? 0) > 1 ? `&copies=${justAdded.quantity}` : ''}`}
+            className="inline-flex min-h-[44px] items-center font-bold text-brand-blue"
+          >
+            Print its labels →
+          </Link>
+        </div>
       )}
 
       <FormError>{error}</FormError>
@@ -263,13 +315,13 @@ function Items({
       {rows && rows.length === 0 && !creating && (
         <Card className="border-slate-200 bg-slate-50/80 text-center">
           <p className="text-sm leading-relaxed text-slate-600">
-            No items yet.{perms.canCreate ? ' Tap “Add” — take a photo, make a code, set the price.' : ''}
+            No items yet.{perms.canCreate ? ' Tap “Add” — take a photo, pick its type, set the price. It gets a SKU when you save.' : ''}
           </p>
         </Card>
       )}
       {rows && rows.length > 0 && shown.length === 0 && <p className="text-sm text-slate-500">Nothing matches “{q}”.</p>}
       {shown.map((p) => (
-        <ProductCard key={p.id} p={p} orgId={orgId} userId={userId} suppliers={suppliers} perms={perms} onAddSupplier={onAddSupplier} onChanged={load} />
+        <ProductCard key={p.id} p={p} orgId={orgId} userId={userId} suppliers={suppliers} types={types} perms={perms} onAddSupplier={onAddSupplier} onTypesChanged={onTypesChanged} onChanged={load} />
       ))}
     </div>
   )
@@ -280,16 +332,20 @@ function ProductCard({
   orgId,
   userId,
   suppliers,
+  types,
   perms,
   onAddSupplier,
+  onTypesChanged,
   onChanged,
 }: {
   p: StockCard
   orgId: string
   userId: string
   suppliers: Supplier[]
+  types: ProductType[]
   perms: Perms
   onAddSupplier: () => void
+  onTypesChanged: () => Promise<void>
   onChanged: () => Promise<void>
 }) {
   const [editing, setEditing] = useState(false)
@@ -317,8 +373,10 @@ function ProductCard({
           orgId={orgId}
           initial={p}
           suppliers={suppliers}
+          types={types}
           canCount={perms.canInventory}
           onAddSupplier={onAddSupplier}
+          onTypesChanged={onTypesChanged}
           onSaved={async () => {
             setEditing(false)
             await onChanged()
@@ -344,10 +402,15 @@ function ProductCard({
             {p.on_order_qty > 0 && <Badge tone="blue">{p.on_order_qty} on order</Badge>}
           </div>
           <p className="mt-0.5 text-xs text-slate-500">
-            {p.code ? <span className="font-mono font-bold text-slate-600">{p.code}</span> : 'No code'}
-            {p.category ? ` · ${p.category}` : ''}
+            {p.code ? <span className="font-mono font-bold text-slate-600">{p.code}</span> : 'No SKU yet'}
+            {(p.type_name ?? p.category) ? ` · ${p.type_name ?? p.category}` : ''}
             {p.shelf ? ` · ${p.shelf}` : ''}
           </p>
+          {(p.barcode || p.donation_code) && (
+            <p className="text-xs text-slate-500">
+              {[p.barcode ? `Barcode ${p.barcode}` : null, p.donation_code ? `Came in as ${p.donation_code}` : null].filter(Boolean).join(' · ')}
+            </p>
+          )}
           {p.supplier_name && (
             <p className="text-xs text-slate-500">
               From {p.supplier_name}
@@ -369,8 +432,16 @@ function ProductCard({
 
       <StockRow p={p} orgId={orgId} userId={userId} canCount={perms.canInventory} onSaved={onChanged} />
 
-      {(perms.canEdit || perms.canDelete) && (
-        <div className="mt-3 flex items-center gap-2">
+      {(perms.canEdit || perms.canDelete || perms.canCreate || perms.canInventory) && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {p.code && (
+            <Link
+              to={`/staff/hopshop/labels?code=${encodeURIComponent(p.code)}`}
+              className="inline-flex min-h-[44px] items-center gap-1 rounded-full border border-slate-200 px-4 text-xs font-bold text-slate-600 hover:bg-slate-50"
+            >
+              <Icon name="printer" size={14} /> Labels
+            </Link>
+          )}
           {perms.canEdit && (
             <button type="button" onClick={() => setEditing(true)} className="min-h-[44px] rounded-full border border-slate-200 px-4 text-xs font-bold text-slate-600 hover:bg-slate-50">
               Edit
@@ -473,9 +544,11 @@ function StockRow({
 interface Draft {
   name: string
   price: string
-  code: string
+  /** The type (its letters start the SKU); '' = Other. */
+  type_id: string
+  /** The maker's barcode on the packet. */
+  barcode: string
   description: string
-  category: string
   unit: string
   shelf: string
   quantity: string
@@ -493,9 +566,9 @@ function draftFrom(p: StockCard | null): Draft {
   return {
     name: p?.name ?? '',
     price: p ? fromCents(p.price_cents) : '',
-    code: p?.code ?? p?.sku ?? '',
+    type_id: p?.type_id ?? '',
+    barcode: p?.barcode ?? '',
     description: p?.description ?? '',
-    category: p?.category ?? '',
     unit: p?.unit ?? '',
     shelf: p?.shelf ?? '',
     quantity: p ? '' : '1',
@@ -510,29 +583,36 @@ function draftFrom(p: StockCard | null): Draft {
   }
 }
 
-const CATEGORY_HINTS = ['Hay', 'Pellets', 'Treats', 'Toys', 'Litter', 'Housing', 'Grooming', 'Gifts & merch']
-
 function ProductForm({
   orgId,
   initial,
   startCode = '',
   suppliers,
+  types,
   canCount,
   onAddSupplier,
+  onTypesChanged,
   onSaved,
   onCancel,
 }: {
   orgId: string
   initial: StockCard | null
-  /** A code scanned before arriving (Scan an item → "A Hop Shop item"). */
+  /** A packet barcode scanned before arriving (Scan an item → "A Hop Shop item"). */
   startCode?: string
   suppliers: Supplier[]
+  types: ProductType[]
   canCount: boolean
   onAddSupplier: () => void
-  onSaved: () => Promise<void>
+  onTypesChanged: () => Promise<void>
+  onSaved: (card?: StockCard) => Promise<void>
   onCancel: () => void
 }) {
-  const [d, setD] = useState<Draft>(() => ({ ...draftFrom(initial), ...(initial || !startCode ? {} : { code: normalizeCode(startCode) }) }))
+  const [d, setD] = useState<Draft>(() => {
+    const scanned = normalizeCode(startCode)
+    return { ...draftFrom(initial), ...(initial || !isRetailBarcode(scanned) ? {} : { barcode: scanned }) }
+  })
+  const [newSku, setNewSku] = useState(false)
+  const [addingType, setAddingType] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [busy, setBusy] = useState(false)
   const [photoBusy, setPhotoBusy] = useState(false)
@@ -582,13 +662,21 @@ function ProductForm({
     }
   }
 
-  const codeInfo = (() => {
-    const c = normalizeCode(d.code)
-    if (!c) return 'Make a code for a printed OHRR tag, scan or type the barcode, or type your own.'
-    if (isTagCode(c)) return `Saved as ${c} — print the tag under Scanned items → Print tags.`
-    if (isRetailBarcode(c)) return `Barcode ${c} — scanning the packet opens this item.`
-    return `Saved as ${c}.`
-  })()
+  // The SKU: TYPE-VENDOR-ITEM. Its first two parts, as they would be made now.
+  const typeOf = (id: string) => types.find((t) => t.id === id) ?? null
+  const shownTypes = types.filter((t) => t.is_active || t.id === d.type_id)
+  const vendorNo = d.supplier_id ? (suppliers.find((s) => s.id === d.supplier_id)?.vendor_no ?? null) : null
+  const prefix = `${typeOf(d.type_id)?.code ?? 'OTH'}-${vendorText(vendorNo)}`
+  const current = initial?.code ?? null
+  const parts = current ? skuParts(current) : null
+  const follows = !parts || `${parts.type}-${parts.vendor}` === prefix
+  const printed = !!initial?.label_printed_at
+  const bc = normalizeCode(d.barcode)
+  const barcodeInfo = !bc
+    ? 'Scan or type it, so scanning the packet at the till finds this item. Leave it empty when there isn’t one.'
+    : isOhrrCode(bc)
+      ? `${bc} is an OHRR number, not the barcode on the packet.`
+      : `Scanning the packet (${bc}) opens this item.`
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -603,14 +691,17 @@ function ProductForm({
         name: d.name.trim(),
         price_cents: price,
         description: d.description.trim() || null,
-        sku: d.code.trim() || null,
         photo_url: d.photo_url,
         is_active: d.is_active,
+        type_id: d.type_id || null,
+        barcode: d.barcode.trim(),
+        new_sku: newSku,
         supplier_id: d.supplier_id || null,
         supplier_sku: d.supplier_sku.trim() || null,
         cost_cents: toCents(d.cost),
         unit: d.unit.trim() || null,
-        category: d.category.trim() || null,
+        // An older item's own category stays until it's given a type.
+        category: d.type_id ? null : (initial?.category ?? null),
         shelf: d.shelf.trim() || null,
         reorder_point: d.reorder_point === '' ? null : Number(d.reorder_point),
         reorder_qty: d.reorder_qty === '' ? null : Number(d.reorder_qty),
@@ -627,7 +718,7 @@ function ProductForm({
           throw new Error(`The item is saved, but its order link or pack sizes didn’t: ${errMessage(err)}`)
         }
       }
-      await onSaved()
+      await onSaved(card)
     } catch (err) {
       setError(errMessage(err))
       setBusy(false)
@@ -664,18 +755,75 @@ function ProductForm({
         <input className={staffInput} required value={d.name} onChange={set('name')} placeholder="Oxbow Timothy Hay, 40 oz" />
       </label>
 
-      {/* Code / SKU */}
+      {/* Type → SKU */}
+      <div>
+        <p className="text-sm font-semibold text-slate-700">Type</p>
+        <div className="mt-1.5 flex flex-wrap gap-2" role="radiogroup" aria-label="Type">
+          {shownTypes.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="radio"
+              aria-checked={d.type_id === t.id}
+              onClick={() => setD((x) => ({ ...x, type_id: x.type_id === t.id ? '' : t.id }))}
+              className={`min-h-[44px] rounded-full px-3.5 text-sm font-bold ${d.type_id === t.id ? 'bg-brand-blue text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600'}`}
+            >
+              {t.name}
+            </button>
+          ))}
+          {!addingType && (
+            <button type="button" onClick={() => setAddingType(true)} className="min-h-[44px] px-2 text-sm font-bold text-brand-blue">
+              + New type
+            </button>
+          )}
+        </div>
+        {addingType && (
+          <div className="mt-2 rounded-2xl border border-slate-200 p-3">
+            <NewTypeForm
+              orgId={orgId}
+              types={types}
+              onAdded={async (t) => {
+                setAddingType(false)
+                await onTypesChanged()
+                setD((x) => ({ ...x, type_id: t.id }))
+              }}
+              onCancel={() => setAddingType(false)}
+            />
+          </div>
+        )}
+        <div className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-sm">
+          {current ? (
+            <>
+              <p className="text-slate-600">
+                SKU <span className="font-mono text-base font-black text-ink">{current}</span>
+              </p>
+              {!follows && !printed && <p className="mt-0.5 text-xs text-slate-600">Saving gives it a new SKU starting {prefix}- (its label hasn’t been printed yet).</p>}
+              {!follows && printed && (
+                <>
+                  <p className="mt-0.5 text-xs text-slate-600">It keeps {current}, so the labels already printed still scan.</p>
+                  <label className="mt-1 flex min-h-[44px] items-center gap-2 text-xs font-bold text-slate-700">
+                    <input type="checkbox" className="h-5 w-5 rounded border-slate-300" checked={newSku} onChange={(e) => setNewSku(e.target.checked)} />
+                    Give it a new {prefix}- SKU anyway, and print new labels
+                  </label>
+                </>
+              )}
+            </>
+          ) : (
+            <p className="text-slate-600">
+              SKU when you save: <span className="font-mono font-black text-ink">{prefix}-###</span>
+            </p>
+          )}
+          <p className="mt-0.5 text-xs text-slate-500">Type, then the supplier’s vendor number (000 = no supplier), then the item’s number.</p>
+        </div>
+      </div>
+
+      {/* The packet's own barcode: a second code */}
       <div>
         <label className="block text-sm font-semibold text-slate-700">
-          Code (SKU)
-          <div className="mt-1 flex gap-2">
-            <input className={`${staffInput} !mt-0 flex-1 font-mono uppercase`} value={d.code} onChange={set('code')} placeholder="OHRR-7K3PX or a barcode" autoCapitalize="characters" />
-            <button type="button" onClick={() => setD((x) => ({ ...x, code: newTagCode() }))} className={`${btn.outline} shrink-0 !px-3.5 !py-2`}>
-              Make one
-            </button>
-          </div>
+          Barcode on the packet
+          <input className={`${staffInput} font-mono`} value={d.barcode} onChange={set('barcode')} placeholder="012345678905" autoCapitalize="characters" />
         </label>
-        <button type="button" onClick={() => setScanning((v) => !v)} className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-bold text-brand-blue">
+        <button type="button" onClick={() => setScanning((v) => !v)} className="mt-1 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-bold text-brand-blue">
           <Icon name="scan" size={16} /> {scanning ? 'Stop scanning' : 'Scan the barcode on the packet'}
         </button>
         {scanning && (
@@ -683,7 +831,7 @@ function ProductForm({
             <Suspense fallback={<Spinner label="Starting the camera…" />}>
               <Scanner
                 onResult={(raw) => {
-                  setD((x) => ({ ...x, code: normalizeCode(raw) }))
+                  setD((x) => ({ ...x, barcode: normalizeCode(raw) }))
                   setScanning(false)
                 }}
                 onTypeInstead={() => setScanning(false)}
@@ -691,7 +839,7 @@ function ProductForm({
             </Suspense>
           </div>
         )}
-        <p className="mt-1 text-xs text-slate-500">{codeInfo}</p>
+        <p className="mt-1 text-xs text-slate-500">{barcodeInfo}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -714,25 +862,16 @@ function ProductForm({
 
       <div className="grid grid-cols-2 gap-3">
         <label className="block text-sm font-semibold text-slate-700">
-          Category
-          <input className={staffInput} list="hopshop-categories" value={d.category} onChange={set('category')} placeholder="Hay" />
-          <datalist id="hopshop-categories">
-            {CATEGORY_HINTS.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
-        </label>
-        <label className="block text-sm font-semibold text-slate-700">
           Where it sits
           <input className={staffInput} value={d.shelf} onChange={set('shelf')} placeholder="Shelf B · counter" />
         </label>
+        {canCount && (
+          <label className="block text-sm font-semibold text-slate-700">
+            Sold as
+            <input className={staffInput} value={d.unit} onChange={set('unit')} placeholder="bag · each · bundle" />
+          </label>
+        )}
       </div>
-      {canCount && (
-        <label className="block text-sm font-semibold text-slate-700">
-          Sold as
-          <input className={staffInput} value={d.unit} onChange={set('unit')} placeholder="bag · each · bundle" />
-        </label>
-      )}
 
       <label className="block text-sm font-semibold text-slate-700">
         Description (shown on the shelf)
@@ -832,6 +971,8 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
   const [note, setNote] = useState<string | null>(null)
   // The pack and count picked on each line (until then, the suggestion).
   const [choices, setChoices] = useState<Record<string, PackChoice>>({})
+  // What just arrived, so its labels are one tap away.
+  const [arrived, setArrived] = useState<{ code: string; name: string; qty: number } | null>(null)
 
   const load = useCallback(async () => {
     if (!orgId) return
@@ -853,7 +994,9 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
   const act = async (p: StockCard, action: 'ordered' | 'received' | 'clear') => {
     setError(null)
     try {
+      const qty = p.on_order_qty
       await setOrder(p.id, action)
+      if (action === 'received' && p.code && qty > 0) setArrived({ code: p.code, name: p.name, qty })
       await load()
     } catch (e) {
       setError(errMessage(e))
@@ -889,6 +1032,14 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
     <div className="space-y-3">
       <FormError>{error}</FormError>
       {note && <p className="text-sm font-bold text-green-700">{note}</p>}
+      {arrived && (
+        <p className="rounded-xl bg-green-50 px-3 py-2 text-sm text-slate-700">
+          {arrived.qty} × {arrived.name} added to stock.{' '}
+          <Link to={`/staff/hopshop/labels?code=${encodeURIComponent(arrived.code)}&copies=${arrived.qty}`} className="inline-flex min-h-[44px] items-center font-bold text-brand-blue">
+            Print {arrived.qty} label{arrived.qty === 1 ? '' : 's'} →
+          </Link>
+        </p>
+      )}
       {items === null && !error && <Spinner label="Checking stock…" />}
       {items && items.length === 0 && (
         <Card className="space-y-2 text-sm text-slate-600">
@@ -904,6 +1055,7 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
         const subtotal = costs.reduce<number>((sum, c) => sum + (c ?? 0), 0)
         const missing = costs.filter((c) => c == null).length
         const min = minOrderCents(s?.min_order)
+        const ship = shippingFor(s, subtotal)
         return (
           <Card key={g.key} className="space-y-3">
             <div>
@@ -914,6 +1066,7 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
                     s.order_how ? ORDER_HOW_LABEL[s.order_how] : null,
                     s.account_number ? `account ${s.account_number}` : null,
                     s.min_order ? `minimum ${s.min_order}` : null,
+                    shippingSummary(s),
                     s.lead_days != null ? `about ${s.lead_days} day${s.lead_days === 1 ? '' : 's'} to arrive` : null,
                   ]
                     .filter(Boolean)
@@ -957,7 +1110,7 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
                 ))}
               </ul>
             )}
-            {toOrder.length > 0 && (subtotal > 0 || min != null) && (
+            {toOrder.length > 0 && (subtotal > 0 || min != null || ship) && (
               <div className="rounded-xl bg-brand-blue-50/60 px-3 py-2 text-sm">
                 <p className="font-bold text-ink">
                   Subtotal {money(subtotal)}
@@ -968,6 +1121,11 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
                     </span>
                   )}
                 </p>
+                {ship && <p className={ship.cents === 0 ? 'font-semibold text-green-700' : 'text-slate-700'}>{ship.label}</p>}
+                {ship && ship.cents != null && <p className="font-bold text-ink">Total {money(subtotal + ship.cents)}</p>}
+                {ship?.toFree != null && ship.toFree > 0 && (
+                  <p className="text-xs font-semibold text-brand-orange-dark">Add {money(ship.toFree)} more for free shipping.</p>
+                )}
                 {min != null && subtotal < min && (
                   <p className="text-xs font-semibold text-brand-orange-dark">Under their {money(min)} minimum — {money(min - subtotal)} to go.</p>
                 )}
@@ -1226,7 +1384,13 @@ function Suppliers({
                 {!s.is_active && <Badge tone="slate">Inactive</Badge>}
               </span>
               <span className="block text-xs text-slate-500">
-                {[s.contact_name, s.order_how ? ORDER_HOW_LABEL[s.order_how] : null, s.account_number ? `account ${s.account_number}` : null]
+                {[
+                  s.vendor_no != null ? `Vendor ${vendorText(s.vendor_no)}` : null,
+                  s.contact_name,
+                  s.order_how ? ORDER_HOW_LABEL[s.order_how] : null,
+                  s.account_number ? `account ${s.account_number}` : null,
+                  s.is_supplier ? shippingSummary(s) : null,
+                ]
                   .filter(Boolean)
                   .join(' · ')}
               </span>

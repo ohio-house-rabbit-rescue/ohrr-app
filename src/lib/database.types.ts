@@ -1196,6 +1196,12 @@ export type Database = {
           vendor_sort: number
           /** The years this company had a BunFest table; empty means not tagged yet. */
           vendor_years: number[]
+          /** Update 41: 101, 102 … given by the database, never changed; part of every SKU. */
+          vendor_no: number | null
+          /** Update 41: how they charge for shipping. */
+          ship_how: 'free' | 'flat' | 'varies' | 'pickup' | null
+          ship_cents: number | null
+          free_ship_over_cents: number | null
           created_by: string | null
           created_at: string
           updated_at: string
@@ -1226,6 +1232,9 @@ export type Database = {
           vendor_published?: boolean
           vendor_sort?: number
           vendor_years?: number[]
+          ship_how?: 'free' | 'flat' | 'varies' | 'pickup' | null
+          ship_cents?: number | null
+          free_ship_over_cents?: number | null
           created_by?: string | null
         }
         Update: {
@@ -1252,6 +1261,9 @@ export type Database = {
           vendor_published?: boolean
           vendor_sort?: number
           vendor_years?: number[]
+          ship_how?: 'free' | 'flat' | 'varies' | 'pickup' | null
+          ship_cents?: number | null
+          free_ship_over_cents?: number | null
         }
         Relationships: []
       }
@@ -2822,10 +2834,21 @@ export type Database = {
           p_reorder_point?: number | null
           p_reorder_qty?: number | null
           p_quantity?: number | null
+          // Update 41: the type makes the SKU; the barcode is the packet's (a second code).
+          p_type_id?: string | null
+          p_barcode?: string | null
+          p_new_sku?: boolean
         }
         Returns: Json
       }
       hopshop_reorder: { Args: { p_org: string }; Returns: Json }
+      // Product types (update 41): HAY Hay, PEL Pellets …
+      list_product_types: { Args: { p_org: string }; Returns: Json }
+      save_product_type: {
+        Args: { p_org: string; p_id: string | null; p_name: string; p_code: string; p_is_active?: boolean }
+        Returns: Json
+      }
+      delete_product_type: { Args: { p_org: string; p_id: string }; Returns: undefined }
       // Volunteers, hours and event content (supabase/migrations/20260922140000_*.sql)
       my_volunteer_record: { Args: { p_token: string }; Returns: Json }
       log_my_hours: {

@@ -11,6 +11,7 @@ export const db = supabase as unknown as SupabaseClient
 
 export type Supplier = Database['public']['Tables']['suppliers']['Row']
 export type OrderHow = NonNullable<Supplier['order_how']>
+export type ShipHow = NonNullable<Supplier['ship_how']>
 
 /** What product_admin_json() returns — a product with its stock, supplier and code. */
 export interface StockCard {
@@ -40,6 +41,28 @@ export interface StockCard {
   ordered_pack_id?: string | null
   ordered_packs?: number | null
   packs?: Pack[]
+  // Update 41 — the SKU is `code`, made from the type and the supplier's vendor number.
+  type_id?: string | null
+  type_code?: string | null
+  type_name?: string | null
+  /** The maker's barcode on the packet: a second code. */
+  barcode?: string | null
+  vendor_no?: number | null
+  /** When the SKU's label was last printed; the SKU stays put from then on. */
+  label_printed_at?: string | null
+  /** The DON number it came in with, when it was a donation. */
+  donation_code?: string | null
+}
+
+/** A product type: three letters that start every SKU of that type (`product_types`, update 41). */
+export interface ProductType {
+  id: string
+  code: string
+  name: string
+  sort_order: number
+  is_active: boolean
+  /** How many products have this type. */
+  items: number
 }
 
 /** A size the product comes in from the supplier: a single, a box, a case of 12 … (`product_packs`). */
@@ -54,6 +77,13 @@ export interface Pack {
   min_packs: number
   is_default: boolean
   notes: string | null
+}
+
+export const SHIP_HOW_LABEL: Record<ShipHow, string> = {
+  free: 'Always free',
+  flat: 'A flat rate per order',
+  varies: 'It varies',
+  pickup: 'We pick it up',
 }
 
 export const ORDER_HOW_LABEL: Record<OrderHow, string> = {
@@ -93,9 +123,14 @@ export interface ProductInput {
   name: string
   price_cents: number
   description: string | null
-  sku: string | null
   photo_url: string | null
   is_active: boolean
+  /** The type makes the SKU (update 41). */
+  type_id: string | null
+  /** The packet's barcode; '' clears it. */
+  barcode: string
+  /** Make a new SKU even though its label was printed. */
+  new_sku?: boolean
   supplier_id: string | null
   supplier_sku: string | null
   cost_cents: number | null
@@ -115,7 +150,6 @@ export async function saveProduct(orgId: string, i: ProductInput): Promise<Stock
     p_name: i.name,
     p_price_cents: i.price_cents,
     p_description: i.description,
-    p_sku: i.sku,
     p_photo_url: i.photo_url,
     p_is_active: i.is_active,
     p_supplier_id: i.supplier_id,
@@ -127,9 +161,84 @@ export async function saveProduct(orgId: string, i: ProductInput): Promise<Stock
     p_reorder_point: i.reorder_point,
     p_reorder_qty: i.reorder_qty,
     p_quantity: i.quantity,
+    p_type_id: i.type_id,
+    p_barcode: i.barcode,
+    p_new_sku: i.new_sku ?? false,
   })
   if (error) throw error
   return data as unknown as StockCard
+}
+
+/* ------------------------------------------------------------ product types */
+
+export async function listTypes(orgId: string): Promise<ProductType[]> {
+  const { data, error } = await supabase.rpc('list_product_types', { p_org: orgId })
+  if (error) throw error
+  return Array.isArray(data) ? (data as unknown as ProductType[]) : []
+}
+
+export async function saveType(orgId: string, t: { id: string | null; name: string; code: string; is_active: boolean }): Promise<ProductType> {
+  const { data, error } = await supabase.rpc('save_product_type', { p_org: orgId, p_id: t.id, p_name: t.name, p_code: t.code, p_is_active: t.is_active })
+  if (error) throw error
+  return data as unknown as ProductType
+}
+
+export async function deleteType(orgId: string, id: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_product_type', { p_org: orgId, p_id: id })
+  if (error) throw error
+}
+
+/** Suggested letters for a new type: "Bedding" → BED, "Gift cards" → GIF. */
+export function suggestTypeCode(name: string, taken: string[]): string {
+  const letters = name.toUpperCase().replace(/[^A-Z]/g, '')
+  if (letters.length < 3) return ''
+  const words = name.toUpperCase().split(/[^A-Z]+/).filter(Boolean)
+  const tries = [
+    letters.slice(0, 3),
+    words.length > 1 ? (words[0].slice(0, 2) + words[1][0]) : '',
+    words.length > 2 ? words.slice(0, 3).map((w) => w[0]).join('') : '',
+    letters[0] + letters.slice(1).replace(/[AEIOU]/g, '').slice(0, 2),
+  ]
+  return tries.find((c) => c.length === 3 && !taken.includes(c) && c !== 'DON' && c !== 'OHR') ?? ''
+}
+
+/** "101" for vendor 101; "000" when there's no supplier. */
+export const vendorText = (n: number | null | undefined) => (n == null ? '000' : String(n).padStart(3, '0'))
+
+/* ------------------------------------------------------------ shipping */
+
+export interface ShippingLine {
+  /** What shipping adds to this order (0 = free), or null when it isn't known. */
+  cents: number | null
+  /** "Shipping $12.95" · "Free shipping (orders of $75 or more)" · … */
+  label: string
+  /** How much more to order for free shipping, when that would help. */
+  toFree: number | null
+}
+
+/** Shipping on one supplier's order of `subtotal`, from their shipping terms. Null when none are set. */
+export function shippingFor(s: Pick<Supplier, 'ship_how' | 'ship_cents' | 'free_ship_over_cents'> | null | undefined, subtotal: number): ShippingLine | null {
+  if (!s) return null
+  const over = s.free_ship_over_cents
+  if (s.ship_how === 'pickup') return { cents: 0, label: 'We pick it up', toFree: null }
+  if (s.ship_how === 'free') return { cents: 0, label: 'Free shipping', toFree: null }
+  if (over != null && subtotal >= over) return { cents: 0, label: `Free shipping (orders of ${money(over)} or more)`, toFree: null }
+  const toFree = over != null && subtotal > 0 ? over - subtotal : null
+  if (s.ship_how === 'flat') return { cents: s.ship_cents ?? null, label: s.ship_cents != null ? `Shipping ${money(s.ship_cents)}` : 'Shipping (flat rate not set)', toFree }
+  if (s.ship_how === 'varies') return { cents: null, label: 'Shipping varies — not in the total', toFree }
+  if (over != null) return { cents: null, label: `Free shipping on orders of ${money(over)} or more`, toFree }
+  return null
+}
+
+/** One line for a supplier's card: "Flat $12.95 · free over $75". */
+export function shippingSummary(s: Pick<Supplier, 'ship_how' | 'ship_cents' | 'free_ship_over_cents'>): string | null {
+  const parts: string[] = []
+  if (s.ship_how === 'free') parts.push('free shipping')
+  else if (s.ship_how === 'pickup') parts.push('we pick up')
+  else if (s.ship_how === 'flat') parts.push(s.ship_cents != null ? `shipping ${money(s.ship_cents)}` : 'flat-rate shipping')
+  else if (s.ship_how === 'varies') parts.push('shipping varies')
+  if (s.free_ship_over_cents != null && s.ship_how !== 'free' && s.ship_how !== 'pickup') parts.push(`free over ${money(s.free_ship_over_cents)}`)
+  return parts.length ? parts.join(' · ') : null
 }
 
 export async function deleteProduct(id: string): Promise<void> {

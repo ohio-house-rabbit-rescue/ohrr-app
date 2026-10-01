@@ -1,7 +1,7 @@
 // An item's photos (up to four): add from the camera or the photo library,
 // remove one, or make another one the main photo (the one on labels, lists
 // and the public pages). Reached from Scan an item → Photo, the items list
-// and the Saved screen of Catalog donations (?code=OHRR-XXXXX).
+// and the Saved screen of Catalog donations (?code=DON-00042).
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'

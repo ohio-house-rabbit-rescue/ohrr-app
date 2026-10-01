@@ -182,11 +182,8 @@ export default function ItemsList() {
         <Link to="/staff/donations/report" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-brand-blue/50 bg-white px-2 text-center font-display text-base font-extrabold text-brand-blue">
           <Icon name="book" size={20} /> Monthly report
         </Link>
-        <Link to="/staff/labels" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white font-display text-base font-extrabold text-slate-600">
+        <Link to="/staff/labels" className="col-span-2 inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white font-display text-base font-extrabold text-slate-600">
           <Icon name="printer" size={20} /> Print labels
-        </Link>
-        <Link to="/staff/items/tags" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white font-display text-base font-extrabold text-slate-600">
-          <Icon name="printer" size={20} /> Blank tags
         </Link>
       </div>
 

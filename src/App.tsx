@@ -112,7 +112,6 @@ const ItemsList = lazy(() => import('./features/scan/pages/ItemsList'))
 const Dropoffs = lazy(() => import('./features/scan/pages/Dropoffs'))
 const DropoffDetail = lazy(() => import('./features/scan/pages/DropoffDetail'))
 const DonationsReport = lazy(() => import('./features/scan/pages/DonationsReport'))
-const PrintTags = lazy(() => import('./features/scan/pages/PrintTags'))
 const CatalogFlow = lazy(() => import('./features/scan/pages/CatalogFlow'))
 const PrintLabels = lazy(() => import('./features/scan/pages/PrintLabels'))
 const ItemPhotos = lazy(() => import('./features/scan/pages/ItemPhotos'))
@@ -286,6 +285,8 @@ export default function App() {
           <Route path="hopshop" element={<HopShopManager />} />
           <Route path="hopshop/reorder" element={<HopShopManager />} />
           <Route path="hopshop/suppliers" element={<HopShopManager />} />
+          <Route path="hopshop/types" element={<HopShopManager />} />
+          <Route path="hopshop/labels" element={<Suspense fallback={null}><PrintLabels mode="shop" /></Suspense>} />
           <Route path="adopt" element={<StaffAdopt />} />
           <Route path="announcements" element={<StaffAnnouncements />} />
           <Route path="home-screen" element={<StaffHomeScreen />} />
@@ -339,7 +340,7 @@ export default function App() {
           <Route path="dropoffs" element={<Suspense fallback={null}><Dropoffs /></Suspense>} />
           <Route path="dropoffs/:id" element={<Suspense fallback={null}><DropoffDetail /></Suspense>} />
           <Route path="donations/report" element={<Suspense fallback={null}><DonationsReport /></Suspense>} />
-          <Route path="items/tags" element={<Suspense fallback={null}><PrintTags /></Suspense>} />
+          <Route path="items/tags" element={<Navigate to="/staff/labels" replace />} />
           <Route path="items/photos" element={<Suspense fallback={null}><ItemPhotos /></Suspense>} />
           <Route path="catalog" element={<Suspense fallback={null}><CatalogFlow /></Suspense>} />
           <Route path="labels" element={<Suspense fallback={null}><PrintLabels /></Suspense>} />

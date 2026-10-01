@@ -15,7 +15,7 @@ import { Icon } from '../../../components/icons'
 import { isNative } from '../../../native/platform'
 import { pickPhoto, type PhotoSource } from '../../../native/camera'
 import Scanner from '../Scanner'
-import { normalizeCode, isRetailBarcode, newTagCode, isTagCode } from '../codes'
+import { normalizeCode, isRetailBarcode, isOhrrCode } from '../codes'
 import { guessProduct, guessTitle, type ProductGuess } from '../lookup'
 import {
   adjustStock,
@@ -394,26 +394,26 @@ export default function ScanFlow() {
               </BigButton>
             </div>
           )}
-          {allowedKinds.length > 0 && (
+          {(canDonation || canAddStock) && (
             <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-3 text-[15px] text-slate-600">
-              <p className="font-bold text-ink">No tag on it yet?</p>
+              <p className="font-bold text-ink">No label on it yet?</p>
               <p className="mt-0.5">
-                <button
-                  type="button"
-                  onClick={() => void lookup(newTagCode())}
-                  className="font-extrabold text-brand-blue underline-offset-2 hover:underline"
-                >
-                  Give it a new code
-                </button>{' '}
-                and write the code on the item — or{' '}
-                <Link to="/staff/items/tags" className="font-extrabold text-brand-blue underline-offset-2 hover:underline">
-                  print tags
-                </Link>
-                . Lots of donations?{' '}
-                <Link to="/staff/catalog" className="font-extrabold text-brand-blue underline-offset-2 hover:underline">
-                  Catalog them one after another
-                </Link>
-                .
+                {canDonation && (
+                  <>
+                    <Link to="/staff/catalog" className="font-extrabold text-brand-blue underline-offset-2 hover:underline">
+                      Add it as a donation
+                    </Link>{' '}
+                    — it gets the next DON number.{canAddStock ? ' Something the shop carries? ' : ''}
+                  </>
+                )}
+                {canAddStock && (
+                  <>
+                    <Link to="/staff/hopshop?add=1" className="font-extrabold text-brand-blue underline-offset-2 hover:underline">
+                      Add it to Hop Shop inventory
+                    </Link>{' '}
+                    — it gets a SKU.
+                  </>
+                )}
               </p>
             </div>
           )}
@@ -917,9 +917,11 @@ export default function ScanFlow() {
   }
 
   if (step === 'done' && item) {
-    const tagged = isTagCode(item.code)
+    // A new donation gets the next DON number, a shop item its SKU: print the label to stick on.
+    const numbered = isOhrrCode(item.code)
+    const labelsAt = item.kind === 'stock' ? '/staff/hopshop/labels' : '/staff/labels'
     return (
-      <StepShell title="Saved!" help={tagged ? 'Make sure the tag is on the item.' : 'All done.'}>
+      <StepShell title="Saved!" help={numbered ? `Its number is ${item.code}. Print its label and stick it on.` : 'All done.'}>
         <div className="space-y-4">
           <div className="flex justify-center">
             <span className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-green-100 text-green-700">
@@ -927,6 +929,11 @@ export default function ScanFlow() {
             </span>
           </div>
           <ItemCard item={item} />
+          {numbered && (
+            <BigButton tone="blue" icon="printer" onClick={() => navigate(`${labelsAt}?code=${encodeURIComponent(item.code)}`)}>
+              Print its label
+            </BigButton>
+          )}
           <BigButton tone="orange" icon="scan" onClick={startOver}>
             Scan another
           </BigButton>

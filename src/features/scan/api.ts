@@ -28,8 +28,8 @@ export async function listItems(orgId: string, kind?: ItemKind | null, unprinted
 }
 
 /**
- * Catalog mode: save a new item in one call. The database makes the code
- * (OHRR-XXXXX) unless a scanned tag's code is given. Update 36.
+ * Catalog mode: save a new item in one call. The database gives a donation the
+ * next DON number (update 41; a scanned packet barcode isn't kept). Update 36.
  */
 export interface CatalogInput {
   title: string

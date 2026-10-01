@@ -1,6 +1,7 @@
 // "Scan an item" — the shapes shared by the scan flow, the items list and the
-// tag printer. One tag code → exactly one item of one kind; the kind decides
-// which table holds the details (see the item_tags migration).
+// label printer. One code → exactly one item of one kind; the kind decides
+// which table holds the details (see the item_tags migration). Donations and
+// prizes carry DON-00042; Hop Shop products a SKU, HAY-101-001 (update 41).
 import type { IconName } from '../../components/icons'
 import type { Capability } from '../../lib/capabilities'
 

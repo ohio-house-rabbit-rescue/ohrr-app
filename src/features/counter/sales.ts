@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase, errMessage } from '../../lib/supabase'
 import type { Json } from '../../lib/database.types'
-import { newTagCode, normalizeCode } from '../scan/codes'
+import { normalizeCode } from '../scan/codes'
 import { readLocal, writeLocal } from './local'
 
 export interface CounterProduct {
@@ -151,29 +151,7 @@ export function useTill(orgId: string | null): Till {
   return { products, loaded, waiting: queue.length, online, error, refresh, recordSale, syncNow }
 }
 
-/* ------------------------------------------------ adding items */
-
-export async function addItem(
-  orgId: string,
-  i: { name: string; priceCents: number; quantity: number; photoUrl: string | null; description?: string },
-): Promise<{ id: string; code: string }> {
-  // A fresh OHRR number; on the rare clash, try another.
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const code = newTagCode()
-    const { data, error } = await supabase.rpc('counter_add_item', {
-      p_org: orgId,
-      p_name: i.name,
-      p_price_cents: i.priceCents,
-      p_quantity: i.quantity,
-      p_photo_url: i.photoUrl,
-      p_code: code,
-      p_description: i.description ?? null,
-    })
-    if (!error) return data as { id: string; code: string }
-    if (!/already on another item/i.test(error.message)) throw error
-  }
-  throw new Error('Couldn’t make a new item number — please try again')
-}
+/* ------------------------------------------------ codes */
 
 export async function linkCode(orgId: string, productId: string, code: string): Promise<void> {
   const { error } = await supabase.rpc('counter_link_code', { p_org: orgId, p_product: productId, p_code: code })
