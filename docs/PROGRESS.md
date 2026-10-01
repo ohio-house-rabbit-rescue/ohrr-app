@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-09-30 (OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-10-01 (CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 WRITTEN, NOT RUN; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,23 @@
 ---
 
 ## Current state (at a glance)
+
+- **Catalog fix + up to four photos per item, 2026-10-01 (app `6011c36`, website `a8289e6`; update 37 WRITTEN, NOT RUN).**
+  OHRR tested the catalog loop on the phone: the first photo never showed, a later one showed but didn't save; asked for
+  photo → description → Save → next or print, and up to four photos per item. **Cause, reproduced in a browser test**
+  (Playwright, mocked sign-in, the OS file chooser): the hidden camera input was swapped for a new element when the
+  screen changed, so the camera's answer landed on a detached element and never reached the page. Fix: the inputs live
+  above every screen. Flow now: Start → camera → What is it? (photo strip, main first, × / Make main, + up to four; name
+  with mic; donor chips) → **Save** → Saved screen (thumb, name, donor, code; Next item / Print this label / I'm done;
+  Change something). Save waits for the background uploads (one retry); a failed photo leaves the item saved with an amber
+  note and Try again. **Update 37** (`20261001100000_item_photos.sql`): `photo_urls text[]` on donation_items /
+  raffle_items / raffle_prizes / hopshop_products (filled from photo_url), `clean_photo_urls()`, `set_item_photos()`,
+  `tagged_item_json` returns photo_urls, `save_scanned_item` keeps the list (a new main photo replaces the first; a move
+  carries it). App: `/staff/items/photos?code=` (add / Make main / Remove), Scan an item → Photos goes there, ItemCard
+  shows the extra thumbs, Print labels `?code=` ticks one label. Website: Add a donation takes several photos, the edit
+  panel has a Photos editor, Print labels `?code=`. Until 37 runs the first photo saves and the Saved screen says the
+  others need the update. Test: scratchpad `catalog_test.py` (23 checks; fails on the old page, passes now). Also
+  2026-09-30: the `ohrr-jobs` function deployed from this PC with the Supabase CLI (see below).
 
 - **`ohrr-jobs` Edge Function deployed, 2026-09-30.** OHRR asked to clear this first. Deployed from the repo with the
   Supabase CLI (`npx supabase@2 functions deploy ohrr-jobs --project-ref ixxzebtzjgeimoijexwn --no-verify-jwt --use-api`);
