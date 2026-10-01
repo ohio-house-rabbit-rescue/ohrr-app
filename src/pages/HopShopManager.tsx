@@ -1031,6 +1031,24 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
   return (
     <div className="space-y-3">
       <FormError>{error}</FormError>
+      {canAct && (
+        <Link
+          to="/staff/hopshop/deliveries/new"
+          className="flex min-h-[56px] items-center gap-3 rounded-2xl border-2 border-brand-blue/40 bg-brand-blue-50/60 px-4 py-2 text-left"
+        >
+          <Icon name="box" size={22} />
+          <span className="min-w-0 flex-1">
+            <span className="block font-display text-[15px] font-extrabold text-ink">Something arrived? Add it from the invoice</span>
+            <span className="block text-xs text-slate-600">PDF or a photo — it fills in the items and how many</span>
+          </span>
+          <Icon name="chevron" size={18} />
+        </Link>
+      )}
+      {canAct && (
+        <Link to="/staff/hopshop/deliveries" className="inline-flex min-h-[44px] items-center text-sm font-bold text-brand-blue">
+          Past deliveries →
+        </Link>
+      )}
       {note && <p className="text-sm font-bold text-green-700">{note}</p>}
       {arrived && (
         <p className="rounded-xl bg-green-50 px-3 py-2 text-sm text-slate-700">
@@ -1406,6 +1424,11 @@ function Suppliers({
                 </span>
               )}
               <CompanySummary c={s} gifts={gifts?.get(s.id)} />
+              {s.is_supplier && (
+                <Link to={`/staff/hopshop/deliveries?supplier=${s.id}`} className="mt-1 inline-flex min-h-[44px] items-center text-xs font-bold text-brand-blue">
+                  Deliveries from {s.name} →
+                </Link>
+              )}
             </span>
             {canWrite && (
               <button type="button" onClick={() => setEditing(editing === s.id ? null : s.id)} className="min-h-[44px] shrink-0 px-2 text-sm font-bold text-brand-blue">

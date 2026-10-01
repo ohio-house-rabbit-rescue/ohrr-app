@@ -114,6 +114,8 @@ const DropoffDetail = lazy(() => import('./features/scan/pages/DropoffDetail'))
 const DonationsReport = lazy(() => import('./features/scan/pages/DonationsReport'))
 const CatalogFlow = lazy(() => import('./features/scan/pages/CatalogFlow'))
 const PrintLabels = lazy(() => import('./features/scan/pages/PrintLabels'))
+const ReceiveDelivery = lazy(() => import('./features/hopshop/ReceiveDelivery'))
+const Deliveries = lazy(() => import('./features/hopshop/DeliveriesPage'))
 const ItemPhotos = lazy(() => import('./features/scan/pages/ItemPhotos'))
 import { FeatureGate } from './features/settings/FeatureGate'
 import { SILENT_AUCTION_FLAG } from './features/settings/features'
@@ -287,6 +289,9 @@ export default function App() {
           <Route path="hopshop/suppliers" element={<HopShopManager />} />
           <Route path="hopshop/types" element={<HopShopManager />} />
           <Route path="hopshop/labels" element={<Suspense fallback={null}><PrintLabels key="shop" mode="shop" /></Suspense>} />
+          <Route path="hopshop/deliveries/new" element={<Suspense fallback={null}><ReceiveDelivery /></Suspense>} />
+          <Route path="hopshop/deliveries" element={<Suspense fallback={null}><Deliveries /></Suspense>} />
+          <Route path="hopshop/deliveries/:id" element={<Suspense fallback={null}><Deliveries /></Suspense>} />
           <Route path="adopt" element={<StaffAdopt />} />
           <Route path="announcements" element={<StaffAnnouncements />} />
           <Route path="home-screen" element={<StaffHomeScreen />} />

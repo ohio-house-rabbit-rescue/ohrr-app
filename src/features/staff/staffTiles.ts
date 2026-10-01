@@ -97,6 +97,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       { to: '/staff/catalog', title: 'Add a donation', hint: 'Photo, name, how many, value', icon: 'camera', group: 'items', show: canItems },
       { to: '/staff/items', title: 'Items', hint: 'Donations to sort, baskets, auction and raffle', icon: 'box', group: 'items', show: canItems },
       { to: '/staff/hopshop', title: 'Hop Shop inventory', hint: 'What the shop carries, stock, reorder', icon: 'store', group: 'items', show: canSeeHopShop },
+      { to: '/staff/hopshop/deliveries/new', title: 'Add a delivery', hint: 'Stock from the supplier’s invoice', icon: 'box', group: 'items', show: can('hopshop.inventory.update') || can('hopshop.products.edit') || can('hopshop.products.create') },
       { to: '/staff/dropoffs', title: 'Drop-offs and thank-yous', hint: 'Who gave what, the letter', icon: 'mail', group: 'items', show: canItems },
       { to: '/staff/donations/report', title: 'Monthly donations report', hint: 'Totals, by donor, a spreadsheet', icon: 'book', group: 'items', show: canItems },
       { to: '/staff/labels', title: 'Print labels', hint: 'Codes for items, any label size', icon: 'printer', group: 'items', show: canItems },

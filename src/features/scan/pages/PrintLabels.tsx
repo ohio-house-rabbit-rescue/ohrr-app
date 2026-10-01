@@ -6,7 +6,8 @@
 // Pick the items (the unprinted ones are ticked by default) and how many
 // copies of each, then Print — on a laptop or a phone that sees the printer —
 // or make a PDF, one label per page, to print from wherever the printer is.
-// ?code=X (repeatable) ticks just those; &copies=N sets their copies.
+// ?code=X (repeatable) ticks just those; &copies=N sets their copies;
+// ?c=X:N (repeatable) ticks X with N copies (a delivery's labels).
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
@@ -116,7 +117,18 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   const [showPrice, setShowPrice] = useState(loadShowPrice)
   // ?code=DON-00042 (one or more): tick just those — "Print this label" from the catalog or a product card.
   const [searchParams] = useSearchParams()
-  const wanted = useMemo(() => searchParams.getAll('code').map((c) => c.trim().toUpperCase()).filter(Boolean), [searchParams])
+  const perCode = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const v of searchParams.getAll('c')) {
+      const [code, n] = v.split(':')
+      if (code?.trim()) m.set(code.trim().toUpperCase(), Number(n) || 1)
+    }
+    return m
+  }, [searchParams])
+  const wanted = useMemo(
+    () => [...searchParams.getAll('code').map((c) => c.trim().toUpperCase()).filter(Boolean), ...perCode.keys()],
+    [searchParams, perCode],
+  )
   const wantedCopies = Number(searchParams.get('copies')) || 0
   const toLabel = (r: Row): LabelItem => (shop ? { ...r.label, price_cents: showPrice ? r.price_cents : null } : r.label)
   const [show, setShow] = useState<Show>(wanted.length ? 'all' : 'unprinted')
@@ -146,7 +158,8 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
           const have = new Set(rows.map((r) => r.code))
           const w = wanted.filter((c) => have.has(c))
           if (w.length) {
-            if (wantedCopies > 1) setCopyText(Object.fromEntries(w.map((c) => [c, String(clampCopies(wantedCopies))])))
+            const copies = w.map((c) => [c, perCode.get(c) ?? wantedCopies] as const).filter(([, n]) => n > 1)
+            if (copies.length) setCopyText(Object.fromEntries(copies.map(([c, n]) => [c, String(clampCopies(n))])))
             return new Set(w)
           }
         }
