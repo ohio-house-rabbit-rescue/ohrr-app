@@ -111,12 +111,17 @@ export function KindTile({
   kind,
   selected,
   onSelect,
+  label,
+  hint,
 }: {
   kind: keyof typeof KIND_META
   selected: boolean
   onSelect: () => void
+  /** Override the kind's own words (e.g. "A Hop Shop item"). */
+  label?: string
+  hint?: string
 }) {
-  const m = KIND_META[kind]
+  const m = { ...KIND_META[kind], ...(label ? { label } : {}), ...(hint ? { hint } : {}) }
   const tile = m.tone === 'orange' ? 'bg-brand-orange-50 text-brand-orange' : 'bg-brand-blue-50 text-brand-blue'
   return (
     <button

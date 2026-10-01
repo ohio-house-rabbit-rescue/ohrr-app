@@ -112,6 +112,24 @@ export interface TaggedItem {
   location?: string | null
   /** Client only: the extra details couldn't be saved yet (update 39 not run). */
   details_skipped?: boolean
+  /** Update 40 (donations): where it's headed, value each or for the lot, size, use-by, drop-off, outcome. */
+  headed_for?: HeadedFor | null
+  value_basis?: 'each' | 'all' | null
+  value_each_cents?: number | null
+  value_total_cents?: number | null
+  size?: string | null
+  use_by?: string | null
+  outcome?: 'sorted' | 'basket' | 'rabbits' | 'passed_on' | null
+  outcome_at?: string | null
+  outcome_note?: string | null
+  dropoff_id?: string | null
+  split_from?: string | null
+  /** A donation in a basket: the basket it's in. */
+  in_basket?: { code: string; kind: ItemKind; title: string } | null
+  /** A basket (raffle prize or auction lot): the donations in it. */
+  contents?: { code: string | null; title: string; quantity: number; size: string | null; donated_by: string | null; value_total_cents: number | null }[] | null
+  /** Client only: headed for / size / use-by / drop-off couldn't be saved yet (update 40 not run). */
+  plan_skipped?: boolean
   created_at: string
   updated_at: string
 }
@@ -134,6 +152,11 @@ export interface ItemDraft {
   condition: string
   category: string
   location: string
+  /** Update 40 (donations). */
+  headedFor: HeadedFor | ''
+  valueBasis: 'each' | 'all'
+  size: string
+  useBy: string
 }
 
 export function emptyDraft(code: string): ItemDraft {
@@ -151,6 +174,10 @@ export function emptyDraft(code: string): ItemDraft {
     condition: '',
     category: '',
     location: '',
+    headedFor: '',
+    valueBasis: 'each',
+    size: '',
+    useBy: '',
   }
 }
 
@@ -169,6 +196,10 @@ export function draftFromItem(item: TaggedItem): ItemDraft {
     condition: item.condition ?? '',
     category: item.category ?? '',
     location: item.location ?? '',
+    headedFor: item.headed_for ?? '',
+    valueBasis: item.value_basis ?? 'each',
+    size: item.size ?? '',
+    useBy: item.use_by ?? '',
   }
 }
 
@@ -181,14 +212,75 @@ export const CONDITIONS: { value: string; label: string }[] = [
 
 export const conditionLabel = (v: string | null | undefined): string => CONDITIONS.find((c) => c.value === v)?.label ?? ''
 
-/** "6 of them · $5 each · Like new · Food & hay · Kept: Bin 3" — the extra details in one line. */
-export function extrasSummary(item: Pick<TaggedItem, 'kind' | 'quantity' | 'price_cents' | 'condition' | 'category' | 'location'>): string {
+/* ------------------------------------------------------------- update 40 */
+
+export type HeadedFor = 'raffle' | 'auction' | 'shop' | 'rabbits'
+
+/** Where a donation is headed; '' = not sure yet (sort later). */
+export const HEADED_FOR: { value: HeadedFor | ''; label: string }[] = [
+  { value: '', label: 'Not sure yet' },
+  { value: 'raffle', label: 'Raffle' },
+  { value: 'auction', label: 'Silent Auction' },
+  { value: 'shop', label: 'Hop Shop' },
+  { value: 'rabbits', label: 'For the rabbits' },
+]
+
+export const headedLabel = (v: string | null | undefined): string => (v ? (HEADED_FOR.find((h) => h.value === v)?.label ?? '') : '')
+
+/** After "for:" — "Raffle", "Hop Shop", or "the rabbits" (not "For the rabbits"). */
+export const headedFor = (v: string | null | undefined): string => (v === 'rabbits' ? 'the rabbits' : headedLabel(v))
+
+/** Where a donation headed for X goes when it's sorted. */
+export const HEADED_KIND: Record<'raffle' | 'auction' | 'shop', ItemKind> = { raffle: 'raffle', auction: 'auction', shop: 'stock' }
+
+/** Value for one and for the lot, whichever way it was typed. */
+export function donationValues(v: { value_cents: number | null; value_basis?: 'each' | 'all' | null; quantity: number | null }): { each: number | null; total: number | null } {
+  if (v.value_cents == null) return { each: null, total: null }
+  const q = Math.max(1, v.quantity ?? 1)
+  return v.value_basis === 'all'
+    ? { each: Math.round(v.value_cents / q), total: v.value_cents }
+    : { each: v.value_cents, total: v.value_cents * q }
+}
+
+/** "$10 each · $500 in all", or "$25" for one. */
+export function valueLine(v: { value_cents: number | null; value_basis?: 'each' | 'all' | null; quantity: number | null }): string {
+  const { each, total } = donationValues(v)
+  if (each == null || total == null) return ''
+  return (v.quantity ?? 1) > 1 ? `${formatMoney(each)} each · ${formatMoney(total)} in all` : formatMoney(total)
+}
+
+/** "Mar 15, 2027" from "2027-03-15". */
+export function usDate(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
+  if (!y || !m || !d) return ''
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+/** Use-by within 30 days (or past). */
+export function isUseSoon(iso: string | null | undefined): boolean {
+  if (!iso) return false
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
+  const t = new Date(y, m - 1, d).getTime()
+  return t - Date.now() < 30 * 86400000
+}
+
+/** "50 of them · 24×36 · Worth $10 each · $500 in all · For the raffle · Like new · Kept: Bin 3" — the extra details in one line. */
+export function extrasSummary(
+  item: Pick<TaggedItem, 'kind' | 'quantity' | 'price_cents' | 'condition' | 'category' | 'location'> &
+    Partial<Pick<TaggedItem, 'value_cents' | 'value_basis' | 'size' | 'headed_for' | 'use_by' | 'outcome'>>,
+): string {
   const parts: string[] = []
-  if (item.kind === 'donation' && item.quantity && item.quantity > 1) parts.push(`${item.quantity} of them`)
-  if (item.kind === 'donation' && item.price_cents != null) parts.push(`${formatMoney(item.price_cents)} each`)
+  const donation = item.kind === 'donation'
+  if (donation && item.quantity && item.quantity > 1) parts.push(`${item.quantity} of them`)
+  if (donation && item.size) parts.push(item.size)
+  if (donation && item.value_cents != null) parts.push(`Worth ${valueLine({ value_cents: item.value_cents, value_basis: item.value_basis, quantity: item.quantity })}`)
+  if (donation && item.price_cents != null) parts.push(`Sells at ${formatMoney(item.price_cents)} each`)
+  if (donation && item.headed_for && !item.outcome) parts.push(`For: ${headedFor(item.headed_for)}`)
   if (item.condition) parts.push(conditionLabel(item.condition))
   if (item.category) parts.push(item.category)
   if (item.location) parts.push(`Kept: ${item.location}`)
+  if (donation && item.use_by) parts.push(`Use by ${usDate(item.use_by)}`)
   return parts.join(' · ')
 }
 
@@ -213,7 +305,12 @@ export function formatMoney(cents: number | null | undefined): string {
 
 /** Plain-words status for the item card and list rows. */
 export function statusLabel(item: TaggedItem): string {
-  if (item.kind === 'donation') return 'To be sorted'
+  if (item.kind === 'donation') {
+    if (item.outcome === 'basket') return item.in_basket ? `In the basket “${item.in_basket.title}”` : 'In a basket'
+    if (item.outcome === 'rabbits') return 'Used for the rabbits'
+    if (item.outcome === 'passed_on') return 'Passed on / not usable'
+    return item.headed_for ? `To be sorted · for: ${headedFor(item.headed_for)}` : 'To be sorted'
+  }
   if (item.kind === 'stock') {
     const n = item.quantity ?? 0
     const count = n === 1 ? '1 in stock' : `${n} in stock`

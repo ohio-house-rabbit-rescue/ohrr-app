@@ -2,8 +2,8 @@
 // point), the reorder list grouped by supplier, and the supplier list itself.
 // One screen, three tabs, phone first. Everything here goes live on the public
 // Hop Shop shelf (name, photo, price, in stock) the moment it is saved.
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
@@ -52,6 +52,8 @@ import {
 import { giftTotals, withScheme, type GiftTotals } from '../features/hopshop/companies'
 import { CompanyForm, CompanySummary, CompanyThumb, useVendorRecordsReady } from '../features/hopshop/CompanyForm'
 import { PackEditor, packRowsFrom, packRowsToInput, type PackRow } from '../features/hopshop/PackEditor'
+
+const Scanner = lazy(() => import('../features/scan/Scanner'))
 
 /** Is update 27's pack table in? `null` while asking. */
 function usePacksReady(): boolean | null {
@@ -167,7 +169,24 @@ function Items({
 }) {
   const [rows, setRows] = useState<StockCard[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [creating, setCreating] = useState(false)
+  const [params, setParams] = useSearchParams()
+  // "Add an item" from elsewhere (Scan an item, the Counter, the website) lands here with ?add=1.
+  const [creating, setCreating] = useState(() => perms.canCreate && params.get('add') === '1')
+  const [startCode] = useState(() => (params.get('add') === '1' ? (params.get('code') ?? '') : ''))
+  const formTop = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!params.has('add') && !params.has('code')) return
+    const next = new URLSearchParams(params)
+    next.delete('add')
+    next.delete('code')
+    setParams(next, { replace: true })
+    if (creating) {
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+      requestAnimationFrame(() => formTop.current?.focus())
+    }
+    // once, on arrival
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [q, setQ] = useState('')
 
   const load = useCallback(async () => {
@@ -219,10 +238,14 @@ function Items({
 
       {creating && (
         <Card>
-          <p className="mb-3 font-display text-[15px] font-extrabold text-ink">New item</p>
+          <div ref={formTop} tabIndex={-1} className="outline-none">
+            <h2 className="mb-1 font-display text-[15px] font-extrabold text-ink">New item the shop carries</h2>
+            <p className="mb-3 text-sm text-slate-500">Something bought from a supplier to sell. Donations are added under “Add a donation”.</p>
+          </div>
           <ProductForm
             orgId={orgId}
             initial={null}
+            startCode={startCode}
             suppliers={suppliers}
             canCount={perms.canInventory || perms.canCreate}
             onAddSupplier={onAddSupplier}
@@ -492,6 +515,7 @@ const CATEGORY_HINTS = ['Hay', 'Pellets', 'Treats', 'Toys', 'Litter', 'Housing',
 function ProductForm({
   orgId,
   initial,
+  startCode = '',
   suppliers,
   canCount,
   onAddSupplier,
@@ -500,13 +524,16 @@ function ProductForm({
 }: {
   orgId: string
   initial: StockCard | null
+  /** A code scanned before arriving (Scan an item → "A Hop Shop item"). */
+  startCode?: string
   suppliers: Supplier[]
   canCount: boolean
   onAddSupplier: () => void
   onSaved: () => Promise<void>
   onCancel: () => void
 }) {
-  const [d, setD] = useState<Draft>(() => draftFrom(initial))
+  const [d, setD] = useState<Draft>(() => ({ ...draftFrom(initial), ...(initial || !startCode ? {} : { code: normalizeCode(startCode) }) }))
+  const [scanning, setScanning] = useState(false)
   const [busy, setBusy] = useState(false)
   const [photoBusy, setPhotoBusy] = useState(false)
   const [preview, setPreview] = useState<string | null>(initial?.photo_url ?? null)
@@ -648,6 +675,22 @@ function ProductForm({
             </button>
           </div>
         </label>
+        <button type="button" onClick={() => setScanning((v) => !v)} className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-bold text-brand-blue">
+          <Icon name="scan" size={16} /> {scanning ? 'Stop scanning' : 'Scan the barcode on the packet'}
+        </button>
+        {scanning && (
+          <div className="mt-2 overflow-hidden rounded-2xl">
+            <Suspense fallback={<Spinner label="Starting the camera…" />}>
+              <Scanner
+                onResult={(raw) => {
+                  setD((x) => ({ ...x, code: normalizeCode(raw) }))
+                  setScanning(false)
+                }}
+                onTypeInstead={() => setScanning(false)}
+              />
+            </Suspense>
+          </div>
+        )}
         <p className="mt-1 text-xs text-slate-500">{codeInfo}</p>
       </div>
 

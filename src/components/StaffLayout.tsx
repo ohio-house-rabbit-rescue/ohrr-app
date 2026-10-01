@@ -55,10 +55,9 @@ export default function StaffLayout() {
     { to: '/staff/bookings', label: 'Bookings', show: can('bookings.manage') },
     {
       to: '/staff/catalog',
-      label: 'Catalog donations',
+      label: 'Add a donation',
       show: can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update'),
     },
-    { to: '/staff/catalog?kind=stock', label: 'Add Hop Shop stock', show: can('hopshop.products.create') },
     {
       to: '/staff/scan',
       label: 'Scan an item',

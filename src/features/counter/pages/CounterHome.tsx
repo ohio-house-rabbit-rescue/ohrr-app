@@ -29,7 +29,6 @@ export default function CounterHome() {
   // even if the phone loses it later.
   useEffect(() => {
     void import('./CounterSell')
-    void import('./CounterAdd')
     void import('./Door')
     void import('./CounterToday')
     void import('../../scan/Scanner')
@@ -40,7 +39,10 @@ export default function CounterHome() {
     mode === 'shop'
       ? [
           { to: '/staff/counter/sell', title: 'Sell', sub: 'Scan or tap what they’re buying, then take the money', icon: 'bag', tone: 'orange' },
-          { to: '/staff/counter/add', title: 'Add a new item', sub: 'Photo, name, price — it gets its own number', icon: 'plus', tone: 'blue' },
+          // New shop items are added in one place: Hop Shop inventory (supplier, price, barcode).
+          ...(can('hopshop.products.create')
+            ? [{ to: '/staff/hopshop?add=1', title: 'Add an item to the shop', sub: 'Opens Hop Shop inventory: photo, price, how many, barcode, supplier', icon: 'plus' as IconName, tone: 'blue' as const }]
+            : []),
           { to: '/staff/counter/today', title: 'Today at the till', sub: 'What sold, and the cash and card totals', icon: 'box', tone: 'blue' },
         ]
       : [

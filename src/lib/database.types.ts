@@ -2553,9 +2553,29 @@ export type Database = {
           p_condition?: string | null
           p_category?: string | null
           p_location?: string | null
+          // Update 40: { headed_for, value_basis, size, use_by, dropoff_id }
+          p_plan?: Json | null
         }
         Returns: Json
       }
+      /** Update 40: donation intake — plan, outcome, split, baskets, sort-all, drop-offs, report. */
+      set_donation_plan: { Args: { p_org: string; p_code: string; p_plan: Json }; Returns: Json }
+      set_donation_outcome: { Args: { p_org: string; p_code: string; p_outcome: string | null; p_note?: string | null }; Returns: Json }
+      split_donation: { Args: { p_org: string; p_code: string; p_quantity: number; p_headed_for?: string | null }; Returns: Json }
+      make_basket: { Args: { p_org: string; p_codes: string[]; p_kind: string; p_title: string; p_description?: string | null }; Returns: Json }
+      sort_headed_donations: { Args: { p_org: string; p_headed_for: string }; Returns: number }
+      start_dropoff: {
+        Args: { p_org: string; p_donor_name?: string | null; p_donor_email?: string | null; p_received_on?: string | null; p_note?: string | null }
+        Returns: Json
+      }
+      update_dropoff: {
+        Args: { p_org: string; p_id: string; p_donor_name?: string | null; p_donor_email?: string | null; p_received_on?: string | null; p_note?: string | null }
+        Returns: Json
+      }
+      set_dropoff_thanked: { Args: { p_org: string; p_id: string; p_thanked?: boolean }; Returns: Json }
+      list_dropoffs: { Args: { p_org: string; p_limit?: number }; Returns: Json }
+      dropoff_detail: { Args: { p_org: string; p_id: string }; Returns: Json }
+      donations_received: { Args: { p_org: string; p_from: string; p_to: string }; Returns: Json }
       /** Update 39: condition, category, where it's kept. */
       set_item_extras: {
         Args: { p_org: string; p_code: string; p_condition?: string | null; p_category?: string | null; p_location?: string | null }

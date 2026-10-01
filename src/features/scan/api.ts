@@ -2,8 +2,9 @@
 // capability-checked in the database); photos go to the public `item-photos`
 // bucket after the same phone-friendly downscale the auction manager uses.
 import { supabase } from '../../lib/supabase'
+import type { Json } from '../../lib/database.types'
 import { downscaleToJpeg } from '../raffle/photoUpload'
-import { dollarsToCents, type ItemDraft, type ItemKind, type TaggedItem } from './types'
+import { dollarsToCents, type HeadedFor, type ItemDraft, type ItemKind, type TaggedItem } from './types'
 
 export const ITEM_PHOTO_BUCKET = 'item-photos'
 
@@ -44,6 +45,17 @@ export interface CatalogInput {
   condition?: string | null
   category?: string | null
   location?: string | null
+  /** Update 40 (donations): where it's headed, value each/all, size, use-by, drop-off. */
+  plan?: DonationPlan | null
+}
+
+/** Update 40: a donation's plan. Only the keys given are changed. */
+export interface DonationPlan {
+  headed_for?: HeadedFor | null
+  value_basis?: 'each' | 'all'
+  size?: string | null
+  use_by?: string | null
+  dropoff_id?: string | null
 }
 
 const isMissingRpc = (e: { code?: string; message?: string } | null) =>
@@ -70,11 +82,22 @@ export async function catalogNewItem(orgId: string, input: CatalogInput): Promis
     p_code: input.code ?? null,
   }
   const extras = { p_condition: blank(input.condition), p_category: blank(input.category), p_location: blank(input.location) }
+  const plan = input.plan && Object.values(input.plan).some((v) => v != null && v !== '' && v !== 'each') ? input.plan : null
+  // Newest first: with the plan (update 40), then without it (39), then the bare call (36).
+  if (plan) {
+    const withPlan = await supabase.rpc('catalog_new_item', { ...base, ...extras, p_plan: plan as unknown as Json })
+    if (!withPlan.error) {
+      const item = asItem(withPlan.data)
+      if (!item) throw new Error('Saved, but the item could not be read back.')
+      return item
+    }
+    if (!isMissingRpc(withPlan.error)) throw withPlan.error
+  }
   const first = await supabase.rpc('catalog_new_item', { ...base, ...extras })
   if (!first.error) {
     const item = asItem(first.data)
     if (!item) throw new Error('Saved, but the item could not be read back.')
-    return item
+    return plan ? { ...item, plan_skipped: true } : item
   }
   if (!isMissingRpc(first.error)) throw first.error
   const old = await supabase.rpc('catalog_new_item', base)
@@ -83,8 +106,150 @@ export async function catalogNewItem(orgId: string, input: CatalogInput): Promis
   if (!item) throw new Error('Saved, but the item could not be read back.')
   const wanted =
     (input.quantity ?? 1) > 1 || input.priceCents != null || extras.p_condition || extras.p_category || extras.p_location
-  return wanted ? { ...item, details_skipped: true } : item
+  return wanted || plan ? { ...item, details_skipped: Boolean(wanted), plan_skipped: Boolean(plan) } : item
 }
+
+/* ------------------------------------------------------------- update 40 */
+
+const NEEDS_40 = 'This needs database update 40.'
+
+type Fn40 =
+  | 'set_donation_plan'
+  | 'set_donation_outcome'
+  | 'split_donation'
+  | 'make_basket'
+  | 'sort_headed_donations'
+  | 'start_dropoff'
+  | 'update_dropoff'
+  | 'set_dropoff_thanked'
+  | 'list_dropoffs'
+  | 'dropoff_detail'
+  | 'donations_received'
+
+async function rpc40<T>(fn: Fn40, args: Record<string, unknown>): Promise<T> {
+  const call = supabase.rpc.bind(supabase) as unknown as (
+    fn: Fn40,
+    args: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>
+  const { data, error } = await call(fn, args)
+  if (error) {
+    if (isMissingRpc(error)) throw new Error(NEEDS_40)
+    throw error
+  }
+  return data as T
+}
+
+/** Headed for, value each/all, size, use-by, drop-off — only the keys given. */
+export async function setDonationPlan(orgId: string, code: string, plan: DonationPlan): Promise<TaggedItem | null> {
+  return asItem(await rpc40('set_donation_plan', { p_org: orgId, p_code: code, p_plan: plan }))
+}
+
+/** Used for the rabbits, passed on / not usable, or null to undo (also takes it out of a basket). */
+export async function setDonationOutcome(orgId: string, code: string, outcome: 'rabbits' | 'passed_on' | null, note?: string): Promise<TaggedItem | null> {
+  return asItem(await rpc40('set_donation_outcome', { p_org: orgId, p_code: code, p_outcome: outcome, p_note: blank(note) }))
+}
+
+/** Take some of a lot off as their own donation, with a new code. Returns the new part. */
+export async function splitDonation(orgId: string, code: string, quantity: number, headedFor?: HeadedFor | null): Promise<TaggedItem> {
+  const item = asItem(await rpc40('split_donation', { p_org: orgId, p_code: code, p_quantity: quantity, p_headed_for: headedFor ?? null }))
+  if (!item) throw new Error('Split, but the new part could not be read back.')
+  return item
+}
+
+/** Several donations become one raffle prize or auction lot. Returns the basket. */
+export async function makeBasket(orgId: string, codes: string[], kind: 'raffle' | 'auction', title: string, description?: string): Promise<TaggedItem> {
+  const item = asItem(await rpc40('make_basket', { p_org: orgId, p_codes: codes, p_kind: kind, p_title: title.trim(), p_description: blank(description) }))
+  if (!item) throw new Error('Made, but the basket could not be read back.')
+  return item
+}
+
+/** Move every donation headed for one place. Returns how many moved. */
+export async function sortHeadedDonations(orgId: string, headedFor: HeadedFor): Promise<number> {
+  const n = await rpc40<unknown>('sort_headed_donations', { p_org: orgId, p_headed_for: headedFor })
+  return typeof n === 'number' ? n : 0
+}
+
+export interface Dropoff {
+  id: string
+  donor_name: string | null
+  donor_email: string | null
+  received_on: string
+  note: string | null
+  thanked_at: string | null
+  created_at: string
+  items: number
+  pieces: number
+  value_total_cents: number | null
+}
+
+export interface DonationLine {
+  id: string
+  title: string
+  size: string | null
+  quantity: number
+  value_cents: number | null
+  value_basis: 'each' | 'all'
+  value_each_cents: number | null
+  value_total_cents: number | null
+  donated_by: string | null
+  received_on: string
+  dropoff_id: string | null
+  headed_for: HeadedFor | null
+  outcome: 'sorted' | 'basket' | 'rabbits' | 'passed_on' | null
+  outcome_at: string | null
+  sorted_kind: ItemKind | null
+  split_from: string | null
+  photo_url: string | null
+  use_by: string | null
+  created_at: string
+  code: string | null
+  went_to: { code: string; kind: ItemKind; title: string | null } | null
+  /** donations_received only */
+  dropoff_donor?: string | null
+}
+
+export async function startDropoff(orgId: string, d: { donorName?: string; donorEmail?: string; receivedOn?: string | null; note?: string }): Promise<Dropoff> {
+  return rpc40<Dropoff>('start_dropoff', {
+    p_org: orgId,
+    p_donor_name: blank(d.donorName),
+    p_donor_email: blank(d.donorEmail),
+    p_received_on: d.receivedOn || null,
+    p_note: blank(d.note),
+  })
+}
+
+export async function updateDropoff(orgId: string, id: string, d: { donorName?: string; donorEmail?: string; receivedOn?: string | null; note?: string }): Promise<Dropoff> {
+  return rpc40<Dropoff>('update_dropoff', {
+    p_org: orgId,
+    p_id: id,
+    p_donor_name: blank(d.donorName),
+    p_donor_email: blank(d.donorEmail),
+    p_received_on: d.receivedOn || null,
+    p_note: blank(d.note),
+  })
+}
+
+export async function setDropoffThanked(orgId: string, id: string, thanked = true): Promise<Dropoff> {
+  return rpc40<Dropoff>('set_dropoff_thanked', { p_org: orgId, p_id: id, p_thanked: thanked })
+}
+
+export async function listDropoffs(orgId: string, limit = 40): Promise<Dropoff[]> {
+  const data = await rpc40<unknown>('list_dropoffs', { p_org: orgId, p_limit: limit })
+  return Array.isArray(data) ? (data as Dropoff[]) : []
+}
+
+export async function dropoffDetail(orgId: string, id: string): Promise<(Dropoff & { lines: DonationLine[] }) | null> {
+  const data = await rpc40<unknown>('dropoff_detail', { p_org: orgId, p_id: id })
+  return data && typeof data === 'object' ? (data as Dropoff & { lines: DonationLine[] }) : null
+}
+
+/** Every donation received between two dates (YYYY-MM-DD), for the report. */
+export async function donationsReceived(orgId: string, from: string, to: string): Promise<DonationLine[]> {
+  const data = await rpc40<unknown>('donations_received', { p_org: orgId, p_from: from, p_to: to })
+  return Array.isArray(data) ? (data as DonationLine[]) : []
+}
+
+export const isNeeds40 = (e: unknown) => e instanceof Error && e.message === NEEDS_40
 
 /** Condition, category and where it's kept (update 39). */
 export async function setItemExtras(orgId: string, code: string, x: { condition?: string | null; category?: string | null; location?: string | null }): Promise<TaggedItem | null> {

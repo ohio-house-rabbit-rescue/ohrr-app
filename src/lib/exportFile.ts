@@ -50,5 +50,5 @@ export function bccMailto(emails: string[], subject: string, body = ''): string 
   params.set('subject', subject)
   if (body) params.set('body', body)
   // mailto wants an empty "to"; everyone goes in bcc so nobody sees the others.
-  return `mailto:?${params.toString()}`
+  return `mailto:?${params.toString().replace(/\+/g, '%20')}`
 }

@@ -1,10 +1,14 @@
-// Catalog donations, fast: photos first (up to four) → say (or type) the name
-// and who gave it → Save → "Next item" (the camera opens again) or "Print
-// this label".
+// Add a donation, fast: who it's from (once per drop-off) → photos (up to
+// four) → say (or type) the name, how many, what it's worth (each or for the
+// lot), where it's headed → Save → "Next item" (the camera opens again) or
+// "Print this label". Everything else waits under "More details".
+//
+// Only donations come in here. Things the Hop Shop buys from a supplier to
+// sell are added in Hop Shop inventory (supplier, cost, price, reorder), the
+// one place for shop items; old ?kind=stock links go there.
 //
 // The app gives each item its own OHRR code; nothing has to be printed or
-// scanned first. Everything is saved as a DONATION ("sort later") unless a
-// kind is picked for the session, and the label prints from Print labels.
+// scanned first. The label prints from here or from Print labels.
 //
 // Each photo uploads in the background while the name is typed. Save waits
 // for them (and retries once); if a photo still fails, the item is saved
@@ -14,20 +18,28 @@
 // camera's answer arrives on the element that opened it, and if that element
 // has been swapped for a new one in the meantime the photo is lost.
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
 import { isNative } from '../../../native/platform'
 import { pickPhoto } from '../../../native/camera'
-import { MAX_ITEM_PHOTOS, catalogNewItem, dataUrlToBlob, listItems, recentDonors, setItemPhotos, uploadItemPhoto } from '../api'
+import {
+  MAX_ITEM_PHOTOS,
+  catalogNewItem,
+  dataUrlToBlob,
+  isNeeds40,
+  listItems,
+  recentDonors,
+  setItemPhotos,
+  startDropoff,
+  uploadItemPhoto,
+} from '../api'
 import { BigButton, BigInput, ErrorBox, StepShell } from '../ScanUI'
-import { ALL_KINDS, KIND_META, dollarsToCents, extrasSummary, type ItemKind, type TaggedItem } from '../types'
-import { MoreDetailsFields, QuantityPriceFields, emptyExtras, useCatalogSuggestions, type Extras } from '../DetailsFields'
+import { KIND_META, dollarsToCents, extrasSummary, usDate, type TaggedItem } from '../types'
+import { HeadedForChips, MoreDetailsFields, QuantityField, ValueFields, emptyExtras, useCatalogSuggestions, type Extras } from '../DetailsFields'
 
 type Step = 'start' | 'name' | 'saved'
-
-const KIND_KEY = 'ohrr.catalog.kind'
 
 // Web Speech API (Chrome, Edge, Safari). Missing inside the iPhone app's web
 // view → the mic is hidden and the keyboard's own dictation key does the job.
@@ -37,8 +49,45 @@ const SpeechRecognitionCtor: any =
 
 interface Draft extends Extras {
   title: string
-  donatedBy: string
 }
+
+/** The drop-off being added to: who it's from, once for the whole bag or box. */
+interface Current {
+  /** null until saved (or before update 40: the donor goes on each item instead). */
+  id: string | null
+  donor: string
+  email: string
+  date: string
+  /** The day it was started; a new day starts a new drop-off. */
+  day: string
+}
+
+const DROPOFF_KEY = 'ohrr.catalog.dropoff'
+
+const todayIso = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function loadCurrent(): Current | null {
+  try {
+    const c = JSON.parse(localStorage.getItem(DROPOFF_KEY) ?? 'null') as Current | null
+    return c && c.day === todayIso() ? c : null
+  } catch {
+    return null
+  }
+}
+
+function saveCurrent(c: Current | null) {
+  try {
+    if (c) localStorage.setItem(DROPOFF_KEY, JSON.stringify(c))
+    else localStorage.removeItem(DROPOFF_KEY)
+  } catch {
+    /* private mode */
+  }
+}
+
+const looksLikeEmail = (e: string) => !e.trim() || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e.trim())
 
 /** One photo of the item being cataloged. The first is the main photo. */
 interface Shot {
@@ -60,27 +109,15 @@ interface Saved {
   photosNote?: string
   /** Quantity, price and the other details waited for database update 39. */
   detailsSkipped?: boolean
+  /** Where it's headed, size, use-by and the drop-off waited for database update 40. */
+  planSkipped?: boolean
   error?: string
 }
 
 /** A fresh item; where it's kept usually stays the same for a whole box. */
-const emptyDraft = (location = ''): Draft => ({ title: '', donatedBy: '', ...emptyExtras(location) })
+const emptyDraft = (location = ''): Draft => ({ title: '', ...emptyExtras(location) })
 
 const MORE_KEY = 'ohrr.catalog.more'
-
-/** The door decides: "Add Hop Shop stock" opens with ?kind=stock. "Catalog
- *  donations" keeps the last event kind used, but never opens on stock, which
- *  has its own door. */
-function loadKind(allowed: ItemKind[], asked: string | null): ItemKind {
-  if (asked && allowed.includes(asked as ItemKind)) return asked as ItemKind
-  try {
-    const k = localStorage.getItem(KIND_KEY) as ItemKind | null
-    if (k && k !== 'stock' && allowed.includes(k)) return k
-  } catch {
-    /* ignore */
-  }
-  return allowed.includes('donation') ? 'donation' : allowed[0]
-}
 
 function isToday(iso: string): boolean {
   const d = new Date(iso)
@@ -94,10 +131,13 @@ export default function CatalogFlow() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
 
-  const allowedKinds = ALL_KINDS.filter((k) => KIND_META[k].caps.some((c) => can(c)))
-  const [kind, setKind] = useState<ItemKind>(() => loadKind(allowedKinds, params.get('kind')))
-  const isStock = kind === 'stock'
+  const allowed = KIND_META.donation.caps.some((c) => can(c))
   const [step, setStep] = useState<Step>('start')
+  const [current, setCurrent] = useState<Current | null>(loadCurrent)
+  const [who, setWho] = useState({ donor: '', email: '', date: todayIso() })
+  const [dropoffNote, setDropoffNote] = useState<string | null>(null)
+  // The drop-off is saved in the background (the camera must open inside the tap); Save waits for it.
+  const dropoffPromise = useRef<Promise<string | null> | null>(current?.id ? Promise.resolve(current.id) : null)
   const [draft, setDraft] = useState<Draft>(emptyDraft)
   const [shots, setShots] = useState<Shot[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -154,14 +194,6 @@ export default function CatalogFlow() {
       alive = false
     }
   }, [orgId])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(KIND_KEY, kind)
-    } catch {
-      /* ignore */
-    }
-  }, [kind])
 
   /* ------------------------------------------------ photos */
   const setShot = (key: number, patch: Partial<Shot>) => setShots((list) => list.map((s) => (s.key === key ? { ...s, ...patch } : s)))
@@ -226,6 +258,47 @@ export default function CatalogFlow() {
         setError(err instanceof Error ? err.message : 'Couldn’t get that photo.')
       }
     })()
+  }
+
+  /** Start (or keep adding to) a drop-off, then the first item. */
+  const begin = () => {
+    if (!current) {
+      if (!looksLikeEmail(who.email)) {
+        setError('That email doesn’t look right. Fix it, or leave it empty.')
+        return
+      }
+      const c: Current = { id: null, donor: who.donor.trim(), email: who.email.trim(), date: who.date || todayIso(), day: todayIso() }
+      setCurrent(c)
+      saveCurrent(c)
+      setDropoffNote(null)
+      dropoffPromise.current = startDropoff(orgId, { donorName: c.donor, donorEmail: c.email, receivedOn: c.date }).then(
+        (d) => {
+          if (!d?.id) return null
+          const next = { ...c, id: d.id }
+          setCurrent(next)
+          saveCurrent(next)
+          return d.id
+        },
+        (err) => {
+          setDropoffNote(
+            isNeeds40(err)
+              ? 'Drop-offs need database update 40. Until then the donor is saved on each item.'
+              : `The drop-off didn’t save (${errMessage(err)}). The donor is saved on each item.`,
+          )
+          return null
+        },
+      )
+    }
+    startItem()
+  }
+
+  /** A new drop-off: forget the current one (it stays in Drop-offs). */
+  const newDropoff = () => {
+    setCurrent(null)
+    saveCurrent(null)
+    dropoffPromise.current = null
+    setDropoffNote(null)
+    setWho({ donor: '', email: '', date: todayIso() })
   }
 
   /** A fresh item: empty form, then the camera. */
@@ -300,7 +373,7 @@ export default function CatalogFlow() {
   const save = () => {
     const title = draft.title.trim()
     if (!title) return
-    const donatedBy = kind === 'stock' ? '' : draft.donatedBy.trim()
+    const donatedBy = current?.donor ?? ''
     const snap = draft
     const list = shots
     recogRef.current?.stop?.()
@@ -314,21 +387,29 @@ export default function CatalogFlow() {
       const photosFailed = settled.length - urls.length
       setSaved((s) => (s ? { ...s, phase: 'saving' } : s))
       try {
-        const counted = kind === 'donation' || kind === 'stock'
+        const dropoffId = dropoffPromise.current ? await dropoffPromise.current.catch(() => null) : null
         let item = await catalogNewItem(orgId, {
           title,
-          kind,
+          kind: 'donation',
           donatedBy,
           photoUrl: urls[0] ?? null,
           description: snap.notes,
-          valueCents: kind === 'stock' ? null : dollarsToCents(snap.value),
-          quantity: counted ? snap.quantity : null,
-          priceCents: counted ? dollarsToCents(snap.price) : null,
-          condition: kind === 'donation' ? snap.condition : null,
-          category: counted ? snap.category : null,
-          location: counted ? snap.location : null,
+          valueCents: dollarsToCents(snap.value),
+          quantity: snap.quantity,
+          priceCents: dollarsToCents(snap.price),
+          condition: snap.condition,
+          category: snap.category,
+          location: snap.location,
+          plan: {
+            headed_for: snap.headedFor || null,
+            value_basis: snap.valueBasis,
+            size: snap.size.trim() || null,
+            use_by: snap.useBy || null,
+            dropoff_id: dropoffId,
+          },
         })
         const detailsSkipped = Boolean(item.details_skipped)
+        const planSkipped = Boolean(item.plan_skipped)
         let photosNote: string | undefined
         if (urls.length > 1) {
           try {
@@ -337,7 +418,7 @@ export default function CatalogFlow() {
             photosNote = `Only the first photo is on the item: ${errMessage(err)}`
           }
         }
-        setSaved((s) => (s ? { ...s, phase: 'saved', item, photosFailed, photosNote, detailsSkipped } : s))
+        setSaved((s) => (s ? { ...s, phase: 'saved', item, photosFailed, photosNote, detailsSkipped, planSkipped } : s))
         setToday((n) => (n ?? 0) + 1)
         setUnprinted((n) => (n ?? 0) + 1)
         if (donatedBy) setDonors((d) => [donatedBy, ...d.filter((x) => x.toLowerCase() !== donatedBy.toLowerCase())].slice(0, 12))
@@ -373,13 +454,16 @@ export default function CatalogFlow() {
     setSaved(null)
   }
 
-  const finish = () => navigate('/staff/items')
+  /** Done with this bag or box: its drop-off page (the thank-you letter), or the items list. */
+  const finish = () => navigate(current?.id ? `/staff/dropoffs/${current.id}` : '/staff/items')
 
+  // Old "Add Hop Shop stock" links: shop items are added in Hop Shop inventory.
+  if (params.get('kind') === 'stock') return <Navigate to="/staff/hopshop?add=1" replace />
   if (!orgId) return null
-  if (allowedKinds.length === 0) {
+  if (!allowed) {
     return (
-      <StepShell title="Catalog donations" onBack={() => navigate('/staff')} backLabel="Dashboard">
-        <ErrorBox>Your account can’t add items yet. Ask an admin to grant Silent Auction or Hop Shop access.</ErrorBox>
+      <StepShell title="Add a donation" onBack={() => navigate('/staff')} backLabel="Dashboard">
+        <ErrorBox>Your account can’t add donations yet. Ask an admin to grant Silent Auction or Hop Shop access.</ErrorBox>
       </StepShell>
     )
   }
@@ -390,64 +474,110 @@ export default function CatalogFlow() {
   if (step === 'start') {
     screen = (
       <StepShell
-        title={isStock ? 'Add Hop Shop stock' : 'Catalog donations'}
-        help={
-          isStock
-            ? 'Photo, the name, how many and the price, Save. Each item gets its own code and shows in the Hop Shop inventory; labels print whenever you like.'
-            : 'Photo, say the name, Save. The app gives each item its own code; labels print whenever you like.'
-        }
+        title="Add a donation"
+        help="Something given to OHRR: photo, name, how many, what it’s worth. Sort it later, or tick where it’s headed."
         onBack={() => navigate('/staff')}
         backLabel="Dashboard"
         footer={
-          <BigButton onClick={startItem} icon="camera">
-            Start — open the camera
+          <BigButton onClick={begin} icon="camera">
+            {current ? 'Next item — open the camera' : 'Start — open the camera'}
           </BigButton>
         }
       >
         <div className="space-y-4">
           <ErrorBox>{error}</ErrorBox>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-base font-bold text-ink">Save each item as</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {allowedKinds.map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setKind(k)}
-                  aria-pressed={kind === k}
-                  className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-4 text-[15px] font-bold transition ${
-                    kind === k ? 'bg-brand-blue text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600'
-                  }`}
-                >
-                  <Icon name={KIND_META[k].icon} size={16} /> {KIND_META[k].label}
+          {current ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Adding to the drop-off from</p>
+              <p className="font-display text-xl font-black text-ink">{current.donor || 'Someone not named'}</p>
+              <p className="text-[15px] text-slate-600">
+                {usDate(current.date)}
+                {current.email ? ` · ${current.email}` : ''}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-x-4">
+                {current.id && (
+                  <Link to={`/staff/dropoffs/${current.id}`} className="inline-flex min-h-[44px] items-center text-[15px] font-bold text-brand-blue">
+                    See this drop-off
+                  </Link>
+                )}
+                <button type="button" onClick={newDropoff} className="min-h-[44px] text-[15px] font-bold text-brand-blue">
+                  Start a new drop-off
                 </button>
-              ))}
+              </div>
             </div>
-            <p className="mt-2 text-sm text-slate-500">{KIND_META[kind].hint}</p>
-          </div>
+          ) : (
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-base font-bold text-ink">
+                Who is it from? <span className="font-normal text-slate-500">(once for the whole bag or box)</span>
+              </p>
+              {donors.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Donors lately">
+                  {donors.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setWho((w) => ({ ...w, donor: w.donor === d ? '' : d }))}
+                      aria-pressed={who.donor === d}
+                      className={`min-h-[44px] shrink-0 rounded-full px-3.5 text-[15px] font-bold transition ${
+                        who.donor === d ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <BigInput value={who.donor} onChange={(v) => setWho((w) => ({ ...w, donor: v }))} placeholder="Name, or leave empty" ariaLabel="Who it is from" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-[15px] font-bold text-slate-600">
+                  Their email <span className="font-normal">(for the thank-you)</span>
+                  <input
+                    type="email"
+                    value={who.email}
+                    onChange={(e) => setWho((w) => ({ ...w, email: e.target.value }))}
+                    placeholder="optional"
+                    autoComplete="off"
+                    className="mt-1 min-h-[52px] w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-lg text-ink outline-none focus:border-brand-blue"
+                  />
+                </label>
+                <label className="block text-[15px] font-bold text-slate-600">
+                  The day it came in
+                  <input
+                    type="date"
+                    value={who.date}
+                    onChange={(e) => setWho((w) => ({ ...w, date: e.target.value }))}
+                    className="mt-1 min-h-[52px] w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-lg text-ink outline-none focus:border-brand-blue"
+                  />
+                </label>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-brand-blue-50 p-4 text-center">
               <p className="font-display text-3xl font-black text-brand-blue">{today ?? '–'}</p>
-              <p className="text-sm font-bold text-slate-600">cataloged today</p>
+              <p className="text-sm font-bold text-slate-600">added today</p>
             </div>
             <Link to="/staff/labels" className="rounded-2xl bg-brand-orange-50 p-4 text-center">
               <p className="font-display text-3xl font-black text-brand-orange">{unprinted ?? '–'}</p>
               <p className="text-sm font-bold text-slate-600">labels to print</p>
             </Link>
           </div>
-          <ol className="list-decimal space-y-1 pl-5 text-[15px] text-slate-600">
-            <li>Take the photo — up to {MAX_ITEM_PHOTOS} per item.</li>
-            <li>{isStock ? 'Say or type the name, then how many and the price.' : 'Say or type the name, tap who gave it.'}</li>
-            <li>Save — then the next item, or print its label.</li>
-          </ol>
-          <p className="text-[15px] text-slate-500">
-            {SpeechRecognitionCtor
-              ? 'Tap the microphone to say the item’s name instead of typing.'
-              : 'The microphone key on your keyboard lets you say the item’s name instead of typing.'}
-          </p>
-          <Link to="/staff/items" className="block text-center text-base font-bold text-brand-blue">
-            See all items
-          </Link>
+          <div className="flex flex-wrap justify-center gap-x-5">
+            <Link to="/staff/dropoffs" className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue">
+              Drop-offs & thank-yous
+            </Link>
+            <Link to="/staff/items" className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue">
+              See all items
+            </Link>
+          </div>
+          {can('hopshop.products.create') && (
+            <p className="text-center text-[15px] text-slate-500">
+              Something the shop carries, bought from a supplier?{' '}
+              <Link to="/staff/hopshop?add=1" className="font-bold text-brand-blue">
+                Add it in Hop Shop inventory
+              </Link>
+            </p>
+          )}
         </div>
       </StepShell>
     )
@@ -479,7 +609,7 @@ export default function CatalogFlow() {
                 Print this label
               </BigButton>
               <BigButton onClick={finish} disabled={!done && s.phase !== 'failed'} tone="plain">
-                I’m done
+                {current?.id ? 'Finish this drop-off' : 'I’m done'}
               </BigButton>
             </div>
           </div>
@@ -501,7 +631,7 @@ export default function CatalogFlow() {
               {s.donatedBy && <p className="text-[15px] text-slate-600">From {s.donatedBy}</p>}
               {s.item && extrasSummary(s.item) && <p className="text-[15px] text-slate-600">{extrasSummary(s.item)}</p>}
               <p className="text-sm text-slate-500">
-                {KIND_META[kind].label}
+                Donation
                 {s.previews.length > 1 && ` · ${s.previews.length} photos`}
               </p>
               {done ? (
@@ -520,6 +650,11 @@ export default function CatalogFlow() {
               {s.previews.map((p, i) => (
                 <img key={p} src={p} alt="" className={`h-16 w-16 rounded-xl object-cover ${i === 0 ? 'ring-2 ring-brand-blue' : ''}`} />
               ))}
+            </div>
+          )}
+          {done && s.planSkipped && (
+            <div role="status" className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
+              The item is saved. Where it’s headed, size, use-by and the drop-off need database update 40.
             </div>
           )}
           {done && s.detailsSkipped && (
@@ -546,7 +681,7 @@ export default function CatalogFlow() {
           )}
           {done && (
             <p className="text-center text-[15px] text-slate-500">
-              {today ?? 1} cataloged today ·{' '}
+              {today ?? 1} added today ·{' '}
               <Link to={`/staff/scan?code=${encodeURIComponent(s.item!.code)}`} className="font-bold text-brand-blue">
                 Change something
               </Link>
@@ -564,7 +699,7 @@ export default function CatalogFlow() {
     screen = (
       <StepShell
         title="What is it?"
-        help="Say it or type it, tap who gave it, then Save."
+        help={current?.donor ? `From ${current.donor}. Say or type the name, then Save.` : 'Say or type the name, then Save.'}
         onBack={() => setStep('start')}
         backLabel="Pause"
         footer={
@@ -672,34 +807,15 @@ export default function CatalogFlow() {
             )}
           </div>
 
-          {!isStock && (
-            <div>
-              <p className="mb-2 text-base font-bold text-ink">
-                Who gave it? <span className="font-normal text-slate-500">(optional)</span>
-              </p>
-              {donors.length > 0 && (
-                <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
-                  {donors.map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => update({ donatedBy: draft.donatedBy === d ? '' : d })}
-                      aria-pressed={draft.donatedBy === d}
-                      className={`shrink-0 rounded-full px-3.5 py-2 text-[15px] font-bold transition ${
-                        draft.donatedBy === d ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'
-                      }`}
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <BigInput value={draft.donatedBy} onChange={(v) => update({ donatedBy: v })} placeholder="A friend of OHRR" ariaLabel="Who donated it" />
+          {dropoffNote && (
+            <div role="status" className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
+              {dropoffNote}
             </div>
           )}
-          {(kind === 'donation' || kind === 'stock') && (
-            <QuantityPriceFields v={draft} set={update} priceHint={kind === 'stock' ? 'the shop price' : 'if it may be sold'} />
-          )}
+          <QuantityField v={draft} set={update} />
+          <ValueFields v={draft} set={update} />
+          <HeadedForChips v={draft} set={update} />
+          {draft.headedFor === 'shop' && <MoreDetailsFields v={draft} set={update} suggestions={suggestions} show={{ price: true }} />}
           <button
             type="button"
             onClick={toggleMore}
@@ -710,7 +826,7 @@ export default function CatalogFlow() {
               <span className="block text-base font-bold text-brand-blue">More details</span>
               <span className="block truncate text-sm text-slate-500">
                 {!more && draft.location ? `Kept: ${draft.location} · ` : ''}
-                {kind === 'donation' ? 'Worth, condition, sort of thing, where it’s kept, notes' : kind === 'stock' ? 'Sort of thing, where it’s kept, notes' : 'Worth, notes'}
+                Size, condition, sort of thing, where it’s kept, use-by, notes
               </span>
             </span>
             <Icon name="chevron" size={20} className={`shrink-0 text-slate-400 transition ${more ? 'rotate-90' : ''}`} />
@@ -720,18 +836,10 @@ export default function CatalogFlow() {
               v={draft}
               set={update}
               suggestions={suggestions}
-              show={
-                kind === 'donation'
-                  ? { value: true, condition: true, category: true, location: true, notes: true }
-                  : kind === 'stock'
-                    ? { category: true, location: true, notes: true }
-                    : { value: true, notes: true }
-              }
+              show={{ size: true, condition: true, category: true, location: true, useBy: true, price: draft.headedFor !== 'shop', notes: true }}
             />
           )}
-          <p className="text-sm text-slate-500">
-            Saving as <span className="font-bold text-ink">{KIND_META[kind].label}</span>. Everything here is optional, and it can all be changed later from the items list.
-          </p>
+          <p className="text-sm text-slate-500">Only the name is needed. Everything else can be added or changed later from the items list.</p>
         </div>
       </StepShell>
     )

@@ -103,12 +103,14 @@ const MyBunnyRoutes = lazy(() => import('./features/mybunny/routes'))
 const ScanFlow = lazy(() => import('./features/scan/pages/ScanFlow'))
 const CounterHome = lazy(() => import('./features/counter/pages/CounterHome'))
 const CounterSell = lazy(() => import('./features/counter/pages/CounterSell'))
-const CounterAdd = lazy(() => import('./features/counter/pages/CounterAdd'))
 const CounterToday = lazy(() => import('./features/counter/pages/CounterToday'))
 const CounterDoor = lazy(() => import('./features/counter/pages/Door'))
 const CounterDoorSetup = lazy(() => import('./features/counter/pages/DoorSetup'))
 const CounterGate = lazy(() => import('./features/counter/CounterShell').then((m) => ({ default: m.CounterGate })))
 const ItemsList = lazy(() => import('./features/scan/pages/ItemsList'))
+const Dropoffs = lazy(() => import('./features/scan/pages/Dropoffs'))
+const DropoffDetail = lazy(() => import('./features/scan/pages/DropoffDetail'))
+const DonationsReport = lazy(() => import('./features/scan/pages/DonationsReport'))
 const PrintTags = lazy(() => import('./features/scan/pages/PrintTags'))
 const CatalogFlow = lazy(() => import('./features/scan/pages/CatalogFlow'))
 const PrintLabels = lazy(() => import('./features/scan/pages/PrintLabels'))
@@ -273,7 +275,8 @@ export default function App() {
         <Route element={<Suspense fallback={null}><CounterGate /></Suspense>}>
           <Route path="counter" element={<Suspense fallback={null}><CounterHome /></Suspense>} />
           <Route path="counter/sell" element={<Suspense fallback={null}><CounterSell /></Suspense>} />
-          <Route path="counter/add" element={<Suspense fallback={null}><CounterAdd /></Suspense>} />
+          {/* New shop items: Hop Shop inventory's form (the Counter's own add screen is gone). */}
+          <Route path="counter/add" element={<Navigate to="/staff/hopshop?add=1" replace />} />
           <Route path="counter/today" element={<Suspense fallback={null}><CounterToday /></Suspense>} />
           <Route path="counter/door" element={<Suspense fallback={null}><CounterDoor /></Suspense>} />
           <Route path="counter/door/setup" element={<Suspense fallback={null}><CounterDoorSetup /></Suspense>} />
@@ -331,6 +334,9 @@ export default function App() {
           <Route path="outreach" element={<Suspense fallback={null}><Outreach /></Suspense>} />
           <Route path="posts/:id" element={<Suspense fallback={null}><PostEditor /></Suspense>} />
           <Route path="items" element={<Suspense fallback={null}><ItemsList /></Suspense>} />
+          <Route path="dropoffs" element={<Suspense fallback={null}><Dropoffs /></Suspense>} />
+          <Route path="dropoffs/:id" element={<Suspense fallback={null}><DropoffDetail /></Suspense>} />
+          <Route path="donations/report" element={<Suspense fallback={null}><DonationsReport /></Suspense>} />
           <Route path="items/tags" element={<Suspense fallback={null}><PrintTags /></Suspense>} />
           <Route path="items/photos" element={<Suspense fallback={null}><ItemPhotos /></Suspense>} />
           <Route path="catalog" element={<Suspense fallback={null}><CatalogFlow /></Suspense>} />

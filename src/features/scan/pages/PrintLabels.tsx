@@ -1,7 +1,8 @@
 // Print labels for cataloged items: QR + barcode + code + name + donor, at the
 // size of the printer's labels. Pick the items (the unprinted ones are ticked
-// by default), then Print — on a laptop or a phone that sees the printer — or
-// make a PDF, one label per page, to print from wherever the printer is.
+// by default) and how many copies of each (one per piece for a lot of 50),
+// then Print — on a laptop or a phone that sees the printer — or make a PDF,
+// one label per page, to print from wherever the printer is.
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
@@ -14,9 +15,35 @@ import { shareFileNative } from '../../../native/share'
 import { listItems, markLabelsPrinted } from '../api'
 import { BigButton, ErrorBox } from '../ScanUI'
 import { KIND_META, type TaggedItem } from '../types'
-import { LABEL_SIZES, customLabelSize, labelDataUrl, labelsPdf, loadLabelSize, saveLabelSize, type LabelItem, type LabelSize } from '../labels'
+import { LABEL_SIZES, customLabelSize, labelDataUrl, loadLabelSize, saveLabelSize, type LabelItem, type LabelSize } from '../labels'
 
 type Show = 'unprinted' | 'all'
+
+/** Copies of one label: 1 to 200. */
+const MAX_COPIES = 200
+const clampCopies = (n: number) => Math.min(MAX_COPIES, Math.max(1, Math.round(n) || 1))
+const plural = (n: number) => `${n} label${n === 1 ? '' : 's'}`
+
+/**
+ * The labels as one PDF, one label per page at the label's size, each label
+ * repeated for its copies. Every label is painted once; its copies reuse the
+ * same picture, so 200 copies stay quick and small.
+ */
+async function labelsPdfCopies(list: { item: LabelItem; copies: number }[], size: LabelSize): Promise<Blob> {
+  const { jsPDF } = await import('jspdf')
+  const orientation = size.wIn >= size.hIn ? 'landscape' : 'portrait'
+  const doc = new jsPDF({ unit: 'in', format: [size.wIn, size.hIn], orientation })
+  let first = true
+  for (const { item, copies } of list) {
+    const png = await labelDataUrl(item, size, 203)
+    for (let c = 0; c < copies; c++) {
+      if (!first) doc.addPage([size.wIn, size.hIn], orientation)
+      first = false
+      doc.addImage(png, 'PNG', 0, 0, size.wIn, size.hIn, `label-${item.code}`)
+    }
+  }
+  return doc.output('blob')
+}
 
 function toLabel(i: TaggedItem): LabelItem {
   return { code: i.code, title: i.title, donated_by: i.donated_by, photo_url: i.photo_url, kindLabel: i.kind === 'donation' ? null : KIND_META[i.kind].label }
@@ -41,6 +68,8 @@ export default function PrintLabels() {
   const [busy, setBusy] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
   const [lastMarked, setLastMarked] = useState<string[]>([])
+  // Copies per label, as typed (so the box can be cleared while typing); 1 when not set.
+  const [copyText, setCopyText] = useState<Record<string, string>>({})
 
   const load = async () => {
     try {
@@ -73,6 +102,9 @@ export default function PrintLabels() {
     )
   }, [items, show, q])
   const selected = useMemo(() => (items ?? []).filter((i) => picked.has(i.code)), [items, picked])
+  const copiesOf = (code: string) => clampCopies(parseInt(copyText[code] ?? '1', 10))
+  const setCopies = (code: string, n: number) => setCopyText((c) => ({ ...c, [code]: String(clampCopies(n)) }))
+  const totalLabels = selected.reduce((n, i) => n + copiesOf(i.code), 0)
 
   // A preview of the first ticked label, at the chosen size.
   useEffect(() => {
@@ -127,12 +159,15 @@ export default function PrintLabels() {
     setError(null)
     try {
       const imgs: string[] = []
-      for (const it of selected) imgs.push(await labelDataUrl(toLabel(it), size))
+      for (const it of selected) {
+        const img = await labelDataUrl(toLabel(it), size)
+        for (let c = copiesOf(it.code); c > 0; c--) imgs.push(img)
+      }
       setPrintImgs(imgs)
       await new Promise((r) => setTimeout(r, 150))
       window.print()
       await markPrinted(selected.map((s) => s.code))
-      setNote(`${selected.length} label${selected.length === 1 ? '' : 's'} sent to print and marked as printed.`)
+      setNote(`${plural(imgs.length)} sent to print and marked as printed.`)
     } catch (e) {
       setError(errMessage(e))
     } finally {
@@ -146,7 +181,9 @@ export default function PrintLabels() {
     setBusy('Making the PDF…')
     setError(null)
     try {
-      const blob = await labelsPdf(selected.map(toLabel), size)
+      const list = selected.map((i) => ({ item: toLabel(i), copies: copiesOf(i.code) }))
+      const pages = list.reduce((n, l) => n + l.copies, 0)
+      const blob = await labelsPdfCopies(list, size)
       const name = `ohrr-labels-${new Date().toISOString().slice(0, 10)}.pdf`
       if (isNative) {
         const out = await shareFileNative(blob, name, 'OHRR item labels')
@@ -160,7 +197,7 @@ export default function PrintLabels() {
         setTimeout(() => URL.revokeObjectURL(url), 5000)
       }
       await markPrinted(selected.map((s) => s.code))
-      setNote(`${selected.length} label${selected.length === 1 ? '' : 's'} in the PDF, each on its own ${size.wIn} × ${size.hIn} in page, marked as printed.`)
+      setNote(`${plural(pages)} in the PDF, each on its own ${size.wIn} × ${size.hIn} in page, marked as printed.`)
     } catch (e) {
       setError(errMessage(e))
     } finally {
@@ -179,7 +216,7 @@ export default function PrintLabels() {
           </Link>
           <h1 className="mt-1 font-display text-2xl font-black text-ink">Print labels</h1>
           <p className="mt-1 text-base text-slate-600">
-            One label per item: the QR code opens it, the barcode scans at the till or desk, and the code can be typed. Any label printer works.
+            A label per item — or a copy for every piece: the QR code opens it, the barcode scans at the till or desk, and the code can be typed. Any label printer works.
           </p>
         </div>
 
@@ -225,12 +262,12 @@ export default function PrintLabels() {
         <div className="grid grid-cols-2 gap-3">
           {isNative ? (
             <BigButton onClick={() => void pdf()} disabled={!!busy || selected.length === 0} icon="printer" className="col-span-2">
-              {busy ?? `Print or share ${selected.length} label${selected.length === 1 ? '' : 's'}`}
+              {busy ?? `Print or share ${plural(totalLabels)}`}
             </BigButton>
           ) : (
             <>
               <BigButton onClick={() => void print()} disabled={!!busy || selected.length === 0} icon="printer">
-                {busy ?? `Print ${selected.length}`}
+                {busy ?? `Print ${totalLabels}`}
               </BigButton>
               <BigButton onClick={() => void pdf()} disabled={!!busy || selected.length === 0} tone="outline">
                 PDF
@@ -315,6 +352,48 @@ export default function PrintLabels() {
                   </span>
                   <span className="shrink-0 font-mono text-xs font-bold tracking-widest text-slate-400">{i.code.replace('OHRR-', '')}</span>
                 </label>
+                {on && (
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2">
+                    <span className="text-sm font-bold text-slate-600">Copies</span>
+                    <button
+                      type="button"
+                      onClick={() => setCopies(i.code, copiesOf(i.code) - 1)}
+                      disabled={copiesOf(i.code) <= 1}
+                      aria-label={`One copy fewer of ${i.title}`}
+                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-ink shadow-sm ring-1 ring-slate-200 transition active:scale-95 disabled:opacity-30"
+                    >
+                      <Icon name="minus" size={20} />
+                    </button>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={copyText[i.code] ?? '1'}
+                      onChange={(e) => setCopyText((c) => ({ ...c, [i.code]: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) }))}
+                      onBlur={() => setCopies(i.code, copiesOf(i.code))}
+                      aria-label={`Copies of ${i.title}`}
+                      className="h-11 w-16 rounded-xl border-2 border-slate-200 bg-white text-center font-display text-lg font-black text-ink outline-none focus:border-brand-blue"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setCopies(i.code, copiesOf(i.code) + 1)}
+                      disabled={copiesOf(i.code) >= MAX_COPIES}
+                      aria-label={`One copy more of ${i.title}`}
+                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-blue text-white shadow-sm transition active:scale-95 disabled:opacity-30"
+                    >
+                      <Icon name="plus" size={20} />
+                    </button>
+                    {(i.quantity ?? 0) > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setCopies(i.code, i.quantity ?? 1)}
+                        aria-pressed={copiesOf(i.code) === clampCopies(i.quantity ?? 1)}
+                        className="min-h-[44px] rounded-xl border-2 border-brand-blue/50 bg-white px-3 text-[15px] font-bold text-brand-blue"
+                      >
+                        One per piece ({clampCopies(i.quantity ?? 1)})
+                      </button>
+                    )}
+                  </div>
+                )}
               </li>
             )
           })}

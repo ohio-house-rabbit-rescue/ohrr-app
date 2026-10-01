@@ -197,32 +197,29 @@ export default function StaffHome() {
             </Link>
           )}
           {canScan && (
-            <ActionCard to="/staff/catalog" title="Catalog donations" subtitle="Photo, say the name, Next — the app gives each item a code" icon="camera" tone="orange" />
-          )}
-          {can('hopshop.products.create') && (
             <ActionCard
-              to="/staff/catalog?kind=stock"
-              title="Add Hop Shop stock"
-              subtitle="Things the shop sells: photo, name, how many, price. Each gets a label."
-              icon="box"
+              to="/staff/catalog"
+              title="Add a donation"
+              subtitle="Something given to OHRR: photo, name, how many, value. Sort it later, or tick where it’s headed."
+              icon="camera"
               tone="orange"
             />
-          )}
-          {canScan && (
-            <ActionCard to="/staff/items" title="Items" subtitle="Donations to sort, auction and raffle items · print labels" icon="printer" tone="orange" />
           )}
           {canSeeHopShop && (
             <ActionCard
               to="/staff/hopshop"
               title="Hop Shop inventory"
               subtitle={
-                isAdminish
-                  ? 'What is in stock and how many, prices, the reorder list, suppliers'
+                can('hopshop.products.create')
+                  ? 'Add an item the shop carries (supplier, cost, price, reorder) and see what’s in stock'
                   : hopshopCaps.map((c) => c.description).join(' · ')
               }
               icon="bag"
               tone="orange"
             />
+          )}
+          {canScan && (
+            <ActionCard to="/staff/items" title="Items" subtitle="Donations to sort, baskets, drop-offs and thank-yous, the monthly report, labels" icon="printer" tone="orange" />
           )}
           {canManageAdopt && (
             <ActionCard

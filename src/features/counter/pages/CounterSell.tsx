@@ -60,7 +60,7 @@ export default function CounterSell() {
       add(p)
       setStep('basket')
     } else {
-      setError('That code isn’t on any item. Add it under “Add a new item”, or sell it as “Something else”.')
+      setError('That code isn’t on any item. Add it in Hop Shop inventory, or sell it as “Something else”.')
       setStep('basket')
     }
   }
@@ -236,7 +236,7 @@ export default function CounterSell() {
 
         {!till.loaded && <p className="text-center text-sm text-slate-500">Getting the item list…</p>}
         {till.loaded && till.products.length === 0 && (
-          <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">No items yet. Add them under “Add a new item”, or sell with “Something else”.</p>
+          <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">No items yet. Add them in Hop Shop inventory, or sell with “Something else”.</p>
         )}
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {shown.map((p) => (
