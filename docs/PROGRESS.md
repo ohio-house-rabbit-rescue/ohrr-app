@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-10-01 (CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live, RUN-THIS has nothing to run, next is 38; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-10-01 (FEATURE SWITCHES FOR FOUNDERS/DEVELOPERS + COVER PHOTO, PHOTO ORDER, GALLERIES — update 38 WRITTEN, NOT RUN; before that CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,27 @@
 ---
 
 ## Current state (at a glance)
+
+- **Feature switches for Founders and Developers + cover photo, photo order, galleries, 2026-10-01 (app `61be387` +
+  `07a9096`, website `6c13fd3` + `5ee03e9`, BunFest `a6e2aa1` + `ee94841`; update 38 WRITTEN, NOT RUN).** OHRR: choose the
+  "hero shot" like Instagram, see all four photos in order when an item opens, reorder saved photos; and "at the developer
+  and founder levels … turn on and off major features … like the silent auction … then when we are ready … visible".
+  - **Photos:** the first photo is the **Cover**. Catalog strip: tap a photo to make it the cover. Photos page: Move earlier
+    / Move later arrows, Make cover, Remove (website editor the same). `PhotoGallery` (swipe strip, "2 of 4", Previous /
+    Next chevrons, thumbnails; print = cover) on the auction item page (all three sites), the staff item card, and Hop Shop
+    products ("See all N photos"). Lists keep the cover.
+  - **Switches:** Staff → Features is Founders and Developers only (`useAllAccess()`; update 38 `can_set_app_setting()`
+    makes the database refuse others for `*_enabled` keys, and audits each flip). New: **Silent Auction**, **Hop Shop items
+    online**, **Phone notifications** (all default ON). OFF = gone for visitors on the app, the website and the BunFest
+    site; signed-in staff still see it under "Hidden from the public" (`useFeature` / `FeatureGate`). Auction OFF also
+    closes online bidding and blocks reopening it; a bidder's own "Your bids" page stays open (winners still need it).
+  - **Update 38** (`20261001120000_feature_switches_and_photo_order.sql`): `feature_on()`, `can_set_app_setting()` +
+    app_settings policies, switch trigger (audit + close bidding), auction_settings guard, `auction_item_json` /
+    `auction_catalog` (`enabled`, items hidden from non-members while off) / `auction_item_by_code` with `photo_urls`,
+    `hopshop_public_products` with `photo_urls` (empty for non-members while off), `push_messages_send` skips while off.
+  - Tests (scratchpad): `switches_test.py` 21 checks (visitor vs staff, Founder vs Board, gallery), `catalog_test.py` 28,
+    `me_open_test.py`; helpers ran 82 BunFest checks and the website's own. Before update 38 everything works with the
+    single-photo fallback and UI-only hiding.
 
 - **Catalog fix + up to four photos per item, 2026-10-01 (app `6011c36`, website `a8289e6`; update 37 APPLIED and checked live 2026-10-01).**
   OHRR tested the catalog loop on the phone: the first photo never showed, a later one showed but didn't save; asked for
