@@ -1,10 +1,17 @@
-// Catalog donations, fast: take a photo → say (or type) the name → Next.
+// Catalog donations, fast: photo first → say (or type) the name and who gave
+// it → Save → "Next item" (the camera opens again) or "Print this label".
 //
 // The app gives each item its own OHRR code; nothing has to be printed or
 // scanned first. Everything is saved as a DONATION ("sort later") unless a
-// kind is picked for the session, and the label prints later from
-// Print labels. Tapping Next opens the camera again straight away — the save
-// runs in the background and reports on the next screen.
+// kind is picked for the session, and the label prints from Print labels.
+//
+// The photo uploads in the background while the name is typed. Save waits
+// for it (and retries once); if the photo still fails, the item is saved
+// without it and the Saved screen says so, with "Try the photo again".
+//
+// The two hidden file inputs are rendered ONCE, outside the screens: the
+// camera's answer arrives on the element that opened it, and if that element
+// has been swapped for a new one in the meantime the photo is lost.
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
@@ -12,11 +19,11 @@ import { errMessage } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
 import { isNative } from '../../../native/platform'
 import { pickPhoto } from '../../../native/camera'
-import { catalogNewItem, dataUrlToBlob, listItems, recentDonors, uploadItemPhoto } from '../api'
+import { catalogNewItem, dataUrlToBlob, listItems, recentDonors, saveItem, uploadItemPhoto } from '../api'
 import { BigButton, BigInput, ErrorBox, StepShell } from '../ScanUI'
 import { ALL_KINDS, KIND_META, type ItemKind, type TaggedItem } from '../types'
 
-type Step = 'start' | 'name'
+type Step = 'start' | 'name' | 'saved'
 
 const KIND_KEY = 'ohrr.catalog.kind'
 
@@ -32,11 +39,15 @@ interface Draft {
   photoPreview: string | null
 }
 
-interface Pending {
-  key: number
+type UploadState = 'none' | 'uploading' | 'ready' | 'failed'
+
+interface Saved {
+  phase: 'photo' | 'saving' | 'saved' | 'failed'
   title: string
-  state: 'saving' | 'saved' | 'failed'
+  donatedBy: string
+  preview: string | null
   item?: TaggedItem
+  photoFailed?: boolean
   error?: string
 }
 
@@ -68,19 +79,22 @@ export default function CatalogFlow() {
   const [step, setStep] = useState<Step>('start')
   const [draft, setDraft] = useState<Draft>(emptyDraft)
   const [error, setError] = useState<string | null>(null)
-  const [photoBusy, setPhotoBusy] = useState(false)
-  const [pending, setPending] = useState<Pending[]>([])
+  const [uploadState, setUploadState] = useState<UploadState>('none')
+  const [saved, setSaved] = useState<Saved | null>(null)
+  const [photoRetrying, setPhotoRetrying] = useState(false)
   const [today, setToday] = useState<number | null>(null)
   const [unprinted, setUnprinted] = useState<number | null>(null)
   const [donors, setDonors] = useState<string[]>([])
   const [listening, setListening] = useState(false)
+  // The photo being cataloged: the file, its upload, and the URL once uploaded.
+  const blobRef = useRef<Blob | null>(null)
   const uploadRef = useRef<Promise<string> | null>(null)
+  const photoUrlRef = useRef<string | null>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
   const libraryRef = useRef<HTMLInputElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recogRef = useRef<any>(null)
-  const keyRef = useRef(0)
 
   const update = useCallback((patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch })), [])
 
@@ -112,22 +126,34 @@ export default function CatalogFlow() {
   }, [kind])
 
   /* ------------------------------------------------ photo */
+  /** Upload in the background; Save waits for it. */
+  const startUpload = (blob: Blob) => {
+    const p = uploadItemPhoto(blob, orgId)
+    uploadRef.current = p
+    photoUrlRef.current = null
+    setUploadState('uploading')
+    p.then(
+      (url) => {
+        if (uploadRef.current !== p) return
+        photoUrlRef.current = url
+        setUploadState('ready')
+      },
+      () => {
+        if (uploadRef.current !== p) return
+        setUploadState('failed')
+      },
+    )
+  }
+
   const usePhoto = async (src: Blob | string) => {
     setError(null)
-    setPhotoBusy(true)
     try {
-      const preview = typeof src === 'string' ? src : URL.createObjectURL(src)
-      update({ photoPreview: preview })
       const blob = typeof src === 'string' ? await dataUrlToBlob(src) : src
-      const p = uploadItemPhoto(blob, orgId)
-      uploadRef.current = p
-      await p
+      blobRef.current = blob
+      update({ photoPreview: URL.createObjectURL(blob) })
+      startUpload(blob)
     } catch (err) {
-      update({ photoPreview: null })
-      uploadRef.current = null
-      setError(`The photo didn’t save: ${errMessage(err)}`)
-    } finally {
-      setPhotoBusy(false)
+      setError(`Couldn’t use that photo: ${errMessage(err)}`)
     }
   }
 
@@ -153,11 +179,20 @@ export default function CatalogFlow() {
     })()
   }
 
-  const start = () => {
-    setStep('name')
-    setDraft(emptyDraft())
+  const clearPhoto = () => {
+    blobRef.current = null
     uploadRef.current = null
+    photoUrlRef.current = null
+    setUploadState('none')
+  }
+
+  /** A fresh item: empty form, then the camera. */
+  const startItem = () => {
+    setDraft(emptyDraft())
+    clearPhoto()
+    setSaved(null)
     setError(null)
+    setStep('name')
     openCamera('camera')
   }
 
@@ -184,52 +219,93 @@ export default function CatalogFlow() {
     recog.start()
   }
 
-  /* ------------------------------------------------ save and next */
-  const saveOne = (snapshot: Draft, upload: Promise<string> | null, key: number) => {
-    const entry: Pending = { key, title: snapshot.title, state: 'saving' }
-    setPending((p) => [entry, ...p].slice(0, 5))
+  /* ------------------------------------------------ save */
+  /** The photo's URL: the background upload, or one more try. Null = gave up. */
+  const settlePhoto = async (): Promise<string | null> => {
+    if (photoUrlRef.current) return photoUrlRef.current
+    const blob = blobRef.current
+    if (!blob) return null
+    try {
+      const url = uploadRef.current ? await uploadRef.current : await uploadItemPhoto(blob, orgId)
+      photoUrlRef.current = url
+      setUploadState('ready')
+      return url
+    } catch {
+      /* once more, fresh */
+    }
+    try {
+      const p = uploadItemPhoto(blob, orgId)
+      uploadRef.current = p
+      const url = await p
+      photoUrlRef.current = url
+      setUploadState('ready')
+      return url
+    } catch {
+      setUploadState('failed')
+      return null
+    }
+  }
+
+  const save = () => {
+    const title = draft.title.trim()
+    if (!title) return
+    const donatedBy = draft.donatedBy.trim()
+    const preview = draft.photoPreview
+    recogRef.current?.stop?.()
+    setError(null)
+    setSaved({ phase: blobRef.current && !photoUrlRef.current ? 'photo' : 'saving', title, donatedBy, preview })
+    setStep('saved')
     void (async () => {
+      const photoUrl = await settlePhoto()
+      const photoFailed = Boolean(blobRef.current) && !photoUrl
+      setSaved((s) => (s ? { ...s, phase: 'saving' } : s))
       try {
-        let photoUrl: string | null = null
-        if (upload) {
-          try {
-            photoUrl = await upload
-          } catch {
-            photoUrl = null
-          }
-        }
-        const item = await catalogNewItem(orgId, { title: snapshot.title, kind, donatedBy: snapshot.donatedBy, photoUrl })
-        setPending((p) => p.map((x) => (x.key === key ? { ...x, state: 'saved', item } : x)))
+        const item = await catalogNewItem(orgId, { title, kind, donatedBy, photoUrl })
+        setSaved((s) => (s ? { ...s, phase: 'saved', item, photoFailed } : s))
         setToday((n) => (n ?? 0) + 1)
         setUnprinted((n) => (n ?? 0) + 1)
-        const donor = snapshot.donatedBy.trim()
-        if (donor) setDonors((d) => [donor, ...d.filter((x) => x.toLowerCase() !== donor.toLowerCase())].slice(0, 12))
+        if (donatedBy) setDonors((d) => [donatedBy, ...d.filter((x) => x.toLowerCase() !== donatedBy.toLowerCase())].slice(0, 12))
       } catch (err) {
-        setPending((p) => p.map((x) => (x.key === key ? { ...x, state: 'failed', error: errMessage(err) } : x)))
+        setSaved((s) => (s ? { ...s, phase: 'failed', error: errMessage(err) } : s))
       }
     })()
   }
 
-  const retry = (entry: Pending) => {
-    setPending((p) => p.filter((x) => x.key !== entry.key))
-    saveOne({ title: entry.title, donatedBy: '', photoPreview: null }, null, ++keyRef.current)
+  /** The item saved but its photo didn't: upload again and attach it. */
+  const retryPhoto = async () => {
+    const item = saved?.item
+    const blob = blobRef.current
+    if (!item || !blob || photoRetrying) return
+    setPhotoRetrying(true)
+    try {
+      const url = await uploadItemPhoto(blob, orgId)
+      photoUrlRef.current = url
+      const updated = await saveItem(orgId, {
+        code: item.code,
+        kind: item.kind,
+        title: item.title,
+        description: item.description ?? '',
+        donatedBy: item.donated_by ?? '',
+        value: item.value_cents != null ? String(item.value_cents / 100) : '',
+        price: item.price_cents != null ? String(item.price_cents / 100) : '',
+        quantity: item.quantity ?? 0,
+        photoUrl: url,
+        photoPreview: null,
+      })
+      setSaved((s) => (s ? { ...s, item: updated, photoFailed: false } : s))
+    } catch (err) {
+      setError(`The photo didn’t save: ${errMessage(err)}`)
+    } finally {
+      setPhotoRetrying(false)
+    }
   }
 
-  const next = () => {
-    const title = draft.title.trim()
-    if (!title) return
-    const snapshot: Draft = { ...draft, title }
-    const upload = uploadRef.current
-    // Open the camera first (the tap is the permission), then save in the background.
-    setDraft(emptyDraft())
-    uploadRef.current = null
-    setError(null)
-    openCamera('camera')
-    saveOne(snapshot, upload, ++keyRef.current)
-    titleRef.current?.focus()
+  /** Back to the form with everything still filled in (after a failed save). */
+  const backToForm = () => {
+    setStep('name')
+    setSaved(null)
   }
 
-  const saving = pending.some((p) => p.state === 'saving')
   const finish = () => navigate('/staff/items')
 
   if (!orgId) return null
@@ -241,23 +317,18 @@ export default function CatalogFlow() {
     )
   }
 
-  const fileInputs = (
-    <>
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} aria-label="Take a photo" />
-      <input ref={libraryRef} type="file" accept="image/*" className="hidden" onChange={onFile} aria-label="Choose a photo" />
-    </>
-  )
+  let screen: React.ReactNode
 
   /* ================================================= start */
   if (step === 'start') {
-    return (
+    screen = (
       <StepShell
         title="Catalog donations"
-        help="Photo, say the name, Next. The app gives each item its own code; labels print later."
+        help="Photo, say the name, Save. The app gives each item its own code; labels print whenever you like."
         onBack={() => navigate('/staff')}
         backLabel="Dashboard"
         footer={
-          <BigButton onClick={start} icon="camera">
+          <BigButton onClick={startItem} icon="camera">
             Start — open the camera
           </BigButton>
         }
@@ -293,6 +364,11 @@ export default function CatalogFlow() {
               <p className="text-sm font-bold text-slate-600">labels to print</p>
             </Link>
           </div>
+          <ol className="list-decimal space-y-1 pl-5 text-[15px] text-slate-600">
+            <li>Take the photo.</li>
+            <li>Say or type the name, tap who gave it.</li>
+            <li>Save — then the next item, or print its label.</li>
+          </ol>
           <p className="text-[15px] text-slate-500">
             {SpeechRecognitionCtor
               ? 'Tap the microphone to say the item’s name instead of typing.'
@@ -301,140 +377,206 @@ export default function CatalogFlow() {
           <Link to="/staff/items" className="block text-center text-base font-bold text-brand-blue">
             See all items
           </Link>
-          {fileInputs}
+        </div>
+      </StepShell>
+    )
+  } else if (step === 'saved' && saved) {
+    /* ================================================= saved */
+    const s = saved
+    const done = s.phase === 'saved' && s.item
+    const title = s.phase === 'saved' ? 'Saved' : s.phase === 'failed' ? 'Didn’t save' : s.phase === 'photo' ? 'Saving the photo…' : 'Saving…'
+    screen = (
+      <StepShell
+        title={title}
+        help={done ? 'Next item opens the camera. Labels can also be printed all at once later.' : undefined}
+        onBack={s.phase === 'failed' ? backToForm : undefined}
+        backLabel="Back"
+        footer={
+          <div className="space-y-2">
+            {s.phase === 'failed' ? (
+              <BigButton onClick={save} icon="check">
+                Try again
+              </BigButton>
+            ) : (
+              <BigButton onClick={startItem} disabled={!done} icon="camera">
+                {done ? 'Next item' : s.phase === 'photo' ? 'Saving the photo…' : 'Saving…'}
+              </BigButton>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <BigButton onClick={() => s.item && navigate(`/staff/labels?code=${encodeURIComponent(s.item.code)}`)} disabled={!done} tone="outline" icon="printer">
+                Print this label
+              </BigButton>
+              <BigButton onClick={finish} disabled={!done && s.phase !== 'failed'} tone="plain">
+                I’m done
+              </BigButton>
+            </div>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <ErrorBox>{s.phase === 'failed' ? s.error : error}</ErrorBox>
+          {/* Photo beside the words, so the name, donor and code all sit above the buttons. */}
+          <div className="flex gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+            {s.preview || s.item?.photo_url ? (
+              <img src={s.preview ?? s.item?.photo_url ?? undefined} alt="" className="h-32 w-32 shrink-0 rounded-2xl object-cover" />
+            ) : (
+              <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-2xl bg-brand-blue-50 text-brand-blue">
+                <Icon name="camera" size={40} />
+              </div>
+            )}
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="font-display text-[22px] font-black leading-tight text-ink">{s.title}</p>
+              {s.donatedBy && <p className="text-[15px] text-slate-600">From {s.donatedBy}</p>}
+              <p className="text-sm text-slate-500">{KIND_META[kind].label}</p>
+              {done ? (
+                <p className="flex items-center gap-2 pt-1 font-mono text-lg font-bold tracking-widest text-ink">
+                  <Icon name="check" size={20} className="shrink-0 text-green-700" /> {s.item!.code}
+                </p>
+              ) : s.phase !== 'failed' ? (
+                <p className="flex items-center gap-2 pt-1 text-[15px] text-slate-500">
+                  <Icon name="clock" size={18} /> {s.phase === 'photo' ? 'Saving the photo…' : 'Saving…'}
+                </p>
+              ) : null}
+            </div>
+          </div>
+          {done && s.photoFailed && (
+            <div role="status" className="flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
+              <Icon name="x" size={18} className="shrink-0" />
+              <span className="min-w-0 flex-1">The item is saved, but its photo didn’t upload.</span>
+              <button type="button" onClick={() => void retryPhoto()} disabled={photoRetrying} className="shrink-0 font-extrabold underline-offset-2 hover:underline disabled:opacity-50">
+                {photoRetrying ? 'Trying…' : 'Try the photo again'}
+              </button>
+            </div>
+          )}
+          {done && (
+            <p className="text-center text-[15px] text-slate-500">
+              {today ?? 1} cataloged today ·{' '}
+              <Link to={`/staff/scan?code=${encodeURIComponent(s.item!.code)}`} className="font-bold text-brand-blue">
+                Change something
+              </Link>
+            </p>
+          )}
+        </div>
+      </StepShell>
+    )
+  } else {
+    /* ================================================= name */
+    const canSave = draft.title.trim().length > 0
+    screen = (
+      <StepShell
+        title="What is it?"
+        help="Say it or type it, tap who gave it, then Save."
+        onBack={() => setStep('start')}
+        backLabel="Pause"
+        footer={
+          <div className="space-y-2">
+            <BigButton onClick={save} disabled={!canSave} icon="check">
+              Save
+            </BigButton>
+            <button type="button" onClick={finish} className="block w-full py-1 text-center text-base font-bold text-brand-blue">
+              I’m done
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <ErrorBox>{error}</ErrorBox>
+
+          <div className="flex items-center gap-3">
+            {draft.photoPreview ? (
+              <img src={draft.photoPreview} alt="" className="h-28 w-28 shrink-0 rounded-2xl object-cover" />
+            ) : (
+              <span className="inline-flex h-28 w-28 shrink-0 items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 text-slate-400">
+                <Icon name="camera" size={32} />
+              </span>
+            )}
+            <div className="min-w-0 flex-1 space-y-2">
+              <button type="button" onClick={() => openCamera('camera')} className="block w-full rounded-xl bg-brand-blue-50 px-3 py-2.5 text-left text-[15px] font-bold text-brand-blue">
+                {draft.photoPreview ? 'Take another photo' : 'Take a photo'}
+              </button>
+              <button type="button" onClick={() => openCamera('library')} className="block w-full rounded-xl bg-slate-100 px-3 py-2.5 text-left text-[15px] font-bold text-slate-700">
+                Choose from my photos
+              </button>
+              {draft.photoPreview && uploadState === 'uploading' && <p className="text-sm text-slate-500">Photo saving in the background…</p>}
+              {draft.photoPreview && uploadState === 'ready' && <p className="text-sm text-green-700">Photo saved.</p>}
+              {draft.photoPreview && uploadState === 'failed' && <p className="text-sm text-amber-700">Photo not saved yet — Save tries again.</p>}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <input
+                ref={titleRef}
+                type="text"
+                value={draft.title}
+                onChange={(e) => update({ title: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && canSave) {
+                    e.preventDefault()
+                    save()
+                  }
+                }}
+                placeholder="Plush bunny basket"
+                aria-label="Name of the item"
+                autoComplete="off"
+                autoCapitalize="sentences"
+                enterKeyHint="done"
+                className="w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-4 text-xl text-ink outline-none transition placeholder:text-slate-300 focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15"
+              />
+            </div>
+            {SpeechRecognitionCtor && (
+              <button
+                type="button"
+                onClick={toggleVoice}
+                aria-pressed={listening}
+                aria-label={listening ? 'Stop listening' : 'Say the name'}
+                className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl transition ${
+                  listening ? 'animate-pulse bg-red-600 text-white' : 'bg-brand-orange text-ink'
+                }`}
+              >
+                <Icon name="mic" size={28} />
+              </button>
+            )}
+          </div>
+
+          <div>
+            <p className="mb-2 text-base font-bold text-ink">
+              Who gave it? <span className="font-normal text-slate-500">(optional)</span>
+            </p>
+            {donors.length > 0 && (
+              <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
+                {donors.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => update({ donatedBy: draft.donatedBy === d ? '' : d })}
+                    aria-pressed={draft.donatedBy === d}
+                    className={`shrink-0 rounded-full px-3.5 py-2 text-[15px] font-bold transition ${
+                      draft.donatedBy === d ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'
+                    }`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            )}
+            <BigInput value={draft.donatedBy} onChange={(v) => update({ donatedBy: v })} placeholder="A friend of OHRR" ariaLabel="Who donated it" />
+          </div>
+          <p className="text-sm text-slate-500">
+            Saving as <span className="font-bold text-ink">{KIND_META[kind].label}</span>. Value, notes and where it goes can be added later from the items list.
+          </p>
         </div>
       </StepShell>
     )
   }
 
-  /* ================================================= name (the loop) */
-  const canNext = draft.title.trim().length > 0 && !photoBusy
+  // The file inputs live here, above every screen, so they are never replaced
+  // while the camera is open (see the note at the top).
   return (
-    <StepShell
-      title="What is it?"
-      help="Say it or type it, then Next — the camera opens for the next one."
-      onBack={() => setStep('start')}
-      backLabel="Pause"
-      footer={
-        <div className="space-y-2">
-          <BigButton onClick={next} disabled={!canNext} icon="camera">
-            {photoBusy ? 'Saving the photo…' : 'Next item'}
-          </BigButton>
-          <button type="button" onClick={finish} disabled={saving} className="block w-full py-1 text-center text-base font-bold text-brand-blue disabled:opacity-50">
-            {saving ? 'Finishing the last save…' : 'I’m done'}
-          </button>
-        </div>
-      }
-    >
-      <div className="space-y-4">
-        {/* the last saves, newest first */}
-        {pending.slice(0, 2).map((p) => (
-          <div
-            key={p.key}
-            role="status"
-            className={`flex items-center gap-3 rounded-2xl px-4 py-2.5 text-[15px] ${
-              p.state === 'failed' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-800'
-            }`}
-          >
-            <Icon name={p.state === 'failed' ? 'x' : p.state === 'saved' ? 'check' : 'clock'} size={18} className="shrink-0" />
-            <span className="min-w-0 flex-1 truncate">
-              <span className="font-bold">{p.title}</span>
-              {p.state === 'saving' && ' · saving…'}
-              {p.state === 'saved' && p.item && <span className="font-mono"> · {p.item.code}</span>}
-              {p.state === 'failed' && ` · ${p.error}`}
-            </span>
-            {p.state === 'failed' && (
-              <button type="button" onClick={() => retry(p)} className="shrink-0 font-extrabold underline-offset-2 hover:underline">
-                Try again
-              </button>
-            )}
-          </div>
-        ))}
-        <ErrorBox>{error}</ErrorBox>
-
-        <div className="flex items-center gap-3">
-          {draft.photoPreview ? (
-            <img src={draft.photoPreview} alt="" className="h-24 w-24 shrink-0 rounded-2xl object-cover" />
-          ) : (
-            <span className="inline-flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 text-slate-400">
-              <Icon name="camera" size={32} />
-            </span>
-          )}
-          <div className="min-w-0 flex-1 space-y-2">
-            <button type="button" onClick={() => openCamera('camera')} disabled={photoBusy} className="block w-full rounded-xl bg-brand-blue-50 px-3 py-2.5 text-left text-[15px] font-bold text-brand-blue">
-              {draft.photoPreview ? 'Take another photo' : 'Take a photo'}
-            </button>
-            <button type="button" onClick={() => openCamera('library')} disabled={photoBusy} className="block w-full rounded-xl bg-slate-100 px-3 py-2.5 text-left text-[15px] font-bold text-slate-700">
-              Choose from my photos
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="min-w-0 flex-1">
-            <input
-              ref={titleRef}
-              type="text"
-              value={draft.title}
-              onChange={(e) => update({ title: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && canNext) {
-                  e.preventDefault()
-                  next()
-                }
-              }}
-              placeholder="Plush bunny basket"
-              aria-label="Name of the item"
-              autoComplete="off"
-              autoCapitalize="sentences"
-              enterKeyHint="next"
-              autoFocus
-              className="w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-4 text-xl text-ink outline-none transition placeholder:text-slate-300 focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15"
-            />
-          </div>
-          {SpeechRecognitionCtor && (
-            <button
-              type="button"
-              onClick={toggleVoice}
-              aria-pressed={listening}
-              aria-label={listening ? 'Stop listening' : 'Say the name'}
-              className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl transition ${
-                listening ? 'animate-pulse bg-red-600 text-white' : 'bg-brand-orange text-ink'
-              }`}
-            >
-              <Icon name="mic" size={28} />
-            </button>
-          )}
-        </div>
-
-        <div>
-          <p className="mb-2 text-base font-bold text-ink">
-            Who gave it? <span className="font-normal text-slate-500">(optional)</span>
-          </p>
-          {donors.length > 0 && (
-            <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
-              {donors.map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => update({ donatedBy: draft.donatedBy === d ? '' : d })}
-                  aria-pressed={draft.donatedBy === d}
-                  className={`shrink-0 rounded-full px-3.5 py-2 text-[15px] font-bold transition ${
-                    draft.donatedBy === d ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'
-                  }`}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-          )}
-          <BigInput value={draft.donatedBy} onChange={(v) => update({ donatedBy: v })} placeholder="A friend of OHRR" ariaLabel="Who donated it" />
-        </div>
-        <p className="text-sm text-slate-500">
-          Saving as <span className="font-bold text-ink">{KIND_META[kind].label}</span>. Value, notes and where it goes can be added later from the items list.
-        </p>
-        {fileInputs}
-      </div>
-    </StepShell>
+    <>
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} aria-label="Take a photo" />
+      <input ref={libraryRef} type="file" accept="image/*" className="hidden" onChange={onFile} aria-label="Choose a photo" />
+      {screen}
+    </>
   )
 }
