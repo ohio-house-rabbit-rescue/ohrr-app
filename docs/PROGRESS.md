@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-10-01 (STAFF DASHBOARD CRASH FIXED — blank on a fresh open since 61be387; "ADD HOP SHOP STOCK" door and "Hop Shop inventory" on the app and website; before that DONATION DETAILS — how many, price, condition, sort of thing, where it's kept; update 39 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 40; Hop Shop shelf empty because no active products, not a code fault; before that FEATURE SWITCHES FOR FOUNDERS/DEVELOPERS + COVER PHOTO, PHOTO ORDER, GALLERIES — update 38 RUN BY OHRR and checked live; before that CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-10-01 (TWO WAYS TO ADD — Add a donation + Hop Shop inventory; DONATION INTAKE: drop-offs, thank-you letters, where it's headed, value each/for all, split, baskets, monthly report — update 40 WRITTEN, NOT RUN; staff portal grouping proposed; before that STAFF DASHBOARD CRASH FIXED — blank on a fresh open since 61be387; "ADD HOP SHOP STOCK" door and "Hop Shop inventory" on the app and website; before that DONATION DETAILS — how many, price, condition, sort of thing, where it's kept; update 39 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 40; Hop Shop shelf empty because no active products, not a code fault; before that FEATURE SWITCHES FOR FOUNDERS/DEVELOPERS + COVER PHOTO, PHOTO ORDER, GALLERIES — update 38 RUN BY OHRR and checked live; before that CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,48 @@
 ---
 
 ## Current state (at a glance)
+
+- **Two ways to add + donation intake, 2026-10-01 (app `9dd69ad` + `8b4ad5e`, website `f652ab7`; update 40 WRITTEN, NOT RUN).**
+  OHRR: "we get a donation and then you ask where it goes … tell it a donation, then we sort it out later or a hop shop
+  … a value input … an each, or box version … a simple check the box for a donation that we know goes to a raffle or a
+  silent auction"; picked every extra offered (drop-off + thank-you, split a lot, baskets, for the rabbits + passed on +
+  use-by, label copies, monthly report, a Size box); a ticked donation STAYS a donation until sorted. Then, mid-build:
+  "we have 3 ways to add things and it is confusing. the hop shop inventory is the right setup for those items. the
+  others are simpler and should remain that way."
+  - **Audit — five ways to add were found:** Catalog donations, "Add Hop Shop stock" (catalog stock mode, added earlier
+    the same day), Hop Shop inventory → Add (full form), Scan an item on an unknown code (auction/raffle/stock), the
+    Counter's "Add a new item". **Now two:** "Add a donation" (simple) and **Hop Shop inventory → Add** (supplier, cost,
+    price, packs, reorder — the one place shop items are added; `?add=1` opens it, `?code=` fills the code, new "Scan
+    the barcode on the packet"). The stock tile and catalog stock mode are gone (`?kind=stock` redirects); a new scanned
+    code is "A donation" or "A Hop Shop item" (→ the form with the code); the Counter's tile and `/staff/counter/add`
+    open the form (CounterAdd.tsx deleted). Auction/raffle items come from sorting donations (or the Silent Auction /
+    Raffle managers).
+  - **Add a donation:** who it's from once per drop-off (name with recent chips, optional email for the thank-you, the
+    day; remembered for the day), then photo, name, how many, value with **Each / For all** ("$10 each · $500 in
+    all"), **where it's headed** (Not sure yet / Raffle / Silent Auction / Hop Shop / For the rabbits); More details =
+    size, condition, sort of thing, where kept, use-by, price, notes. Saved screen → Next item / Print this label /
+    Finish this drop-off (→ its page and letter).
+  - **After intake:** Items opens on "Donations to sort" with where-headed chips, "Move all N to the raffle" (Silent
+    Auction, Hop Shop — unpriced ones arrive hidden — or "used for the rabbits"), Use soon badges, Make a basket (value
+    adds up). A donation: Split this lot, Used for the rabbits, Passed on / not usable, Undo; shows its basket; a basket
+    lists its contents. Sorting into the raffle/auction starts the prize at the whole lot's value. **Drop-offs** list +
+    page with an editable **thank-you letter** (print, email to the donor, copy, mark thanked, values off by default),
+    **monthly donations report** (totals, where it is now, by donor, print, CSV), **label copies** ("One per piece").
+  - **Update 40** (`20261001160000_donation_intake.sql`): `donation_dropoffs`; donation_items + dropoff_id, headed_for,
+    value_basis, size, use_by, outcome (sorted / basket / rabbits / passed_on), sorted_kind, sorted_tag_id, split_from;
+    **a sorted donation stays on record** (save_scanned_item marks it 'sorted' instead of deleting; moving back re-opens
+    it) so letters and the report still see it; donation_value_total/each; tagged_item_json (new fields, basket
+    contents); delete_item_by_code frees a basket's contents; start/update_dropoff, set_dropoff_thanked, list_dropoffs,
+    dropoff_detail, set_donation_plan, set_donation_outcome, split_donation, make_basket, sort_headed_donations,
+    donations_received; catalog_new_item + p_plan; recent_donors + drop-off names. Given as 7 chat blocks.
+  - **Before update 40** everything saves (catalog retries without p_plan, a "for all" value is saved as one piece's so
+    it doesn't later read 50× too high); the screens say what waits.
+  - Tests: scratchpad `intake40_test.py` 45 checks (incl. before-40, live check after deploy), `catalog_test.py` 35,
+    `switches_test.py` 21, `app40/app40_test.py` 73 + `letters.test.ts` 43 (helper); website helper 151 checks
+    (`web40/test40.py`). tsc, build, 231 checks, `scripts/hooks-scan.py` clean.
+  - **Next (OHRR, mid-build):** "clean up the staff portal … too many in the list … bin these into groups and simplify".
+    Mock-up shown in chat: a Today row (Inbox, Bookings, Counter, Scan) + 8 group tiles (Items and Hop Shop, Rabbits and
+    care, Volunteers, Events and BunFest, Getting the word out, Supporters and giving, Admin, Me); waiting on OHRR.
 
 - **Staff dashboard crash fixed + "Add Hop Shop stock", 2026-10-01 (app `9e77224`, website `af7e784`).** OHRR: "i was
   in the staff list. i went to add a donation and that was there but there was not add inventory just a scan an item which
