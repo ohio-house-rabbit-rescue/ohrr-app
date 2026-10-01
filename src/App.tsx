@@ -254,8 +254,9 @@ export default function App() {
         <Route path="auction" element={auctionGate(<RaffleCatalog />)} />
         {/* Static auction routes come before auction/:id so "register" and "me" are never read as an item id */}
         <Route path="auction/register" element={auctionGate(<Suspense fallback={null}><AuctionRegister /></Suspense>)} />
-        <Route path="auction/me" element={auctionGate(<Suspense fallback={null}><MyBids /></Suspense>)} />
-        <Route path="auction/me/:token" element={auctionGate(<Suspense fallback={null}><MyBids /></Suspense>)} />
+        {/* A bidder's own page stays open while the auction is switched off, so winners can still see what they owe */}
+        <Route path="auction/me" element={<Suspense fallback={null}><MyBids /></Suspense>} />
+        <Route path="auction/me/:token" element={<Suspense fallback={null}><MyBids /></Suspense>} />
         <Route path="auction/:id" element={auctionGate(<RaffleItemDetail />)} />
         <Route path="p/:id" element={<BunfestPage />} />
         <Route path="give" element={<Give />} />
