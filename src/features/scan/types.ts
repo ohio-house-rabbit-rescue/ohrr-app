@@ -106,6 +106,12 @@ export interface TaggedItem {
   received_on?: string | null
   /** Set once its label has been printed (update 36). */
   label_printed_at?: string | null
+  /** Update 39: condition (donations), category and where it's kept (donations; shop stock's shelf). */
+  condition?: string | null
+  category?: string | null
+  location?: string | null
+  /** Client only: the extra details couldn't be saved yet (update 39 not run). */
+  details_skipped?: boolean
   created_at: string
   updated_at: string
 }
@@ -124,6 +130,10 @@ export interface ItemDraft {
   photoUrl: string | null
   /** A local preview while the upload is still running / for the done card. */
   photoPreview: string | null
+  /** Update 39: '', 'new', 'like_new', 'good' or 'fair'. */
+  condition: string
+  category: string
+  location: string
 }
 
 export function emptyDraft(code: string): ItemDraft {
@@ -138,6 +148,9 @@ export function emptyDraft(code: string): ItemDraft {
     quantity: 1,
     photoUrl: null,
     photoPreview: null,
+    condition: '',
+    category: '',
+    location: '',
   }
 }
 
@@ -153,7 +166,30 @@ export function draftFromItem(item: TaggedItem): ItemDraft {
     quantity: item.quantity ?? 1,
     photoUrl: item.photo_url,
     photoPreview: item.photo_url,
+    condition: item.condition ?? '',
+    category: item.category ?? '',
+    location: item.location ?? '',
   }
+}
+
+export const CONDITIONS: { value: string; label: string }[] = [
+  { value: 'new', label: 'New' },
+  { value: 'like_new', label: 'Like new' },
+  { value: 'good', label: 'Good' },
+  { value: 'fair', label: 'Fair' },
+]
+
+export const conditionLabel = (v: string | null | undefined): string => CONDITIONS.find((c) => c.value === v)?.label ?? ''
+
+/** "6 of them · $5 each · Like new · Food & hay · Kept: Bin 3" — the extra details in one line. */
+export function extrasSummary(item: Pick<TaggedItem, 'kind' | 'quantity' | 'price_cents' | 'condition' | 'category' | 'location'>): string {
+  const parts: string[] = []
+  if (item.kind === 'donation' && item.quantity && item.quantity > 1) parts.push(`${item.quantity} of them`)
+  if (item.kind === 'donation' && item.price_cents != null) parts.push(`${formatMoney(item.price_cents)} each`)
+  if (item.condition) parts.push(conditionLabel(item.condition))
+  if (item.category) parts.push(item.category)
+  if (item.location) parts.push(`Kept: ${item.location}`)
+  return parts.join(' · ')
 }
 
 /* ------------------------------------------------------------- money */

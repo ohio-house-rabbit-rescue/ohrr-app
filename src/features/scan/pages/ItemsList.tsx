@@ -9,7 +9,7 @@ import { Screen } from '../../../components/ui'
 import { Spinner } from '../../../components/staffui'
 import { listItems } from '../api'
 import { BigButton, ErrorBox } from '../ScanUI'
-import { ITEM_KINDS, KIND_META, formatMoney, statusLabel, type ItemKind, type TaggedItem } from '../types'
+import { ITEM_KINDS, KIND_META, formatMoney, statusLabel, type ItemKind, type TaggedItem, extrasSummary } from '../types'
 
 type Filter = 'all' | 'event' | ItemKind
 
@@ -145,6 +145,7 @@ export default function ItemsList() {
                     {m.label} · {statusLabel(i)}
                     {money ? ` · ${money}` : ''}
                   </span>
+                  {extrasSummary(i) && <span className="mt-0.5 block truncate text-sm text-slate-500">{extrasSummary(i)}</span>}
                   <span className="mt-0.5 block font-mono text-xs font-bold tracking-widest text-slate-400">{i.code}</span>
                 </span>
                 <Icon name="chevron" size={18} className="shrink-0 text-slate-300" />

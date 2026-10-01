@@ -22,7 +22,8 @@ import { isNative } from '../../../native/platform'
 import { pickPhoto } from '../../../native/camera'
 import { MAX_ITEM_PHOTOS, catalogNewItem, dataUrlToBlob, listItems, recentDonors, setItemPhotos, uploadItemPhoto } from '../api'
 import { BigButton, BigInput, ErrorBox, StepShell } from '../ScanUI'
-import { ALL_KINDS, KIND_META, type ItemKind, type TaggedItem } from '../types'
+import { ALL_KINDS, KIND_META, dollarsToCents, extrasSummary, type ItemKind, type TaggedItem } from '../types'
+import { MoreDetailsFields, QuantityPriceFields, emptyExtras, useCatalogSuggestions, type Extras } from '../DetailsFields'
 
 type Step = 'start' | 'name' | 'saved'
 
@@ -34,7 +35,7 @@ const KIND_KEY = 'ohrr.catalog.kind'
 const SpeechRecognitionCtor: any =
   typeof window !== 'undefined' && ((window as unknown as Record<string, unknown>).SpeechRecognition || (window as unknown as Record<string, unknown>).webkitSpeechRecognition)
 
-interface Draft {
+interface Draft extends Extras {
   title: string
   donatedBy: string
 }
@@ -57,10 +58,15 @@ interface Saved {
   photosFailed: number
   /** The extra photos could not be attached (e.g. before update 37). */
   photosNote?: string
+  /** Quantity, price and the other details waited for database update 39. */
+  detailsSkipped?: boolean
   error?: string
 }
 
-const emptyDraft = (): Draft => ({ title: '', donatedBy: '' })
+/** A fresh item; where it's kept usually stays the same for a whole box. */
+const emptyDraft = (location = ''): Draft => ({ title: '', donatedBy: '', ...emptyExtras(location) })
+
+const MORE_KEY = 'ohrr.catalog.more'
 
 function loadKind(allowed: ItemKind[]): ItemKind {
   try {
@@ -95,6 +101,24 @@ export default function CatalogFlow() {
   const [unprinted, setUnprinted] = useState<number | null>(null)
   const [donors, setDonors] = useState<string[]>([])
   const [listening, setListening] = useState(false)
+  const suggestions = useCatalogSuggestions(orgId)
+  // "More details" stays open or closed on this phone, as the person left it.
+  const [more, setMore] = useState(() => {
+    try {
+      return localStorage.getItem(MORE_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  const toggleMore = () =>
+    setMore((m) => {
+      try {
+        localStorage.setItem(MORE_KEY, m ? '0' : '1')
+      } catch {
+        /* private mode */
+      }
+      return !m
+    })
   // Each shot's file and upload, by key (the state above mirrors them).
   const filesRef = useRef<Map<number, { blob: Blob; upload: Promise<string> | null }>>(new Map())
   const shotKey = useRef(0)
@@ -200,7 +224,7 @@ export default function CatalogFlow() {
 
   /** A fresh item: empty form, then the camera. */
   const startItem = () => {
-    setDraft(emptyDraft())
+    setDraft((d) => emptyDraft(d.location))
     filesRef.current = new Map()
     setShots([])
     setSaved(null)
@@ -271,6 +295,7 @@ export default function CatalogFlow() {
     const title = draft.title.trim()
     if (!title) return
     const donatedBy = draft.donatedBy.trim()
+    const snap = draft
     const list = shots
     recogRef.current?.stop?.()
     setError(null)
@@ -283,7 +308,21 @@ export default function CatalogFlow() {
       const photosFailed = settled.length - urls.length
       setSaved((s) => (s ? { ...s, phase: 'saving' } : s))
       try {
-        let item = await catalogNewItem(orgId, { title, kind, donatedBy, photoUrl: urls[0] ?? null })
+        const counted = kind === 'donation' || kind === 'stock'
+        let item = await catalogNewItem(orgId, {
+          title,
+          kind,
+          donatedBy,
+          photoUrl: urls[0] ?? null,
+          description: snap.notes,
+          valueCents: kind === 'stock' ? null : dollarsToCents(snap.value),
+          quantity: counted ? snap.quantity : null,
+          priceCents: counted ? dollarsToCents(snap.price) : null,
+          condition: kind === 'donation' ? snap.condition : null,
+          category: counted ? snap.category : null,
+          location: counted ? snap.location : null,
+        })
+        const detailsSkipped = Boolean(item.details_skipped)
         let photosNote: string | undefined
         if (urls.length > 1) {
           try {
@@ -292,7 +331,7 @@ export default function CatalogFlow() {
             photosNote = `Only the first photo is on the item: ${errMessage(err)}`
           }
         }
-        setSaved((s) => (s ? { ...s, phase: 'saved', item, photosFailed, photosNote } : s))
+        setSaved((s) => (s ? { ...s, phase: 'saved', item, photosFailed, photosNote, detailsSkipped } : s))
         setToday((n) => (n ?? 0) + 1)
         setUnprinted((n) => (n ?? 0) + 1)
         if (donatedBy) setDonors((d) => [donatedBy, ...d.filter((x) => x.toLowerCase() !== donatedBy.toLowerCase())].slice(0, 12))
@@ -450,6 +489,7 @@ export default function CatalogFlow() {
             <div className="min-w-0 flex-1 space-y-1">
               <p className="font-display text-[22px] font-black leading-tight text-ink">{s.title}</p>
               {s.donatedBy && <p className="text-[15px] text-slate-600">From {s.donatedBy}</p>}
+              {s.item && extrasSummary(s.item) && <p className="text-[15px] text-slate-600">{extrasSummary(s.item)}</p>}
               <p className="text-sm text-slate-500">
                 {KIND_META[kind].label}
                 {s.previews.length > 1 && ` · ${s.previews.length} photos`}
@@ -470,6 +510,11 @@ export default function CatalogFlow() {
               {s.previews.map((p, i) => (
                 <img key={p} src={p} alt="" className={`h-16 w-16 rounded-xl object-cover ${i === 0 ? 'ring-2 ring-brand-blue' : ''}`} />
               ))}
+            </div>
+          )}
+          {done && s.detailsSkipped && (
+            <div role="status" className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
+              The item is saved. How many, the price and the other details need database update 39; add them from the item once it has run.
             </div>
           )}
           {done && (s.photosFailed > 0 || s.photosNote) && (
@@ -640,8 +685,40 @@ export default function CatalogFlow() {
             )}
             <BigInput value={draft.donatedBy} onChange={(v) => update({ donatedBy: v })} placeholder="A friend of OHRR" ariaLabel="Who donated it" />
           </div>
+          {(kind === 'donation' || kind === 'stock') && (
+            <QuantityPriceFields v={draft} set={update} priceHint={kind === 'stock' ? 'the shop price' : 'if it may be sold'} />
+          )}
+          <button
+            type="button"
+            onClick={toggleMore}
+            aria-expanded={more}
+            className="flex min-h-[52px] w-full items-center justify-between gap-3 rounded-2xl border-2 border-slate-200 bg-white px-4 py-2 text-left"
+          >
+            <span className="min-w-0">
+              <span className="block text-base font-bold text-brand-blue">More details</span>
+              <span className="block truncate text-sm text-slate-500">
+                {!more && draft.location ? `Kept: ${draft.location} · ` : ''}
+                {kind === 'donation' ? 'Worth, condition, sort of thing, where it’s kept, notes' : kind === 'stock' ? 'Sort of thing, where it’s kept, notes' : 'Worth, notes'}
+              </span>
+            </span>
+            <Icon name="chevron" size={20} className={`shrink-0 text-slate-400 transition ${more ? 'rotate-90' : ''}`} />
+          </button>
+          {more && (
+            <MoreDetailsFields
+              v={draft}
+              set={update}
+              suggestions={suggestions}
+              show={
+                kind === 'donation'
+                  ? { value: true, condition: true, category: true, location: true, notes: true }
+                  : kind === 'stock'
+                    ? { category: true, location: true, notes: true }
+                    : { value: true, notes: true }
+              }
+            />
+          )}
           <p className="text-sm text-slate-500">
-            Saving as <span className="font-bold text-ink">{KIND_META[kind].label}</span>. Value, notes and where it goes can be added later from the items list.
+            Saving as <span className="font-bold text-ink">{KIND_META[kind].label}</span>. Everything here is optional, and it can all be changed later from the items list.
           </p>
         </div>
       </StepShell>

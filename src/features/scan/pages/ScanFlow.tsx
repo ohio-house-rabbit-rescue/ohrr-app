@@ -25,9 +25,11 @@ import {
   saveItem,
   setPublished,
   setStatus,
+  setItemExtras,
   uploadItemPhoto,
 } from '../api'
 import { BigButton, BigInput, Busy, ErrorBox, ItemCard, KindTile, MoneyInput, StepShell, Stepper } from '../ScanUI'
+import { MoreDetailsFields, QuantityPriceFields, useCatalogSuggestions, type Extras } from '../DetailsFields'
 import { ITEM_KINDS, KIND_META, draftFromItem, emptyDraft, type ItemDraft, type ItemKind, type TaggedItem } from '../types'
 
 type Step = 'scan' | 'type' | 'lookup' | 'found' | 'kind' | 'photo' | 'name' | 'details' | 'saving' | 'done'
@@ -65,6 +67,7 @@ export default function ScanFlow() {
   const { membership, can } = useAuth()
   const orgId = membership?.orgId ?? ''
   const navigate = useNavigate()
+  const suggestions = useCatalogSuggestions(orgId)
   const [params, setParams] = useSearchParams()
 
   const [step, setStep] = useState<Step>('scan')
@@ -222,7 +225,18 @@ export default function ScanFlow() {
           /* photo failed; save the rest */
         }
       }
-      const saved = await saveItem(orgId, d)
+      let saved = await saveItem(orgId, d)
+      // Condition, category and where it's kept travel separately (update 39).
+      if (saved.kind === 'donation' || saved.kind === 'stock') {
+        const changed = (d.condition ?? '') !== (saved.condition ?? '') || (d.category ?? '') !== (saved.category ?? '') || (d.location ?? '') !== (saved.location ?? '')
+        if (changed) {
+          try {
+            saved = (await setItemExtras(orgId, saved.code, d)) ?? saved
+          } catch (err) {
+            setError(`Saved, but not the condition, category or place: ${errMessage(err)}`)
+          }
+        }
+      }
       setItem(saved)
       setDraft(draftFromItem(saved))
       persist(null)
@@ -603,10 +617,25 @@ export default function ScanFlow() {
   if (step === 'details' && draft.kind) {
     const { step: n, of } = stepNo('details')
     const stock = draft.kind === 'stock'
+    const donation = draft.kind === 'donation'
+    // The shared detail fields read and write the draft (notes = description).
+    const ex: Extras = {
+      quantity: draft.quantity,
+      price: draft.price,
+      value: draft.value,
+      condition: draft.condition ?? '',
+      category: draft.category ?? '',
+      location: draft.location ?? '',
+      notes: draft.description,
+    }
+    const setEx = (p: Partial<Extras>) => {
+      const { notes, ...rest } = p
+      update(notes === undefined ? rest : { ...rest, description: notes })
+    }
     return (
       <StepShell
-        title={stock ? 'How many, and the price' : 'A couple of details'}
-        help="Both are optional — you can fill them in later."
+        title={stock ? 'How many, and the price' : donation ? 'The details' : 'A couple of details'}
+        help={donation ? 'All optional — fill in what you know.' : 'Both are optional — you can fill them in later.'}
         step={editing ? undefined : n}
         of={editing ? undefined : of}
         onBack={() => backTo('details')}
@@ -618,7 +647,16 @@ export default function ScanFlow() {
       >
         <div className="space-y-5">
           <ErrorBox>{error}</ErrorBox>
-          {stock ? (
+          {donation ? (
+            <>
+              <div>
+                <p className="mb-2 text-base font-bold text-ink">Who gave it?</p>
+                <BigInput value={draft.donatedBy} onChange={(v) => update({ donatedBy: v })} placeholder="A friend of OHRR" ariaLabel="Who donated it" />
+              </div>
+              <QuantityPriceFields v={ex} set={setEx} />
+              <MoreDetailsFields v={ex} set={setEx} suggestions={suggestions} />
+            </>
+          ) : stock ? (
             <>
               <div>
                 <p className="mb-2 text-base font-bold text-ink">How many do we have?</p>
@@ -628,6 +666,7 @@ export default function ScanFlow() {
                 <p className="mb-2 text-base font-bold text-ink">Price for one</p>
                 <MoneyInput value={draft.price} onChange={(v) => update({ price: v })} ariaLabel="Price for one" />
               </div>
+              <MoreDetailsFields v={ex} set={setEx} suggestions={suggestions} show={{ category: true, location: true }} />
             </>
           ) : (
             <>

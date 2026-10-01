@@ -2549,9 +2549,20 @@ export type Database = {
           p_price_cents?: number | null
           p_quantity?: number | null
           p_code?: string | null
+          // Update 39
+          p_condition?: string | null
+          p_category?: string | null
+          p_location?: string | null
         }
         Returns: Json
       }
+      /** Update 39: condition, category, where it's kept. */
+      set_item_extras: {
+        Args: { p_org: string; p_code: string; p_condition?: string | null; p_category?: string | null; p_location?: string | null }
+        Returns: Json
+      }
+      /** Update 39: recent places and categories. */
+      catalog_suggestions: { Args: { p_org: string }; Returns: Json }
       mark_labels_printed: {
         Args: { p_org: string; p_codes: string[]; p_printed?: boolean }
         Returns: number

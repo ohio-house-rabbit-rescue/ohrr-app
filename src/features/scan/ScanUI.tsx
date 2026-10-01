@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { Icon, type IconName } from '../../components/icons'
 import { itemPhotos } from './api'
 import PhotoGallery from '../../components/PhotoGallery'
-import { KIND_META, formatMoney, statusLabel, type TaggedItem } from './types'
+import { KIND_META, extrasSummary, formatMoney, statusLabel, type TaggedItem } from './types'
 
 type BigTone = 'orange' | 'blue' | 'outline' | 'plain' | 'danger'
 
@@ -172,6 +172,8 @@ export function ItemCard({ item, big = false }: { item: TaggedItem; big?: boolea
             {money && <span>{item.kind === 'stock' ? `${money} each` : `Worth ${money}`}</span>}
           </p>
         )}
+        {extrasSummary(item) && <p className="text-[15px] text-slate-600">{extrasSummary(item)}</p>}
+        {item.description && <p className="text-[15px] leading-snug text-slate-500">{item.description}</p>}
         <p className="font-mono text-sm font-bold tracking-widest text-slate-400">{item.code}</p>
       </div>
     </div>
