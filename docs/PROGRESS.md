@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-10-01 (CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 WRITTEN, NOT RUN; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-10-01 (CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live, RUN-THIS has nothing to run, next is 38; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,7 +19,7 @@
 
 ## Current state (at a glance)
 
-- **Catalog fix + up to four photos per item, 2026-10-01 (app `6011c36`, website `a8289e6`; update 37 WRITTEN, NOT RUN).**
+- **Catalog fix + up to four photos per item, 2026-10-01 (app `6011c36`, website `a8289e6`; update 37 APPLIED and checked live 2026-10-01).**
   OHRR tested the catalog loop on the phone: the first photo never showed, a later one showed but didn't save; asked for
   photo → description → Save → next or print, and up to four photos per item. **Cause, reproduced in a browser test**
   (Playwright, mocked sign-in, the OS file chooser): the hidden camera input was swapped for a new element when the
@@ -35,6 +35,10 @@
   panel has a Photos editor, Print labels `?code=`. Until 37 runs the first photo saves and the Saved screen says the
   others need the update. Test: scratchpad `catalog_test.py` (23 checks; fails on the old page, passes now). Also
   2026-09-30: the `ohrr-jobs` function deployed from this PC with the Supabase CLI (see below).
+  **Update 37 run by OHRR 2026-10-01** (parts 1–3, then the save function as part 4). Checked live over REST: the
+  `photo_urls` column answers on all four tables, `set_item_photos` and `save_scanned_item` answer "Not authenticated"
+  for anon, `clean_photo_urls` drops blanks and repeats and keeps four, and all 7 auction items that had a photo now
+  carry it as the first of their list. `APPLY-37 (applied 2026-10-01).sql` filed; RUN-THIS says nothing to run.
 
 - **`ohrr-jobs` Edge Function deployed, 2026-09-30.** OHRR asked to clear this first. Deployed from the repo with the
   Supabase CLI (`npx supabase@2 functions deploy ohrr-jobs --project-ref ixxzebtzjgeimoijexwn --no-verify-jwt --use-api`);
