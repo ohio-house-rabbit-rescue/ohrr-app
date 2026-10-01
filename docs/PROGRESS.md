@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-10-01 (TWO WAYS TO ADD — Add a donation + Hop Shop inventory; DONATION INTAKE: drop-offs, thank-you letters, where it's headed, value each/for all, split, baskets, monthly report — update 40 RUN BY OHRR and checked live, RUN-THIS has nothing to run, next is 41; staff portal grouping proposed; before that STAFF DASHBOARD CRASH FIXED — blank on a fresh open since 61be387; "ADD HOP SHOP STOCK" door and "Hop Shop inventory" on the app and website; before that DONATION DETAILS — how many, price, condition, sort of thing, where it's kept; update 39 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 40; Hop Shop shelf empty because no active products, not a code fault; before that FEATURE SWITCHES FOR FOUNDERS/DEVELOPERS + COVER PHOTO, PHOTO ORDER, GALLERIES — update 38 RUN BY OHRR and checked live; before that CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-10-01 (STAFF PORTAL IN GROUPS — a Today row + 8 groups on one phone screen; the home bar takes you home, no drop-down list; before that TWO WAYS TO ADD — Add a donation + Hop Shop inventory; DONATION INTAKE: drop-offs, thank-you letters, where it's headed, value each/for all, split, baskets, monthly report — update 40 RUN BY OHRR and checked live, RUN-THIS has nothing to run, next is 41; staff portal grouping proposed; before that STAFF DASHBOARD CRASH FIXED — blank on a fresh open since 61be387; "ADD HOP SHOP STOCK" door and "Hop Shop inventory" on the app and website; before that DONATION DETAILS — how many, price, condition, sort of thing, where it's kept; update 39 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 40; Hop Shop shelf empty because no active products, not a code fault; before that FEATURE SWITCHES FOR FOUNDERS/DEVELOPERS + COVER PHOTO, PHOTO ORDER, GALLERIES — update 38 RUN BY OHRR and checked live; before that CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,28 @@
 ---
 
 ## Current state (at a glance)
+
+- **Staff portal in groups + the home bar goes home, 2026-10-01 (app `70d9fd9` + `b208ac0`, website `1ebc2a4` + `ca7599b`).**
+  OHRR: "clean up the staff portal … too many in the list and you have to scroll a long way … bin these into groups and
+  simplify the look and feel" (mock-up approved: "this looks better … we need the dashboard simplified"); then "the home
+  button you have opens a list. i think just taking the user back to the home works better so they land on the home
+  screen."
+  - **Staff home:** a Today row (Inbox, Bookings, Counter, Scan, with waiting counts) + 8 group tiles — Items and Hop
+    Shop, Rabbits and care, Volunteers (orange), Events and BunFest, Getting the word out, Supporters and giving, Admin,
+    Me — on one phone screen (was ~40 tiles). A group shows only if the person can open something in it; a one-page
+    group opens that page. `/staff/g/:group` lists a group's pages (icon, title, one line, a count). Me holds My
+    account, My volunteer hours, Your access, Signed in as, Delete account.
+  - **No drop-down menu:** under the top bar, on every page but the staff home, "[home] Staff › Group" (Staff → the
+    staff home, Group → its list); the page title isn't repeated, so nothing is cut off at 375px. Beside Back the top bar
+    drops the "OHRR Staff" name (it truncated and wrapped "Sign out").
+  - **One list** of every staff page with its group and permission check — app `src/features/staff/staffTiles.ts`,
+    website `src/lib/staffTiles.ts`; every old dashboard/menu page is still reachable (app 42, website 39 ways in).
+    Website: same groups; Today = Inbox, Bookings (no Counter/Scan there); laptop sidebar = Dashboard, Today, the 8
+    groups; Share kit gets `/staff/posts?view=kit`; on phones Back to the website / My account / Sign out moved to the
+    bottom of the staff home and the Me page.
+  - Tests: scratchpad `groups_test.py` 25 checks (Founder, a volunteer lead, 375 and 1300, every old page reachable;
+    also run against the live app), `intake40_test.py` 45, `catalog_test.py` 35, `switches_test.py` 21; website
+    helper `webgroups/testg.py` 105. tsc, build, 231 checks, hooks scan clean.
 
 - **Two ways to add + donation intake, 2026-10-01 (app `9dd69ad` + `8b4ad5e`, website `f652ab7`; update 40 APPLIED and checked live 2026-10-01).**
   OHRR: "we get a donation and then you ask where it goes … tell it a donation, then we sort it out later or a hop shop
@@ -63,8 +85,7 @@
     `APPLY-40 (applied 2026-10-01).sql`; RUN-THIS has nothing to run (next is 41). Not yet tried with a real signed-in
     drop-off — worth one test item.
   - **Next (OHRR, mid-build):** "clean up the staff portal … too many in the list … bin these into groups and simplify".
-    Mock-up shown in chat: a Today row (Inbox, Bookings, Counter, Scan) + 8 group tiles (Items and Hop Shop, Rabbits and
-    care, Volunteers, Events and BunFest, Getting the word out, Supporters and giving, Admin, Me); waiting on OHRR.
+    Mock-up shown in chat, approved, built the same day (entry above).
 
 - **Staff dashboard crash fixed + "Add Hop Shop stock", 2026-10-01 (app `9e77224`, website `af7e784`).** OHRR: "i was
   in the staff list. i went to add a donation and that was there but there was not add inventory just a scan an item which
