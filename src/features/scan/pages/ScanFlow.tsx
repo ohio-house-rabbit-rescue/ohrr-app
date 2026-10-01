@@ -34,7 +34,19 @@ import {
 } from '../api'
 import { BigButton, BigInput, Busy, ErrorBox, ItemCard, KindTile, MoneyInput, StepShell, Stepper } from '../ScanUI'
 import { HeadedForChips, MoreDetailsFields, QuantityField, ValueFields, emptyExtras, useCatalogSuggestions, type Extras } from '../DetailsFields'
-import { ITEM_KINDS, KIND_META, draftFromItem, emptyDraft, formatMoney, type HeadedFor, type ItemDraft, type ItemKind, type TaggedItem } from '../types'
+import {
+  ITEM_KINDS,
+  KIND_META,
+  centsToDollars,
+  dollarsToCents,
+  draftFromItem,
+  emptyDraft,
+  formatMoney,
+  type HeadedFor,
+  type ItemDraft,
+  type ItemKind,
+  type TaggedItem,
+} from '../types'
 
 type Step = 'scan' | 'type' | 'lookup' | 'found' | 'kind' | 'photo' | 'name' | 'details' | 'saving' | 'done'
 
@@ -265,6 +277,15 @@ export default function ScanFlow() {
                 use_by: d.useBy || null,
               })) ?? saved
           } catch (err) {
+            // Without update 40 a value is always "for one": save the lot's value as one piece's.
+            const cents = dollarsToCents(d.value)
+            if (isNeeds40(err) && d.valueBasis === 'all' && cents != null && d.quantity > 1) {
+              try {
+                saved = await saveItem(orgId, { ...d, value: centsToDollars(Math.round(cents / d.quantity)) })
+              } catch {
+                /* the first save stands */
+              }
+            }
             setError(isNeeds40(err) ? 'Saved. Where it’s headed, value for the lot, size and use-by need database update 40.' : `Saved, but not where it’s headed: ${errMessage(err)}`)
           }
         }
@@ -687,6 +708,11 @@ export default function ScanFlow() {
               onSelect={() => {
                 update({ kind: k })
                 if (guess && !draft.title) update({ kind: k, title: guessTitle(guess) })
+                // Sorting a donation into the raffle or auction: the prize is worth the whole lot.
+                if (sorting && item && (k === 'auction' || k === 'raffle')) {
+                  const total = item.value_total_cents ?? (item.value_cents != null ? item.value_cents * Math.max(1, item.quantity ?? 1) : null)
+                  if (total != null) update({ kind: k, value: centsToDollars(total) })
+                }
                 setStep(editing ? 'details' : 'photo')
               }}
             />

@@ -93,6 +93,9 @@ export async function catalogNewItem(orgId: string, input: CatalogInput): Promis
     }
     if (!isMissingRpc(withPlan.error)) throw withPlan.error
   }
+  // Without update 40 a value is always "for one": turn a value for the whole lot into one piece's.
+  const qty = Math.max(1, input.quantity ?? 1)
+  if (plan?.value_basis === 'all' && base.p_value_cents != null && qty > 1) base.p_value_cents = Math.round(base.p_value_cents / qty)
   const first = await supabase.rpc('catalog_new_item', { ...base, ...extras })
   if (!first.error) {
     const item = asItem(first.data)
