@@ -58,6 +58,7 @@ export default function StaffLayout() {
       label: 'Catalog donations',
       show: can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update'),
     },
+    { to: '/staff/catalog?kind=stock', label: 'Add Hop Shop stock', show: can('hopshop.products.create') },
     {
       to: '/staff/scan',
       label: 'Scan an item',
@@ -76,7 +77,7 @@ export default function StaffLayout() {
         can('adoptions.listings.edit') ||
         can('adoptions.status.change'),
     },
-    { to: '/staff/hopshop', label: 'Hop Shop', show: Boolean(membership) && !counterOnly },
+    { to: '/staff/hopshop', label: 'Hop Shop inventory', show: Boolean(membership) && !counterOnly },
     { to: '/staff/announcements', label: 'Announcements', show: can('announcements.post') },
     { to: '/staff/home-screen', label: 'Home screen cards', show: can('announcements.post') },
     { to: '/staff/calls', label: 'Volunteer calls — needs, sign-ups, thanks', show: can('volunteers.shifts.manage') || can('bookings.manage') },

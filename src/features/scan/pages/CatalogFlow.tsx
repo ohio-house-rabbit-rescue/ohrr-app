@@ -14,7 +14,7 @@
 // camera's answer arrives on the element that opened it, and if that element
 // has been swapped for a new one in the meantime the photo is lost.
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
@@ -68,10 +68,14 @@ const emptyDraft = (location = ''): Draft => ({ title: '', donatedBy: '', ...emp
 
 const MORE_KEY = 'ohrr.catalog.more'
 
-function loadKind(allowed: ItemKind[]): ItemKind {
+/** The door decides: "Add Hop Shop stock" opens with ?kind=stock. "Catalog
+ *  donations" keeps the last event kind used, but never opens on stock, which
+ *  has its own door. */
+function loadKind(allowed: ItemKind[], asked: string | null): ItemKind {
+  if (asked && allowed.includes(asked as ItemKind)) return asked as ItemKind
   try {
     const k = localStorage.getItem(KIND_KEY) as ItemKind | null
-    if (k && allowed.includes(k)) return k
+    if (k && k !== 'stock' && allowed.includes(k)) return k
   } catch {
     /* ignore */
   }
@@ -88,9 +92,11 @@ export default function CatalogFlow() {
   const { membership, can } = useAuth()
   const orgId = membership?.orgId ?? ''
   const navigate = useNavigate()
+  const [params] = useSearchParams()
 
   const allowedKinds = ALL_KINDS.filter((k) => KIND_META[k].caps.some((c) => can(c)))
-  const [kind, setKind] = useState<ItemKind>(() => loadKind(allowedKinds))
+  const [kind, setKind] = useState<ItemKind>(() => loadKind(allowedKinds, params.get('kind')))
+  const isStock = kind === 'stock'
   const [step, setStep] = useState<Step>('start')
   const [draft, setDraft] = useState<Draft>(emptyDraft)
   const [shots, setShots] = useState<Shot[]>([])
@@ -294,7 +300,7 @@ export default function CatalogFlow() {
   const save = () => {
     const title = draft.title.trim()
     if (!title) return
-    const donatedBy = draft.donatedBy.trim()
+    const donatedBy = kind === 'stock' ? '' : draft.donatedBy.trim()
     const snap = draft
     const list = shots
     recogRef.current?.stop?.()
@@ -384,8 +390,12 @@ export default function CatalogFlow() {
   if (step === 'start') {
     screen = (
       <StepShell
-        title="Catalog donations"
-        help="Photo, say the name, Save. The app gives each item its own code; labels print whenever you like."
+        title={isStock ? 'Add Hop Shop stock' : 'Catalog donations'}
+        help={
+          isStock
+            ? 'Photo, the name, how many and the price, Save. Each item gets its own code and shows in the Hop Shop inventory; labels print whenever you like.'
+            : 'Photo, say the name, Save. The app gives each item its own code; labels print whenever you like.'
+        }
         onBack={() => navigate('/staff')}
         backLabel="Dashboard"
         footer={
@@ -427,7 +437,7 @@ export default function CatalogFlow() {
           </div>
           <ol className="list-decimal space-y-1 pl-5 text-[15px] text-slate-600">
             <li>Take the photo — up to {MAX_ITEM_PHOTOS} per item.</li>
-            <li>Say or type the name, tap who gave it.</li>
+            <li>{isStock ? 'Say or type the name, then how many and the price.' : 'Say or type the name, tap who gave it.'}</li>
             <li>Save — then the next item, or print its label.</li>
           </ol>
           <p className="text-[15px] text-slate-500">
@@ -662,29 +672,31 @@ export default function CatalogFlow() {
             )}
           </div>
 
-          <div>
-            <p className="mb-2 text-base font-bold text-ink">
-              Who gave it? <span className="font-normal text-slate-500">(optional)</span>
-            </p>
-            {donors.length > 0 && (
-              <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
-                {donors.map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => update({ donatedBy: draft.donatedBy === d ? '' : d })}
-                    aria-pressed={draft.donatedBy === d}
-                    className={`shrink-0 rounded-full px-3.5 py-2 text-[15px] font-bold transition ${
-                      draft.donatedBy === d ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'
-                    }`}
-                  >
-                    {d}
-                  </button>
-                ))}
-              </div>
-            )}
-            <BigInput value={draft.donatedBy} onChange={(v) => update({ donatedBy: v })} placeholder="A friend of OHRR" ariaLabel="Who donated it" />
-          </div>
+          {!isStock && (
+            <div>
+              <p className="mb-2 text-base font-bold text-ink">
+                Who gave it? <span className="font-normal text-slate-500">(optional)</span>
+              </p>
+              {donors.length > 0 && (
+                <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
+                  {donors.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => update({ donatedBy: draft.donatedBy === d ? '' : d })}
+                      aria-pressed={draft.donatedBy === d}
+                      className={`shrink-0 rounded-full px-3.5 py-2 text-[15px] font-bold transition ${
+                        draft.donatedBy === d ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <BigInput value={draft.donatedBy} onChange={(v) => update({ donatedBy: v })} placeholder="A friend of OHRR" ariaLabel="Who donated it" />
+            </div>
+          )}
           {(kind === 'donation' || kind === 'stock') && (
             <QuantityPriceFields v={draft} set={update} priceHint={kind === 'stock' ? 'the shop price' : 'if it may be sold'} />
           )}

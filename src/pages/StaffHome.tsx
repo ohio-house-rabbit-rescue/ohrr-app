@@ -28,6 +28,8 @@ export default function StaffHome() {
   const readyPosts = useReadyPostCount(membership && (can('announcements.post') || can('social.publish')) ? membership.orgId : null)
   // Update 28: the person's level (Volunteer 1 … Developer from update 30), and whether it's in yet.
   const myLevel = useMyLevel(user?.id, membership?.orgId)
+  // Founder or Developer: the Features tile (update 38). A hook, so it stays above the early returns.
+  const { allAccess } = useAllAccess()
 
   if (!configured) return <NotConfigured />
   if (loading) return <Spinner />
@@ -64,7 +66,6 @@ export default function StaffHome() {
   const canManageTeam = can('staff.invite') || can('staff.permissions.manage')
   const canViewActivity = can('audit.view')
   const canManageSettings = can('settings.manage')
-  const { allAccess } = useAllAccess()
   const canSupporters = can('supporters.view')
   const canNotify = can('notifications.send')
   const canWishList = can('giving.wishlist')
@@ -190,7 +191,7 @@ export default function StaffHome() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block font-display text-xl font-black">Scan an item</span>
-                <span className="mt-0.5 block text-sm text-slate-900/85">Silent Auction, raffle prizes & Hop Shop stock — point the camera at the tag</span>
+                <span className="mt-0.5 block text-sm text-slate-900/85">Point the camera at a label to see, change or sort that item. Not a sale.</span>
               </span>
               <Icon name="chevron" size={20} className="shrink-0 text-slate-900/70" />
             </Link>
@@ -198,8 +199,30 @@ export default function StaffHome() {
           {canScan && (
             <ActionCard to="/staff/catalog" title="Catalog donations" subtitle="Photo, say the name, Next — the app gives each item a code" icon="camera" tone="orange" />
           )}
+          {can('hopshop.products.create') && (
+            <ActionCard
+              to="/staff/catalog?kind=stock"
+              title="Add Hop Shop stock"
+              subtitle="Things the shop sells: photo, name, how many, price. Each gets a label."
+              icon="box"
+              tone="orange"
+            />
+          )}
           {canScan && (
             <ActionCard to="/staff/items" title="Items" subtitle="Donations to sort, auction and raffle items · print labels" icon="printer" tone="orange" />
+          )}
+          {canSeeHopShop && (
+            <ActionCard
+              to="/staff/hopshop"
+              title="Hop Shop inventory"
+              subtitle={
+                isAdminish
+                  ? 'What is in stock and how many, prices, the reorder list, suppliers'
+                  : hopshopCaps.map((c) => c.description).join(' · ')
+              }
+              icon="bag"
+              tone="orange"
+            />
           )}
           {canManageAdopt && (
             <ActionCard
@@ -207,19 +230,6 @@ export default function StaffHome() {
               title="Adoptable rabbits"
               subtitle="Add rabbits, photos & adoption status"
               icon="heart"
-              tone="orange"
-            />
-          )}
-          {canSeeHopShop && (
-            <ActionCard
-              to="/staff/hopshop"
-              title="Hop Shop"
-              subtitle={
-                isAdminish
-                  ? 'Items with photos & codes, stock counts, the reorder list, suppliers'
-                  : hopshopCaps.map((c) => c.description).join(' · ')
-              }
-              icon="bag"
               tone="orange"
             />
           )}
