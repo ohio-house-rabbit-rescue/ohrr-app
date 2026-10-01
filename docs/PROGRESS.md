@@ -19,7 +19,7 @@
 
 ## Current state (at a glance)
 
-- **Item numbers with a system, Hop Shop labels, shipping, 2026-10-01 (app `cc046bf`; update 41 APPLIED and checked live 2026-10-01).**
+- **Item numbers with a system, Hop Shop labels, shipping, 2026-10-01 (app `cc046bf` + `ed9bce4`, website `b2669a4`; update 41 APPLIED and checked live 2026-10-01).**
   OHRR: "on the hop shop items this looks really good. we will need the label printing capability like we have on the
   donations. also for the sku lets make them very different than the donations so they have a system behind them" ·
   "on the supplier side there should be a shipping section … if there is a minimum order for free shipping" · "the
@@ -50,6 +50,12 @@
     checks (renumbering, SKUs following until printed, barcodes, sort into the shop and back, splits, baskets, the till,
     running 41 twice); browser `app41/app41_test.py` 75 checks + `tag_landing_test.py`; earlier suites moved to DON
     numbers and passing (catalog 35, intake40 45, app40 73, groups 25, switches 21). tsc, build, 231 checks, hooks scan.
+  - **Website** (`b2669a4`, helper): the same — `lib/codes.ts` + `lib/labels.ts` copies, Hop Shop form/cards/Types/Reorder
+    shipping/supplier Shipping, `/staff/hopshop/labels`, donation labels without stock, `items/tags` → labels; packet
+    barcode by camera or "read it from a photo"; its "Add a donation" keeps a scanned number only when it's a DON number.
+    216 mocked checks. Website keeps 999 copies per label (app 200).
+  - App follow-ups (`ed9bce4`): Enter in "New type" inside the product form adds the type instead of saving the product;
+    the donation and Hop Shop label pages no longer share ticks when switching between them.
 
 - **Scan an item on the website, for laptops, 2026-10-01 (website `8628706`).**
   OHRR: "on the web version for the laptop users i think they still need the option to scan and input like on the
