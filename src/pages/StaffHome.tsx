@@ -1,18 +1,19 @@
-import { useAllAccess } from '../lib/allAccess'
-import { useEffect, useState } from 'react'
+// The staff dashboard, short (OHRR, 2026-10-01: "too many in the list and you
+// have to scroll a long way … bin these into groups and simplify"): a Today
+// row (Inbox, Bookings, Counter, Scan) and the groups; each group opens a
+// short list (StaffGroup). The pages and who may open them live in
+// features/staff/staffTiles.ts.
 import { Link, Navigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
-import { ActionCard, Badge, Card, Screen } from '../components/ui'
+import { Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { Spinner, NotConfigured } from '../components/staffui'
-import { PERMISSION_CATALOG } from '../lib/capabilities'
-import { DeleteAccount } from '../components/DeleteAccount'
 import ExpiringNotice from '../features/sponsors/ExpiringNotice'
 import { ApplicationsNotice, CertificatesNotice } from '../features/volunteers/StaffNotices'
 import { PostsToApproveNotice } from '../features/share/PostsToApproveNotice'
 import { EasterCampaignNotice } from '../features/share/EasterCampaignCard'
 import { isFullAccess, levelInfo, useMyLevel } from '../lib/staffLevels'
+import { useStaffTiles } from '../features/staff/staffTiles'
 
 const roleBadge: Record<string, { label: string; tone: 'blue' | 'orange' | 'slate' }> = {
   owner: { label: 'Owner', tone: 'blue' },
@@ -20,554 +21,106 @@ const roleBadge: Record<string, { label: string; tone: 'blue' | 'orange' | 'slat
   staff: { label: 'Staff', tone: 'slate' },
 }
 
+const count = (n: number) => (n > 99 ? '99+' : String(n))
+
 export default function StaffHome() {
-  const { configured, loading, user, membership, can, capabilities } = useAuth()
-  // Hooks before any early return: the Inbox badge count (0 when not allowed).
-  const newCount = useNewRequestCount(membership && can('inbox.manage') ? membership.orgId : null)
-  const pendingCount = usePendingBookingCount(membership && can('bookings.manage') ? membership.orgId : null)
-  const readyPosts = useReadyPostCount(membership && (can('announcements.post') || can('social.publish')) ? membership.orgId : null)
-  // Update 28: the person's level (Volunteer 1 … Developer from update 30), and whether it's in yet.
+  const { configured, loading, user, membership, can } = useAuth()
+  // Hooks before any early return (a hook below one blanked this page once).
   const myLevel = useMyLevel(user?.id, membership?.orgId)
-  // Founder or Developer: the Features tile (update 38). A hook, so it stays above the early returns.
-  const { allAccess } = useAllAccess()
+  const { today, groups, counterOnly, nothingYet, isAdminish } = useStaffTiles({ counts: true })
 
   if (!configured) return <NotConfigured />
   if (loading) return <Spinner />
   if (!user) return <Navigate to="/staff/signin" replace />
   // Signed in but not on the team yet: the invite code is the next step.
   if (!membership) return <Navigate to="/staff/join" replace />
-
-  const isAdminish = membership.role === 'owner' || membership.role === 'admin'
   // A counter volunteer goes straight to the Counter — the one screen they need.
-  if (!isAdminish && capabilities.size === 1 && can('counter.use')) return <Navigate to="/staff/counter" replace />
-  const canCounter = can('counter.use') || can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.inventory.update')
-  const canInbox = can('inbox.manage')
-  const canBookings = can('bookings.manage')
-  const canQueue = can('announcements.post') || can('social.publish') || can('social.approve')
+  if (counterOnly) return <Navigate to="/staff/counter" replace />
+
   const badge = myLevel.level
     ? { label: levelInfo(myLevel.level).label, tone: isAdminish || isFullAccess(myLevel.level) ? ('blue' as const) : ('slate' as const) }
     : (roleBadge[membership.role] ?? roleBadge.staff)
 
-  // What this person can do in the Hop Shop (drives the dashboard subtitle).
-  const hopshopCaps = PERMISSION_CATALOG.filter(
-    (p) => p.area === 'Hop Shop' && can(p.key),
-  )
-  const canSeeHopShop = isAdminish || hopshopCaps.length > 0
-  const canManageAdopt =
-    can('adoptions.listings.create') ||
-    can('adoptions.listings.edit') ||
-    can('adoptions.status.change')
-  const canPostAnnouncements = can('announcements.post')
-  const canManageVolunteer = can('volunteers.shifts.manage')
-  const canEditCare = can('content.education.edit')
-  const canManageEvents = can('events.bunfest.manage')
-  const canManageAuction = can('events.bunfest.manage')
-  const canManageSponsors = can('events.bunfest.manage')
-  const canManageTeam = can('staff.invite') || can('staff.permissions.manage')
-  const canViewActivity = can('audit.view')
-  const canManageSettings = can('settings.manage')
-  const canSupporters = can('supporters.view')
-  const canNotify = can('notifications.send')
-  const canWishList = can('giving.wishlist')
-  const canScan = can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update')
-  const showTiles =
-    canCounter ||
-    canQueue ||
-    canInbox ||
-    canBookings ||
-    canScan ||
-    canSeeHopShop ||
-    canManageAdopt ||
-    canPostAnnouncements ||
-    canManageVolunteer ||
-    canEditCare ||
-    canManageEvents ||
-    canManageAuction ||
-    canManageSponsors ||
-    canManageTeam ||
-    canViewActivity ||
-    canManageSettings ||
-    canSupporters ||
-    canNotify ||
-    canWishList
-
-  // For a staff member, list the granted capabilities so they know their access.
-  const grantedList = PERMISSION_CATALOG.filter((p) => capabilities.has(p.key))
-
   return (
     <Screen className="space-y-5">
-      <div className="pt-1">
-        <div className="flex items-center gap-2">
-          <h1 className="font-display text-2xl font-black text-ink">Staff dashboard</h1>
-          <Badge tone={badge.tone}>{badge.label}</Badge>
-        </div>
-        <p className="mt-1 text-sm text-slate-600">
-          Signed in as{' '}
-          <Link to="/staff/account" className="break-all font-bold text-brand-blue hover:text-brand-blue-dark">
-            {user.email}
-          </Link>
-        </p>
+      <div className="flex items-center gap-2 pt-1">
+        <h1 className="font-display text-2xl font-black text-ink">Staff</h1>
+        <Badge tone={badge.tone}>{badge.label}</Badge>
       </div>
 
-      {canManageSponsors && <ExpiringNotice orgId={membership.orgId} />}
-      {(canManageVolunteer || canBookings) && <ApplicationsNotice orgId={membership.orgId} />}
+      {can('events.bunfest.manage') && <ExpiringNotice orgId={membership.orgId} />}
+      {(can('volunteers.shifts.manage') || can('bookings.manage')) && <ApplicationsNotice orgId={membership.orgId} />}
       {can('volunteers.certificates') && <CertificatesNotice orgId={membership.orgId} />}
       {can('social.approve') && <PostsToApproveNotice />}
       {/* In the weeks before Easter, until this year's Easter posts are planned (Staff → Posts) */}
       {can('announcements.post') && <EasterCampaignNotice />}
 
-      {showTiles ? (
-        <div className="space-y-3">
-          {canInbox && (
-            <Link
-              to="/staff/inbox"
-              className="flex items-center gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
-            >
-              <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-blue-50 text-brand-blue">
-                <Icon name="mail" size={22} />
-                {newCount > 0 && (
-                  <span className="absolute -right-1.5 -top-1.5 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-brand-orange px-1.5 text-xs font-black text-ink">
-                    {newCount > 99 ? '99+' : newCount}
+      {today.length > 0 && (
+        <section aria-labelledby="today-h">
+          <h2 id="today-h" className="mb-2 px-1 text-sm font-bold text-slate-500">
+            Today
+          </h2>
+          <div className={`grid gap-2 ${today.length >= 4 ? 'grid-cols-4' : today.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            {today.map((t) => (
+              <Link
+                key={t.to}
+                to={t.to}
+                aria-label={t.badge ? `${t.title}, ${t.badge} waiting` : t.title}
+                className="relative flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white px-1 py-2 text-center shadow-sm transition hover:border-slate-300 active:scale-[.98]"
+              >
+                <Icon name={t.icon} size={24} className="text-brand-blue-dark" />
+                <span className="text-[13px] font-bold leading-tight text-ink">{t.title === 'Scan an item' ? 'Scan' : t.title}</span>
+                {(t.badge ?? 0) > 0 && (
+                  <span className="absolute right-1.5 top-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand-orange px-1 text-[11px] font-black text-ink">
+                    {count(t.badge ?? 0)}
                   </span>
                 )}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-display text-[15px] font-extrabold text-ink">Inbox</span>
-                <span className="mt-0.5 block text-sm text-slate-500">
-                  {newCount > 0 ? `${newCount} new request${newCount === 1 ? '' : 's'} waiting` : 'Appointments, sign-ups, surrenders & messages'}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section aria-labelledby="groups-h">
+        <h2 id="groups-h" className="mb-2 px-1 text-sm font-bold text-slate-500">
+          {today.length > 0 ? 'Everything else' : 'Your tools'}
+        </h2>
+        <div className="grid grid-cols-2 gap-2.5">
+          {groups.map((g) => {
+            // A group with one page opens that page straight away.
+            const to = g.tiles.length === 1 ? g.tiles[0].to : `/staff/g/${g.key}`
+            return (
+              <Link
+                key={g.key}
+                to={to}
+                className="relative flex min-h-[64px] items-center gap-2.5 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm transition hover:border-slate-300 active:scale-[.98]"
+              >
+                <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${g.key === 'volunteers' ? 'bg-brand-orange-50 text-brand-orange-dark' : 'bg-brand-blue-50 text-brand-blue-dark'}`}>
+                  <Icon name={g.icon} size={20} />
                 </span>
-              </span>
-              <Icon name="chevron" size={18} className="shrink-0 text-slate-300" />
-            </Link>
-          )}
-          {canSupporters && (
-            <ActionCard
-              to="/staff/supporters"
-              title="Supporters"
-              subtitle="The email list: who wants emails and about what — copy or download"
-              icon="mail"
-              tone="blue"
-            />
-          )}
-          {canNotify && (
-            <ActionCard
-              to="/staff/notifications"
-              title="Send a notification"
-              subtitle="To the phones of people who asked — volunteers, events, new rabbits, BunFest, news"
-              icon="device"
-              tone="blue"
-            />
-          )}
-          {canBookings && (
-            <ActionCard
-              to="/staff/bookings"
-              title={pendingCount > 0 ? `Bookings · ${pendingCount} to confirm` : 'Bookings'}
-              subtitle="Volunteer shifts & appointments: who’s coming, make times"
-              icon="calendar"
-              tone="blue"
-            />
-          )}
-          {canCounter && (
-            <Link
-              to="/staff/counter"
-              className="flex items-center gap-4 rounded-2xl bg-brand-blue p-4 text-white shadow-md transition hover:-translate-y-0.5 hover:bg-brand-blue-dark active:translate-y-0"
-            >
-              <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20">
-                <Icon name="bag" size={30} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-display text-xl font-black">Counter</span>
-                <span className="mt-0.5 block text-sm text-white/90">Sell, add a new item, and the BunFest door — works without signal</span>
-              </span>
-            </Link>
-          )}
-          {canScan && (
-            <Link
-              to="/staff/scan"
-              className="flex items-center gap-4 rounded-2xl bg-brand-orange p-4 text-ink shadow-md transition hover:-translate-y-0.5 hover:bg-brand-orange-dark active:translate-y-0"
-            >
-              <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20">
-                <Icon name="scan" size={30} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-display text-xl font-black">Scan an item</span>
-                <span className="mt-0.5 block text-sm text-slate-900/85">Point the camera at a label to see, change or sort that item. Not a sale.</span>
-              </span>
-              <Icon name="chevron" size={20} className="shrink-0 text-slate-900/70" />
-            </Link>
-          )}
-          {canScan && (
-            <ActionCard
-              to="/staff/catalog"
-              title="Add a donation"
-              subtitle="Something given to OHRR: photo, name, how many, value. Sort it later, or tick where it’s headed."
-              icon="camera"
-              tone="orange"
-            />
-          )}
-          {canSeeHopShop && (
-            <ActionCard
-              to="/staff/hopshop"
-              title="Hop Shop inventory"
-              subtitle={
-                can('hopshop.products.create')
-                  ? 'Add an item the shop carries (supplier, cost, price, reorder) and see what’s in stock'
-                  : hopshopCaps.map((c) => c.description).join(' · ')
-              }
-              icon="bag"
-              tone="orange"
-            />
-          )}
-          {canScan && (
-            <ActionCard to="/staff/items" title="Items" subtitle="Donations to sort, baskets, drop-offs and thank-yous, the monthly report, labels" icon="printer" tone="orange" />
-          )}
-          {canManageAdopt && (
-            <ActionCard
-              to="/staff/adopt"
-              title="Adoptable rabbits"
-              subtitle="Add rabbits, photos & adoption status"
-              icon="heart"
-              tone="orange"
-            />
-          )}
-          {canQueue && (
-            <ActionCard
-              to="/staff/posts"
-              title={readyPosts > 0 ? `Post queue · ${readyPosts} ready` : 'Post queue'}
-              subtitle="Premade posts, released with one tap by whoever posts as OHRR"
-              icon="mail"
-              tone="orange"
-            />
-          )}
-          {canPostAnnouncements && (
-            <ActionCard
-              to="/staff/share"
-              title="Share kit"
-              subtitle="Ready-made posts for Instagram, Facebook & TikTok — pick, tap Share"
-              icon="sparkles"
-              tone="orange"
-            />
-          )}
-          {canPostAnnouncements && (
-            <ActionCard
-              to="/staff/flyers"
-              title="Flyers"
-              subtitle="QR posters for vets, campus boards and pet stores — share, save or print"
-              icon="printer"
-              tone="blue"
-            />
-          )}
-          {canPostAnnouncements && (
-            <ActionCard
-              to="/staff/outreach"
-              title="Outreach letters"
-              subtitle="Ready-to-send emails to campus offices, vets, stores, schools & media"
-              icon="mail"
-              tone="blue"
-            />
-          )}
-          {canPostAnnouncements && (
-            <ActionCard
-              to="/staff/impact"
-              title="Impact numbers"
-              subtitle="The year in numbers for donors & sponsors — shown at /impact"
-              icon="star"
-              tone="blue"
-            />
-          )}
-          {can('giving.guardians') && (
-            <ActionCard
-              to="/staff/guardians"
-              title="Rescue Rabbit Guardians"
-              subtitle="The Legacy Fund thank-you list, a year at a time"
-              icon="heart"
-              tone="blue"
-            />
-          )}
-          {canWishList && (
-            <ActionCard
-              to="/staff/wish-list"
-              title="Wish list items"
-              subtitle="Amazon wish list items, each with its own “Buy on Amazon” button"
-              icon="gift"
-              tone="orange"
-            />
-          )}
-          {canPostAnnouncements && (
-            <ActionCard
-              to="/staff/announcements"
-              title="Announcements"
-              subtitle="Post notices that show on the app home"
-              icon="gift"
-              tone="orange"
-            />
-          )}
-          {(canManageVolunteer || canBookings) && (
-            <ActionCard
-              to="/staff/calls"
-              title="Volunteer calls"
-              subtitle="Put out a need, share it everywhere, check people in, thank them"
-              icon="heart"
-              tone="orange"
-            />
-          )}
-          {(canManageVolunteer || canBookings) && (
-            <ActionCard
-              to="/staff/volunteers"
-              title="Volunteers"
-              subtitle="The roster, their hours, and each person's private hours link"
-              icon="users"
-              tone="blue"
-            />
-          )}
-          {canManageVolunteer && (
-            <ActionCard
-              to="/staff/volunteer"
-              title="Volunteer opportunities"
-              subtitle="Shifts, transport runs & events"
-              icon="heart"
-              tone="orange"
-            />
-          )}
-          {canEditCare && (
-            <ActionCard
-              to="/staff/learn"
-              title="Care guides & pages"
-              subtitle="Rabbit Care articles in Learn, plus the Give / Adopt / About pages"
-              icon="book"
-              tone="blue"
-            />
-          )}
-          {canEditCare && (
-            <ActionCard
-              to="/staff/vets"
-              title="Vet directory"
-              subtitle="Rabbit-savvy vets shown in Find a vet"
-              icon="vet"
-              tone="blue"
-            />
-          )}
-          {canManageEvents && (
-            <ActionCard
-              to="/staff/events"
-              title="Events"
-              subtitle="Midwest BunFest & OHRR hoppenings"
-              icon="calendar"
-              tone="orange"
-            />
-          )}
-          {canManageEvents && (
-            <ActionCard
-              to="/staff/bunfest"
-              title="BunFest content"
-              subtitle="The education schedule, vendors & booths, rescue partners"
-              icon="star"
-              tone="orange"
-            />
-          )}
-          {canPostAnnouncements && (
-            <ActionCard
-              to="/staff/home-screen"
-              title="Home screen"
-              subtitle="The big cards the app opens on (and the website's home page)"
-              icon="home"
-              tone="blue"
-            />
-          )}
-          {(canEditCare || canInbox) && (
-            <ActionCard
-              to="/staff/tails"
-              title="Happy Tails"
-              subtitle="Publish and edit adopters’ stories"
-              icon="sparkles"
-              tone="blue"
-            />
-          )}
-          {canManageAuction && (
-            <ActionCard
-              to="/staff/raffle"
-              title="Silent Auction"
-              subtitle="BunFest auction items, photos & won status"
-              icon="award"
-              tone="orange"
-            />
-          )}
-          {canManageAuction && (
-            <ActionCard
-              to="/staff/auction-desk"
-              title="Auction desk"
-              subtitle="Close bidding & charge cards, walk-up sales, pickup and shipping, bidders"
-              icon="gavel"
-              tone="orange"
-            />
-          )}
-          {canManageAuction && (
-            <ActionCard
-              to="/staff/raffle-tickets"
-              title="Raffle tickets"
-              subtitle="The raffle table: mark paid, sell at the table, draw winners"
-              icon="ticket"
-              tone="orange"
-            />
-          )}
-          {canManageSponsors && (
-            <ActionCard
-              to="/staff/sponsors"
-              title="Sponsors & partners"
-              subtitle="Partner roster, perks & “Presented by” placements"
-              icon="award"
-              tone="blue"
-            />
-          )}
-          {canManageSponsors && (
-            <ActionCard
-              to="/staff/sponsors/renewals"
-              title="Sponsor renewals"
-              subtitle="Whose sponsorship ends soon, who to ask, and where each ask stands"
-              icon="calendar"
-              tone="blue"
-            />
-          )}
-          {canEditCare && (
-            <ActionCard to="/staff/bunny-help" title="Bunny Help topics" subtitle="What “My bunny is…” answers with" icon="help" tone="blue" />
-          )}
-          {canManageTeam && (
-            <ActionCard
-              to="/staff/team"
-              title="Team"
-              subtitle="Invite staff and manage who can do what"
-              icon="users"
-              tone="blue"
-            />
-          )}
-          {canViewActivity && (
-            <ActionCard
-              to="/staff/activity"
-              title="Activity"
-              subtitle="Who changed what, and when"
-              icon="clock"
-              tone="blue"
-            />
-          )}
-          {allAccess && (
-            <ActionCard
-              to="/staff/features"
-              title="Features"
-              subtitle="Show or hide whole features, like the Silent Auction"
-              icon="settings"
-              tone="blue"
-            />
-          )}
-          {canManageSettings && (
-            <ActionCard
-              to="/staff/details"
-              title="OHRR details"
-              subtitle="Hours, phone, address and a notice — shown everywhere"
-              icon="mappin"
-              tone="blue"
-            />
-          )}
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-[15px] font-extrabold leading-tight text-ink">{g.title}</span>
+                  <span className="mt-0.5 block text-[12.5px] leading-snug text-slate-500">{g.hint}</span>
+                </span>
+                {g.badge > 0 && (
+                  <span className="absolute -right-1 -top-1 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-brand-orange px-1.5 text-xs font-black text-ink">
+                    {count(g.badge)}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
         </div>
-      ) : (
+      </section>
+
+      {nothingYet && (
         <Card className="border-slate-200 bg-slate-50/80">
           <p className="text-sm leading-relaxed text-slate-600">
-            You're on the team, but no tasks have been switched on for you yet. Someone above your level
-            can switch them on from the Team screen.
+            You're on the team, but no tasks have been switched on for you yet. Someone above your level can switch them on from
+            the Team screen.
           </p>
         </Card>
       )}
-
-      {/* Anyone on the team can log the time they give, shift or not (update 28). */}
-      {myLevel.ready && (
-        <ActionCard
-          to="/staff/my-hours"
-          title="My volunteer hours"
-          subtitle="Log time you give that isn’t a shift — vet runs, fostering, events, admin"
-          icon="clock"
-          tone="blue"
-        />
-      )}
-
-      {/* Everyone's own profile as the team sees it (email and password are in My OHRR). */}
-      <ActionCard
-        to="/staff/account"
-        title="My account"
-        subtitle="Your name, title and photo, your level and access"
-        icon="settings"
-        tone="blue"
-      />
-
-      {!isAdminish && (
-        <div className="space-y-2">
-          <p className="px-1 text-xs font-extrabold uppercase tracking-wider text-slate-400">
-            Your access
-          </p>
-          {grantedList.length === 0 ? (
-            <p className="px-1 text-sm text-slate-500">No capabilities granted yet.</p>
-          ) : (
-            <Card className="space-y-2">
-              {grantedList.map((p) => (
-                <div key={p.key} className="flex items-start gap-2 text-sm">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-                  <span className="text-slate-700">
-                    <span className="font-semibold">{p.area}</span> — {p.description}
-                  </span>
-                </div>
-              ))}
-            </Card>
-          )}
-        </div>
-      )}
-
-      <DeleteAccount />
     </Screen>
   )
-}
-
-// How many requests are waiting — refreshed each time the dashboard opens.
-function useNewRequestCount(orgId: string | null): number {
-  const [n, setN] = useState(0)
-  useEffect(() => {
-    if (!orgId) return
-    let alive = true
-    supabase
-      .rpc('count_new_requests', { p_org: orgId })
-      .then(({ data }) => alive && typeof data === 'number' && setN(data))
-    return () => {
-      alive = false
-    }
-  }, [orgId])
-  return n
-}
-
-// Appointments waiting for a staff confirmation.
-function usePendingBookingCount(orgId: string | null): number {
-  const [n, setN] = useState(0)
-  useEffect(() => {
-    if (!orgId) return
-    let alive = true
-    supabase
-      .rpc('count_pending_bookings', { p_org: orgId })
-      .then(({ data }) => alive && typeof data === 'number' && setN(data))
-    return () => {
-      alive = false
-    }
-  }, [orgId])
-  return n
-}
-
-// Approved posts whose day has come.
-function useReadyPostCount(orgId: string | null): number {
-  const [n, setN] = useState(0)
-  useEffect(() => {
-    if (!orgId) return
-    let alive = true
-    supabase
-      .rpc('count_ready_posts', { p_org: orgId })
-      .then(({ data }) => alive && typeof data === 'number' && setN(data))
-    return () => {
-      alive = false
-    }
-  }, [orgId])
-  return n
 }

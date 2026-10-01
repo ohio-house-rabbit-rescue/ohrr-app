@@ -75,6 +75,7 @@ import StaffResetPassword from './pages/StaffResetPassword'
 import StaffOnboard from './pages/StaffOnboard'
 import StaffJoin from './pages/StaffJoin'
 import StaffHome from './pages/StaffHome'
+import StaffGroup from './pages/StaffGroup'
 import HopShopManager from './pages/HopShopManager'
 import StaffTeam from './pages/StaffTeam'
 import StaffMyHours from './pages/StaffMyHours'
@@ -309,6 +310,7 @@ export default function App() {
           <Route path="sponsors/renewals" element={<Suspense fallback={null}><StaffSponsorRenewals /></Suspense>} />
           <Route path="bunny-help" element={<StaffBunnyHelp />} />
           {/* Your own name, photo, email and password — for everyone on the team */}
+          <Route path="g/:group" element={<StaffGroup />} />
           <Route path="account" element={<StaffAccount />} />
           <Route path="team" element={<StaffTeam />} />
           {/* Update 28: a staff member's own volunteer page, to log hours that aren't a shift */}

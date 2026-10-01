@@ -1,4 +1,3 @@
-import { useAllAccess } from '../lib/allAccess'
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
@@ -7,6 +6,7 @@ import ScrollToTop from './ScrollToTop'
 import BackButton from './BackButton'
 import { buildLabel } from '../data/version'
 import { levelInfo, useMyLevel } from '../lib/staffLevels'
+import { placeOf, useStaffTiles, type GroupKey } from '../features/staff/staffTiles'
 
 function roleLabel(role: string | undefined) {
   if (role === 'owner') return 'Owner'
@@ -16,8 +16,7 @@ function roleLabel(role: string | undefined) {
 }
 
 export default function StaffLayout() {
-  const { user, membership, can, capabilities, signOut } = useAuth()
-  const { allAccess } = useAllAccess()
+  const { user, membership, signOut } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -29,86 +28,24 @@ export default function StaffLayout() {
     navigate('/staff/signin', { replace: true })
   }
 
-  // The section menu. Adding a section later = one line here; the dropdown never
-  // overflows or needs a scrolling tab strip, however many sections there are.
-  // A counter volunteer (the till and the door, nothing else) sees only that.
-  const counterOnly = can('counter.use') && membership?.role !== 'owner' && membership?.role !== 'admin' && capabilities.size === 1
-  const canCounter = can('counter.use') || can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.inventory.update')
-  const navItems = [
-    { to: '/staff', label: 'Dashboard', end: true, show: !counterOnly },
-    // Everyone's own name, photo, email and password — near the top, easy to find.
-    { to: '/staff/account', label: 'My account', show: Boolean(membership) },
-    { to: '/staff/counter', label: 'Counter — sell, add items, door tickets', show: canCounter },
-    { to: '/staff/my-hours', label: 'My volunteer hours', show: myLevel.ready },
-    { to: '/staff/inbox', label: 'Inbox', show: can('inbox.manage') },
-    // Update 31: who asked for emails, and about what.
-    { to: '/staff/supporters', label: 'Supporters — the email list', show: can('supporters.view') },
-    // Update 32: a phone notification to everyone who asked for one topic.
-    { to: '/staff/notifications', label: 'Send a notification', show: can('notifications.send') },
-    { to: '/staff/share', label: 'Share kit', show: can('announcements.post') },
-    { to: '/staff/posts', label: 'Post queue', show: can('announcements.post') || can('social.publish') || can('social.approve') },
-    { to: '/staff/flyers', label: 'Flyers', show: can('announcements.post') },
-    { to: '/staff/outreach', label: 'Outreach letters', show: can('announcements.post') },
-    { to: '/staff/impact', label: 'Impact numbers', show: can('announcements.post') },
-    { to: '/staff/guardians', label: 'Rescue Rabbit Guardians', show: can('giving.guardians') },
-    { to: '/staff/wish-list', label: 'Wish list items', show: can('giving.wishlist') },
-    { to: '/staff/bookings', label: 'Bookings', show: can('bookings.manage') },
-    {
-      to: '/staff/catalog',
-      label: 'Add a donation',
-      show: can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update'),
-    },
-    {
-      to: '/staff/scan',
-      label: 'Scan an item',
-      show: can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update'),
-    },
-    {
-      to: '/staff/items',
-      label: 'Items',
-      show: can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update'),
-    },
-    {
-      to: '/staff/adopt',
-      label: 'Adoptable rabbits',
-      show:
-        can('adoptions.listings.create') ||
-        can('adoptions.listings.edit') ||
-        can('adoptions.status.change'),
-    },
-    { to: '/staff/hopshop', label: 'Hop Shop inventory', show: Boolean(membership) && !counterOnly },
-    { to: '/staff/announcements', label: 'Announcements', show: can('announcements.post') },
-    { to: '/staff/home-screen', label: 'Home screen cards', show: can('announcements.post') },
-    { to: '/staff/calls', label: 'Volunteer calls — needs, sign-ups, thanks', show: can('volunteers.shifts.manage') || can('bookings.manage') },
-    { to: '/staff/volunteers', label: 'Volunteers — roster & hours', show: can('volunteers.shifts.manage') || can('bookings.manage') },
-    { to: '/staff/volunteer', label: 'Volunteer opportunities', show: can('volunteers.shifts.manage') },
-    { to: '/staff/learn', label: 'Care guides & pages', show: can('content.education.edit') },
-    { to: '/staff/vets', label: 'Vet directory', show: can('content.education.edit') },
-    { to: '/staff/events', label: 'Events', show: can('events.bunfest.manage') },
-    { to: '/staff/bunfest', label: 'BunFest — schedule, vendors, rescues', show: can('events.bunfest.manage') },
-    { to: '/staff/tails', label: 'Happy Tails', show: can('content.education.edit') || can('inbox.manage') },
-    { to: '/staff/raffle', label: 'Silent Auction', show: can('events.bunfest.manage') },
-    { to: '/staff/auction-desk', label: 'Auction desk — close & charge, pickup, shipping', show: can('events.bunfest.manage') },
-    { to: '/staff/raffle-tickets', label: 'Raffle tickets', show: can('events.bunfest.manage') || can('counter.use') },
-    { to: '/staff/sponsors', label: 'Sponsors & partners', end: true, show: can('events.bunfest.manage') },
-    { to: '/staff/sponsors/renewals', label: 'Sponsor renewals — who to ask next', show: can('events.bunfest.manage') },
-    { to: '/staff/bunny-help', label: 'Bunny Help topics', show: can('content.education.edit') },
-    {
-      to: '/staff/team',
-      label: 'Team',
-      show: can('staff.invite') || can('staff.permissions.manage'),
-    },
-    { to: '/staff/activity', label: 'Activity', show: can('audit.view') },
-    { to: '/staff/features', label: 'Features — turn things on & off', show: allAccess },
-    { to: '/staff/details', label: 'OHRR details — hours, phone, address', show: can('settings.manage') },
-  ].filter((i) => i.show)
-
-  // Which section are we in (for the menu button label)? The longest match
-  // wins, so /staff/sponsors/renewals isn't labelled as /staff/sponsors.
-  const current =
-    navItems
-      .filter((i) => i.to !== '/staff' && pathname.startsWith(i.to))
-      .sort((a, b) => b.to.length - a.to.length)[0] ?? navItems.find((i) => i.to !== '/staff/account') ?? navItems[0]
+  // The section menu, short (OHRR, 2026-10-01): Dashboard, the Today row, then
+  // one line per group. The pages themselves live in features/staff/staffTiles.ts.
+  const { tiles, today, groups, counterOnly } = useStaffTiles()
+  const place = placeOf(pathname, tiles)
+  const navItems: { to: string; label: string; end?: boolean; group?: GroupKey }[] = [
+    ...(counterOnly ? [] : [{ to: '/staff', label: 'Dashboard', end: true }]),
+    ...today.map((t) => ({ to: t.to, label: t.title })),
+    ...groups.map((g) => ({ to: g.tiles.length === 1 ? g.tiles[0].to : `/staff/g/${g.key}`, label: g.title, group: g.key })),
+  ]
+  // The menu button says where you are: "Items and Hop Shop › Drop-offs and thank-yous".
+  const currentLabel =
+    pathname === '/staff'
+      ? 'Dashboard'
+      : place.tile
+        ? place.group
+          ? `${place.group.title} › ${place.tile.title}`
+          : place.tile.title
+        : (place.group?.title ?? 'Menu')
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -131,7 +68,8 @@ export default function StaffLayout() {
                 <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-blue text-white">
                   <Icon name="settings" size={20} />
                 </span>
-                <span className="min-w-0 leading-tight">
+                {/* Beside the Back button there's only room for the badge; the name shows on the dashboard. */}
+                <span className={`min-w-0 leading-tight ${pathname !== '/staff' ? 'hidden' : ''}`}>
                   <span className="block truncate font-display text-sm font-extrabold text-ink">OHRR Staff</span>
                   {membership && (
                     <span className="block text-[11px] font-semibold text-slate-400">
@@ -172,9 +110,9 @@ export default function StaffLayout() {
                 className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm font-bold text-ink transition hover:bg-slate-50"
                 aria-expanded={menuOpen}
               >
-                <span className="flex items-center gap-2">
-                  <Icon name="home" size={15} className="text-brand-blue" />
-                  {current?.label ?? 'Menu'}
+                <span className="flex min-w-0 items-center gap-2">
+                  <Icon name="home" size={15} className="shrink-0 text-brand-blue" />
+                  <span className="truncate">{currentLabel}</span>
                 </span>
                 <Icon
                   name="chevron"
@@ -203,8 +141,8 @@ export default function StaffLayout() {
                         onClick={() => setMenuOpen(false)}
                         className={({ isActive }) =>
                           [
-                            'block px-4 py-2.5 text-sm font-semibold transition',
-                            isActive
+                            'block min-h-[44px] px-4 py-3 text-[15px] font-semibold transition',
+                            isActive || (i.group && place.group?.key === i.group)
                               ? 'bg-brand-blue-50 text-brand-blue'
                               : 'text-slate-600 hover:bg-slate-50',
                           ].join(' ')
