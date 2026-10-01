@@ -286,7 +286,7 @@ export default function App() {
           <Route path="hopshop/reorder" element={<HopShopManager />} />
           <Route path="hopshop/suppliers" element={<HopShopManager />} />
           <Route path="hopshop/types" element={<HopShopManager />} />
-          <Route path="hopshop/labels" element={<Suspense fallback={null}><PrintLabels mode="shop" /></Suspense>} />
+          <Route path="hopshop/labels" element={<Suspense fallback={null}><PrintLabels key="shop" mode="shop" /></Suspense>} />
           <Route path="adopt" element={<StaffAdopt />} />
           <Route path="announcements" element={<StaffAnnouncements />} />
           <Route path="home-screen" element={<StaffHomeScreen />} />
@@ -343,7 +343,7 @@ export default function App() {
           <Route path="items/tags" element={<Navigate to="/staff/labels" replace />} />
           <Route path="items/photos" element={<Suspense fallback={null}><ItemPhotos /></Suspense>} />
           <Route path="catalog" element={<Suspense fallback={null}><CatalogFlow /></Suspense>} />
-          <Route path="labels" element={<Suspense fallback={null}><PrintLabels /></Suspense>} />
+          <Route path="labels" element={<Suspense fallback={null}><PrintLabels key="items" /></Suspense>} />
         </Route>
       </Route>
 

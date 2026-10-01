@@ -2,7 +2,7 @@
 // Hay, from vendor 101, that vendor's first hay item. A type can be renamed
 // any time; its letters can change only while no item uses it, so a printed
 // label never stops matching. Product types are update 41's `product_types`.
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import { errMessage } from '../../lib/supabase'
 import { Badge, btn, Card } from '../../components/ui'
 import { Icon } from '../../components/icons'
@@ -30,6 +30,12 @@ export function NewTypeForm({
   const [error, setError] = useState<string | null>(null)
   const taken = types.map((t) => t.code)
   const shownCode = ownCode ? code : suggestTypeCode(name, taken)
+  // Inside the product form, Enter here adds the type — it must not save the product.
+  const onEnter = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    void add()
+  }
 
   const add = async (e?: FormEvent) => {
     e?.preventDefault()
@@ -55,7 +61,7 @@ export function NewTypeForm({
       <div className="grid grid-cols-[1fr_6rem] gap-2">
         <label className="block text-sm font-semibold text-slate-700">
           New type
-          <input className={staffInput} value={name} onChange={(e) => setName(e.target.value)} placeholder="Bedding" />
+          <input className={staffInput} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={onEnter} placeholder="Bedding" />
         </label>
         <label className="block text-sm font-semibold text-slate-700">
           Letters
@@ -66,6 +72,7 @@ export function NewTypeForm({
               setOwnCode(true)
               setCode(letters(e.target.value))
             }}
+            onKeyDown={onEnter}
             placeholder="BED"
             autoCapitalize="characters"
             aria-label="Three letters for the SKU"
