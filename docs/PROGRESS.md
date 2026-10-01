@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-10-01 (FEATURE SWITCHES FOR FOUNDERS/DEVELOPERS + COVER PHOTO, PHOTO ORDER, GALLERIES — update 38 WRITTEN, NOT RUN; before that CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-10-01 (DONATION DETAILS — how many, price, condition, sort of thing, where it's kept; update 39 WRITTEN, NOT RUN; Hop Shop shelf empty because no active products, not a code fault; before that FEATURE SWITCHES FOR FOUNDERS/DEVELOPERS + COVER PHOTO, PHOTO ORDER, GALLERIES — update 38 RUN BY OHRR and checked live; before that CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,8 +19,35 @@
 
 ## Current state (at a glance)
 
+- **Donation details + Hop Shop shelf check, 2026-10-01 (app `66e626b`, website `b45bf82`; update 39 WRITTEN, NOT RUN).**
+  OHRR: "the hop shop inventory does not show anymore. also the donation items should have things like quantity and
+  possible price etc. … a few more details that the scanner person can enter."
+  - **Hop Shop:** not a code fault. `hopshop_public_products` answers `[]` for visitors, and it did before update 38 too
+    (the website helper saw the empty shelf then); the Hop Shop items switch reads ON. The public "On the shelf now" list
+    only shows **active** rows in `hopshop_products`, and there are none. Staff lists were not changed. OHRR was given a
+    one-line SQL check (products, active, on hand) and asked which screen they were looking at.
+  - **Donation details:** Catalog donations → What is it? now has **How many** (stepper, starts at 1) and **Price for
+    one** ("if it may be sold") on the screen, and a **More details** toggle (remembered per phone) with What is it worth,
+    Condition (New / Like new / Good / Fair), What sort of thing (recent + starter chips, or type), Where is it kept
+    (recent chips; **stays filled for the next item**, since a box usually goes to one bin) and Notes. Scan an item →
+    Details on a donation has the same; shop stock gets sort of thing + shelf. The details line ("3 of them · $5 each ·
+    Like new · Toys & chews · Kept: Bin 3") shows on the Saved screen, the item card and the items list. Sorting a
+    donation carries them: to the Hop Shop = price, stock count, sort of thing, shelf; to auction/raffle = worth, and the
+    condition is added to the notes. New `features/scan/DetailsFields.tsx`. Website Items page mirrors it (Add a donation
+    grid, edit panel, stock edit, list rows, Move to Hop Shop fills price + count); until update 39 runs the website's
+    edit panel shows a note instead of fields the database would drop.
+  - **Update 39** (`20261001140000_donation_details.sql`): `donation_items` gets quantity / price_cents / condition /
+    category / location; `condition_label()`; `tagged_item_json` returns them (stock: category + shelf);
+    `save_scanned_item` keeps them and carries them on a move (blank quantity keeps the old one — `greatest(1, null)` is
+    1 in Postgres, so it uses a `case`); `set_item_extras()`; `catalog_new_item` with the extra arguments (old 10-argument
+    version dropped); `catalog_suggestions()` (recent places and sorts). Before 39 runs: the catalog retries the old call,
+    the item is saved, and the Saved screen says the details need update 39.
+  - Tests: scratchpad `catalog_test.py` 35 checks (details sent, place carries over, pre-39 retry + note, Scan → Details
+    → `set_item_extras`), `switches_test.py` 21; the website helper's Playwright run (after and before 39, 1300×675 and
+    375×740). tsc, build, 231 checks pass. Nothing run against the live database.
+
 - **Feature switches for Founders and Developers + cover photo, photo order, galleries, 2026-10-01 (app `61be387` +
-  `07a9096`, website `6c13fd3` + `5ee03e9`, BunFest `a6e2aa1` + `ee94841`; update 38 WRITTEN, NOT RUN).** OHRR: choose the
+  `07a9096`, website `6c13fd3` + `5ee03e9`, BunFest `a6e2aa1` + `ee94841`; update 38 APPLIED and checked live 2026-10-01).** OHRR: choose the
   "hero shot" like Instagram, see all four photos in order when an item opens, reorder saved photos; and "at the developer
   and founder levels … turn on and off major features … like the silent auction … then when we are ready … visible".
   - **Photos:** the first photo is the **Cover**. Catalog strip: tap a photo to make it the cover. Photos page: Move earlier
