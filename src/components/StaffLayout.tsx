@@ -1,12 +1,11 @@
-import { useState } from 'react'
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { Icon } from './icons'
 import ScrollToTop from './ScrollToTop'
 import BackButton from './BackButton'
 import { buildLabel } from '../data/version'
 import { levelInfo, useMyLevel } from '../lib/staffLevels'
-import { placeOf, useStaffTiles, type GroupKey } from '../features/staff/staffTiles'
+import { placeOf, useStaffTiles } from '../features/staff/staffTiles'
 
 function roleLabel(role: string | undefined) {
   if (role === 'owner') return 'Owner'
@@ -19,7 +18,6 @@ export default function StaffLayout() {
   const { user, membership, signOut } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const [menuOpen, setMenuOpen] = useState(false)
   // Update 28: show the level (Volunteer 1 … Developer from update 30) once it's in.
   const myLevel = useMyLevel(user?.id, membership?.orgId)
 
@@ -28,24 +26,11 @@ export default function StaffLayout() {
     navigate('/staff/signin', { replace: true })
   }
 
-  // The section menu, short (OHRR, 2026-10-01): Dashboard, the Today row, then
-  // one line per group. The pages themselves live in features/staff/staffTiles.ts.
-  const { tiles, today, groups, counterOnly } = useStaffTiles()
+  // Where you are, as a path back (OHRR, 2026-10-01: the home button should
+  // take you home, not open a list): Staff › Items and Hop Shop › Drop-offs.
+  // The grouped dashboard is the menu. Pages live in features/staff/staffTiles.ts.
+  const { tiles } = useStaffTiles()
   const place = placeOf(pathname, tiles)
-  const navItems: { to: string; label: string; end?: boolean; group?: GroupKey }[] = [
-    ...(counterOnly ? [] : [{ to: '/staff', label: 'Dashboard', end: true }]),
-    ...today.map((t) => ({ to: t.to, label: t.title })),
-    ...groups.map((g) => ({ to: g.tiles.length === 1 ? g.tiles[0].to : `/staff/g/${g.key}`, label: g.title, group: g.key })),
-  ]
-  // The menu button says where you are: "Items and Hop Shop › Drop-offs and thank-yous".
-  const currentLabel =
-    pathname === '/staff'
-      ? 'Dashboard'
-      : place.tile
-        ? place.group
-          ? `${place.group.title} › ${place.tile.title}`
-          : place.tile.title
-        : (place.group?.title ?? 'Menu')
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -64,7 +49,7 @@ export default function StaffLayout() {
                   className="border border-slate-200 bg-white px-3 text-slate-700 hover:bg-slate-50"
                 />
               ) : null}
-              <Link to="/staff" className="flex min-w-0 items-center gap-2" onClick={() => setMenuOpen(false)}>
+              <Link to="/staff" className="flex min-w-0 items-center gap-2">
                 <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-blue text-white">
                   <Icon name="settings" size={20} />
                 </span>
@@ -84,7 +69,7 @@ export default function StaffLayout() {
               {/* Always-available way back to the public app (kept signed in). */}
               <Link
                 to="/"
-                onClick={() => setMenuOpen(false)}
+               
                 className="inline-flex min-h-10 items-center gap-1.5 rounded-full border-2 border-brand-blue/50 px-3 text-sm font-bold text-brand-blue transition hover:bg-brand-blue-50"
               >
                 <Icon name="home" size={16} /> App
@@ -101,60 +86,33 @@ export default function StaffLayout() {
             </div>
           </div>
 
-          {/* Section menu — one compact line; opens a dropdown of all sections */}
-          {membership && (
-            <div className="relative border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setMenuOpen((o) => !o)}
-                className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm font-bold text-ink transition hover:bg-slate-50"
-                aria-expanded={menuOpen}
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <Icon name="home" size={15} className="shrink-0 text-brand-blue" />
-                  <span className="truncate">{currentLabel}</span>
-                </span>
-                <Icon
-                  name="chevron"
-                  size={16}
-                  className={`text-slate-400 transition-transform ${
-                    menuOpen ? '-rotate-90' : 'rotate-90'
-                  }`}
-                />
-              </button>
-
-              {menuOpen && (
+          {/* The way back home: Staff, then this page's group (not on the dashboard itself).
+              The page's own title is just below, so it isn't repeated here. */}
+          {membership && pathname !== '/staff' && (
+            <nav aria-label="Where you are" className="flex min-w-0 items-center gap-0.5 border-t border-slate-100 px-2 text-[15px] font-bold">
+              <Link to="/staff" className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-lg px-2 text-brand-blue transition hover:bg-slate-50">
+                <Icon name="home" size={17} /> Staff
+              </Link>
+              {place.group && (
                 <>
-                  {/* backdrop to close on outside tap */}
-                  <button
-                    type="button"
-                    aria-label="Close menu"
-                    onClick={() => setMenuOpen(false)}
-                    className="fixed inset-0 z-30 cursor-default"
-                  />
-                  <nav className="absolute left-0 right-0 top-full z-40 max-h-[70vh] overflow-y-auto border-b border-slate-200 bg-white py-1 shadow-lg">
-                    {navItems.map((i) => (
-                      <NavLink
-                        key={i.to}
-                        to={i.to}
-                        end={i.end}
-                        onClick={() => setMenuOpen(false)}
-                        className={({ isActive }) =>
-                          [
-                            'block min-h-[44px] px-4 py-3 text-[15px] font-semibold transition',
-                            isActive || (i.group && place.group?.key === i.group)
-                              ? 'bg-brand-blue-50 text-brand-blue'
-                              : 'text-slate-600 hover:bg-slate-50',
-                          ].join(' ')
-                        }
-                      >
-                        {i.label}
-                      </NavLink>
-                    ))}
-                  </nav>
+                  <span aria-hidden="true" className="shrink-0 text-slate-300">
+                    ›
+                  </span>
+                  {place.tile ? (
+                    <Link
+                      to={`/staff/g/${place.group.key}`}
+                      className="inline-flex min-h-[44px] min-w-0 items-center rounded-lg px-2 text-brand-blue transition hover:bg-slate-50"
+                    >
+                      <span className="truncate">{place.group.title}</span>
+                    </Link>
+                  ) : (
+                    <span aria-current="page" className="min-w-0 truncate px-2 text-ink">
+                      {place.group.title}
+                    </span>
+                  )}
                 </>
               )}
-            </div>
+            </nav>
           )}
         </header>
 
