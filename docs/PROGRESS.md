@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-10-01 (SCAN AN ITEM ON THE WEBSITE for laptop users — type or USB-scan a code, read it from a webcam or a photo, drag photos onto the item forms; before that STAFF PORTAL IN GROUPS — a Today row + 8 groups on one phone screen; the home bar takes you home, no drop-down list; before that TWO WAYS TO ADD — Add a donation + Hop Shop inventory; DONATION INTAKE: drop-offs, thank-you letters, where it's headed, value each/for all, split, baskets, monthly report — update 40 RUN BY OHRR and checked live, RUN-THIS has nothing to run, next is 41; staff portal grouping proposed; before that STAFF DASHBOARD CRASH FIXED — blank on a fresh open since 61be387; "ADD HOP SHOP STOCK" door and "Hop Shop inventory" on the app and website; before that DONATION DETAILS — how many, price, condition, sort of thing, where it's kept; update 39 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 40; Hop Shop shelf empty because no active products, not a code fault; before that FEATURE SWITCHES FOR FOUNDERS/DEVELOPERS + COVER PHOTO, PHOTO ORDER, GALLERIES — update 38 RUN BY OHRR and checked live; before that CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-10-01 (ITEM NUMBERS WITH A SYSTEM — donations DON-00001, Hop Shop SKUs HAY-101-001 (type-vendor-item), product types, vendor numbers, supplier shipping, Hop Shop price labels; update 41 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 42; before that SCAN AN ITEM ON THE WEBSITE for laptop users — type or USB-scan a code, read it from a webcam or a photo, drag photos onto the item forms; before that STAFF PORTAL IN GROUPS — a Today row + 8 groups on one phone screen; the home bar takes you home, no drop-down list; before that TWO WAYS TO ADD — Add a donation + Hop Shop inventory; DONATION INTAKE: drop-offs, thank-you letters, where it's headed, value each/for all, split, baskets, monthly report — update 40 RUN BY OHRR and checked live, RUN-THIS has nothing to run, next is 41; staff portal grouping proposed; before that STAFF DASHBOARD CRASH FIXED — blank on a fresh open since 61be387; "ADD HOP SHOP STOCK" door and "Hop Shop inventory" on the app and website; before that DONATION DETAILS — how many, price, condition, sort of thing, where it's kept; update 39 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 40; Hop Shop shelf empty because no active products, not a code fault; before that FEATURE SWITCHES FOR FOUNDERS/DEVELOPERS + COVER PHOTO, PHOTO ORDER, GALLERIES — update 38 RUN BY OHRR and checked live; before that CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,38 @@
 ---
 
 ## Current state (at a glance)
+
+- **Item numbers with a system, Hop Shop labels, shipping, 2026-10-01 (app `cc046bf`; update 41 APPLIED and checked live 2026-10-01).**
+  OHRR: "on the hop shop items this looks really good. we will need the label printing capability like we have on the
+  donations. also for the sku lets make them very different than the donations so they have a system behind them" ·
+  "on the supplier side there should be a shipping section … if there is a minimum order for free shipping" · "the
+  donations can be a systematic order like DON-000001 … the vendors could be attached to a vendor number which can be
+  attached to a product type" · "no other labels or codes are in use yet. you can delete the old or update with the new
+  format." Chosen: DON-00001 and TYPE-VENDOR-ITEM.
+  - **Numbers:** donations (and the auction/raffle items, splits and baskets they become) get the next DON number from
+    the database. Hop Shop SKU = type letters (Types: HAY PEL TRT TOY LIT HSE GRM GFT OTH, staff add more) + the
+    supplier's vendor number (101, 102 …; 000 = no supplier) + an item number: HAY-101-001. The SKU follows the type
+    and supplier until its label is printed, then stays ("Give it a new … SKU anyway" on purpose). A packet barcode is
+    a second code; a donation sorted into the shop keeps its DON number as a second code. Existing items renumbered;
+    `OHRR-XXXXX` codes, "Give it a new code" and the blank tag sheets are gone (`/staff/items/tags` → labels).
+  - **Hop Shop inventory:** type chips (+ New type) in place of the free-text category, the SKU preview, Barcode on the
+    packet; SKU, barcode and "Came in as DON-…" on cards; a Labels button per card and in the header; "Added X as
+    SKU. Print its labels →"; a **Types** tab. **Reorder:** Subtotal, Shipping, Total, "Add $X more for free
+    shipping"; Arrived → "Print N labels". **Suppliers:** vendor number; a **Shipping** section (always free / flat
+    rate per order / it varies / we pick it up; free shipping from $X) with a one-line summary.
+  - **Labels:** `/staff/hopshop/labels` price tags (OHRR HOP SHOP, name, price, barcode, SKU; price on/off; one per item
+    in stock; `?code=&copies=`); donation labels leave shop items out and print the full DON number. A shop label's QR
+    opens the public Hop Shop for shoppers, Scan for staff. Scan's "No label on it yet?" → Add a donation / Add to Hop
+    Shop inventory; the Saved screen offers "Print its label".
+  - **Database update 41** (`supabase/migrations/20261001180000_item_numbers_and_shipping.sql`, 8 chat parts): code_counters,
+    product_types, suppliers.vendor_no + shipping, hopshop_products.type_id/barcode, item_tags.is_alias; new
+    normalize_item_code, new_item_code, make_product_sku, refresh_product_sku; save_product (+ p_type_id, p_barcode,
+    p_new_sku; old p_sku still accepted), save_scanned_item, catalog_new_item, set_item_extras, tagged_item_json,
+    list_tagged_items, counter_add_item, counter_link_code, list/save/delete_product_type. Checked live over REST.
+  - Tests: the whole migration history + 41 run in PGlite (in-memory Postgres) with old-style data first — 71
+    checks (renumbering, SKUs following until printed, barcodes, sort into the shop and back, splits, baskets, the till,
+    running 41 twice); browser `app41/app41_test.py` 75 checks + `tag_landing_test.py`; earlier suites moved to DON
+    numbers and passing (catalog 35, intake40 45, app40 73, groups 25, switches 21). tsc, build, 231 checks, hooks scan.
 
 - **Scan an item on the website, for laptops, 2026-10-01 (website `8628706`).**
   OHRR: "on the web version for the laptop users i think they still need the option to scan and input like on the
