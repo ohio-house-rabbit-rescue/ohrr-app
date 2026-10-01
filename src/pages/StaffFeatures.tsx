@@ -1,5 +1,6 @@
-// Staff → Features: the switches an owner or admin uses to turn parts of the
-// app on and off for everyone.
+// Staff → Features: the switches a Founder or Developer uses to turn parts of
+// the app, the website and the BunFest site on and off for everyone. Only
+// those two levels may flip one (the database refuses anyone else, update 38).
 //
 // This used to be "Settings → Test features", which said neither what it was
 // for nor who could use it. The OHRR details (hours, phone, address) that
@@ -8,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { useAllAccess } from '../lib/allAccess'
 import { Badge, Card, Screen, SectionLabel } from '../components/ui'
 import { Icon } from '../components/icons'
 import { Spinner, FormError } from '../components/staffui'
@@ -40,7 +42,7 @@ function Switch({ on, disabled, label, onChange }: { on: boolean; disabled?: boo
 export default function StaffFeatures() {
   const { user, membership, can } = useAuth()
   const orgId = membership?.orgId ?? ''
-  const allowed = can('settings.manage')
+  const { allAccess: allowed } = useAllAccess()
 
   const [values, setValues] = useState<Record<string, Json>>({})
   const [loading, setLoading] = useState(true)
@@ -84,8 +86,8 @@ export default function StaffFeatures() {
         <h1 className="font-display text-2xl font-black text-ink">Features</h1>
         <Card className="border-slate-200 bg-slate-50/80">
           <p className="text-sm leading-relaxed text-slate-600">
-            Only an owner or admin can turn features on and off. Ask one of them for the “Change app settings” access if
-            you need it.
+            Only a Founder or Developer can switch features on and off. Ask one of them if something should be shown or
+            hidden.
           </p>
         </Card>
       </Screen>
@@ -97,8 +99,9 @@ export default function StaffFeatures() {
       <div className="pt-1">
         <h1 className="font-display text-2xl font-black text-ink">Features</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Turn parts of the app on and off for everyone. A change takes effect the next time someone opens the app — no
-          new version needed.
+          Turn parts of the app, the website and the BunFest site on and off. Switched off, a feature disappears for
+          visitors; signed-in staff still see it, marked “Hidden from the public”, so it can be got ready first. A change
+          shows the next time a page opens — no new version needed.
         </p>
       </div>
 

@@ -314,6 +314,8 @@ export type Database = {
           donated_by: string | null
           value_cents: number | null
           photo_url: string | null
+          /** Update 37: all the photos, cover first. */
+          photo_urls?: string[] | null
           session: string
           status: string
           is_published: boolean
@@ -344,6 +346,7 @@ export type Database = {
           donated_by?: string | null
           value_cents?: number | null
           photo_url?: string | null
+          photo_urls?: string[] | null
           session?: string
           status?: string
           is_published?: boolean
@@ -371,6 +374,7 @@ export type Database = {
           donated_by?: string | null
           value_cents?: number | null
           photo_url?: string | null
+          photo_urls?: string[] | null
           session?: string
           status?: string
           is_published?: boolean
@@ -2762,7 +2766,7 @@ export type Database = {
       // Public Hop Shop shelf (supabase/migrations/20260921160000_public_shop.sql)
       hopshop_public_products: {
         Args: Record<string, never>
-        Returns: { id: string; name: string; description: string | null; price_cents: number; photo_url: string | null; in_stock: boolean }[]
+        Returns: { id: string; name: string; description: string | null; price_cents: number; photo_url: string | null; photo_urls?: string[] | null; in_stock: boolean }[]
       }
       // Weekly booking schedule (supabase/migrations/20260922100000_booking_schedule.sql)
       fill_booking_slots: { Args: { p_type_id: string; p_force?: boolean }; Returns: number }
@@ -3072,6 +3076,10 @@ export type Database = {
       set_invite_level: { Args: { p_code: string; p_level: StaffLevel | null }; Returns: undefined }
       /** The signed-in person's level, or null if they aren't an active member. */
       my_level: { Args: { p_org: string }; Returns: StaffLevel | null }
+      /** Update 38: is a feature switch on (a missing row = p_default)? */
+      feature_on: { Args: { p_org: string; p_key: string; p_default?: boolean }; Returns: boolean }
+      /** Update 38: switches (keys ending _enabled) are for Founders and Developers only. */
+      can_set_app_setting: { Args: { p_org: string; p_key: string }; Returns: boolean }
       can_manage_member: { Args: { p_membership: string }; Returns: boolean }
       /** The signed-in staff member's own volunteer access_token — the record is made the first time. */
       my_staff_volunteer_page: { Args: { p_org: string }; Returns: string }

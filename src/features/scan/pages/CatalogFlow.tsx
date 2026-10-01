@@ -531,7 +531,15 @@ export default function CatalogFlow() {
             <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Photos of the item">
               {shots.map((s, i) => (
                 <div key={s.key} className="relative shrink-0">
-                  <img src={s.preview} alt="" className={`h-24 w-24 rounded-2xl object-cover ${i === 0 ? 'ring-2 ring-brand-blue' : ''}`} />
+                  {/* Tap a photo to make it the cover (like choosing a cover on Instagram) */}
+                  <button
+                    type="button"
+                    onClick={() => makeMain(s.key)}
+                    aria-label={i === 0 ? `Photo ${i + 1}, the cover` : `Make photo ${i + 1} the cover`}
+                    className="block"
+                  >
+                    <img src={s.preview} alt="" className={`h-24 w-24 rounded-2xl object-cover ${i === 0 ? 'ring-[3px] ring-brand-blue' : ''}`} />
+                  </button>
                   <button
                     type="button"
                     onClick={() => removePhoto(s.key)}
@@ -540,12 +548,8 @@ export default function CatalogFlow() {
                   >
                     <Icon name="x" size={16} />
                   </button>
-                  {i === 0 ? (
-                    <span className="absolute bottom-1 left-1 rounded-full bg-brand-blue px-1.5 py-0.5 text-[11px] font-extrabold uppercase text-white">Main</span>
-                  ) : (
-                    <button type="button" onClick={() => makeMain(s.key)} className="absolute bottom-1 left-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[11px] font-extrabold text-brand-blue">
-                      Make main
-                    </button>
+                  {i === 0 && (
+                    <span className="pointer-events-none absolute bottom-1 left-1 rounded-full bg-brand-blue px-1.5 py-0.5 text-[11px] font-extrabold uppercase text-white">Cover</span>
                   )}
                   {s.state === 'failed' && <span className="absolute inset-x-0 top-1 text-center text-[11px] font-extrabold text-red-700">not saved</span>}
                 </div>
@@ -569,6 +573,7 @@ export default function CatalogFlow() {
               <button type="button" onClick={() => openCamera('library')} disabled={full} className="min-h-[44px] text-[15px] font-bold text-slate-600 disabled:opacity-40">
                 Choose from my photos
               </button>
+              {shots.length > 1 && <span className="text-sm text-slate-500">Tap a photo to make it the cover.</span>}
               {full && <span className="text-sm text-slate-500">{MAX_ITEM_PHOTOS} photos is the most.</span>}
               {!full && uploading > 0 && <span className="text-sm text-slate-500">Saving in the background…</span>}
               {!full && uploading === 0 && failed === 0 && shots.length > 0 && <span className="text-sm text-green-700">Photos saved.</span>}

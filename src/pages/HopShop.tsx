@@ -7,11 +7,17 @@ import { mapsUrl } from '../lib/events'
 import { PageHeader, Screen, Card, SectionLabel } from '../components/ui'
 import { Icon } from '../components/icons'
 import PresentedBy from '../features/sponsors/PresentedBy'
+import { useState } from 'react'
+import PhotoGallery, { photoList } from '../components/PhotoGallery'
+import { HiddenFromPublic, useFeature } from '../features/settings/FeatureGate'
+import { HOP_SHOP_ITEMS_FLAG } from '../features/settings/features'
 
 export default function HopShop() {
   const org = useOrgProfile()
   const live = useHopShopProducts()
   const inStock = live ?? []
+  const shelf = useFeature(HOP_SHOP_ITEMS_FLAG)
+  const [opened, setOpened] = useState<string | null>(null)
 
   return (
     <>
@@ -55,9 +61,10 @@ export default function HopShop() {
         </Card>
 
         {/* What staff have scanned onto the shelf (hopshop_public_products) */}
-        {inStock.length > 0 && (
+        {shelf.show && inStock.length > 0 && (
           <section className="space-y-2.5">
             <SectionLabel>On the shelf now</SectionLabel>
+            {shelf.preview && <HiddenFromPublic />}
             <p className="px-1 text-xs text-slate-500">Buy at the Adoption Center counter. Counts change as things sell.</p>
             <div className="grid grid-cols-1 gap-3">
               {inStock.map((p) => (
@@ -78,6 +85,21 @@ export default function HopShop() {
                     </div>
                     {p.description && <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{p.description}</p>}
                     {!p.in_stock && <p className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">Sold out — ask at the counter</p>}
+                    {photoList(p).length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setOpened(opened === p.id ? null : p.id)}
+                        aria-expanded={opened === p.id}
+                        className="mt-1 inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-brand-blue"
+                      >
+                        <Icon name="camera" size={15} /> {opened === p.id ? 'Hide the photos' : `See all ${photoList(p).length} photos`}
+                      </button>
+                    )}
+                    {opened === p.id && (
+                      <div className="mt-2 overflow-hidden rounded-xl">
+                        <PhotoGallery photos={photoList(p)} alt={p.name} />
+                      </div>
+                    )}
                   </div>
                 </Card>
               ))}

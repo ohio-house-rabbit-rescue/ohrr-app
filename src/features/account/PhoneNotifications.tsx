@@ -28,6 +28,8 @@ import {
   turnOffPush,
   turnOnPush,
 } from './push'
+import { HiddenFromPublic, useFeature } from '../settings/FeatureGate'
+import { PHONE_NOTIFICATIONS_FLAG } from '../settings/features'
 
 type State =
   | { kind: 'loading' | 'native' | 'home-screen' | 'unsupported' | 'missing' | 'not-ready' | 'denied' | 'error' }
@@ -37,7 +39,19 @@ const NATIVE_NOTE =
   'Notifications when the app is closed come with the app-store version. For now, reminders you set on this phone still work.'
 const HOME_SCREEN_NOTE = 'On iPhone: tap Share → Add to Home Screen, open OHRR from there, then turn this on.'
 
+/** Behind the Phone notifications switch (Staff → Features); staff see it with a note. */
 export function PhoneNotificationsSection({ signedIn }: { signedIn: boolean }) {
+  const f = useFeature(PHONE_NOTIFICATIONS_FLAG)
+  if (f.loading || !f.show) return null
+  return (
+    <>
+      {f.preview && <HiddenFromPublic className="mb-2" />}
+      <PhoneNotificationsInner signedIn={signedIn} />
+    </>
+  )
+}
+
+function PhoneNotificationsInner({ signedIn }: { signedIn: boolean }) {
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [topics, setTopics] = useState<PushTopic[]>(defaultTopics)
   const [busy, setBusy] = useState(false)
@@ -215,6 +229,13 @@ export function PhoneNotificationsSection({ signedIn }: { signedIn: boolean }) {
  * volunteer calls; the rest is in My OHRR.
  */
 export function NotificationsPrompt({ className = '' }: { className?: string }) {
+  const f = useFeature(PHONE_NOTIFICATIONS_FLAG)
+  // Only when the switch is really on — staff previews don't need the offer.
+  if (f.loading || !f.on) return null
+  return <NotificationsPromptInner className={className} />
+}
+
+function NotificationsPromptInner({ className = '' }: { className?: string }) {
   const [show, setShow] = useState(false)
   const [phase, setPhase] = useState<'ask' | 'busy' | 'on' | 'denied' | 'error'>('ask')
   const [error, setError] = useState('')

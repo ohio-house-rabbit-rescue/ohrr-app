@@ -137,26 +137,47 @@ export default function ItemPhotos() {
                 </div>
               ) : (
                 <ul className="grid grid-cols-2 gap-3">
-                  {photos.map((url, i) => (
-                    <li key={url} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                      <img src={url} alt="" className="aspect-square w-full object-cover" />
-                      <div className="flex items-center justify-between gap-1 px-2 py-1.5">
-                        {i === 0 ? (
-                          <span className="rounded-full bg-brand-blue-50 px-2 py-1 text-xs font-extrabold uppercase tracking-wide text-brand-blue">Main</span>
-                        ) : (
-                          <button type="button" disabled={!!busy} onClick={() => void apply([url, ...photos.filter((u) => u !== url)], 'Making it the main photo…')} className="min-h-[44px] px-1 text-sm font-bold text-brand-blue">
-                            Make main
+                  {photos.map((url, i) => {
+                    const move = (to: number) => {
+                      const next = [...photos]
+                      next.splice(i, 1)
+                      next.splice(to, 0, url)
+                      void apply(next, 'Saving the order…')
+                    }
+                    return (
+                      <li key={url} className={`overflow-hidden rounded-2xl border bg-white ${i === 0 ? 'border-brand-blue ring-2 ring-brand-blue' : 'border-slate-200'}`}>
+                        <div className="relative">
+                          <img src={url} alt={`Photo ${i + 1}`} className="aspect-square w-full object-cover" />
+                          {i === 0 && (
+                            <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-brand-blue px-2 py-1 text-xs font-extrabold uppercase tracking-wide text-white">
+                              <Icon name="star" size={12} /> Cover
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 p-1.5">
+                          <button type="button" disabled={!!busy || i === 0} onClick={() => move(i - 1)} aria-label={`Move photo ${i + 1} earlier`} className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-slate-100 text-ink disabled:opacity-30">
+                            <Icon name="arrowLeft" size={20} />
                           </button>
-                        )}
-                        <button type="button" disabled={!!busy} onClick={() => void apply(photos.filter((u) => u !== url), 'Removing the photo…')} className="min-h-[44px] px-1 text-sm font-bold text-red-700" aria-label={`Remove photo ${i + 1}`}>
-                          Remove
-                        </button>
-                      </div>
-                    </li>
-                  ))}
+                          <button type="button" disabled={!!busy || i === photos.length - 1} onClick={() => move(i + 1)} aria-label={`Move photo ${i + 1} later`} className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-slate-100 text-ink disabled:opacity-30">
+                            <Icon name="arrowLeft" size={20} className="rotate-180" />
+                          </button>
+                          {i === 0 ? (
+                            <span className="inline-flex min-h-[44px] items-center justify-center text-sm font-bold text-brand-blue">The cover</span>
+                          ) : (
+                            <button type="button" disabled={!!busy} onClick={() => move(0)} className="min-h-[44px] rounded-xl text-sm font-bold text-brand-blue">
+                              Make cover
+                            </button>
+                          )}
+                          <button type="button" disabled={!!busy} onClick={() => void apply(photos.filter((u) => u !== url), 'Removing the photo…')} className="min-h-[44px] rounded-xl text-sm font-bold text-red-700" aria-label={`Remove photo ${i + 1}`}>
+                            Remove
+                          </button>
+                        </div>
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
-              <p className="text-sm text-slate-500">Up to {MAX_ITEM_PHOTOS} photos. The main one goes on labels, lists and the public pages.</p>
+              <p className="text-sm text-slate-500">Up to {MAX_ITEM_PHOTOS} photos, shown in this order. The cover shows in the catalog, on labels and on the public pages. Use the arrows to change the order.</p>
             </>
           )}
         </div>

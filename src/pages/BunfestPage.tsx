@@ -8,9 +8,12 @@ import { RaffleTickets } from '../components/RaffleTickets'
 import { RafflePrizes } from '../features/raffle/RafflePrizes'
 import { useAuctionSettings } from '../features/raffle/useRaffleItems'
 import { Icon } from '../components/icons'
+import { useFeature } from '../features/settings/FeatureGate'
+import { SILENT_AUCTION_FLAG } from '../features/settings/features'
 
 export default function BunfestPage() {
   const { id } = useParams()
+  const auctionSwitch = useFeature(SILENT_AUCTION_FLAG)
   // This year's copy, prices and times — edited in Staff → BunFest → Pages.
   const { page, loading } = useBunfestPage(id)
   // Raffle page only: staff-entered raffle details + ticket pricing (auction_settings).
@@ -152,11 +155,12 @@ export default function BunfestPage() {
         )}
 
         {/* Related in-app links */}
-        {p.related && p.related.length > 0 && (
+        {/* A switched-off auction leaves no links behind */}
+        {p.related && p.related.filter((r) => auctionSwitch.show || !r.to.startsWith('/bunfest/auction')).length > 0 && (
           <section className="space-y-2.5">
             <SectionLabel>{p.relatedLabel ?? 'Related'}</SectionLabel>
             <div className="space-y-2">
-              {p.related.map((r) => (
+              {p.related.filter((r) => auctionSwitch.show || !r.to.startsWith('/bunfest/auction')).map((r) => (
                 <Link
                   key={r.to}
                   to={r.to}

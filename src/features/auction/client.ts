@@ -39,6 +39,8 @@ export interface AuctionItem {
   donated_by: string | null
   value_cents: number | null
   photo_url: string | null
+  /** All its photos, cover first (update 38; missing before it). */
+  photo_urls?: string[] | null
   session: Session
   status: 'available' | 'won'
   won_kind: SaleKind | null
@@ -72,6 +74,8 @@ export interface AuctionSettings {
 
 export interface Catalog {
   now: string
+  /** The Silent Auction switch (update 38; missing before it = on). */
+  enabled?: boolean
   settings: AuctionSettings | null
   items: AuctionItem[]
 }

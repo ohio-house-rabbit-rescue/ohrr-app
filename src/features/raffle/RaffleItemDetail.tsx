@@ -10,6 +10,7 @@ import { Screen, Card, Badge, btn } from '../../components/ui'
 import { Icon } from '../../components/icons'
 import ShareButton, { appLink } from '../../components/ShareButton'
 import { RafflePhoto } from './RafflePhoto'
+import PhotoGallery, { photoList } from '../../components/PhotoGallery'
 import { SessionBadge, soldLabel } from './RaffleCatalog'
 import { formatValue } from './types'
 import { useCatalogItem } from '../auction/useAuction'
@@ -49,14 +50,18 @@ export default function RaffleItemDetail() {
     <div>
       {/* Photo header with an in-app back button */}
       <div className="relative">
-        <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100">
-          <RafflePhoto
-            title={item.title}
-            photo={item.photo_url}
-            initialClassName="text-7xl"
-            className={sold ? 'opacity-70' : ''}
-          />
-        </div>
+        {photoList(item).length > 1 ? (
+          <PhotoGallery photos={photoList(item)} alt={item.title} imgClassName={sold ? 'opacity-70' : ''} />
+        ) : (
+          <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100">
+            <RafflePhoto
+              title={item.title}
+              photo={item.photo_url}
+              initialClassName="text-7xl"
+              className={sold ? 'opacity-70' : ''}
+            />
+          </div>
+        )}
         <Link
           to="/bunfest/auction"
           aria-label="Back to the Silent Auction"

@@ -1,3 +1,4 @@
+import { useAllAccess } from '../lib/allAccess'
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -63,6 +64,7 @@ export default function StaffHome() {
   const canManageTeam = can('staff.invite') || can('staff.permissions.manage')
   const canViewActivity = can('audit.view')
   const canManageSettings = can('settings.manage')
+  const { allAccess } = useAllAccess()
   const canSupporters = can('supporters.view')
   const canNotify = can('notifications.send')
   const canWishList = can('giving.wishlist')
@@ -440,11 +442,11 @@ export default function StaffHome() {
               tone="blue"
             />
           )}
-          {canManageSettings && (
+          {allAccess && (
             <ActionCard
               to="/staff/features"
               title="Features"
-              subtitle="Turn parts of the app on and off for everyone"
+              subtitle="Show or hide whole features, like the Silent Auction"
               icon="settings"
               tone="blue"
             />

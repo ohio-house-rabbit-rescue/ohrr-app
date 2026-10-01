@@ -40,6 +40,7 @@ export function rowToItem(r: ItemRow, s: SettingsRow | null): AuctionItem {
     donated_by: r.donated_by,
     value_cents: r.value_cents,
     photo_url: r.photo_url,
+    photo_urls: r.photo_urls ?? null,
     session: (r.session as Session) ?? 'all-day',
     status: r.status === 'won' ? 'won' : 'available',
     won_kind: r.won_kind ?? null,

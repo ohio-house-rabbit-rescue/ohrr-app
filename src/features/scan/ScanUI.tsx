@@ -4,6 +4,7 @@
 import type { ReactNode } from 'react'
 import { Icon, type IconName } from '../../components/icons'
 import { itemPhotos } from './api'
+import PhotoGallery from '../../components/PhotoGallery'
 import { KIND_META, formatMoney, statusLabel, type TaggedItem } from './types'
 
 type BigTone = 'orange' | 'blue' | 'outline' | 'plain' | 'danger'
@@ -149,20 +150,11 @@ export function ItemCard({ item, big = false }: { item: TaggedItem; big?: boolea
   const money = item.kind === 'stock' ? formatMoney(item.price_cents) : formatMoney(item.value_cents)
   return (
     <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-      {item.photo_url ? (
-        <img src={item.photo_url} alt="" className={`w-full object-cover ${big ? 'h-56' : 'h-40'}`} />
+      {itemPhotos(item).length > 0 ? (
+        <PhotoGallery photos={itemPhotos(item)} alt={item.title} frameClassName={big ? 'h-56' : 'h-40'} />
       ) : (
         <div className={`flex items-center justify-center ${big ? 'h-40' : 'h-28'} ${tile}`}>
           <Icon name={m.icon} size={48} />
-        </div>
-      )}
-      {itemPhotos(item).length > 1 && (
-        <div className="flex gap-1.5 px-3 pt-3" aria-label="More photos">
-          {itemPhotos(item)
-            .slice(1)
-            .map((u) => (
-              <img key={u} src={u} alt="" className="h-14 w-14 rounded-lg object-cover" loading="lazy" />
-            ))}
         </div>
       )}
       <div className="space-y-2 p-4">

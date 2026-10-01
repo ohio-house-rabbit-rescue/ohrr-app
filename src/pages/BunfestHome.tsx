@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom'
 import { event } from '../data/event'
 import { useBunfestFeatures } from '../features/bunfest/thisYear'
 import { BUNFEST_HUB } from '../data/content'
+import { useFeature } from '../features/settings/FeatureGate'
+import { SILENT_AUCTION_FLAG } from '../features/settings/features'
 import { useBunfestEvent, eventDate, eventTime, isUpcoming } from '../lib/events'
 import { Screen, SectionLabel, ActionCard, IconTile, Card, btn } from '../components/ui'
 import { Icon } from '../components/icons'
@@ -11,6 +13,7 @@ import ShareButton, { appLink } from '../components/ShareButton'
 import AddEventToCalendar from '../components/AddEventToCalendar'
 
 export default function BunfestHome() {
+  const auction = useFeature(SILENT_AUCTION_FLAG)
   // This year's cards, from Staff → BunFest (bundled 2026 list until then)
   const { features } = useBunfestFeatures()
   // Date / time / venue / theme from the shared BunFest event record (live
@@ -130,7 +133,7 @@ export default function BunfestHome() {
         <div className="space-y-2.5">
           <SectionLabel>Explore BunFest</SectionLabel>
           <div className="space-y-2.5">
-            {BUNFEST_HUB.map((h) => (
+            {BUNFEST_HUB.filter((h) => auction.show || !h.to.startsWith('/bunfest/auction')).map((h) => (
               <ActionCard key={h.to} to={h.to} title={h.title} subtitle={h.subtitle} icon={h.icon} tone={h.tone} />
             ))}
           </div>

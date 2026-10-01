@@ -113,6 +113,15 @@ const PrintTags = lazy(() => import('./features/scan/pages/PrintTags'))
 const CatalogFlow = lazy(() => import('./features/scan/pages/CatalogFlow'))
 const PrintLabels = lazy(() => import('./features/scan/pages/PrintLabels'))
 const ItemPhotos = lazy(() => import('./features/scan/pages/ItemPhotos'))
+import { FeatureGate } from './features/settings/FeatureGate'
+import { SILENT_AUCTION_FLAG } from './features/settings/features'
+
+// Every silent-auction page sits behind the Silent Auction switch (Staff → Features).
+const auctionGate = (page: React.ReactNode) => (
+  <FeatureGate flag={SILENT_AUCTION_FLAG} closedTitle="The silent auction isn’t open right now" closedText="Its items and bidding appear here when OHRR opens the auction." backTo="/bunfest" backLabel="Back to BunFest">
+    {page}
+  </FeatureGate>
+)
 const TagLanding = lazy(() => import('./features/scan/pages/TagLanding'))
 // Share kit — canvas + QR, lazy
 const StaffShare = lazy(() => import('./features/share/pages/StaffShare'))
@@ -242,12 +251,12 @@ export default function App() {
         <Route path="visit" element={<Visit />} />
         <Route path="map" element={<EventMap />} />
         <Route path="silent-auction" element={<Navigate to="/bunfest/auction" replace />} />
-        <Route path="auction" element={<RaffleCatalog />} />
+        <Route path="auction" element={auctionGate(<RaffleCatalog />)} />
         {/* Static auction routes come before auction/:id so "register" and "me" are never read as an item id */}
-        <Route path="auction/register" element={<Suspense fallback={null}><AuctionRegister /></Suspense>} />
-        <Route path="auction/me" element={<Suspense fallback={null}><MyBids /></Suspense>} />
-        <Route path="auction/me/:token" element={<Suspense fallback={null}><MyBids /></Suspense>} />
-        <Route path="auction/:id" element={<RaffleItemDetail />} />
+        <Route path="auction/register" element={auctionGate(<Suspense fallback={null}><AuctionRegister /></Suspense>)} />
+        <Route path="auction/me" element={auctionGate(<Suspense fallback={null}><MyBids /></Suspense>)} />
+        <Route path="auction/me/:token" element={auctionGate(<Suspense fallback={null}><MyBids /></Suspense>)} />
+        <Route path="auction/:id" element={auctionGate(<RaffleItemDetail />)} />
         <Route path="p/:id" element={<BunfestPage />} />
         <Route path="give" element={<Give />} />
       </Route>

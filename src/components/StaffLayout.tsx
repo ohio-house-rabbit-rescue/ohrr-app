@@ -1,3 +1,4 @@
+import { useAllAccess } from '../lib/allAccess'
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
@@ -16,6 +17,7 @@ function roleLabel(role: string | undefined) {
 
 export default function StaffLayout() {
   const { user, membership, can, capabilities, signOut } = useAuth()
+  const { allAccess } = useAllAccess()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -97,7 +99,7 @@ export default function StaffLayout() {
       show: can('staff.invite') || can('staff.permissions.manage'),
     },
     { to: '/staff/activity', label: 'Activity', show: can('audit.view') },
-    { to: '/staff/features', label: 'Features — turn things on & off', show: can('settings.manage') },
+    { to: '/staff/features', label: 'Features — turn things on & off', show: allAccess },
     { to: '/staff/details', label: 'OHRR details — hours, phone, address', show: can('settings.manage') },
   ].filter((i) => i.show)
 
