@@ -1,13 +1,14 @@
-// Catalog donations, fast: photo first → say (or type) the name and who gave
-// it → Save → "Next item" (the camera opens again) or "Print this label".
+// Catalog donations, fast: photos first (up to four) → say (or type) the name
+// and who gave it → Save → "Next item" (the camera opens again) or "Print
+// this label".
 //
 // The app gives each item its own OHRR code; nothing has to be printed or
 // scanned first. Everything is saved as a DONATION ("sort later") unless a
 // kind is picked for the session, and the label prints from Print labels.
 //
-// The photo uploads in the background while the name is typed. Save waits
-// for it (and retries once); if the photo still fails, the item is saved
-// without it and the Saved screen says so, with "Try the photo again".
+// Each photo uploads in the background while the name is typed. Save waits
+// for them (and retries once); if a photo still fails, the item is saved
+// with the others and the Saved screen says so, with "Try again".
 //
 // The two hidden file inputs are rendered ONCE, outside the screens: the
 // camera's answer arrives on the element that opened it, and if that element
@@ -19,7 +20,7 @@ import { errMessage } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
 import { isNative } from '../../../native/platform'
 import { pickPhoto } from '../../../native/camera'
-import { catalogNewItem, dataUrlToBlob, listItems, recentDonors, saveItem, uploadItemPhoto } from '../api'
+import { MAX_ITEM_PHOTOS, catalogNewItem, dataUrlToBlob, listItems, recentDonors, setItemPhotos, uploadItemPhoto } from '../api'
 import { BigButton, BigInput, ErrorBox, StepShell } from '../ScanUI'
 import { ALL_KINDS, KIND_META, type ItemKind, type TaggedItem } from '../types'
 
@@ -36,22 +37,30 @@ const SpeechRecognitionCtor: any =
 interface Draft {
   title: string
   donatedBy: string
-  photoPreview: string | null
 }
 
-type UploadState = 'none' | 'uploading' | 'ready' | 'failed'
+/** One photo of the item being cataloged. The first is the main photo. */
+interface Shot {
+  key: number
+  preview: string
+  url: string | null
+  state: 'uploading' | 'ready' | 'failed'
+}
 
 interface Saved {
   phase: 'photo' | 'saving' | 'saved' | 'failed'
   title: string
   donatedBy: string
-  preview: string | null
+  previews: string[]
   item?: TaggedItem
-  photoFailed?: boolean
+  /** How many photos could not be uploaded (0 = all fine). */
+  photosFailed: number
+  /** The extra photos could not be attached (e.g. before update 37). */
+  photosNote?: string
   error?: string
 }
 
-const emptyDraft = (): Draft => ({ title: '', donatedBy: '', photoPreview: null })
+const emptyDraft = (): Draft => ({ title: '', donatedBy: '' })
 
 function loadKind(allowed: ItemKind[]): ItemKind {
   try {
@@ -78,18 +87,17 @@ export default function CatalogFlow() {
   const [kind, setKind] = useState<ItemKind>(() => loadKind(allowedKinds))
   const [step, setStep] = useState<Step>('start')
   const [draft, setDraft] = useState<Draft>(emptyDraft)
+  const [shots, setShots] = useState<Shot[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [uploadState, setUploadState] = useState<UploadState>('none')
   const [saved, setSaved] = useState<Saved | null>(null)
   const [photoRetrying, setPhotoRetrying] = useState(false)
   const [today, setToday] = useState<number | null>(null)
   const [unprinted, setUnprinted] = useState<number | null>(null)
   const [donors, setDonors] = useState<string[]>([])
   const [listening, setListening] = useState(false)
-  // The photo being cataloged: the file, its upload, and the URL once uploaded.
-  const blobRef = useRef<Blob | null>(null)
-  const uploadRef = useRef<Promise<string> | null>(null)
-  const photoUrlRef = useRef<string | null>(null)
+  // Each shot's file and upload, by key (the state above mirrors them).
+  const filesRef = useRef<Map<number, { blob: Blob; upload: Promise<string> | null }>>(new Map())
+  const shotKey = useRef(0)
   const cameraRef = useRef<HTMLInputElement>(null)
   const libraryRef = useRef<HTMLInputElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
@@ -125,42 +133,53 @@ export default function CatalogFlow() {
     }
   }, [kind])
 
-  /* ------------------------------------------------ photo */
-  /** Upload in the background; Save waits for it. */
-  const startUpload = (blob: Blob) => {
+  /* ------------------------------------------------ photos */
+  const setShot = (key: number, patch: Partial<Shot>) => setShots((list) => list.map((s) => (s.key === key ? { ...s, ...patch } : s)))
+
+  /** Upload one shot in the background; Save waits for it. */
+  const startUpload = (key: number, blob: Blob) => {
     const p = uploadItemPhoto(blob, orgId)
-    uploadRef.current = p
-    photoUrlRef.current = null
-    setUploadState('uploading')
+    filesRef.current.set(key, { blob, upload: p })
+    setShot(key, { state: 'uploading' })
     p.then(
       (url) => {
-        if (uploadRef.current !== p) return
-        photoUrlRef.current = url
-        setUploadState('ready')
+        if (filesRef.current.get(key)?.upload !== p) return
+        setShot(key, { url, state: 'ready' })
       },
       () => {
-        if (uploadRef.current !== p) return
-        setUploadState('failed')
+        if (filesRef.current.get(key)?.upload !== p) return
+        setShot(key, { state: 'failed' })
       },
     )
   }
 
-  const usePhoto = async (src: Blob | string) => {
+  const addPhoto = async (src: Blob | string) => {
     setError(null)
+    if (shots.length >= MAX_ITEM_PHOTOS) {
+      setError(`${MAX_ITEM_PHOTOS} photos is the most for one item.`)
+      return
+    }
     try {
       const blob = typeof src === 'string' ? await dataUrlToBlob(src) : src
-      blobRef.current = blob
-      update({ photoPreview: URL.createObjectURL(blob) })
-      startUpload(blob)
+      const key = ++shotKey.current
+      setShots((list) => [...list, { key, preview: URL.createObjectURL(blob), url: null, state: 'uploading' }])
+      startUpload(key, blob)
     } catch (err) {
       setError(`Couldn’t use that photo: ${errMessage(err)}`)
     }
   }
 
+  const removePhoto = (key: number) => {
+    filesRef.current.delete(key)
+    setShots((list) => list.filter((s) => s.key !== key))
+  }
+
+  const makeMain = (key: number) => setShots((list) => [...list.filter((s) => s.key === key), ...list.filter((s) => s.key !== key)])
+
   const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
-    if (file) await usePhoto(file)
+    if (file) await addPhoto(file)
   }
 
   /** Open the camera. On the web this must run inside the tap itself. */
@@ -172,24 +191,18 @@ export default function CatalogFlow() {
     void (async () => {
       try {
         const dataUrl = await pickPhoto(source)
-        if (dataUrl) await usePhoto(dataUrl)
+        if (dataUrl) await addPhoto(dataUrl)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Couldn’t get that photo.')
       }
     })()
   }
 
-  const clearPhoto = () => {
-    blobRef.current = null
-    uploadRef.current = null
-    photoUrlRef.current = null
-    setUploadState('none')
-  }
-
   /** A fresh item: empty form, then the camera. */
   const startItem = () => {
     setDraft(emptyDraft())
-    clearPhoto()
+    filesRef.current = new Map()
+    setShots([])
     setSaved(null)
     setError(null)
     setStep('name')
@@ -220,48 +233,66 @@ export default function CatalogFlow() {
   }
 
   /* ------------------------------------------------ save */
-  /** The photo's URL: the background upload, or one more try. Null = gave up. */
-  const settlePhoto = async (): Promise<string | null> => {
-    if (photoUrlRef.current) return photoUrlRef.current
-    const blob = blobRef.current
-    if (!blob) return null
-    try {
-      const url = uploadRef.current ? await uploadRef.current : await uploadItemPhoto(blob, orgId)
-      photoUrlRef.current = url
-      setUploadState('ready')
-      return url
-    } catch {
-      /* once more, fresh */
+  /**
+   * Every shot's URL, in order: the background upload, or one more try.
+   * Null where a photo could not be uploaded.
+   */
+  const settlePhotos = async (list: Shot[]): Promise<(string | null)[]> => {
+    const out: (string | null)[] = []
+    for (const s of list) {
+      if (s.url) {
+        out.push(s.url)
+        continue
+      }
+      const f = filesRef.current.get(s.key)
+      if (!f) {
+        out.push(null)
+        continue
+      }
+      let url: string | null = null
+      try {
+        url = f.upload ? await f.upload : await uploadItemPhoto(f.blob, orgId)
+      } catch {
+        try {
+          const p = uploadItemPhoto(f.blob, orgId)
+          filesRef.current.set(s.key, { blob: f.blob, upload: p })
+          url = await p
+        } catch {
+          url = null
+        }
+      }
+      setShot(s.key, url ? { url, state: 'ready' } : { state: 'failed' })
+      out.push(url)
     }
-    try {
-      const p = uploadItemPhoto(blob, orgId)
-      uploadRef.current = p
-      const url = await p
-      photoUrlRef.current = url
-      setUploadState('ready')
-      return url
-    } catch {
-      setUploadState('failed')
-      return null
-    }
+    return out
   }
 
   const save = () => {
     const title = draft.title.trim()
     if (!title) return
     const donatedBy = draft.donatedBy.trim()
-    const preview = draft.photoPreview
+    const list = shots
     recogRef.current?.stop?.()
     setError(null)
-    setSaved({ phase: blobRef.current && !photoUrlRef.current ? 'photo' : 'saving', title, donatedBy, preview })
+    const waiting = list.some((s) => !s.url)
+    setSaved({ phase: waiting ? 'photo' : 'saving', title, donatedBy, previews: list.map((s) => s.preview), photosFailed: 0 })
     setStep('saved')
     void (async () => {
-      const photoUrl = await settlePhoto()
-      const photoFailed = Boolean(blobRef.current) && !photoUrl
+      const settled = await settlePhotos(list)
+      const urls = settled.filter((u): u is string => Boolean(u))
+      const photosFailed = settled.length - urls.length
       setSaved((s) => (s ? { ...s, phase: 'saving' } : s))
       try {
-        const item = await catalogNewItem(orgId, { title, kind, donatedBy, photoUrl })
-        setSaved((s) => (s ? { ...s, phase: 'saved', item, photoFailed } : s))
+        let item = await catalogNewItem(orgId, { title, kind, donatedBy, photoUrl: urls[0] ?? null })
+        let photosNote: string | undefined
+        if (urls.length > 1) {
+          try {
+            item = await setItemPhotos(orgId, item.code, urls)
+          } catch (err) {
+            photosNote = `Only the first photo is on the item: ${errMessage(err)}`
+          }
+        }
+        setSaved((s) => (s ? { ...s, phase: 'saved', item, photosFailed, photosNote } : s))
         setToday((n) => (n ?? 0) + 1)
         setUnprinted((n) => (n ?? 0) + 1)
         if (donatedBy) setDonors((d) => [donatedBy, ...d.filter((x) => x.toLowerCase() !== donatedBy.toLowerCase())].slice(0, 12))
@@ -271,30 +302,21 @@ export default function CatalogFlow() {
     })()
   }
 
-  /** The item saved but its photo didn't: upload again and attach it. */
-  const retryPhoto = async () => {
+  /** The item saved but some photos didn't: upload them again and attach the lot. */
+  const retryPhotos = async () => {
     const item = saved?.item
-    const blob = blobRef.current
-    if (!item || !blob || photoRetrying) return
+    if (!item || photoRetrying) return
     setPhotoRetrying(true)
+    setError(null)
     try {
-      const url = await uploadItemPhoto(blob, orgId)
-      photoUrlRef.current = url
-      const updated = await saveItem(orgId, {
-        code: item.code,
-        kind: item.kind,
-        title: item.title,
-        description: item.description ?? '',
-        donatedBy: item.donated_by ?? '',
-        value: item.value_cents != null ? String(item.value_cents / 100) : '',
-        price: item.price_cents != null ? String(item.price_cents / 100) : '',
-        quantity: item.quantity ?? 0,
-        photoUrl: url,
-        photoPreview: null,
-      })
-      setSaved((s) => (s ? { ...s, item: updated, photoFailed: false } : s))
+      const settled = await settlePhotos(shots)
+      const urls = settled.filter((u): u is string => Boolean(u))
+      const stillFailed = settled.length - urls.length
+      const updated = urls.length ? await setItemPhotos(orgId, item.code, urls) : item
+      setSaved((s) => (s ? { ...s, item: updated, photosFailed: stillFailed, photosNote: undefined } : s))
+      if (stillFailed) setError(`${stillFailed} photo${stillFailed === 1 ? '' : 's'} still didn’t upload.`)
     } catch (err) {
-      setError(`The photo didn’t save: ${errMessage(err)}`)
+      setError(`The photos didn’t save: ${errMessage(err)}`)
     } finally {
       setPhotoRetrying(false)
     }
@@ -365,7 +387,7 @@ export default function CatalogFlow() {
             </Link>
           </div>
           <ol className="list-decimal space-y-1 pl-5 text-[15px] text-slate-600">
-            <li>Take the photo.</li>
+            <li>Take the photo — up to {MAX_ITEM_PHOTOS} per item.</li>
             <li>Say or type the name, tap who gave it.</li>
             <li>Save — then the next item, or print its label.</li>
           </ol>
@@ -384,7 +406,8 @@ export default function CatalogFlow() {
     /* ================================================= saved */
     const s = saved
     const done = s.phase === 'saved' && s.item
-    const title = s.phase === 'saved' ? 'Saved' : s.phase === 'failed' ? 'Didn’t save' : s.phase === 'photo' ? 'Saving the photo…' : 'Saving…'
+    const title = s.phase === 'saved' ? 'Saved' : s.phase === 'failed' ? 'Didn’t save' : s.phase === 'photo' ? 'Saving the photos…' : 'Saving…'
+    const main = s.previews[0] ?? s.item?.photo_url ?? null
     screen = (
       <StepShell
         title={title}
@@ -399,7 +422,7 @@ export default function CatalogFlow() {
               </BigButton>
             ) : (
               <BigButton onClick={startItem} disabled={!done} icon="camera">
-                {done ? 'Next item' : s.phase === 'photo' ? 'Saving the photo…' : 'Saving…'}
+                {done ? 'Next item' : s.phase === 'photo' ? 'Saving the photos…' : 'Saving…'}
               </BigButton>
             )}
             <div className="grid grid-cols-2 gap-2">
@@ -417,8 +440,8 @@ export default function CatalogFlow() {
           <ErrorBox>{s.phase === 'failed' ? s.error : error}</ErrorBox>
           {/* Photo beside the words, so the name, donor and code all sit above the buttons. */}
           <div className="flex gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            {s.preview || s.item?.photo_url ? (
-              <img src={s.preview ?? s.item?.photo_url ?? undefined} alt="" className="h-32 w-32 shrink-0 rounded-2xl object-cover" />
+            {main ? (
+              <img src={main} alt="" className="h-32 w-32 shrink-0 rounded-2xl object-cover" />
             ) : (
               <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-2xl bg-brand-blue-50 text-brand-blue">
                 <Icon name="camera" size={40} />
@@ -427,25 +450,43 @@ export default function CatalogFlow() {
             <div className="min-w-0 flex-1 space-y-1">
               <p className="font-display text-[22px] font-black leading-tight text-ink">{s.title}</p>
               {s.donatedBy && <p className="text-[15px] text-slate-600">From {s.donatedBy}</p>}
-              <p className="text-sm text-slate-500">{KIND_META[kind].label}</p>
+              <p className="text-sm text-slate-500">
+                {KIND_META[kind].label}
+                {s.previews.length > 1 && ` · ${s.previews.length} photos`}
+              </p>
               {done ? (
                 <p className="flex items-center gap-2 pt-1 font-mono text-lg font-bold tracking-widest text-ink">
                   <Icon name="check" size={20} className="shrink-0 text-green-700" /> {s.item!.code}
                 </p>
               ) : s.phase !== 'failed' ? (
                 <p className="flex items-center gap-2 pt-1 text-[15px] text-slate-500">
-                  <Icon name="clock" size={18} /> {s.phase === 'photo' ? 'Saving the photo…' : 'Saving…'}
+                  <Icon name="clock" size={18} /> {s.phase === 'photo' ? 'Saving the photos…' : 'Saving…'}
                 </p>
               ) : null}
             </div>
           </div>
-          {done && s.photoFailed && (
+          {s.previews.length > 1 && (
+            <div className="flex gap-2" aria-label="All the photos">
+              {s.previews.map((p, i) => (
+                <img key={p} src={p} alt="" className={`h-16 w-16 rounded-xl object-cover ${i === 0 ? 'ring-2 ring-brand-blue' : ''}`} />
+              ))}
+            </div>
+          )}
+          {done && (s.photosFailed > 0 || s.photosNote) && (
             <div role="status" className="flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
               <Icon name="x" size={18} className="shrink-0" />
-              <span className="min-w-0 flex-1">The item is saved, but its photo didn’t upload.</span>
-              <button type="button" onClick={() => void retryPhoto()} disabled={photoRetrying} className="shrink-0 font-extrabold underline-offset-2 hover:underline disabled:opacity-50">
-                {photoRetrying ? 'Trying…' : 'Try the photo again'}
-              </button>
+              <span className="min-w-0 flex-1">
+                {s.photosFailed > 0
+                  ? s.previews.length === 1
+                    ? 'The item is saved, but its photo didn’t upload.'
+                    : `The item is saved, but ${s.photosFailed} of its ${s.previews.length} photos didn’t upload.`
+                  : s.photosNote}
+              </span>
+              {s.photosFailed > 0 && (
+                <button type="button" onClick={() => void retryPhotos()} disabled={photoRetrying} className="shrink-0 font-extrabold underline-offset-2 hover:underline disabled:opacity-50">
+                  {photoRetrying ? 'Trying…' : s.previews.length === 1 ? 'Try the photo again' : 'Try again'}
+                </button>
+              )}
             </div>
           )}
           {done && (
@@ -462,6 +503,9 @@ export default function CatalogFlow() {
   } else {
     /* ================================================= name */
     const canSave = draft.title.trim().length > 0
+    const uploading = shots.filter((s) => s.state === 'uploading').length
+    const failed = shots.filter((s) => s.state === 'failed').length
+    const full = shots.length >= MAX_ITEM_PHOTOS
     screen = (
       <StepShell
         title="What is it?"
@@ -482,24 +526,53 @@ export default function CatalogFlow() {
         <div className="space-y-4">
           <ErrorBox>{error}</ErrorBox>
 
-          <div className="flex items-center gap-3">
-            {draft.photoPreview ? (
-              <img src={draft.photoPreview} alt="" className="h-28 w-28 shrink-0 rounded-2xl object-cover" />
-            ) : (
-              <span className="inline-flex h-28 w-28 shrink-0 items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 text-slate-400">
-                <Icon name="camera" size={32} />
-              </span>
-            )}
-            <div className="min-w-0 flex-1 space-y-2">
-              <button type="button" onClick={() => openCamera('camera')} className="block w-full rounded-xl bg-brand-blue-50 px-3 py-2.5 text-left text-[15px] font-bold text-brand-blue">
-                {draft.photoPreview ? 'Take another photo' : 'Take a photo'}
+          {/* The photos: main first, a × on each, + for another (up to four). */}
+          <div>
+            <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Photos of the item">
+              {shots.map((s, i) => (
+                <div key={s.key} className="relative shrink-0">
+                  <img src={s.preview} alt="" className={`h-24 w-24 rounded-2xl object-cover ${i === 0 ? 'ring-2 ring-brand-blue' : ''}`} />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(s.key)}
+                    aria-label={`Remove photo ${i + 1}`}
+                    className="absolute -right-1.5 -top-1.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-ink text-white shadow"
+                  >
+                    <Icon name="x" size={16} />
+                  </button>
+                  {i === 0 ? (
+                    <span className="absolute bottom-1 left-1 rounded-full bg-brand-blue px-1.5 py-0.5 text-[11px] font-extrabold uppercase text-white">Main</span>
+                  ) : (
+                    <button type="button" onClick={() => makeMain(s.key)} className="absolute bottom-1 left-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[11px] font-extrabold text-brand-blue">
+                      Make main
+                    </button>
+                  )}
+                  {s.state === 'failed' && <span className="absolute inset-x-0 top-1 text-center text-[11px] font-extrabold text-red-700">not saved</span>}
+                </div>
+              ))}
+              {!full && (
+                <button
+                  type="button"
+                  onClick={() => openCamera('camera')}
+                  aria-label={shots.length ? 'Add another photo' : 'Take a photo'}
+                  className="inline-flex h-24 w-24 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-slate-300 text-slate-500"
+                >
+                  <Icon name="camera" size={28} />
+                  <span className="text-xs font-bold">{shots.length ? `${shots.length} of ${MAX_ITEM_PHOTOS}` : 'Photo'}</span>
+                </button>
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <button type="button" onClick={() => openCamera('camera')} disabled={full} className="min-h-[44px] text-[15px] font-bold text-brand-blue disabled:opacity-40">
+                {shots.length ? 'Add another photo' : 'Take a photo'}
               </button>
-              <button type="button" onClick={() => openCamera('library')} className="block w-full rounded-xl bg-slate-100 px-3 py-2.5 text-left text-[15px] font-bold text-slate-700">
+              <button type="button" onClick={() => openCamera('library')} disabled={full} className="min-h-[44px] text-[15px] font-bold text-slate-600 disabled:opacity-40">
                 Choose from my photos
               </button>
-              {draft.photoPreview && uploadState === 'uploading' && <p className="text-sm text-slate-500">Photo saving in the background…</p>}
-              {draft.photoPreview && uploadState === 'ready' && <p className="text-sm text-green-700">Photo saved.</p>}
-              {draft.photoPreview && uploadState === 'failed' && <p className="text-sm text-amber-700">Photo not saved yet — Save tries again.</p>}
+              {full && <span className="text-sm text-slate-500">{MAX_ITEM_PHOTOS} photos is the most.</span>}
+              {!full && uploading > 0 && <span className="text-sm text-slate-500">Saving in the background…</span>}
+              {!full && uploading === 0 && failed === 0 && shots.length > 0 && <span className="text-sm text-green-700">Photos saved.</span>}
+              {!full && uploading === 0 && failed > 0 && <span className="text-sm text-amber-700">Not saved yet — Save tries again.</span>}
             </div>
           </div>
 

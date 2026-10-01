@@ -2552,6 +2552,10 @@ export type Database = {
         Args: { p_org: string; p_codes: string[]; p_printed?: boolean }
         Returns: number
       }
+      set_item_photos: {
+        Args: { p_org: string; p_code: string; p_photo_urls: string[] }
+        Returns: Json
+      }
       recent_donors: {
         Args: { p_org: string; p_limit?: number }
         Returns: Json

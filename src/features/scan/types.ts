@@ -95,6 +95,8 @@ export interface TaggedItem {
   donated_by: string | null
   value_cents: number | null
   photo_url: string | null
+  /** All its photos, main first (update 37; missing before it). */
+  photo_urls?: string[] | null
   price_cents: number | null
   quantity: number | null
   status: string

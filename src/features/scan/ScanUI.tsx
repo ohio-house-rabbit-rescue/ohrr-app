@@ -3,6 +3,7 @@
 // button always in the same place at the bottom, Back always top-left.
 import type { ReactNode } from 'react'
 import { Icon, type IconName } from '../../components/icons'
+import { itemPhotos } from './api'
 import { KIND_META, formatMoney, statusLabel, type TaggedItem } from './types'
 
 type BigTone = 'orange' | 'blue' | 'outline' | 'plain' | 'danger'
@@ -153,6 +154,15 @@ export function ItemCard({ item, big = false }: { item: TaggedItem; big?: boolea
       ) : (
         <div className={`flex items-center justify-center ${big ? 'h-40' : 'h-28'} ${tile}`}>
           <Icon name={m.icon} size={48} />
+        </div>
+      )}
+      {itemPhotos(item).length > 1 && (
+        <div className="flex gap-1.5 px-3 pt-3" aria-label="More photos">
+          {itemPhotos(item)
+            .slice(1)
+            .map((u) => (
+              <img key={u} src={u} alt="" className="h-14 w-14 rounded-lg object-cover" loading="lazy" />
+            ))}
         </div>
       )}
       <div className="space-y-2 p-4">

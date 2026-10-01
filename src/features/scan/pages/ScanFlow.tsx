@@ -428,12 +428,9 @@ export default function ScanFlow() {
               <BigButton
                 tone="outline"
                 icon="camera"
-                onClick={() => {
-                  setEditing(true)
-                  setStep('photo')
-                }}
+                onClick={() => navigate(`/staff/items/photos?code=${encodeURIComponent(item.code)}`)}
               >
-                Photo
+                Photos
               </BigButton>
               <BigButton
                 tone="outline"

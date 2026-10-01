@@ -58,6 +58,7 @@ const TITLES: [string, string][] = [
   ['/staff/auction-desk', 'Auction desk'],
   ['/staff/catalog', 'Catalog donations'],
   ['/staff/labels', 'Print labels'],
+  ['/staff/items/photos', 'Item photos'],
   ['/staff', 'Staff'],
 ]
 

@@ -112,6 +112,7 @@ const ItemsList = lazy(() => import('./features/scan/pages/ItemsList'))
 const PrintTags = lazy(() => import('./features/scan/pages/PrintTags'))
 const CatalogFlow = lazy(() => import('./features/scan/pages/CatalogFlow'))
 const PrintLabels = lazy(() => import('./features/scan/pages/PrintLabels'))
+const ItemPhotos = lazy(() => import('./features/scan/pages/ItemPhotos'))
 const TagLanding = lazy(() => import('./features/scan/pages/TagLanding'))
 // Share kit — canvas + QR, lazy
 const StaffShare = lazy(() => import('./features/share/pages/StaffShare'))
@@ -321,6 +322,7 @@ export default function App() {
           <Route path="posts/:id" element={<Suspense fallback={null}><PostEditor /></Suspense>} />
           <Route path="items" element={<Suspense fallback={null}><ItemsList /></Suspense>} />
           <Route path="items/tags" element={<Suspense fallback={null}><PrintTags /></Suspense>} />
+          <Route path="items/photos" element={<Suspense fallback={null}><ItemPhotos /></Suspense>} />
           <Route path="catalog" element={<Suspense fallback={null}><CatalogFlow /></Suspense>} />
           <Route path="labels" element={<Suspense fallback={null}><PrintLabels /></Suspense>} />
         </Route>
