@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-10-01 (DONATION DETAILS — how many, price, condition, sort of thing, where it's kept; update 39 WRITTEN, NOT RUN; Hop Shop shelf empty because no active products, not a code fault; before that FEATURE SWITCHES FOR FOUNDERS/DEVELOPERS + COVER PHOTO, PHOTO ORDER, GALLERIES — update 38 RUN BY OHRR and checked live; before that CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-10-01 (DONATION DETAILS — how many, price, condition, sort of thing, where it's kept; update 39 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 40; Hop Shop shelf empty because no active products, not a code fault; before that FEATURE SWITCHES FOR FOUNDERS/DEVELOPERS + COVER PHOTO, PHOTO ORDER, GALLERIES — update 38 RUN BY OHRR and checked live; before that CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -19,7 +19,7 @@
 
 ## Current state (at a glance)
 
-- **Donation details + Hop Shop shelf check, 2026-10-01 (app `66e626b`, website `b45bf82`; update 39 WRITTEN, NOT RUN).**
+- **Donation details + Hop Shop shelf check, 2026-10-01 (app `66e626b`, website `b45bf82`; update 39 APPLIED and checked live 2026-10-01).**
   OHRR: "the hop shop inventory does not show anymore. also the donation items should have things like quantity and
   possible price etc. … a few more details that the scanner person can enter."
   - **Hop Shop:** not a code fault. `hopshop_public_products` answers `[]` for visitors, and it did before update 38 too
@@ -44,7 +44,12 @@
     the item is saved, and the Saved screen says the details need update 39.
   - Tests: scratchpad `catalog_test.py` 35 checks (details sent, place carries over, pre-39 retry + note, Scan → Details
     → `set_item_extras`), `switches_test.py` 21; the website helper's Playwright run (after and before 39, 1300×675 and
-    375×740). tsc, build, 231 checks pass. Nothing run against the live database.
+    375×740). tsc, build, 231 checks pass.
+  - **Update 39 run by OHRR 2026-10-01** (four parts, given in chat). Checked live over REST: the five new
+    `donation_items` columns answer, `condition_label('like_new')` = "Like new", `set_item_extras` and the 13-argument
+    `catalog_new_item` answer "Not authenticated", `catalog_suggestions` answers empty lists for a non-member. Filed as
+    `APPLY-39 (applied 2026-10-01).sql`; RUN-THIS has nothing to run (next is 40). Still open from this round: OHRR's
+    answer on the Hop Shop shelf (the one-line product check, and which screen).
 
 - **Feature switches for Founders and Developers + cover photo, photo order, galleries, 2026-10-01 (app `61be387` +
   `07a9096`, website `6c13fd3` + `5ee03e9`, BunFest `a6e2aa1` + `ee94841`; update 38 APPLIED and checked live 2026-10-01).** OHRR: choose the
