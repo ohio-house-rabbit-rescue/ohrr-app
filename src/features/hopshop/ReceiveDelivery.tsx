@@ -439,7 +439,7 @@ export default function ReceiveDelivery() {
               <ul className="space-y-1">
                 {files.map((f, i) => (
                   <li key={`${f.name}-${i}`} className="flex items-center gap-2 text-sm text-slate-700">
-                    <Icon name={/pdf/i.test(f.type) || /\.pdf$/i.test(f.name) ? 'book' : 'camera'} size={16} />
+                    <Icon name={/pdf/i.test(f.type) || /\.pdf$/i.test(f.name) ? 'file' : 'camera'} size={16} />
                     <span className="min-w-0 flex-1 truncate">{/pdf/i.test(f.type) || /\.pdf$/i.test(f.name) ? f.name : `Photo, page ${i + 1}`}</span>
                     <button
                       type="button"

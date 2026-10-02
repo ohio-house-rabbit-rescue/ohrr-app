@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 // The shared OHRR line-icon set. The website (ohrr-website/src/components/icons.tsx)
 // carries a copy so the same icon means the same thing on both surfaces:
 // calendar = events, gift = ways to give, award = silent auction, users = volunteer,
-// book = care guides, vet = vets (a broad cross in a circle), phone = calling, mappin = found a rabbit / surrender, bag = Hop Shop,
+// book = care guides, file = an invoice or report (a page), vet = vets (a broad cross in a circle), phone = calling, mappin = found a rabbit / surrender, bag = Hop Shop,
 // sparkles = news / Happy Tails, star = partners, mail = contact, device = the app.
 // Keep the two files in sync.
 
@@ -45,6 +45,7 @@ export type IconName =
   | 'minus'
   | 'keyboard'
   | 'printer'
+  | 'file'
   | 'trash'
   | 'box'
   | 'eye'
@@ -247,6 +248,13 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10" />
     </>
   ),
+  file: (
+    <>
+      <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+      <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z" />
+      <path d="M9 13h6M9 17h6" />
+    </>
+  ),
   printer: (
     <>
       <path d="M7 8V4h10v4" />
@@ -323,6 +331,7 @@ const accents: Partial<Record<IconName, ReactNode>> = {
   device: <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" />,
   camera: <circle cx="12" cy="13" r="3.5" />,
   box: <path d="M3.5 8 12 4l8.5 4L12 12z" />,
+  file: <path d="M14 3v4a1 1 0 0 0 1 1h4z" />,
   printer: <path d="M7 14h10v6H7z" />,
   eye: <circle cx="12" cy="12" r="3" />,
   user: <circle cx="12" cy="8" r="4" />,
