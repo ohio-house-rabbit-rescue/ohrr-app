@@ -367,7 +367,7 @@
 
 - **Board comparison, 2026-09-28 (document only; no code changes).** OHRR asked for a comparison a board member who knows
   only the old sites can follow: where the app, website and BunFest site could save volunteer time, reach more (and younger)
-  people, or bring in money. Delivered as Drive root `OHRR Old and New - Board Comparison.pdf` (11 pages): summary, first
+  people, or bring in money. Delivered as Drive `04 Sponsorship & Board/OHRR Old and New - Board Comparison.pdf` (11 pages): summary, first
   screens old vs new (live screenshots), two everyday tasks, task-by-task table, the seven personas + staff, behind-the-scenes
   chores, a blank hours worksheet (no invented savings), BunFest old vs new, money, reach/next generation, limits + measures +
   decisions, and QR codes to the three sites. Sources and build script: Drive `Research/board-comparison/` (`comparison.html`,
@@ -1035,7 +1035,7 @@
   - **Speakers** (`bunfest_presenters`, `bunfest_sessions.presenter_ids`) — the ten
     2026 bios from midwestbunfest.org. **RHDV2**: `vets.gives_rhdv2` (Borders, Norton
     Road) and the vet finder's filter; "Bringing Your Bunny" links to it.
-  - Also: *OHRR Design Principles and Personas.pdf* in the Drive root — the brief for
+  - Also: *OHRR Design Principles and Personas.pdf* in Drive `OHRR App Design/` — the brief for
     the BunFest sample site (older visitors first).
 
 - **Midwest BunFest 2026, and the last of the hard-coded content (2026-09-22,
@@ -1303,8 +1303,8 @@
     if Apple (5.3.3) or Play object; Adopt/Help sample-rabbit notes no longer mention Petfinder;
     HANDOFF §8a = Data safety / App Privacy / content-rating answers + review notes; ten store
     screenshots (1290×2796, headless Chrome) in Drive `Mobile builds/store-screenshots/`
-    (`make-screenshots.py` regenerates); AAB rebuilt. Briefing PDFs live in the Drive root
-    (`OHRR App and Website Briefing.pdf`, `Midwest BunFest - Sponsor Case.pdf`; sources in
+    (`make-screenshots.py` regenerates); AAB rebuilt. Briefing PDFs live in Drive
+    (`OHRR App Design/OHRR App and Website Briefing.pdf`, `04 Sponsorship & Board/Midwest BunFest - Sponsor Case.pdf`; sources in
     `Research/`, `build-briefing.py`). SQL APPLY-5/6/7 confirmed pasted (verified via REST).
   - Sponsor side before testers: Play Console (org) + Apple Developer (org, fee
     waiver) accounts; privacy-policy sign-off; real rabbits / booking times / auction items;
@@ -2040,6 +2040,6 @@ Sponsor wants the app on phones for internal testers (Google Play internal testi
 - **Native config:** Android manifest — CAMERA (photo picker needs no storage permission, so READ_MEDIA_IMAGES deliberately not declared), POST_NOTIFICATIONS, SCHEDULE_EXACT_ALARM, RECEIVE_BOOT_COMPLETED, portrait-only; iOS Info.plist — NSCamera / NSPhotoLibrary(/Add) usage strings, portrait-only, arm64, `ITSAppUsesNonExemptEncryption=false`; versions 0.1.0 / versionCode 1 / MARKETING_VERSION 0.1.0.
 - **Icons + splash:** `scripts/make-native-assets.py` (Pillow) builds `resources/` from `public/ohrr-mark.png` — the mark in a white disc on brand blue (the mark is drawn for a white background, so no chroma-keying) — plus the Android status-bar icon `ic_stat_ohrr` (white silhouette). `npm run cap:assets` generated the adaptive/legacy launcher icons, splash drawables and the iOS AppIcon / Splash sets (committed).
 - **Android build done here:** JDK 21 + Android SDK 36 were present, so `gradlew bundleRelease` / `assembleDebug` ran: **`ohrr-0.1.0-vc1-release.aab`** (signed, `jarsigner -verify` OK) and **`ohrr-0.1.0-vc1-debug.apk`** in Drive `07-OHRR App/Mobile builds/android/`. Test keystore `ohrr-test.keystore` + `README.txt` (passwords, keep-forever rule) in `…/Mobile builds/keys/`; `android/app/build.gradle` signs release when the gitignored `android/keystore.properties` exists (`keystore.properties.example` committed).
-- **Handoff:** `docs/HANDOFF.md` and Drive `07-OHRR App/OHRR Mobile Build Handoff.docx` (same content, generated from one source with the `docx` npm package): where things are, prerequisites (Mac: Xcode 16.4+, Node 22, no CocoaPods; Android Studio + JDK 21), numbered iPhone steps (clone → `npm install` → `npm run cap:sync` → `npm run cap:ios` → Team / bundle id → Run → Archive → TestFlight internal), Android steps (Studio or gradle → Play Console internal testing, versionCode rule, keystore rule), rebuild after a change, tester checklist, what's OFF (raffle-ticket flag, Petfinder proxy, Netlify-form posts, in-app Back up, .ics), public-release checklist (Apple org enrolment + D-U-N-S + nonprofit fee waiver, Play org verification / 14-day closed test, privacy URL after board review, remove noindex, listing text, screenshots), troubleshooting.
+- **Handoff:** `docs/HANDOFF.md` and Drive `07-OHRR App/Mobile builds/OHRR Mobile Build Handoff.docx` (same content, generated from one source with the `docx` npm package): where things are, prerequisites (Mac: Xcode 16.4+, Node 22, no CocoaPods; Android Studio + JDK 21), numbered iPhone steps (clone → `npm install` → `npm run cap:sync` → `npm run cap:ios` → Team / bundle id → Run → Archive → TestFlight internal), Android steps (Studio or gradle → Play Console internal testing, versionCode rule, keystore rule), rebuild after a change, tester checklist, what's OFF (raffle-ticket flag, Petfinder proxy, Netlify-form posts, in-app Back up, .ics), public-release checklist (Apple org enrolment + D-U-N-S + nonprofit fee waiver, Play org verification / 14-day closed test, privacy URL after board review, remove noindex, listing text, screenshots), troubleshooting.
 - **Verified:** `npm run build` clean (dist works — checked at localhost:4173: web pages still show the calendar buttons and no native UI; with a fake Android bridge injected, the native "Remind me on this phone" rows render and outside links are intercepted), `npx tsc --noEmit` clean, `npx cap sync` OK, `node scripts/mybunny-check.ts` 205 checks (also fixed its stale Netlify UID expectation from the Cloudflare move).
 - Not done / for the Mac: iOS build + TestFlight (needs Xcode). Not attempted: share-sheet backup export, push notifications, a Cloudflare replacement for the Netlify form posts (pre-existing gap, documented in the handoff).

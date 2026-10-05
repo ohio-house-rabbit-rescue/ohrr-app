@@ -1,6 +1,6 @@
 """Regenerate the Drive copy of the mobile handoff from docs/HANDOFF.md.
 
-    python scripts/make-handoff-docx.py "G:/Shared drives/07-OHRR App/OHRR Mobile Build Handoff.docx"
+    python scripts/make-handoff-docx.py "G:/Shared drives/07-OHRR App/Mobile builds/OHRR Mobile Build Handoff.docx"
 
 Plain Markdown → Word: headings, bullet / numbered lists, tables, `code`,
 **bold**, links kept as text. Needs python-docx (pip install python-docx).

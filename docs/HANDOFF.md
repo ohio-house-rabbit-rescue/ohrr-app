@@ -2,7 +2,7 @@
 
 > Android + iPhone internal test builds of the OHRR app · 2026-09-17, updated 2026-09-22 (0.3.0)
 
-> Same content as **OHRR Mobile Build Handoff.docx** in the Drive folder "07-OHRR App". Regenerate both from one source if you change it (see docs/PROGRESS.md, 2026-09-17).
+> Same content as **OHRR Mobile Build Handoff.docx** in the Drive folder "07-OHRR App/Mobile builds". Regenerate both from one source if you change it (see docs/PROGRESS.md, 2026-09-17).
 
 This document is for whoever builds and installs the OHRR app on phones for internal testing — the Mac owner for iPhone (Xcode / TestFlight) and anyone with Android Studio for Android (Play Console internal testing). It is written to be followed top to bottom without needing the code history. Nothing here is for a public store release yet; the last section lists what that will need.
 
@@ -33,7 +33,7 @@ This document is for whoever builds and installs the OHRR app on phones for inte
 | Ready-made Android builds | G:\Shared drives\07-OHRR App\Mobile builds\android\ — **ohrr-0.3.0-vc6-release.aab** (for Play Console) and **ohrr-0.3.0-vc6-debug.apk** (sideload); the earlier 0.2.x / 0.1.0 files are previous builds |
 | Android test signing key | G:\Shared drives\07-OHRR App\Mobile builds\keys\ohrr-test.keystore + README.txt (passwords). Never in the repo. |
 | iPhone builds | G:\Shared drives\07-OHRR App\Mobile builds\ios\ — empty until the Mac produces one (see section 4) |
-| This document | docs/HANDOFF.md in the repo, and G:\Shared drives\07-OHRR App\OHRR Mobile Build Handoff.docx |
+| This document | docs/HANDOFF.md in the repo, and G:\Shared drives\07-OHRR App\Mobile builds\OHRR Mobile Build Handoff.docx |
 
 ### npm scripts
 
