@@ -2,7 +2,7 @@
 
 > Android + iPhone internal test builds of the OHRR app · 2026-09-17, updated 2026-09-22 (0.3.0)
 
-> Same content as **OHRR Mobile Build Handoff.docx** in the Drive folder "07-OHRR App/Mobile builds". Regenerate both from one source if you change it (see docs/PROGRESS.md, 2026-09-17).
+> Same content as **OHRR Mobile Build Handoff.docx** in the Drive folder "07-OHRR App/03 Mobile Builds". Regenerate both from one source if you change it (see docs/PROGRESS.md, 2026-09-17).
 
 This document is for whoever builds and installs the OHRR app on phones for internal testing — the Mac owner for iPhone (Xcode / TestFlight) and anyone with Android Studio for Android (Play Console internal testing). It is written to be followed top to bottom without needing the code history. Nothing here is for a public store release yet; the last section lists what that will need.
 
@@ -30,10 +30,10 @@ This document is for whoever builds and installs the OHRR app on phones for inte
 | Capacitor config | `capacitor.config.ts` (app id, name, splash / status-bar / notification settings) |
 | Native code the app uses | `src/native/` (platform.ts, camera.ts, notifications.ts, browser.ts, NativeBridge.tsx) |
 | Icon + splash sources | `resources/` (made from public/ohrr-mark.png by `scripts/make-native-assets.py`); generated into android/ and ios/ by `npm run cap:assets` |
-| Ready-made Android builds | G:\Shared drives\07-OHRR App\Mobile builds\android\ — **ohrr-0.3.0-vc6-release.aab** (for Play Console) and **ohrr-0.3.0-vc6-debug.apk** (sideload); the earlier 0.2.x / 0.1.0 files are previous builds |
-| Android test signing key | G:\Shared drives\07-OHRR App\Mobile builds\keys\ohrr-test.keystore + README.txt (passwords). Never in the repo. |
-| iPhone builds | G:\Shared drives\07-OHRR App\Mobile builds\ios\ — empty until the Mac produces one (see section 4) |
-| This document | docs/HANDOFF.md in the repo, and G:\Shared drives\07-OHRR App\Mobile builds\OHRR Mobile Build Handoff.docx |
+| Ready-made Android builds | G:\Shared drives\07-OHRR App\03 Mobile Builds\android\ — **ohrr-0.3.0-vc6-release.aab** (for Play Console) and **ohrr-0.3.0-vc6-debug.apk** (sideload); the earlier 0.2.x / 0.1.0 files are previous builds |
+| Android test signing key | G:\Shared drives\07-OHRR App\03 Mobile Builds\keys\ohrr-test.keystore + README.txt (passwords). Never in the repo. |
+| iPhone builds | G:\Shared drives\07-OHRR App\03 Mobile Builds\ios\ — empty until the Mac produces one (see section 4) |
+| This document | docs/HANDOFF.md in the repo, and G:\Shared drives\07-OHRR App\03 Mobile Builds\OHRR Mobile Build Handoff.docx |
 
 ### npm scripts
 
@@ -93,7 +93,7 @@ Two ready-made builds are already in the Drive folder (section 2). To make a new
 ### Option A — Android Studio (point and click)
 
 1. In the repo run `npm install` (first time) and `npm run cap:sync`.
-2. Copy `android/keystore.properties.example` to `android/keystore.properties` and fill in the four values from `G:\Shared drives\07-OHRR App\Mobile builds\keys\README.txt` (the file is gitignored, so it never goes to GitHub). On a Mac copy `ohrr-test.keystore` somewhere local and point `storeFile` at it.
+2. Copy `android/keystore.properties.example` to `android/keystore.properties` and fill in the four values from `G:\Shared drives\07-OHRR App\03 Mobile Builds\keys\README.txt` (the file is gitignored, so it never goes to GitHub). On a Mac copy `ohrr-test.keystore` somewhere local and point `storeFile` at it.
 3. Open the project: `npm run cap:android`. Let Gradle sync finish (bottom status bar).
 4. For a quick install on a phone plugged in with USB debugging on: press **Run** (▶).
 5. For Play Console: **Build → Generate Signed App Bundle / APK → Android App Bundle → Next**, choose the keystore file, alias `ohrr-test` and the passwords from README.txt, pick **release**, **Create**. The .aab lands in `android/app/release/`.

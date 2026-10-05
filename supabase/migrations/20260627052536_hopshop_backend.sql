@@ -3,7 +3,7 @@
 -- Target: Supabase (PostgreSQL 15+). Apply as a migration or paste
 -- into the Supabase SQL editor.
 --
--- Source of truth: "OHRR App Design/06-hopshop-backend.sql" (Drive).
+-- Source of truth: "02 App Design/06-hopshop-backend.sql" (Drive).
 -- This file version-controls the schema that is ALREADY APPLIED to the
 -- live Supabase project, so the repo matches the database. It is written
 -- to be idempotent (create ... if not exists / on conflict do nothing),

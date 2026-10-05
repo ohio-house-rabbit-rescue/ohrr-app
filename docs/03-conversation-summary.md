@@ -15,7 +15,7 @@ The sponsor runs / supports **Ohio House Rabbit Rescue (OHRR)**, a nonprofit rab
 1. **Researched OHRR and Midwest BunFest** from public sources (their own site, the BunFest site, GuideStar, GreatNonprofits, Yelp, Petfinder, and related rabbit orgs). The org's site blocked automated fetching, so facts were gathered via web search across those pages.
 2. **Produced an organization profile** — see `01-OHRR-org-profile.md`.
 3. **Worked through app strategy** — answered: "assuming we can't ask the org more questions, what advantages would an app bring and what can we leverage?" Captured in `02-app-strategy-and-findings.md`.
-4. **Set this Shared Drive folder ("OHRR App Design") as the canonical home** for project documents, stored as real Markdown files.
+4. **Set this Shared Drive folder ("02 App Design") as the canonical home** for project documents, stored as real Markdown files.
 
 ---
 
@@ -31,7 +31,7 @@ The sponsor runs / supports **Ohio House Rabbit Rescue (OHRR)**, a nonprofit rab
 
 ## Decisions & project context
 
-- **Canonical document home:** this Shared Drive folder, "OHRR App Design." Documents live here as `.md` files.
+- **Canonical document home:** this Shared Drive folder, "02 App Design." Documents live here as `.md` files.
 - **New code repository:** the sponsor will set up a dedicated Git repo for the OHRR app later (working remotely at the time). Not created yet.
 - **Connected Google account for this workspace:** `gadgetguyaddict@gmail.com` (granted Content Manager on the Shared Drive).
 - **Scratch history:** early research drafts were committed to an unrelated existing repo (`the-perfect-pour`, PR #2) before this Shared Drive folder existed. That repo is *not* the OHRR project home; treat these Drive `.md` files as the source of truth.

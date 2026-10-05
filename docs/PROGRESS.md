@@ -3,14 +3,14 @@
 > The single source of truth for "where is this project right now." A fresh
 > session (human or AI) should be able to resume from **GitHub `main` + this file
 > + the Drive design docs** alone. Keep it current: update and push at the end of
-> every work chunk, and mirror a copy to the Drive folder "OHRR App Design" as
+> every work chunk, and mirror a copy to the Drive folder "02 App Design" as
 > `04-progress-log.md`.
 
 - **Last updated:** 2026-10-01 (ADD A DELIVERY FROM ITS INVOICE — a PDF or a photo of the paper invoice is read on the phone or laptop (no AI, no outside service), its lines matched to Hop Shop items, the stock added and the delivery kept with what shipping really cost; update 42 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 43; not yet tried on a real supplier invoice; before that ITEM NUMBERS WITH A SYSTEM — donations DON-00001, Hop Shop SKUs HAY-101-001 (type-vendor-item), product types, vendor numbers, supplier shipping, Hop Shop price labels; update 41 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 42; before that SCAN AN ITEM ON THE WEBSITE for laptop users — type or USB-scan a code, read it from a webcam or a photo, drag photos onto the item forms; before that STAFF PORTAL IN GROUPS — a Today row + 8 groups on one phone screen; the home bar takes you home, no drop-down list; before that TWO WAYS TO ADD — Add a donation + Hop Shop inventory; DONATION INTAKE: drop-offs, thank-you letters, where it's headed, value each/for all, split, baskets, monthly report — update 40 RUN BY OHRR and checked live, RUN-THIS has nothing to run, next is 41; staff portal grouping proposed; before that STAFF DASHBOARD CRASH FIXED — blank on a fresh open since 61be387; "ADD HOP SHOP STOCK" door and "Hop Shop inventory" on the app and website; before that DONATION DETAILS — how many, price, condition, sort of thing, where it's kept; update 39 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 40; Hop Shop shelf empty because no active products, not a code fault; before that FEATURE SWITCHES FOR FOUNDERS/DEVELOPERS + COVER PHOTO, PHOTO ORDER, GALLERIES — update 38 RUN BY OHRR and checked live; before that CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
-  Google Drive "OHRR App Design" folder holds the canonical *design* docs only).
+  Google Drive "02 App Design" folder holds the canonical *design* docs only).
 - **New here? Read [`START-HERE.md`](START-HERE.md) first** — storage map, how to
   resume, and why Claude sessions kept disappearing (open the project from the
   local repo path above, **not** the Google Drive Streaming path).
@@ -42,7 +42,7 @@
     list_deliveries / delivery_detail / undo_delivery / forget_invoice_match. Tested on an in-memory Postgres (28
     checks), the reader on made-up invoices (31 checks), and both sites end to end with the database mocked.
   - **Still to do:** try it on real supplier invoices — OHRR can drop a PDF and a phone photo of a paper invoice in
-    Drive `OHRR App Design/Sample invoices/`; layouts it misreads get a fix and a test case.
+    Drive `02 App Design/Sample invoices/`; layouts it misreads get a fix and a test case.
 - **Item numbers with a system, Hop Shop labels, shipping, 2026-10-01 (app `cc046bf` + `ed9bce4`, website `b2669a4`; update 41 APPLIED and checked live 2026-10-01).**
   OHRR: "on the hop shop items this looks really good. we will need the label printing capability like we have on the
   donations. also for the sku lets make them very different than the donations so they have a system behind them" ·
@@ -370,7 +370,7 @@
   people, or bring in money. Delivered as Drive `04 Sponsorship & Board/OHRR Old and New - Board Comparison.pdf` (11 pages): summary, first
   screens old vs new (live screenshots), two everyday tasks, task-by-task table, the seven personas + staff, behind-the-scenes
   chores, a blank hours worksheet (no invented savings), BunFest old vs new, money, reach/next generation, limits + measures +
-  decisions, and QR codes to the three sites. Sources and build script: Drive `Research/board-comparison/` (`comparison.html`,
+  decisions, and QR codes to the three sites. Sources and build script: Drive `01 Research/board-comparison/` (`comparison.html`,
   `build.py` = Playwright + installed Chrome, `shots.py`). Old-site facts come from read-only checks on 2026-09-28 of
   ohiohouserabbitrescue.org (WordPress: 63 pages, 9 posts, 269 links; forms by Visual Form Builder/WPForms with unseen
   destinations; SignUp.com shifts; PayPal donate; 65 outside domains) and midwestbunfest.org (Weebly: 23 menu pages; 2025 map;
@@ -437,7 +437,7 @@
 - **Update 32, 2026-09-26 (latest; website `c5d97c9` + app the same day; update 32 SQL applied and checked live 2026-09-26 — new tables/RPCs answer with their rules, `APPLY-32 (applied 2026-09-26).sql`; the `ohrr-jobs` function answered "not found", so `push_public_key` is still null until it is deployed under that exact name).** OHRR: "build
   the things you can and then lets also do 2 [phone notifications] and 7 [Cloudflare Web Analytics]".
   - **Order for OHRR:** (1) Supabase → Edge Functions → Deploy a new function → Via Editor, name `ohrr-jobs`, paste
-    Drive `OHRR App Design/OHRR-JOBS-FUNCTION.ts` (= `supabase/functions/ohrr-jobs/PASTE-INTO-SUPABASE.ts`),
+    Drive `02 App Design/OHRR-JOBS-FUNCTION.ts` (= `supabase/functions/ohrr-jobs/PASTE-INTO-SUPABASE.ts`),
     **Verify JWT OFF**; (2) run update 32 (RUN-THIS / six chat blocks). Every new screen stays quiet until then.
   - **Wish-list items** (`wish_list_items`, task `giving.wishlist`): staff paste each item's own Amazon link
     (Amazon blocks programs reading the list); Give / Hop Shop list them, "Most needed" first, each "Buy on
@@ -673,7 +673,7 @@
 - **Even boxes, Bunny Help above the fold, the two-minute check (2026-09-24; website
   `0160f94`).** Sponsor: boxes with different amounts of words look like "mismatched boxes" (keep the
   words); get Bunny Help above the fold and open it fully when used; educate people before they buy
-  (OHRR research, Drive `Research/market-data-points.md` 2.1–2.3: rabbits are given up almost always
+  (OHRR research, Drive `01 Research/market-data-points.md` 2.1–2.3: rabbits are given up almost always
   for human reasons; surrender requests rise 2–3 months after Easter).
   - **Box rule:** side-by-side topics with very different amounts of text become rows or open columns
     (Volunteer opportunities: details beside the sign-up; Give's top ways as rows like Donate; Adopt's
@@ -1035,12 +1035,12 @@
   - **Speakers** (`bunfest_presenters`, `bunfest_sessions.presenter_ids`) — the ten
     2026 bios from midwestbunfest.org. **RHDV2**: `vets.gives_rhdv2` (Borders, Norton
     Road) and the vet finder's filter; "Bringing Your Bunny" links to it.
-  - Also: *OHRR Design Principles and Personas.pdf* in Drive `OHRR App Design/` — the brief for
+  - Also: *OHRR Design Principles and Personas.pdf* in Drive `02 App Design/` — the brief for
     the BunFest sample site (older visitors first).
 
 - **Midwest BunFest 2026, and the last of the hard-coded content (2026-09-22,
   0.3.0 · rev 6, latest).** **Paste `RUN-THIS-IN-SUPABASE.sql`** (Drive →
-  OHRR App Design). A review of the published 2026 site against the app found the
+  02 App Design). A review of the published 2026 site against the app found the
   rest of the festival still bundled or in code, and some of it now wrong.
   - **The activity pages are per year.** `bunfest_pages` replaces
     `src/data/bunfestPages.ts` — the Bunny Spa, Glamour Shots, the raffle, the
@@ -1093,13 +1093,13 @@
     width. Staff screens are build-verified only.
 
 - **Drive tidied (2026-09-22).** The sponsor could not tell which files still needed them, so the
-  Drive now answers that by itself. **`OHRR App Design/RUN-THIS-IN-SUPABASE.sql`** is the single
+  Drive now answers that by itself. **`02 App Design/RUN-THIS-IN-SUPABASE.sql`** is the single
   file to paste — APPLY-8 … 12 concatenated in order, idempotent, with a plain-English header;
   verified against the live database that none of those five had been applied. Everything else
-  moved out of the way: `OHRR App Design/Supabase history/` (the five pieces + every applied
-  migration + the old root paste file) and `OHRR App Design/Older design notes/` (the early
-  research, the duplicate progress log). `Mobile builds/android/Older builds/` holds every build
-  before 0.3.0-vc6. New `OHRR App Design/00-WHAT-IS-IN-HERE.md` explains the folder in four lines;
+  moved out of the way: `02 App Design/Supabase history/` (the five pieces + every applied
+  migration + the old root paste file) and `02 App Design/Older design notes/` (the early
+  research, the duplicate progress log). `03 Mobile Builds/android/Older builds/` holds every build
+  before 0.3.0-vc6. New `02 App Design/00-WHAT-IS-IN-HERE.md` explains the folder in four lines;
   both START-HERE files now point at the one SQL file.
 
 - **Volunteers, per-year event content, and the rest of the sponsor's list (2026-09-22,
@@ -1288,7 +1288,7 @@
     dashboard) — Apple 5.1.1(v); refuses the only active owner; clears every `auth.users`
     reference in public tables (own rows deleted, shared content unattributed).
   - **Version 0.2.0** / Android versionCode 2 / iOS build 2. Signed **`ohrr-0.2.0-vc2-release.aab`**
-    + `…-debug.apk` in Drive `Mobile builds/android/` (jarsigner verified).
+    + `…-debug.apk` in Drive `03 Mobile Builds/android/` (jarsigner verified).
   - **iOS without a Mac:** `docs/github/ios-testflight.yml` — GitHub Actions macOS runner (free on
     this public repo), automatic signing via an App Store Connect API key, uploads to TestFlight.
     Must be copied to `.github/workflows/` — the automated push was refused (token lacks the
@@ -1302,10 +1302,10 @@
     via `useFeatureFlag(key, fallback)`) so the raffle can be hidden from the native builds alone
     if Apple (5.3.3) or Play object; Adopt/Help sample-rabbit notes no longer mention Petfinder;
     HANDOFF §8a = Data safety / App Privacy / content-rating answers + review notes; ten store
-    screenshots (1290×2796, headless Chrome) in Drive `Mobile builds/store-screenshots/`
+    screenshots (1290×2796, headless Chrome) in Drive `03 Mobile Builds/store-screenshots/`
     (`make-screenshots.py` regenerates); AAB rebuilt. Briefing PDFs live in Drive
-    (`OHRR App Design/OHRR App and Website Briefing.pdf`, `04 Sponsorship & Board/Midwest BunFest - Sponsor Case.pdf`; sources in
-    `Research/`, `build-briefing.py`). SQL APPLY-5/6/7 confirmed pasted (verified via REST).
+    (`02 App Design/OHRR App and Website Briefing.pdf`, `04 Sponsorship & Board/Midwest BunFest - Sponsor Case.pdf`; sources in
+    `01 Research/`, `build-briefing.py`). SQL APPLY-5/6/7 confirmed pasted (verified via REST).
   - Sponsor side before testers: Play Console (org) + Apple Developer (org, fee
     waiver) accounts; privacy-policy sign-off; real rabbits / booking times / auction items;
     tester email lists. Deferred by decision: payments, Easter scheduler, push notifications,
@@ -1360,7 +1360,7 @@
   - Easter campaign scheduler: **on hold per sponsor** (2026-09-21).
 
 - **Reach & education build — on `main` (2026-09-21).** Sponsor direction: OHRR is missing the
-  market (see `G:\Shared drives\07-OHRR App\Research\market-data-points.md` and *OHRR Users &
+  market (see `G:\Shared drives\07-OHRR App\01 Research\market-data-points.md` and *OHRR Users &
   Growth Research.docx*); realign toward educating the right people and recruiting volunteers,
   given a volunteer base short on digital-media skill. **Paste `APPLY-4-POSTS-REACH.sql`.**
   - **Share kit** (`/staff/share`; website Staff → Posts): pick a rabbit / event / one of ten
@@ -1387,7 +1387,7 @@
 - **Outside-links audit → everything in-house except payments & third-party directories — on `main` (2026-09-20/21).**
   Sponsor asked where the app and website still "lead outside the current design"; the
   sweep found four kinds of hand-off and all four are now solved. **Migrations to paste
-  (Drive → `OHRR App Design/APPLY-2-SCAN-ITEMS.sql` then `APPLY-3-INBOX-BOOKINGS-PAGES.sql`).**
+  (Drive → `02 App Design/APPLY-2-SCAN-ITEMS.sql` then `APPLY-3-INBOX-BOOKINGS-PAGES.sql`).**
   - **Scan an item (`/staff/scan`, `/staff/items`, `/staff/items/tags`; website `/staff/items`).**
     One QR/barcode scan → "What is it?" (Silent Auction / Raffle prize / Hop Shop stock) →
     photo → name → two details → saved. Built for a person with impaired cognition: one
@@ -1442,7 +1442,7 @@
   ("Remind me on this phone", 9:00 AM on the due date, next 6 for repeats), every outside
   http(s) link → system browser, brand-blue status bar + splash, Android back button. The web
   app is unchanged (every native call is behind `isNative` in `src/native/`). A **signed
-  Android .aab + debug .apk** were built here and sit in Drive `07-OHRR App/Mobile builds/`
+  Android .aab + debug .apk** were built here and sit in Drive `07-OHRR App/03 Mobile Builds/`
   (test keystore + passwords in `…/keys/`, never in the repo). iPhone builds happen on the
   sponsor's Mac — **`docs/HANDOFF.md`** (= *OHRR Mobile Build Handoff.docx* in Drive) has the
   numbered steps, what's OFF for test builds, and the public-release checklist. Scripts:
@@ -2010,7 +2010,7 @@ strategy doc; not yet scheduled:
 2. **Work on a branch**, keep a draft PR open; commit + push after every
    meaningful change — never leave work only in the session.
 3. **End of each work chunk:** update this file, push it, and copy it to the Drive
-   "OHRR App Design" folder as `04-progress-log.md`.
+   "02 App Design" folder as `04-progress-log.md`.
 4. **Before ending a turn:** everything committed + pushed and this log current,
    so a fresh session can resume from GitHub + Drive alone.
 
@@ -2039,7 +2039,7 @@ Sponsor wants the app on phones for internal testers (Google Play internal testi
 - **My Bunny in the app:** camera / library buttons call the native picker (same 512px downscale; `downscaleImage` now also takes a data URL); "Add to my phone's calendar" → **"Remind me on this phone"** toggle per reminder + "Remind me about all N"; Mark done re-schedules, edit re-syncs, delete / archive / remove-bunny cancel; copy on the list and empty state follows. "Back up" is disabled in the app with a note (blob downloads can't reach Files — a share-sheet export is a later build); BunFest CalendarSheet hides the .ics option in the app.
 - **Native config:** Android manifest — CAMERA (photo picker needs no storage permission, so READ_MEDIA_IMAGES deliberately not declared), POST_NOTIFICATIONS, SCHEDULE_EXACT_ALARM, RECEIVE_BOOT_COMPLETED, portrait-only; iOS Info.plist — NSCamera / NSPhotoLibrary(/Add) usage strings, portrait-only, arm64, `ITSAppUsesNonExemptEncryption=false`; versions 0.1.0 / versionCode 1 / MARKETING_VERSION 0.1.0.
 - **Icons + splash:** `scripts/make-native-assets.py` (Pillow) builds `resources/` from `public/ohrr-mark.png` — the mark in a white disc on brand blue (the mark is drawn for a white background, so no chroma-keying) — plus the Android status-bar icon `ic_stat_ohrr` (white silhouette). `npm run cap:assets` generated the adaptive/legacy launcher icons, splash drawables and the iOS AppIcon / Splash sets (committed).
-- **Android build done here:** JDK 21 + Android SDK 36 were present, so `gradlew bundleRelease` / `assembleDebug` ran: **`ohrr-0.1.0-vc1-release.aab`** (signed, `jarsigner -verify` OK) and **`ohrr-0.1.0-vc1-debug.apk`** in Drive `07-OHRR App/Mobile builds/android/`. Test keystore `ohrr-test.keystore` + `README.txt` (passwords, keep-forever rule) in `…/Mobile builds/keys/`; `android/app/build.gradle` signs release when the gitignored `android/keystore.properties` exists (`keystore.properties.example` committed).
-- **Handoff:** `docs/HANDOFF.md` and Drive `07-OHRR App/Mobile builds/OHRR Mobile Build Handoff.docx` (same content, generated from one source with the `docx` npm package): where things are, prerequisites (Mac: Xcode 16.4+, Node 22, no CocoaPods; Android Studio + JDK 21), numbered iPhone steps (clone → `npm install` → `npm run cap:sync` → `npm run cap:ios` → Team / bundle id → Run → Archive → TestFlight internal), Android steps (Studio or gradle → Play Console internal testing, versionCode rule, keystore rule), rebuild after a change, tester checklist, what's OFF (raffle-ticket flag, Petfinder proxy, Netlify-form posts, in-app Back up, .ics), public-release checklist (Apple org enrolment + D-U-N-S + nonprofit fee waiver, Play org verification / 14-day closed test, privacy URL after board review, remove noindex, listing text, screenshots), troubleshooting.
+- **Android build done here:** JDK 21 + Android SDK 36 were present, so `gradlew bundleRelease` / `assembleDebug` ran: **`ohrr-0.1.0-vc1-release.aab`** (signed, `jarsigner -verify` OK) and **`ohrr-0.1.0-vc1-debug.apk`** in Drive `07-OHRR App/03 Mobile Builds/android/`. Test keystore `ohrr-test.keystore` + `README.txt` (passwords, keep-forever rule) in `…/03 Mobile Builds/keys/`; `android/app/build.gradle` signs release when the gitignored `android/keystore.properties` exists (`keystore.properties.example` committed).
+- **Handoff:** `docs/HANDOFF.md` and Drive `07-OHRR App/03 Mobile Builds/OHRR Mobile Build Handoff.docx` (same content, generated from one source with the `docx` npm package): where things are, prerequisites (Mac: Xcode 16.4+, Node 22, no CocoaPods; Android Studio + JDK 21), numbered iPhone steps (clone → `npm install` → `npm run cap:sync` → `npm run cap:ios` → Team / bundle id → Run → Archive → TestFlight internal), Android steps (Studio or gradle → Play Console internal testing, versionCode rule, keystore rule), rebuild after a change, tester checklist, what's OFF (raffle-ticket flag, Petfinder proxy, Netlify-form posts, in-app Back up, .ics), public-release checklist (Apple org enrolment + D-U-N-S + nonprofit fee waiver, Play org verification / 14-day closed test, privacy URL after board review, remove noindex, listing text, screenshots), troubleshooting.
 - **Verified:** `npm run build` clean (dist works — checked at localhost:4173: web pages still show the calendar buttons and no native UI; with a fake Android bridge injected, the native "Remind me on this phone" rows render and outside links are intercepted), `npx tsc --noEmit` clean, `npx cap sync` OK, `node scripts/mybunny-check.ts` 205 checks (also fixed its stale Netlify UID expectation from the Cloudflare move).
 - Not done / for the Mac: iOS build + TestFlight (needs Xcode). Not attempted: share-sheet backup export, push notifications, a Cloudflare replacement for the Netlify form posts (pre-existing gap, documented in the handoff).

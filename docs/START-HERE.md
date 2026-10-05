@@ -24,10 +24,10 @@
 |---|---|---|---|
 | **Code + docs (working copy)** | Local disk: `C:\Users\johns\ohrr-app` | ✅ local SSD | the app |
 | **Code remote (canonical)** | GitHub: `ohio-house-rabbit-rescue/ohrr-app` | ✅ cloud | the app — source of truth |
-| **Design docs (canonical)** | Drive Shared Drive → "07-OHRR App / OHRR App Design" (`00`–`04` + this file) | ✅ cloud | research & strategy |
+| **Design docs (canonical)** | Drive Shared Drive → "07-OHRR App / 02 App Design" (`00`–`04` + this file) | ✅ cloud | research & strategy |
 | **Live app** | https://ohrr-app.pages.dev (Cloudflare Pages auto-deploys `main`) | ✅ cloud | what's shipped |
-| **Database changes to paste** | Drive **"OHRR App Design" → `RUN-THIS-IN-SUPABASE.sql`** — one file, everything pending, safe to run twice. Paste it into Supabase → SQL Editor → New query → Run. (The pieces it is made of, and everything already applied, are in "OHRR App Design/Supabase history".) | ⏳ waiting | the schema the app expects |
-| **Phone builds (Android/iOS)** | Repo `android/` + `ios/` (Capacitor); built files, test keystore + passwords in Drive "07-OHRR App / Mobile builds"; steps in `docs/HANDOFF.md` (= *Mobile builds/OHRR Mobile Build Handoff.docx* in Drive) | ✅ cloud | the test builds |
+| **Database changes to paste** | Drive **"02 App Design" → `RUN-THIS-IN-SUPABASE.sql`** — one file, everything pending, safe to run twice. Paste it into Supabase → SQL Editor → New query → Run. (The pieces it is made of, and everything already applied, are in "02 App Design/Supabase history".) | ⏳ waiting | the schema the app expects |
+| **Phone builds (Android/iOS)** | Repo `android/` + `ios/` (Capacitor); built files, test keystore + passwords in Drive "07-OHRR App / 03 Mobile Builds"; steps in `docs/HANDOFF.md` (= *03 Mobile Builds/OHRR Mobile Build Handoff.docx* in Drive) | ✅ cloud | the test builds |
 | **Claude session transcripts** | Local only: `C:\Users\johns\.claude\projects\<project>\*.jsonl` | ⚠️ local only — **not** the record | a convenience |
 | **Project memory (AI)** | Local: `…\.claude\projects\<project>\memory\` | ⚠️ local only | AI continuity |
 
@@ -65,7 +65,7 @@ directly. (To pre-stage continuity, the AI memory has been copied to the local
 path's project folder so it carries over when you switch.)
 
 *Secondary mitigation* (if you ever do want the Drive folder reliably present):
-in Google Drive for Desktop, right-click the "OHRR App Design" folder →
+in Google Drive for Desktop, right-click the "02 App Design" folder →
 **Available offline**, so it's backed by a real local copy instead of streamed.
 
 ---
@@ -85,7 +85,7 @@ path so they all stay together.
 
 Everything is readable without opening a code session:
 
-- **Google Drive** → Shared drive "07-OHRR App" → folder **"OHRR App Design"**:
+- **Google Drive** → Shared drive "07-OHRR App" → folder **"02 App Design"**:
   `00-README.md` (index), `01-OHRR-org-profile.md`, `02-app-strategy-and-findings.md`,
   `03-conversation-summary.md`, `04-progress-log.md` (live status), and this
   `START-HERE.md`. Markdown files preview as text in Drive.

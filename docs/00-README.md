@@ -18,7 +18,7 @@ Design an app that supports **all** of OHRR's efforts — rescue, adoption, educ
 ## Status
 
 - **Phase:** Discovery / research. No code written yet.
-- **Canonical home:** this Shared Drive folder ("OHRR App Design").
+- **Canonical home:** this Shared Drive folder ("02 App Design").
 - **Last updated:** 2026-06-16.
 
 > These are living documents. Anything marked **[VERIFY]** still needs confirmation directly from OHRR.
