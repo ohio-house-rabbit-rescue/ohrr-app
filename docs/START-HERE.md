@@ -27,7 +27,7 @@
 | **Design docs (canonical)** | Drive Shared Drive → "07-OHRR App / 02 App Design" (`00`–`04` + this file) | ✅ cloud | research & strategy |
 | **Live app** | https://ohrr-app.pages.dev (Cloudflare Pages auto-deploys `main`) | ✅ cloud | what's shipped |
 | **Database changes to paste** | Drive **"02 App Design" → `RUN-THIS-IN-SUPABASE.sql`** — one file, everything pending, safe to run twice. Paste it into Supabase → SQL Editor → New query → Run. (The pieces it is made of, and everything already applied, are in "02 App Design/Supabase history".) | ⏳ waiting | the schema the app expects |
-| **Phone builds (Android/iOS)** | Repo `android/` + `ios/` (Capacitor); built files, test keystore + passwords in Drive "07-OHRR App / 03 Mobile Builds"; steps in `docs/HANDOFF.md` (= *03 Mobile Builds/OHRR Mobile Build Handoff.docx* in Drive) | ✅ cloud | the test builds |
+| **Phone builds (Android/iOS)** | Repo `android/` + `ios/` (Capacitor); built files, test keystore + passwords in Drive "07-OHRR App / 90 Admin / Keys"; steps in `docs/HANDOFF.md` (= *03 Mobile Builds/OHRR Mobile Build Handoff.docx* in Drive) | ✅ cloud | the test builds |
 | **Claude session transcripts** | Local only: `C:\Users\johns\.claude\projects\<project>\*.jsonl` | ⚠️ local only — **not** the record | a convenience |
 | **Project memory (AI)** | Local: `…\.claude\projects\<project>\memory\` | ⚠️ local only | AI continuity |
 
