@@ -87,12 +87,15 @@ export async function saveBookingType(t: Partial<BookingType> & { org_id: string
   const { weekly, ...rest } = t
   const row = { ...rest, ...(weekly ? { weekly: weekly as unknown as Json } : {}) }
   let { data, error } = await supabase.from('booking_types').upsert(row, { onConflict: 'org_id,slug' }).select('*').single()
-  // Before update 25 there is no "who can book" column: save the rest.
-  const noColumn = /approval_role|schema cache/i.test(error?.message ?? '')
-  if (error && noColumn && 'approval_role' in row) {
-    const { approval_role: wanted, ...older } = row
-    ;({ data, error } = await supabase.from('booking_types').upsert(older, { onConflict: 'org_id,slug' }).select('*').single())
-    if (!error && wanted) throw new Error('Saved — but “Who can book” only works once update 25 has been run in Supabase.')
+  // Before update 43 there are no form questions, and before update 25 no
+  // "who can book": save the rest, then say what didn't stick.
+  const noColumn = /questions|approval_role|schema cache/i.test(error?.message ?? '')
+  if (error && noColumn && ('questions' in row || 'approval_role' in row)) {
+    const { questions, approval_role, ...older } = row
+    const keep = /approval_role/i.test(error.message) ? {} : { approval_role }
+    ;({ data, error } = await supabase.from('booking_types').upsert({ ...older, ...keep }, { onConflict: 'org_id,slug' }).select('*').single())
+    if (!error && questions) throw new Error('Saved — but the questions on the form only work once update 43 has been run in Supabase.')
+    if (!error && approval_role && !('approval_role' in keep)) throw new Error('Saved — but “Who can book” only works once update 25 has been run in Supabase.')
   }
   if (error || !data) throw error ?? new Error('Could not save that.')
   const saved = asType(data as Record<string, unknown>)

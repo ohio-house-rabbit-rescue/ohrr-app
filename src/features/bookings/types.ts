@@ -31,6 +31,11 @@ export interface BookingType {
    * null = anyone. Undefined until update 25 adds the column — treat it as null.
    */
   approval_role?: string | null
+  /**
+   * Questions on the form, one per line (see questions.ts). Undefined until
+   * update 43 adds the column — the form then asks only `ask_reason`.
+   */
+  questions?: string | null
 }
 
 /** One line of a weekly schedule: "Sat + Sun, 1:30–2:30 pm, 4 people". `days`: 0 = Sunday. */

@@ -231,10 +231,12 @@ function Roster({ orgId }: { orgId: string }) {
                       <p className="text-xs text-slate-500">
                         {r.email}
                         {r.phone ? ` · ${r.phone}` : ''}
-                        {r.answer ? ` · ${r.answer}` : ''}
+                        {r.answer && !r.answer.includes('\n') ? ` · ${r.answer}` : ''}
                         {r.notes ? ` · ${r.notes}` : ''}
                         {r.attested ? ' · confirmed requirements' : ''}
                       </p>
+                      {/* Answers to the form's questions: one line each. */}
+                      {r.answer?.includes('\n') && <p className="whitespace-pre-line rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-700">{r.answer}</p>}
                       <div className="flex flex-wrap gap-1.5">
                         {r.phone && (
                           <a href={`tel:${r.phone.replace(/[^0-9+]/g, '')}`} className="rounded-full bg-brand-blue-50 px-3 py-1.5 text-xs font-bold text-brand-blue">
@@ -482,6 +484,8 @@ const emptyType = (orgId: string): Partial<BookingType> & { org_id: string; slug
 
 function Setup({ orgId, types, onChanged }: { orgId: string; types: BookingType[]; onChanged: () => Promise<void> }) {
   const [editing, setEditing] = useState<string | 'new' | null>(null)
+  // A new type gets the questions box once the database has the column (update 43).
+  const hasQuestions = types.some((t) => t.questions !== undefined)
   return (
     <div className="space-y-3">
       {types.map((t) => (
@@ -529,7 +533,7 @@ function Setup({ orgId, types, onChanged }: { orgId: string; types: BookingType[
       {editing === 'new' ? (
         <Card>
           <TypeForm
-            initial={emptyType(orgId)}
+            initial={{ ...emptyType(orgId), ...(hasQuestions ? { questions: '' } : {}) }}
             onSaved={async () => {
               setEditing(null)
               await onChanged()
@@ -566,6 +570,8 @@ function TypeForm({ initial, onSaved }: { initial: Partial<BookingType> & { org_
         location: d.location || null,
         ask_reason: d.ask_reason || null,
         attest_text: d.attest_text || null,
+        // Only once update 43 has added the column (it is on every row from then on).
+        ...(d.questions !== undefined ? { questions: d.questions?.trim() || null } : {}),
         approval_role: d.approval_role || null,
         max_per_month: d.max_per_month || null,
         auto_weeks: Math.min(26, Math.max(1, Number(d.auto_weeks) || 8)),
@@ -656,8 +662,17 @@ function TypeForm({ initial, onSaved }: { initial: Partial<BookingType> & { org_
           <input inputMode="numeric" className={staffInput} value={d.max_per_month ?? ''} onChange={num('max_per_month')} />
         </label>
       </div>
+      {d.questions !== undefined && (
+        <label className="block text-sm font-semibold text-slate-700">
+          Questions on the form (optional) — one per line
+          <textarea className={staffInput} rows={4} value={d.questions ?? ''} onChange={txt('questions')} placeholder={'Your rabbit’s name *\nSpayed or neutered? * | Yes | No | Booked in'} />
+          <span className="mt-1 block text-xs font-normal text-slate-500">
+            Put choices after a | to make a pick-list. End the question with * if it must be answered. The answers show under each person in the list.
+          </span>
+        </label>
+      )}
       <label className="block text-sm font-semibold text-slate-700">
-        A question to ask (optional)
+        {d.questions !== undefined ? 'A last question, answered in their own words (optional)' : 'A question to ask (optional)'}
         <input className={staffInput} value={d.ask_reason ?? ''} onChange={txt('ask_reason')} placeholder="Which rabbit would you like to meet?" />
       </label>
       <label className="block text-sm font-semibold text-slate-700">
