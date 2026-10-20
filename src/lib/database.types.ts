@@ -2017,6 +2017,7 @@ export type Database = {
           // Who can book (supabase/migrations/20260924190000_volunteer_approval_and_letters.sql):
           // approved volunteers of this kind ('socialization', 'buncare' …); null = anyone.
           approval_role: string | null
+          questions: string | null
           created_at: string
           updated_at: string
         }
@@ -2042,6 +2043,7 @@ export type Database = {
           weekly?: Json
           auto_weeks?: number
           approval_role?: string | null
+          questions?: string | null
         }
         Update: {
           slug?: string
@@ -2063,6 +2065,7 @@ export type Database = {
           weekly?: Json
           auto_weeks?: number
           approval_role?: string | null
+          questions?: string | null
         }
         Relationships: []
       }
