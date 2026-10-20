@@ -10,6 +10,7 @@ import { BREED_PHOTO_CREDITS } from '../data/breeds'
 import { useAuth } from '../lib/auth'
 import { firstName, useMyName } from '../features/account/profile'
 import InterestPicker from '../features/account/InterestPicker'
+import InstallApp from '../features/install/InstallApp'
 import { getDeviceInterests, joinMailingList, type Interest } from '../features/account/emailList'
 
 function fmtDate(iso: string): string {
@@ -118,6 +119,9 @@ export default function Settings() {
             <p className="text-xs text-slate-400">Applies everywhere in the app, and stays set on this device.</p>
           </Card>
         </section>
+
+        {/* ---- Home screen (browser only) ---- */}
+        <InstallApp />
 
         {/* ---- Saved data summary ---- */}
         <section className="space-y-2">
