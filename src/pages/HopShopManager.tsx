@@ -3,6 +3,7 @@
 // list, and the product types whose letters start every SKU (HAY-101-001).
 // One screen, four tabs, phone first. Price labels print from Labels. Everything here goes live on the public
 // Hop Shop shelf (name, photo, price, in stock) the moment it is saved.
+// The Items tab downloads as a spreadsheet with photos, to email or save (2026-10-24).
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { errMessage } from '../lib/supabase'
@@ -12,7 +13,9 @@ import { Icon } from '../components/icons'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { isNative } from '../native/platform'
 import { pickPhoto, type PhotoSource } from '../native/camera'
-import { dataUrlToBlob, uploadItemPhoto } from '../features/scan/api'
+import { dataUrlToBlob, itemPhotos, uploadItemPhoto } from '../features/scan/api'
+import ExportButtons from '../components/ExportButtons'
+import { todayStamp, type SheetColumn, type SheetSpec } from '../lib/inventoryExport'
 import { isOhrrCode, isRetailBarcode, normalizeCode, skuParts } from '../features/scan/codes'
 import { copyText, shareText } from '../features/share/share'
 import {
@@ -61,6 +64,65 @@ import { PackEditor, packRowsFrom, packRowsToInput, type PackRow } from '../feat
 import { NewTypeForm, TypesPanel } from '../features/hopshop/TypesPanel'
 
 const Scanner = lazy(() => import('../features/scan/Scanner'))
+
+// The spreadsheet's columns, the same as the website's Hop Shop download.
+const SHEET_COLUMNS: SheetColumn[] = [
+  { header: 'SKU', width: 14 },
+  { header: 'Name', width: 32 },
+  { header: 'Type', width: 16 },
+  { header: 'In stock', width: 9, kind: 'number' },
+  { header: 'Unit', width: 9 },
+  { header: 'Price', width: 10, kind: 'money' },
+  { header: 'Cost', width: 10, kind: 'money' },
+  { header: 'Supplier', width: 20 },
+  { header: 'Supplier’s item no.', width: 16 },
+  { header: 'Barcode', width: 15 },
+  { header: 'Category', width: 15 },
+  { header: 'Shelf', width: 12 },
+  { header: 'Reorder at', width: 10, kind: 'number' },
+  { header: 'Reorder how many', width: 10, kind: 'number' },
+  { header: 'On order', width: 9, kind: 'number' },
+  { header: 'In the shop', width: 10 },
+  { header: 'Came in as', width: 12 },
+  { header: 'Description', width: 40 },
+  { header: 'Label printed', width: 13, kind: 'date' },
+  { header: 'Last changed', width: 13, kind: 'date' },
+]
+
+function sheetSpec(list: StockCard[], q: string): SheetSpec {
+  const made = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return {
+    filename: `ohrr-hop-shop-inventory-${todayStamp()}`,
+    sheetName: 'Hop Shop',
+    title: `Ohio House Rabbit Rescue — Hop Shop inventory${q.trim() ? ` matching “${q.trim()}”` : ''} · ${list.length} items · ${made}`,
+    columns: SHEET_COLUMNS,
+    rows: list.map((p) => ({
+      photos: itemPhotos(p),
+      cells: [
+        p.code ?? p.sku,
+        p.name,
+        p.type_name,
+        p.quantity,
+        p.unit,
+        p.price_cents,
+        p.cost_cents,
+        p.supplier_name,
+        p.supplier_sku,
+        p.barcode,
+        p.category,
+        p.shelf,
+        p.reorder_point,
+        p.reorder_qty,
+        p.on_order_qty || null,
+        p.is_active ? 'Yes' : 'Hidden',
+        p.donation_code,
+        p.description,
+        p.label_printed_at,
+        p.updated_at,
+      ],
+    })),
+  }
+}
 
 /** Is update 27's pack table in? `null` while asking. */
 function usePacksReady(): boolean | null {
@@ -266,6 +328,7 @@ function Items({
           </button>
         )}
       </div>
+      {shown.length > 0 && <ExportButtons spec={() => sheetSpec(shown, q)} label={`Spreadsheet of ${shown.length} with photos`} />}
       {low > 0 && (
         <p className="text-xs font-bold text-brand-orange-dark">
           {low} item{low === 1 ? ' is' : 's are'} at or below the reorder point — see the Reorder tab.

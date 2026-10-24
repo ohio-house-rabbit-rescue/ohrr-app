@@ -5,6 +5,9 @@
 // headed for the raffle / Silent Auction / Hop Shop in one go, mark all the
 // "for the rabbits" ones used, and put several into one basket (a raffle
 // prize or auction lot). Shop items live in Hop Shop inventory.
+//
+// "Spreadsheet with photos" (2026-10-24): what the list shows, as an Excel file
+// with a picture in each row, to email from the phone or save; or a CSV.
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
@@ -12,16 +15,20 @@ import { errMessage } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
 import { Screen } from '../../../components/ui'
 import { Spinner } from '../../../components/staffui'
-import { listItems, makeBasket, sortHeadedDonations } from '../api'
+import ExportButtons from '../../../components/ExportButtons'
+import { todayStamp, type SheetColumn, type SheetRow, type SheetSpec } from '../../../lib/inventoryExport'
+import { itemPhotos, listItems, makeBasket, sortHeadedDonations } from '../api'
 import { BigButton, BigInput, ErrorBox } from '../ScanUI'
 import {
   HEADED_FOR,
   ITEM_KINDS,
   KIND_META,
+  conditionLabel,
   donationValues,
   extrasSummary,
   formatMoney,
   headedFor,
+  headedLabel,
   statusLabel,
   isUseSoon,
   type HeadedFor,
@@ -48,6 +55,57 @@ const subMatch = (i: TaggedItem, sub: Sub): boolean => {
 }
 
 const PLACE: Record<HeadedFor, string> = { raffle: 'the raffle', auction: 'the Silent Auction', shop: 'the Hop Shop', rabbits: 'the rabbits' }
+
+// The spreadsheet's columns, the same as the website's Items download.
+const SHEET_COLUMNS: SheetColumn[] = [
+  { header: 'Number', width: 14 },
+  { header: 'Name', width: 32 },
+  { header: 'Kind', width: 20 },
+  { header: 'Status', width: 26 },
+  { header: 'Donated by', width: 22 },
+  { header: 'Received', width: 13, kind: 'date' },
+  { header: 'Headed for', width: 15 },
+  { header: 'How many', width: 10, kind: 'number' },
+  { header: 'Size', width: 12 },
+  { header: 'Value each', width: 12, kind: 'money' },
+  { header: 'Value in all', width: 12, kind: 'money' },
+  { header: 'Price', width: 10, kind: 'money' },
+  { header: 'Condition', width: 11 },
+  { header: 'Sort of thing', width: 16 },
+  { header: 'Where it’s kept', width: 18 },
+  { header: 'Use by', width: 13, kind: 'date' },
+  { header: 'Description', width: 40 },
+  { header: 'Label printed', width: 13, kind: 'date' },
+  { header: 'Added', width: 13, kind: 'date' },
+]
+
+function sheetRow(i: TaggedItem): SheetRow {
+  const v = i.kind === 'donation' ? donationValues(i) : { each: null, total: i.value_cents }
+  return {
+    photos: itemPhotos(i),
+    cells: [
+      i.code,
+      i.title,
+      KIND_META[i.kind].label,
+      statusLabel(i),
+      i.donated_by,
+      i.received_on,
+      headedLabel(i.headed_for),
+      i.quantity,
+      i.size,
+      v.each,
+      v.total,
+      i.price_cents,
+      conditionLabel(i.condition),
+      i.category,
+      i.location,
+      i.use_by,
+      i.description,
+      i.label_printed_at,
+      i.created_at,
+    ],
+  }
+}
 
 export default function ItemsList() {
   const { membership, can } = useAuth()
@@ -152,6 +210,25 @@ export default function ItemsList() {
   const stopPicking = () => {
     setPicking(false)
     setPicked(new Set())
+  }
+
+  const sheet = (): SheetSpec => {
+    const what =
+      filter === 'all'
+        ? 'Everything'
+        : filter === 'event'
+          ? 'Auction & raffle'
+          : filter === 'donation'
+            ? `Donations — ${SUBS.find((s) => s.key === sub)?.label ?? ''}`
+            : KIND_META[filter].label
+    const made = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    return {
+      filename: `ohrr-items-${filter}-${todayStamp()}`,
+      sheetName: 'Items',
+      title: `Ohio House Rabbit Rescue — items: ${what}${q.trim() ? ` matching “${q.trim()}”` : ''} · ${shown.length} · ${made}`,
+      columns: SHEET_COLUMNS,
+      rows: shown.map(sheetRow),
+    }
   }
 
   const movable = filter === 'donation' && !picking && (sub === 'raffle' || sub === 'auction' || sub === 'shop' || sub === 'rabbits') && counts.s[sub] > 0
@@ -290,6 +367,8 @@ export default function ItemsList() {
           className="w-full rounded-2xl border-2 border-slate-200 bg-white py-3 pl-11 pr-4 text-base text-ink outline-none focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15"
         />
       </div>
+
+      {items && shown.length > 0 && !picking && <ExportButtons spec={sheet} label={`Spreadsheet of ${shown.length} with photos`} />}
 
       <ErrorBox>{error}</ErrorBox>
       {note && (
