@@ -1,8 +1,8 @@
 {
   "name": "ohrr-app",
   "private": true,
-  "version": "0.4.0",
-  "revision": 7,
+  "version": "0.4.1",
+  "revision": 8,
   "type": "module",
   "description": "Midwest BunFest companion — an app supporting Ohio House Rabbit Rescue (OHRR).",
   "scripts": {
@@ -17,6 +17,7 @@
     "cap:assets": "npx capacitor-assets generate --android --ios --iconBackgroundColor #0669ac --iconBackgroundColorDark #0669ac --splashBackgroundColor #0669ac --splashBackgroundColorDark #0669ac"
   },
   "dependencies": {
+    "@capacitor-community/bluetooth-le": "^8.3.0",
     "@capacitor/android": "^8.5.2",
     "@capacitor/app": "^8.1.1",
     "@capacitor/browser": "^8.0.4",

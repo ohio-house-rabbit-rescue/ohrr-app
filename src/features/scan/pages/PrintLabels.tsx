@@ -5,7 +5,8 @@
 //                           price (one per item in stock)
 // Pick the items (the unprinted ones are ticked by default) and how many
 // copies of each, then Print — on a laptop or a phone that sees the printer —
-// or make a PDF, one label per page, to print from wherever the printer is.
+// or make a PDF, one label per page, to print from wherever the printer is —
+// or send them straight to OHRR's Bluetooth label printer (printer/).
 // ?code=X (repeatable) ticks just those; &copies=N sets their copies;
 // ?c=X:N (repeatable) ticks X with N copies (a delivery's labels).
 import { useEffect, useMemo, useState } from 'react'
@@ -23,6 +24,7 @@ import { listProducts, money, type StockCard } from '../../hopshop/api'
 import { BigButton, ErrorBox } from '../ScanUI'
 import { KIND_META, type TaggedItem } from '../types'
 import { LABEL_SIZES, customLabelSize, labelDataUrl, loadLabelSize, saveLabelSize, type LabelItem, type LabelSize } from '../labels'
+import BluetoothPrint from '../printer/BluetoothPrint'
 
 type Show = 'unprinted' | 'all'
 type Mode = 'items' | 'shop'
@@ -382,6 +384,17 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
             </>
           )}
         </div>
+        <BluetoothPrint
+          labels={selected.map((i) => ({ code: i.code, item: toLabel(i), copies: copiesOf(i.code) }))}
+          size={size}
+          busy={busy}
+          setBusy={setBusy}
+          onError={setError}
+          onPrinted={(codes, msg) => {
+            setNote(msg)
+            void markPrinted(codes)
+          }}
+        />
         {note && (
           <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
             {note}{' '}
@@ -394,7 +407,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
         )}
         <p className="text-sm text-slate-500">
           {isNative
-            ? 'In the share sheet choose the printer’s app — for OHRR’s Phomemo that is Labelife: PDF processing → pick the label size → Print. AirPrint works for printers that have it.'
+            ? 'Print or share: in the share sheet choose the printer’s app — for OHRR’s Phomemo and Omezizy printers that is Labelife: PDF processing → pick the label size → Print. AirPrint works for printers that have it.'
             : 'In the print dialog choose the label printer and its label size; margins are zero. “Save as PDF” works too.'}
         </p>
 

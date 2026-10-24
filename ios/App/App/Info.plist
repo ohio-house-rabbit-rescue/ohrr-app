@@ -26,6 +26,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>OHRR uses Bluetooth to print labels on the rescue's label printer.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>OHRR uses the camera to take a photo of your bunny.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
