@@ -1,7 +1,7 @@
 // Supabase calls for "Scan an item". Every write is an RPC (SECURITY DEFINER,
 // capability-checked in the database); photos go to the public `item-photos`
 // bucket after the same phone-friendly downscale the auction manager uses.
-import { supabase } from '../../lib/supabase'
+import { errMessage, supabase } from '../../lib/supabase'
 import type { Json } from '../../lib/database.types'
 import { downscaleToJpeg } from '../raffle/photoUpload'
 import { dollarsToCents, type HeadedFor, type ItemDraft, type ItemKind, type TaggedItem } from './types'
@@ -312,6 +312,44 @@ export async function saveItem(orgId: string, d: ItemDraft): Promise<TaggedItem>
   if (error) throw error
   const item = asItem(data)
   if (!item) throw new Error('Saved, but the item could not be read back.')
+  return item
+}
+
+/**
+ * A donation just catalogued, straight into the Silent Auction with its
+ * starting bid and Buy it now price (it keeps its DON number and photos).
+ * The prices failing still leaves it in the auction; the message says so.
+ */
+export async function catalogToAuction(
+  orgId: string,
+  code: string,
+  title: string,
+  donatedBy: string,
+  prices: { starting_bid_cents: number | null; buy_now_cents: number | null },
+): Promise<TaggedItem> {
+  const { data, error } = await supabase.rpc('save_scanned_item', {
+    p_org: orgId,
+    p_code: code,
+    p_kind: 'auction',
+    p_title: title.trim(),
+    p_description: null,
+    p_donated_by: donatedBy.trim() || null,
+    p_value_cents: null,
+    p_photo_url: null,
+    p_price_cents: null,
+    p_quantity: null,
+    p_session: null,
+  })
+  if (error) throw error
+  const item = asItem(data)
+  if (!item) throw new Error('Moved, but the item could not be read back.')
+  if (prices.starting_bid_cents != null || prices.buy_now_cents != null) {
+    const { error: e } = await supabase.rpc('auction_set_item_prices', {
+      p_item_id: item.ref_id,
+      p_patch: { starting_bid_cents: prices.starting_bid_cents ?? '', buy_now_cents: prices.buy_now_cents ?? '' },
+    })
+    if (e) throw new Error(`It’s in the Silent Auction, but the prices didn’t save: ${errMessage(e)}. Set them in Silent Auction.`)
+  }
   return item
 }
 

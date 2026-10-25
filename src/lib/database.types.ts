@@ -415,6 +415,9 @@ export type Database = {
           bidding_note: string | null
           pickup_note: string | null
           shipping_note: string | null
+          // Update 44: Buy it now, pay at the table (absent until it runs).
+          buy_now_at_table?: boolean
+          helper_user_ids?: string[]
           updated_at: string
         }
         Insert: {
@@ -2808,6 +2811,13 @@ export type Database = {
       auction_set_bidder_blocked: { Args: { p_bidder_id: string; p_blocked: boolean }; Returns: Json }
       auction_save_settings: { Args: { p_org: string; p_event: string; p_patch: Json }; Returns: Json }
       auction_set_item_prices: { Args: { p_item_id: string; p_patch: Json }; Returns: Json }
+      // Buy it now, pay at the table (supabase/migrations/20261025100000_auction_buy_now_at_table.sql)
+      auction_buy_now_claim: { Args: { p_item_id: string; p_name: string; p_phone: string }; Returns: Json }
+      auction_table_claim: { Args: { p_token: string }; Returns: Json }
+      auction_table_claims: { Args: { p_org: string; p_event: string }; Returns: Json }
+      auction_helper_candidates: { Args: { p_org: string }; Returns: Json }
+      auction_set_table_buy_now: { Args: { p_org: string; p_event: string; p_on?: boolean | null; p_helpers?: string[] | null }; Returns: Json }
+      auction_item_label_code: { Args: { p_item_id: string }; Returns: string }
       delete_own_account: { Args: Record<string, never>; Returns: undefined }
       // Public Hop Shop shelf (supabase/migrations/20260921160000_public_shop.sql)
       hopshop_public_products: {

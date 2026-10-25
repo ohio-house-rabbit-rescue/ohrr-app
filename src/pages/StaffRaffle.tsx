@@ -13,7 +13,7 @@
 // update is on the database (a one-column probe on load), so editing keeps
 // working before it runs. Sales themselves are handled on the Auction desk.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen, SectionLabel } from '../components/ui'
@@ -515,6 +515,17 @@ function ItemCard({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
+
+  // Its bid-sheet label: an item added here gets a DON number first (update 44).
+  const printLabel = async () => {
+    setBusy(true)
+    setError(null)
+    const { data, error } = await supabase.rpc('auction_item_label_code', { p_item_id: item.id })
+    setBusy(false)
+    if (error) setError(/could not find the function|PGRST202/i.test(error.message) ? 'Printing a label from here needs database update 44.' : errMessage(error))
+    else if (data) navigate(`/staff/labels?code=${encodeURIComponent(data)}`)
+  }
 
   const patch = async (values: Partial<AuctionItem>) => {
     setBusy(true)
@@ -670,6 +681,9 @@ function ItemCard({
         </button>
         <button type="button" onClick={() => setEditing(true)} className={pill}>
           Edit
+        </button>
+        <button type="button" disabled={busy} onClick={() => void printLabel()} className={pill}>
+          Print label
         </button>
         {confirmDelete ? (
           <>

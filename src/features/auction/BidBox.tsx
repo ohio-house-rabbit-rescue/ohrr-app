@@ -4,6 +4,10 @@
 //
 // Money moves only through the payment server (auctionApi) and Stripe; this
 // file never sees a card. Every message here is written for the bidder.
+//
+// With "Buy it now, pay at the table" on (update 44), Buy it now holds the
+// item and the buyer pays at the auction table (BuyAtTable.tsx) instead of
+// on a saved card; with online bidding off, bids go on the paper sheet.
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
@@ -16,15 +20,19 @@ import {
   dollarsToCents,
   fetchItemBids,
   fmtWhen,
+  forgetHold,
   money,
   placeBid,
+  recallHolds,
   shippingFor,
   whyClosed,
   type AuctionItem,
   type AuctionSettings,
   type BidRow,
+  type RememberedHold,
 } from './client'
 import { shipLine, useMyPage, useRememberedBidder } from './useAuction'
+import { BuyAtTable, HoldCard } from './BuyAtTable'
 
 export function BidBox({
   item,
@@ -44,6 +52,12 @@ export function BidBox({
   const bidder = page?.bidder ?? null
 
   const closed = whyClosed(item, settings, now)
+  // Buy it now at the table, and whether bids go on the paper sheet instead.
+  const atTable = !!settings?.buy_now_at_table
+  const paper = atTable && !settings?.bidding_enabled
+  const [hold, setHold] = useState<RememberedHold | null>(() => recallHolds().find((h) => h.item_id === item.id) ?? null)
+  useEffect(() => setHold(recallHolds().find((h) => h.item_id === item.id) ?? null), [item.id])
+  const canHold = atTable && item.status === 'available' && item.buy_now_cents != null && !(item.closes_at && new Date(now) >= new Date(item.closes_at))
   const registerTo = `/bunfest/auction/register?next=${encodeURIComponent(`/bunfest/auction/${item.id}`)}`
 
   return (
@@ -61,9 +75,11 @@ export function BidBox({
             </p>
           </div>
           <div className="text-right text-xs font-semibold text-slate-500">
-            <p>
-              {item.bid_count} bid{item.bid_count === 1 ? '' : 's'}
-            </p>
+            {!paper && (
+              <p>
+                {item.bid_count} bid{item.bid_count === 1 ? '' : 's'}
+              </p>
+            )}
             {item.high_bidder_no != null && item.status !== 'won' && (
               <p className={me && me.bidder_no === item.high_bidder_no ? 'text-emerald-700' : ''}>
                 {me && me.bidder_no === item.high_bidder_no ? 'You are high' : `Bidder #${item.high_bidder_no} is high`}
@@ -74,7 +90,7 @@ export function BidBox({
         </div>
 
         <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
-          {item.status !== 'won' && (
+          {item.status !== 'won' && !paper && (
             <>
               <dt className="text-slate-500">Next bid at least</dt>
               <dd className="text-right font-bold text-ink">{money(item.next_min_cents)}</dd>
@@ -99,7 +115,16 @@ export function BidBox({
           )}
         </dl>
 
-        {closed ? (
+        {hold ? (
+          <HoldCard
+            hold={hold}
+            onForget={() => {
+              forgetHold(hold.claim_token)
+              setHold(null)
+              void onChanged()
+            }}
+          />
+        ) : closed ? (
           <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-600">{closed}</p>
         ) : !me ? (
           <div className="space-y-2 pt-1">
@@ -136,7 +161,17 @@ export function BidBox({
             token={token!}
             bidder={bidder}
             publishableKey={settings?.stripe_publishable_key ?? null}
+            cardBuyNow={!atTable}
             onChanged={onChanged}
+          />
+        )}
+        {!hold && canHold && (
+          <BuyAtTable
+            item={item}
+            onHeld={(h) => {
+              setHold(h)
+              void onChanged()
+            }}
           />
         )}
       </Card>
@@ -152,12 +187,15 @@ function BidForm({
   token,
   bidder,
   publishableKey,
+  cardBuyNow,
   onChanged,
 }: {
   item: AuctionItem
   token: string
   bidder: { fulfil: 'pickup' | 'ship' }
   publishableKey: string | null
+  /** Buy Now on the saved card (off when Buy it now is paid at the table). */
+  cardBuyNow: boolean
   onChanged: () => Promise<void> | void
 }) {
   const [amount, setAmount] = useState(() => String(item.next_min_cents / 100))
@@ -284,7 +322,7 @@ function BidForm({
         <Icon name="gavel" size={18} /> {busy === 'bid' ? 'Placing your bid…' : 'Place bid'}
       </button>
 
-      {item.buy_now_cents != null &&
+      {item.buy_now_cents != null && cardBuyNow &&
         (confirmBuy ? (
           <div className="space-y-2 rounded-xl border border-brand-orange/40 bg-brand-orange-50/60 px-4 py-3">
             <p className="font-display text-base font-extrabold text-ink">Buy now for {money(total)}?</p>
