@@ -70,6 +70,8 @@ export interface AuctionSettings {
   bidding_note: string | null
   pickup_note: string | null
   shipping_note: string | null
+  /** Update 44: Buy it now holds the item and the buyer pays at the auction table. */
+  buy_now_at_table?: boolean
 }
 
 export interface Catalog {
@@ -133,6 +135,9 @@ export interface Sale {
   shipped_at: string | null
   note: string | null
   created_at: string
+  /** Update 44: a Buy it now hold, paid at the table, and its pickup number. */
+  at_table?: boolean
+  pickup_no?: number | null
   buyer: {
     name: string | null
     email: string | null
@@ -204,6 +209,45 @@ export function updateBidder(
     p_fulfil: patch.fulfil,
     p_address: patch.address,
   })
+}
+
+// -------------------------------------------------------------
+// Buy it now, pay at the table (update 44): no card online — the item is
+// held under a pickup number and paid for at the auction table.
+// -------------------------------------------------------------
+export interface TableHold {
+  sale_id: string
+  claim_token: string
+  pickup_no: number
+  item_id: string
+  title: string
+  amount_cents: number
+}
+
+export type HoldState = 'waiting' | 'paid' | 'done' | 'cancelled'
+
+/** auction_table_claim(): what the buyer's screen shows. */
+export interface HoldStatus {
+  pickup_no: number
+  item_id: string
+  title: string
+  photo_url: string | null
+  amount_cents: number
+  buyer_name: string | null
+  created_at: string
+  payment_status: PaymentStatus
+  fulfil_status: FulfilStatus
+  paid_at: string | null
+  state: HoldState
+  pickup_note: string | null
+}
+
+export function holdItem(db: SupabaseClient, itemId: string, name: string, phone: string): Promise<TableHold> {
+  return call<TableHold>(db, 'auction_buy_now_claim', { p_item_id: itemId, p_name: name, p_phone: phone })
+}
+
+export function fetchHold(db: SupabaseClient, token: string): Promise<HoldStatus | null> {
+  return call<HoldStatus | null>(db, 'auction_table_claim', { p_token: token })
 }
 
 // -------------------------------------------------------------
@@ -305,6 +349,63 @@ export function forgetBidder(): void {
   }
 }
 
+// The holds made on this device (so the pickup number survives a reload), and
+// the name and phone last used, to fill the form next time.
+const HOLDS_KEY = 'ohrr.auction.holds'
+const BUYER_KEY = 'ohrr.auction.buyer'
+
+export interface RememberedHold {
+  claim_token: string
+  item_id: string
+  pickup_no: number
+  title: string
+  amount_cents: number
+}
+
+export function recallHolds(): RememberedHold[] {
+  try {
+    const list = JSON.parse(localStorage.getItem(HOLDS_KEY) ?? '[]') as RememberedHold[]
+    return Array.isArray(list) ? list.filter((h) => h && h.claim_token && h.item_id) : []
+  } catch {
+    return []
+  }
+}
+
+export function rememberHold(h: TableHold): void {
+  try {
+    const keep = recallHolds().filter((x) => x.item_id !== h.item_id).slice(-19)
+    const { claim_token, item_id, pickup_no, title, amount_cents } = h
+    localStorage.setItem(HOLDS_KEY, JSON.stringify([...keep, { claim_token, item_id, pickup_no, title, amount_cents }]))
+  } catch {
+    /* private mode */
+  }
+}
+
+export function forgetHold(token: string): void {
+  try {
+    localStorage.setItem(HOLDS_KEY, JSON.stringify(recallHolds().filter((x) => x.claim_token !== token)))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function recallBuyer(): { name: string; phone: string } {
+  try {
+    const b = JSON.parse(localStorage.getItem(BUYER_KEY) ?? '{}') as { name?: string; phone?: string }
+    return { name: b.name ?? '', phone: b.phone ?? '' }
+  } catch {
+    return { name: '', phone: '' }
+  }
+}
+
+export function rememberBuyer(name: string, phone: string): void {
+  try {
+    localStorage.setItem(BUYER_KEY, JSON.stringify({ name, phone }))
+  } catch {
+    /* ignore */
+  }
+}
+
 // -------------------------------------------------------------
 // Words and numbers
 // -------------------------------------------------------------
@@ -358,6 +459,7 @@ export function bidLine(item: AuctionItem): string {
 /** Why bidding isn't possible, or null when it is. */
 export function whyClosed(item: AuctionItem, settings: AuctionSettings | null, nowIso: string): string | null {
   if (item.status === 'won') return 'This item has been sold.'
+  if (settings?.buy_now_at_table && !settings.bidding_enabled) return 'Bid on the paper sheet at the auction table.'
   if (!settings || !settings.bidding_enabled) return 'Online bidding is not open yet.'
   if (settings.bidding_opens_at && new Date(nowIso) < new Date(settings.bidding_opens_at)) return `Bidding opens ${fmtWhen(settings.bidding_opens_at)}.`
   if (item.closes_at && new Date(nowIso) >= new Date(item.closes_at)) return 'Bidding on this item has closed.'

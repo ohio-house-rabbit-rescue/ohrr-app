@@ -1,4 +1,6 @@
 // Staff → Auction desk: the Silent Auction on BunFest day and the days after.
+//   Buy it now at the table — holds waiting to pay, "Paid and taken" (update
+//              44, TableHolds.tsx)
 //   Totals   — paid, pending, declined, sold, to pick up, to ship
 //   Close & charge now — every item whose time has passed: start a sale for
 //              its high bidder and charge the card on file (payment server)
@@ -33,6 +35,7 @@ import {
   type PaymentStatus,
   type Sale,
 } from '../client'
+import TableHolds from '../TableHolds'
 
 const DESK_POLL_MS = 20_000
 
@@ -118,6 +121,8 @@ export default function AuctionDesk() {
           .
         </p>
       </div>
+
+      {orgId && <TableHolds orgId={orgId} onChange={refresh} />}
 
       {error && !data && (
         <Card className="space-y-2 border-amber-200 bg-amber-50/60">
@@ -401,7 +406,8 @@ function ItemCard({ item, now, settings, onChange }: { item: DeskItem; now: stri
       {sale && (
         <div className="space-y-1 rounded-xl bg-slate-50 px-3 py-2 text-sm">
           <p className="font-bold text-ink">
-            {sale.kind === 'buy_now' ? 'Buy Now' : sale.kind === 'desk' ? 'Table sale' : 'Winning bid'} · {sale.buyer?.name ?? 'Walk-up'}
+            {sale.at_table ? `Buy it now at the table · #${sale.pickup_no}` : sale.kind === 'buy_now' ? 'Buy Now' : sale.kind === 'desk' ? 'Table sale' : 'Winning bid'} ·{' '}
+            {sale.buyer?.name ?? 'Walk-up'}
             {sale.buyer?.bidder_no != null && <> (#{sale.buyer.bidder_no})</>}
           </p>
           <p className="break-all text-slate-600">
@@ -439,9 +445,14 @@ function ItemCard({ item, now, settings, onChange }: { item: DeskItem; now: stri
                 Charge card again
               </button>
             )}
-            {sale.kind !== 'desk' && (
+            {sale.kind !== 'desk' && !sale.at_table && (
               <button type="button" disabled={busy} onClick={() => window.confirm('Pass this item to the next-highest bidder with a card? This cancels the current sale.') && void offerNext()} className={small}>
                 Offer to next bidder
+              </button>
+            )}
+            {sale.at_table && (
+              <button type="button" disabled={busy} onClick={() => void updateSale({ p_payment_status: 'cash', p_fulfil_status: 'picked_up' })} className={`${btn.primary} min-h-[44px] !py-2 disabled:opacity-60`}>
+                <Icon name="check" size={16} /> Paid and taken
               </button>
             )}
             <button type="button" disabled={busy} onClick={() => void updateSale({ p_payment_status: 'cash' })} className={small}>

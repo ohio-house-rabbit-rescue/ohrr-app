@@ -9,10 +9,12 @@
 // or send them straight to OHRR's Bluetooth label printer (printer/).
 // ?code=X (repeatable) ticks just those; &copies=N sets their copies;
 // ?c=X:N (repeatable) ticks X with N copies (a delivery's labels).
+// Silent Auction items print as bid-sheet labels (prices, "Scan to buy it
+// now") unless "Bid-sheet labels" is unticked (update 44).
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
-import { errMessage } from '../../../lib/supabase'
+import { errMessage, supabase } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
 import { Screen } from '../../../components/ui'
 import { Spinner } from '../../../components/staffui'
@@ -23,7 +25,8 @@ import { listItems, markLabelsPrinted } from '../api'
 import { listProducts, money, type StockCard } from '../../hopshop/api'
 import { BigButton, ErrorBox } from '../ScanUI'
 import { KIND_META, type TaggedItem } from '../types'
-import { LABEL_SIZES, customLabelSize, labelDataUrl, loadLabelSize, saveLabelSize, type LabelItem, type LabelSize } from '../labels'
+import { LABEL_SIZES, customLabelSize, labelDataUrl, loadLabelSize, saveLabelSize, type AuctionLabel, type LabelItem, type LabelSize } from '../labels'
+import { AUCTION_EVENT_SLUG } from '../../raffle/types'
 import BluetoothPrint from '../printer/BluetoothPrint'
 
 type Show = 'unprinted' | 'all'
@@ -45,12 +48,43 @@ interface Row {
 }
 
 const PRICE_KEY = 'ohrr.labels.shopPrice'
-function loadShowPrice(): boolean {
+const SHEET_KEY = 'ohrr.labels.auctionSheet'
+function loadOn(key: string): boolean {
   try {
-    return localStorage.getItem(PRICE_KEY) !== 'off'
+    return localStorage.getItem(key) !== 'off'
   } catch {
     return true
   }
+}
+function saveOn(key: string, on: boolean) {
+  try {
+    localStorage.setItem(key, on ? 'on' : 'off')
+  } catch {
+    /* private mode */
+  }
+}
+
+/** The bid-sheet details of the auction items: their prices and the auction's switches. */
+async function auctionDetails(orgId: string, ids: string[]): Promise<Map<string, AuctionLabel>> {
+  const out = new Map<string, AuctionLabel>()
+  if (ids.length === 0) return out
+  const [items, settings] = await Promise.all([
+    supabase.from('raffle_items').select('id, value_cents, starting_bid_cents, min_increment_cents, buy_now_cents').in('id', ids),
+    supabase.from('auction_settings').select('*').eq('org_id', orgId).eq('event_slug', AUCTION_EVENT_SLUG).maybeSingle(),
+  ])
+  if (items.error) throw items.error
+  const s = settings.data
+  for (const r of items.data ?? []) {
+    out.set(r.id, {
+      value_cents: r.value_cents,
+      starting_bid_cents: r.starting_bid_cents,
+      increment_cents: r.min_increment_cents ?? s?.default_increment_cents ?? null,
+      buy_now_cents: r.buy_now_cents,
+      buy_now_at_table: !!s?.buy_now_at_table,
+      online_bidding: !!s?.bidding_enabled,
+    })
+  }
+  return out
 }
 
 /** Copies of one label: 1 to 200. */
@@ -79,7 +113,7 @@ async function labelsPdfCopies(list: { item: LabelItem; copies: number }[], size
   return doc.output('blob')
 }
 
-function itemRow(i: TaggedItem): Row {
+function itemRow(i: TaggedItem, auction?: AuctionLabel): Row {
   return {
     key: i.tag_id,
     code: i.code,
@@ -90,7 +124,14 @@ function itemRow(i: TaggedItem): Row {
     quantity: i.quantity,
     label_printed_at: i.label_printed_at ?? null,
     price_cents: null,
-    label: { code: i.code, title: i.title, donated_by: i.donated_by, photo_url: i.photo_url, kindLabel: i.kind === 'donation' ? null : KIND_META[i.kind].label },
+    label: {
+      code: i.code,
+      title: i.title,
+      donated_by: i.donated_by,
+      photo_url: i.photo_url,
+      kindLabel: i.kind === 'donation' ? null : KIND_META[i.kind].label,
+      auction: auction ?? null,
+    },
   }
 }
 
@@ -116,7 +157,8 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   const orgId = membership?.orgId ?? ''
   const [items, setItems] = useState<Row[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [showPrice, setShowPrice] = useState(loadShowPrice)
+  const [showPrice, setShowPrice] = useState(() => loadOn(PRICE_KEY))
+  const [bidSheet, setBidSheet] = useState(() => loadOn(SHEET_KEY))
   // ?code=DON-00042 (one or more): tick just those — "Print this label" from the catalog or a product card.
   const [searchParams] = useSearchParams()
   const perCode = useMemo(() => {
@@ -132,7 +174,8 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
     [searchParams, perCode],
   )
   const wantedCopies = Number(searchParams.get('copies')) || 0
-  const toLabel = (r: Row): LabelItem => (shop ? { ...r.label, price_cents: showPrice ? r.price_cents : null } : r.label)
+  const toLabel = (r: Row): LabelItem =>
+    shop ? { ...r.label, price_cents: showPrice ? r.price_cents : null } : bidSheet ? r.label : { ...r.label, auction: null }
   const [show, setShow] = useState<Show>(wanted.length ? 'all' : 'unprinted')
   const [q, setQ] = useState('')
   const [picked, setPicked] = useState<Set<string>>(new Set())
@@ -150,9 +193,14 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   const load = async () => {
     try {
       // Hop Shop products print on their own page, as price labels.
-      const rows = shop
-        ? (await listProducts(orgId)).filter((p) => p.code || p.sku).map(productRow)
-        : (await listItems(orgId)).filter((i) => i.kind !== 'stock').map(itemRow)
+      let rows: Row[]
+      if (shop) rows = (await listProducts(orgId)).filter((p) => p.code || p.sku).map(productRow)
+      else {
+        const list = (await listItems(orgId)).filter((i) => i.kind !== 'stock')
+        // Auction items carry their prices for the bid-sheet label; without them it's a plain label.
+        const prices = await auctionDetails(orgId, list.filter((i) => i.kind === 'auction').map((i) => i.ref_id)).catch(() => new Map<string, AuctionLabel>())
+        rows = list.map((i) => itemRow(i, i.kind === 'auction' ? prices.get(i.ref_id) : undefined))
+      }
       setItems(rows)
       setPicked((p) => {
         if (p.size) return p
@@ -204,7 +252,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
       alive = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, shown, size, showPrice])
+  }, [selected, shown, size, showPrice, bidSheet])
 
   const chooseSize = (s: LabelSize) => {
     setSize(s)
@@ -349,15 +397,28 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
                 checked={showPrice}
                 onChange={(e) => {
                   setShowPrice(e.target.checked)
-                  try {
-                    localStorage.setItem(PRICE_KEY, e.target.checked ? 'on' : 'off')
-                  } catch {
-                    /* private mode */
-                  }
+                  saveOn(PRICE_KEY, e.target.checked)
                 }}
                 className="h-6 w-6 accent-brand-blue"
               />
               Show the price on the label
+            </label>
+          )}
+          {!shop && (items ?? []).some((r) => r.label.auction) && (
+            <label className="mt-3 flex min-h-[44px] items-start gap-2 text-[15px] font-bold text-slate-700">
+              <input
+                type="checkbox"
+                checked={bidSheet}
+                onChange={(e) => {
+                  setBidSheet(e.target.checked)
+                  saveOn(SHEET_KEY, e.target.checked)
+                }}
+                className="mt-0.5 h-6 w-6 shrink-0 accent-brand-blue"
+              />
+              <span>
+                Bid-sheet labels for Silent Auction items
+                <span className="block text-sm font-semibold text-slate-500">Starting bid, raise, Buy it now price and “Scan to buy it now”. 3 × 2 in or bigger reads best.</span>
+              </span>
             </label>
           )}
           {preview && (

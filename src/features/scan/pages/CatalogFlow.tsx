@@ -27,6 +27,7 @@ import { pickPhoto } from '../../../native/camera'
 import {
   MAX_ITEM_PHOTOS,
   catalogNewItem,
+  catalogToAuction,
   dataUrlToBlob,
   isNeeds40,
   listItems,
@@ -35,9 +36,12 @@ import {
   startDropoff,
   uploadItemPhoto,
 } from '../api'
-import { BigButton, BigInput, ErrorBox, StepShell } from '../ScanUI'
+import { BigButton, BigInput, ErrorBox, MoneyInput, StepShell } from '../ScanUI'
 import { KIND_META, dollarsToCents, extrasSummary, usDate, type TaggedItem } from '../types'
 import { HeadedForChips, MoreDetailsFields, QuantityField, ValueFields, emptyExtras, useCatalogSuggestions, type Extras } from '../DetailsFields'
+
+/** "$35" or "$12.50". */
+const usd = (cents: number) => (cents % 100 === 0 ? `$${cents / 100}` : `$${(cents / 100).toFixed(2)}`)
 
 type Step = 'start' | 'name' | 'saved'
 
@@ -49,6 +53,9 @@ const SpeechRecognitionCtor: any =
 
 interface Draft extends Extras {
   title: string
+  /** Headed for the Silent Auction (staff who run it): the prices for its bid sheet. */
+  startBid: string
+  buyNow: string
 }
 
 /** The drop-off being added to: who it's from, once for the whole bag or box. */
@@ -111,11 +118,15 @@ interface Saved {
   detailsSkipped?: boolean
   /** Where it's headed, size, use-by and the drop-off waited for database update 40. */
   planSkipped?: boolean
+  /** Moved straight into the Silent Auction, with these prices. */
+  auction?: { start: number | null; buyNow: number | null }
+  /** It stayed a donation headed for the auction, or its prices didn't save: why. */
+  auctionNote?: string
   error?: string
 }
 
 /** A fresh item; where it's kept usually stays the same for a whole box. */
-const emptyDraft = (location = ''): Draft => ({ title: '', ...emptyExtras(location) })
+const emptyDraft = (location = ''): Draft => ({ title: '', startBid: '', buyNow: '', ...emptyExtras(location) })
 
 const MORE_KEY = 'ohrr.catalog.more'
 
@@ -132,6 +143,8 @@ export default function CatalogFlow() {
   const [params] = useSearchParams()
 
   const allowed = KIND_META.donation.caps.some((c) => can(c))
+  // Runs the Silent Auction: a donation headed there goes straight in, with its prices.
+  const canAuction = can('events.bunfest.manage')
   const [step, setStep] = useState<Step>('start')
   const [current, setCurrent] = useState<Current | null>(loadCurrent)
   const [who, setWho] = useState({ donor: '', email: '', date: todayIso() })
@@ -418,7 +431,21 @@ export default function CatalogFlow() {
             photosNote = `Only the first photo is on the item: ${errMessage(err)}`
           }
         }
-        setSaved((s) => (s ? { ...s, phase: 'saved', item, photosFailed, photosNote, detailsSkipped, planSkipped } : s))
+        // Headed for the Silent Auction and they run it: straight in, with its prices.
+        let auction: Saved['auction']
+        let auctionNote: string | undefined
+        if (snap.headedFor === 'auction' && canAuction) {
+          const prices = { starting_bid_cents: dollarsToCents(snap.startBid), buy_now_cents: dollarsToCents(snap.buyNow) }
+          try {
+            item = await catalogToAuction(orgId, item.code, title, donatedBy, prices)
+            auction = { start: prices.starting_bid_cents, buyNow: prices.buy_now_cents }
+          } catch (err) {
+            const msg = errMessage(err)
+            if (/^It’s in the Silent Auction/.test(msg)) auction = { start: null, buyNow: null }
+            auctionNote = auction ? msg : `Saved as a donation headed for the Silent Auction; it didn’t move in (${msg}). Move it from the item.`
+          }
+        }
+        setSaved((s) => (s ? { ...s, phase: 'saved', item, photosFailed, photosNote, detailsSkipped, planSkipped, auction, auctionNote } : s))
         setToday((n) => (n ?? 0) + 1)
         setUnprinted((n) => (n ?? 0) + 1)
         if (donatedBy) setDonors((d) => [donatedBy, ...d.filter((x) => x.toLowerCase() !== donatedBy.toLowerCase())].slice(0, 12))
@@ -606,7 +633,7 @@ export default function CatalogFlow() {
             )}
             <div className="grid grid-cols-2 gap-2">
               <BigButton onClick={() => s.item && navigate(`/staff/labels?code=${encodeURIComponent(s.item.code)}`)} disabled={!done} tone="outline" icon="printer">
-                Print this label
+                {s.auction ? 'Print the bid-sheet label' : 'Print this label'}
               </BigButton>
               <BigButton onClick={finish} disabled={!done && s.phase !== 'failed'} tone="plain">
                 {current?.id ? 'Finish this drop-off' : 'I’m done'}
@@ -631,7 +658,9 @@ export default function CatalogFlow() {
               {s.donatedBy && <p className="text-[15px] text-slate-600">From {s.donatedBy}</p>}
               {s.item && extrasSummary(s.item) && <p className="text-[15px] text-slate-600">{extrasSummary(s.item)}</p>}
               <p className="text-sm text-slate-500">
-                Donation
+                {s.auction ? 'In the Silent Auction' : 'Donation'}
+                {s.auction?.start != null && ` · starts ${usd(s.auction.start)}`}
+                {s.auction?.buyNow != null && ` · Buy it now ${usd(s.auction.buyNow)}`}
                 {s.previews.length > 1 && ` · ${s.previews.length} photos`}
               </p>
               {done ? (
@@ -650,6 +679,11 @@ export default function CatalogFlow() {
               {s.previews.map((p, i) => (
                 <img key={p} src={p} alt="" className={`h-16 w-16 rounded-xl object-cover ${i === 0 ? 'ring-2 ring-brand-blue' : ''}`} />
               ))}
+            </div>
+          )}
+          {done && s.auctionNote && (
+            <div role="status" className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
+              {s.auctionNote}
             </div>
           )}
           {done && s.planSkipped && (
@@ -815,6 +849,26 @@ export default function CatalogFlow() {
           <QuantityField v={draft} set={update} />
           <ValueFields v={draft} set={update} />
           <HeadedForChips v={draft} set={update} />
+          {draft.headedFor === 'auction' &&
+            (canAuction ? (
+              <div className="space-y-2 rounded-2xl border-2 border-brand-blue/20 bg-brand-blue-50/50 p-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="mb-1 text-[15px] font-bold text-slate-700">Starting bid</p>
+                    <MoneyInput value={draft.startBid} onChange={(p) => update({ startBid: p })} ariaLabel="Starting bid, in dollars" />
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[15px] font-bold text-slate-700">Buy it now</p>
+                    <MoneyInput value={draft.buyNow} onChange={(p) => update({ buyNow: p })} ariaLabel="Buy it now price, in dollars" />
+                  </div>
+                </div>
+                <p className="text-sm text-slate-600">
+                  Saves it straight into the Silent Auction, ready for its bid-sheet label. Leave Buy it now empty for bids only.
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">It’s saved as a donation headed for the Silent Auction; someone who runs the auction moves it in and sets its prices.</p>
+            ))}
           {draft.headedFor === 'shop' && <MoreDetailsFields v={draft} set={update} suggestions={suggestions} show={{ price: true }} />}
           <button
             type="button"
