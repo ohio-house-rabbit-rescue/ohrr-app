@@ -1,21 +1,24 @@
-// Silent auction: everything a site needs to show the catalog, register a
+// The auctions: everything a site needs to show the catalog, register a
 // bidder, bid, Buy Now and show "my bids". Framework-free; the website and the
 // BunFest site carry a copy (src/lib/auctionClient.ts). Keep the three in sync.
+//
+// Two auctions share it (update 45): BunFest's Silent Auction and the OHRR
+// Online Auction, told apart by their event slug.
 //
 // Where things run:
 //   * reading the catalog, placing a bid, the bidder's own page → Postgres
 //     functions (update 35), called with the public key
-//   * registering (saving a card), Buy Now, changing a card → the payment
-//     server at AUCTION_API (Cloudflare Pages Functions next to the website),
-//     which holds Stripe's secret key
+//   * registering (saving a card), Buy Now, changing a card, charging → the
+//     "ohrr-auction" Supabase Edge Function, which holds Square's access token
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const AUCTION_EVENT = 'midwest-bunfest-2026'
+export const ONLINE_AUCTION_EVENT = 'ohrr-online-auction'
 
-/** The payment server. The website uses its own /api; the app and the BunFest site call the website's. */
+/** The payment server: the "ohrr-auction" Edge Function (Square). */
 export const AUCTION_API: string =
   ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_AUCTION_API ?? '').replace(/\/$/, '') ||
-  'https://ohrr-website.pages.dev/api/auction'
+  'https://ixxzebtzjgeimoijexwn.supabase.co/functions/v1/ohrr-auction'
 
 export type Session = 'morning' | 'afternoon' | 'all-day'
 export type Fulfil = 'pickup' | 'ship'
@@ -34,6 +37,8 @@ export interface Address {
 /** One item as auction_item_json() returns it (public-safe). */
 export interface AuctionItem {
   id: string
+  /** Which auction it's in (update 45; missing before it). */
+  event_slug?: string
   title: string
   description: string | null
   donated_by: string | null
@@ -59,13 +64,22 @@ export interface AuctionItem {
 }
 
 export interface AuctionSettings {
+  /** Update 45: the auction's slug and name. */
+  event_slug?: string
+  title?: string | null
   bidding_enabled: boolean
   bidding_opens_at: string | null
   morning_closes_at: string | null
   afternoon_closes_at: string | null
   extend_minutes: number
   default_increment_cents: number
+  /** Retired with update 45 (Square replaced Stripe). */
   stripe_publishable_key: string | null
+  /** Update 45: Square's public ids for the card form. */
+  square_application_id?: string | null
+  square_location_id?: string | null
+  /** Update 45: the winners are charged automatically when it closes. */
+  auto_charge?: boolean
   intro_text: string | null
   bidding_note: string | null
   pickup_note: string | null
@@ -130,6 +144,8 @@ export interface Sale {
   stripe_payment_intent_id: string | null
   failure_message: string | null
   paid_at: string | null
+  /** Update 45: Square's receipt for a card payment. */
+  receipt_url?: string | null
   fulfil_status: FulfilStatus
   tracking: string | null
   shipped_at: string | null
@@ -158,10 +174,12 @@ export interface MyPage {
   won: Sale[]
 }
 
-export type ChargeResult =
-  | { ok: true; sale: Sale }
-  | { ok: false; requires_action: true; client_secret: string; sale: Sale }
-  | { ok: false; requires_action?: false; error: string; sale: Sale }
+export type ChargeResult = { ok: true; sale: Sale } | { ok: false; error: string; sale: Sale }
+
+/** Square's ids are in place: the card form can open. */
+export function cardPaymentsReady(s: AuctionSettings | null | undefined): boolean {
+  return Boolean(s?.square_application_id && s?.square_location_id)
+}
 
 // -------------------------------------------------------------
 // Database reads and bids (public key)
@@ -177,7 +195,7 @@ export function cleanMessage(m: string): string {
   return m.replace(/^.*?(?:ERROR|error):\s*/, '').replace(/\s*\(SQLSTATE.*$/, '').trim() || 'Something went wrong.'
 }
 
-export function fetchCatalog(db: SupabaseClient, event = AUCTION_EVENT): Promise<Catalog> {
+export function fetchCatalog(db: SupabaseClient, event: string = AUCTION_EVENT): Promise<Catalog> {
   return call<Catalog>(db, 'auction_catalog', { p_event: event })
 }
 
@@ -253,6 +271,16 @@ export function fetchHold(db: SupabaseClient, token: string): Promise<HoldStatus
 // -------------------------------------------------------------
 // The payment server
 // -------------------------------------------------------------
+
+/** The payment server said no; `data` carries what else it sent (a registered bidder whose card didn't save). */
+export class AuctionApiError extends Error {
+  data: Record<string, unknown>
+  constructor(message: string, data: Record<string, unknown>) {
+    super(message)
+    this.data = data
+  }
+}
+
 async function post<T>(path: string, body: unknown, headers: Record<string, string> = {}): Promise<T> {
   let res: Response
   try {
@@ -265,30 +293,28 @@ async function post<T>(path: string, body: unknown, headers: Record<string, stri
     throw new Error('We could not reach the payment server. Check your connection and try again.')
   }
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
-  if (!res.ok && !('ok' in data)) throw new Error((data.error as string) || `The payment server answered ${res.status}.`)
+  if (!res.ok && !('ok' in data)) throw new AuctionApiError((data.error as string) || `The payment server answered ${res.status}.`, data)
   return data as T
 }
 
 export interface RegisterInput {
-  event?: string
+  event: string
   name: string
   email: string
   phone?: string
   fulfil: Fulfil
   address?: Address | null
+  /** From Square's card form (a one-time token; the number never reaches OHRR). */
+  card_token: string
 }
 
 export const auctionApi = {
-  /** Make the bidder record and get the client_secret for Stripe's card form. */
-  register: (input: RegisterInput) => post<{ bidder: Bidder; client_secret: string }>('register', { event: AUCTION_EVENT, ...input }),
-  /** After the card form succeeds: tell the server which setup it was. */
-  cardSaved: (token: string, setupIntentId: string) => post<{ bidder: Bidder }>('card-saved', { token, setup_intent: setupIntentId }),
-  /** A new card form for an existing bidder. */
-  newCard: (token: string) => post<{ client_secret: string }>('new-card', { token }),
+  /** Make the bidder and save their card on Square, in one go. */
+  register: (input: RegisterInput) => post<{ bidder: Bidder }>('register', input),
+  /** Save a new card for an existing bidder (it replaces the old one). */
+  newCard: (token: string, cardToken: string) => post<{ bidder: Bidder }>('new-card', { token, card_token: cardToken }),
   /** Buy the item now on the saved card. */
   buyNow: (token: string, itemId: string) => post<ChargeResult>('buy-now', { token, item_id: itemId }),
-  /** After the bank's extra check: how did the payment end? */
-  complete: (token: string, saleId: string) => post<{ sale: Sale; stripe_status?: string }>('complete', { token, sale_id: saleId }),
   /** A winner pays for a declined or unpaid sale on the card they have now. */
   pay: (token: string, saleId: string) => post<ChargeResult>('pay', { token, sale_id: saleId }),
   /** Staff: close & charge, retry one, or pass to the next bidder. */
@@ -299,11 +325,19 @@ export const auctionApi = {
     post<{ results: ChargeResult[]; errors: { item_id?: string; error: string }[]; message?: string }>('charge', body, {
       authorization: `Bearer ${jwt}`,
     }),
+  /** Staff: the Square locations the access token can take payments into. */
+  locations: (jwt: string, event: string, applicationId: string) =>
+    post<{ locations: { id: string; name: string; active: boolean; currency: string | null }[] }>(
+      'locations',
+      { event, application_id: applicationId },
+      { authorization: `Bearer ${jwt}` },
+    ),
   /** Is the server set up? (No secrets in the answer.) */
   health: async () => {
     try {
       const r = await fetch(`${AUCTION_API}/health`)
-      return (await r.json()) as { ok: boolean; stripe: boolean; stripe_mode: 'live' | 'test' | null; webhook: boolean; supabase: boolean }
+      if (!r.ok) return null
+      return (await r.json()) as { ok: boolean; provider?: string; square: boolean; square_live: boolean; square_sandbox: boolean; supabase: boolean }
     } catch {
       return null
     }
@@ -311,9 +345,10 @@ export const auctionApi = {
 }
 
 // -------------------------------------------------------------
-// Remembering the bidder on this device
+// Remembering the bidder on this device — one per auction
 // -------------------------------------------------------------
 const KEY = 'ohrr.auction.bidder'
+const keyFor = (event: string) => (event === AUCTION_EVENT ? KEY : `${KEY}.${event}`)
 
 export interface RememberedBidder {
   access_token: string
@@ -324,15 +359,15 @@ export interface RememberedBidder {
 
 export function rememberBidder(b: Bidder): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ access_token: b.access_token, event_slug: b.event_slug, name: b.name, bidder_no: b.bidder_no }))
+    localStorage.setItem(keyFor(b.event_slug), JSON.stringify({ access_token: b.access_token, event_slug: b.event_slug, name: b.name, bidder_no: b.bidder_no }))
   } catch {
     /* private mode */
   }
 }
 
-export function recallBidder(event = AUCTION_EVENT): RememberedBidder | null {
+export function recallBidder(event: string = AUCTION_EVENT): RememberedBidder | null {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(keyFor(event))
     if (!raw) return null
     const b = JSON.parse(raw) as RememberedBidder
     return b && b.access_token && b.event_slug === event ? b : null
@@ -341,9 +376,9 @@ export function recallBidder(event = AUCTION_EVENT): RememberedBidder | null {
   }
 }
 
-export function forgetBidder(): void {
+export function forgetBidder(event: string = AUCTION_EVENT): void {
   try {
-    localStorage.removeItem(KEY)
+    localStorage.removeItem(keyFor(event))
   } catch {
     /* ignore */
   }

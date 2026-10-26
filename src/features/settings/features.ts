@@ -29,6 +29,8 @@ export interface AppFeature {
 
 export const BUNFEST_SECTION_FLAG = 'bunfest_section_enabled'
 export const SILENT_AUCTION_FLAG = 'silent_auction_enabled'
+/** The OHRR Online Auction (update 45): off until switched on. */
+export const ONLINE_AUCTION_FLAG = 'online_auction_enabled'
 export const RAFFLE_TICKETS_FLAG = 'raffle_tickets_enabled'
 /** Second switch for the Android / iPhone apps only (Apple 5.3.3 / Play gambling). */
 export const RAFFLE_TICKETS_NATIVE_FLAG = 'raffle_tickets_native_enabled'
@@ -59,6 +61,13 @@ export const APP_FEATURES: AppFeature[] = [
     description:
       'Show “Get raffle tickets” on the BunFest raffle page: numbered tickets held for the person, paid at the raffle table, drawn from Staff → Raffle tickets. Pricing comes from Silent Auction → Auction setup.',
     group: 'Midwest BunFest',
+  },
+  {
+    key: ONLINE_AUCTION_FLAG,
+    label: 'Online Auction',
+    description:
+      'The OHRR Online Auction at /auction, on the app and the website: its own items and closing time, bidders save a card with Square first and the winners are charged automatically at the close. Switching it OFF also closes its bidding.',
+    group: 'The rescue',
   },
   {
     key: HOP_SHOP_ITEMS_FLAG,
