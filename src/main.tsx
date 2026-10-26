@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './lib/auth'
 import NativeBridge from './native/NativeBridge'
+import EmailChooser from './components/EmailChooser'
 import { applyTextSize } from './lib/textSize'
 import { isNative } from './native/platform'
 import './index.css'
@@ -25,6 +26,8 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       {/* No-op on the web; inside the Android/iOS app: splash, status bar, back button, external links */}
       <NativeBridge />
+      {/* On a computer: email links go to Gmail, the email program, or are copied */}
+      <EmailChooser />
       <AuthProvider>
         <App />
       </AuthProvider>

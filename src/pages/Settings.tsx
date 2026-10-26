@@ -3,6 +3,8 @@ import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader, Screen, Card, SectionLabel, ActionCard, btn } from '../components/ui'
 import { TEXT_SIZES, setTextSize, useTextSize } from '../lib/textSize'
+import { setEmailWith, useEmailWith, type EmailWith } from '../lib/emailWith'
+import { isNative } from '../native/platform'
 import { Icon } from '../components/icons'
 import { build, buildLabel } from '../data/version'
 import { PHOTO_CREDITS } from '../data/photos'
@@ -119,6 +121,9 @@ export default function Settings() {
             <p className="text-xs text-slate-400">Applies everywhere in the app, and stays set on this device.</p>
           </Card>
         </section>
+
+        {/* ---- Sending email (browser only; phones use their mail app) ---- */}
+        {!isNative && <SendingEmail />}
 
         {/* ---- Home screen (browser only) ---- */}
         <InstallApp />
@@ -299,6 +304,45 @@ function JustEmails() {
         )}
       </div>
     </details>
+  )
+}
+
+const EMAIL_WITH: { value: EmailWith; label: string }[] = [
+  { value: 'ask', label: 'Ask each time' },
+  { value: 'gmail', label: 'Gmail' },
+  { value: 'app', label: 'Email program' },
+]
+
+// Where an "Email it" goes on a computer (lib/emailWith.ts). Phones always
+// open their own mail app.
+function SendingEmail() {
+  const current = useEmailWith()
+  return (
+    <section className="space-y-2">
+      <SectionLabel>Sending email</SectionLabel>
+      <Card className="space-y-2">
+        <p className="text-sm text-slate-600">
+          On a computer, the app's email buttons can open a new Gmail message in the browser, all filled in — nothing to set up
+          on the computer.
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {EMAIL_WITH.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => setEmailWith(o.value)}
+              aria-pressed={current === o.value}
+              className={`min-h-[52px] rounded-2xl border px-2 text-sm font-bold transition ${
+                current === o.value ? 'border-brand-blue bg-brand-blue text-white shadow-sm' : 'border-slate-200 bg-white text-slate-600'
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-slate-400">Stays set on this computer. Phones and tablets always use their own mail app.</p>
+      </Card>
+    </section>
   )
 }
 

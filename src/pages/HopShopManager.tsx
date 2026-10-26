@@ -63,6 +63,7 @@ import { CompanyForm, CompanySummary, CompanyThumb, useVendorRecordsReady } from
 import { PackEditor, packRowsFrom, packRowsToInput, type PackRow } from '../features/hopshop/PackEditor'
 import { NewTypeForm, TypesPanel } from '../features/hopshop/TypesPanel'
 import { NewSupplierForm } from '../features/hopshop/NewSupplierForm'
+import { openMail } from '../lib/emailWith'
 import { clearNewItemDraft, readNewItemDraft, writeNewItemDraft } from '../features/hopshop/newItemDraft'
 
 const Scanner = lazy(() => import('../features/scan/Scanner'))
@@ -1138,7 +1139,7 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
   const sendList = async (name: string, list: StockCard[], s: Supplier | null) => {
     const text = orderText(name, list, s?.account_number, choiceMap(list))
     if (s?.email) {
-      window.location.href = `mailto:${s.email}?subject=${encodeURIComponent(`Order — Ohio House Rabbit Rescue`)}&body=${encodeURIComponent(text)}`
+      openMail(`mailto:${s.email}?subject=${encodeURIComponent(`Order — Ohio House Rabbit Rescue`)}&body=${encodeURIComponent(text)}`)
       return
     }
     const r = await shareText(text, `Order — ${name}`)
