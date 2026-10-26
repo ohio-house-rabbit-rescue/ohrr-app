@@ -396,7 +396,8 @@ begin
   select * into c from push_config where id = 1;
   if not found then return; end if;
   perform net.http_post(
-    url := replace(c.function_url, '/ohrr-jobs', '/ohrr-auction'),
+    -- The function reads the action from the last part of the address (…/ohrr-auction/close-due).
+    url := replace(c.function_url, '/ohrr-jobs', '/ohrr-auction/' || coalesce(p_body->>'action', 'close-due')),
     body := p_body,
     headers := jsonb_build_object('Content-Type', 'application/json', 'x-ohrr-secret', c.trigger_secret),
     timeout_milliseconds := 120000);
