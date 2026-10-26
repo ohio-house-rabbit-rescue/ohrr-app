@@ -28,6 +28,12 @@
 --   auction_due_exists()             the five-minute check (nothing is called
 --                                    while no auction is waiting to close)
 --   auction_set_receipt(sale, url)   Edge Function
+--   auction_claim_stuck_sales()      Edge Function: charges started but never
+--                                    answered, retried for about an hour
+--   auction_charge_begin(sale)       Edge Function: one charge at a time per sale
+--   auction_card_attempt(bidder)     Edge Function: five new cards an hour
+--   auction_finalize_sale            re-made: a paid sale can't be reopened
+--   auction_register_bidder          re-made: refuses a flood of sign-ups
 --   auction_move_item(item, event)   staff: move an item between the auctions
 --                                    (only while nobody has bid on it)
 --
@@ -336,22 +342,184 @@ grant execute on function auction_move_item(uuid, text) to authenticated;
 -- -------------------------------------------------------------
 -- 4. The automatic close (Edge Function only)
 -- -------------------------------------------------------------
+-- Only winners who can be charged: a blocked bidder or one with no card stays
+-- on the desk for staff ("Pass to the next bidder" or cash).
 create or replace function auction_due_items()
 returns setof raffle_items language sql stable security definer set search_path = public as $$
   select i.* from raffle_items i
     join auction_settings s on s.org_id = i.org_id and s.event_slug = i.event_slug
-   where s.auto_charge and i.is_published and i.status = 'available' and i.high_bidder_id is not null
+    join auction_bidders d on d.id = i.high_bidder_id
+   where s.auto_charge and i.is_published and i.status = 'available'
+     and d.card_ready and not d.is_blocked
      and auction_effective_close(i) is not null and now() >= auction_effective_close(i)
      and not exists (select 1 from auction_sales sa where sa.item_id = i.id and sa.payment_status <> 'void')
    order by auction_effective_close(i), i.sort_order;
 $$;
 revoke all on function auction_due_items() from public, anon, authenticated;
 
+-- -------------------------------------------------------------
+-- 5. Charging safely
+-- -------------------------------------------------------------
+-- decline_count   how many times the card was declined (part of Square's
+--                 idempotency key, so a new attempt is a new payment and a
+--                 repeat of the same attempt is never charged twice)
+-- charge_attempts how many times the five-minute check retried a stuck charge
+-- last_charge_at  a charge is being made right now (held for two minutes, or
+--                 until Square answers), so two charges never run side by side
+alter table auction_sales add column if not exists decline_count int not null default 0;
+alter table auction_sales add column if not exists charge_attempts int not null default 0;
+alter table auction_sales add column if not exists last_charge_at timestamptz;
+-- New cards per bidder: at most five an hour.
+alter table auction_bidders add column if not exists card_changes int not null default 0;
+alter table auction_bidders add column if not exists card_window_at timestamptz;
+
+-- Record what Square said. A settled sale stays settled: paid or cash can only
+-- become refunded, and nothing reopens a refunded or void sale.
+create or replace function auction_finalize_sale(p_sale_id uuid, p_status text, p_payment_intent text default null,
+                                                 p_failure text default null)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  sa auction_sales;
+begin
+  if p_status not in ('pending', 'paid', 'failed', 'refunded', 'void', 'cash') then raise exception 'Unknown status'; end if;
+  select * into sa from auction_sales where id = p_sale_id for update;
+  if not found then raise exception 'Sale not found'; end if;
+  if sa.payment_status in ('void', 'refunded') then return auction_sale_json(sa); end if;
+  if sa.payment_status in ('paid', 'cash') and p_status <> 'refunded' then return auction_sale_json(sa); end if;
+  update auction_sales set
+    payment_status = p_status,
+    stripe_payment_intent_id = coalesce(p_payment_intent, stripe_payment_intent_id),
+    failure_message = case when p_status = 'failed' then left(coalesce(p_failure, 'Payment failed'), 300)
+                           when p_status = 'paid' then null else failure_message end,
+    decline_count = decline_count + case when p_status = 'failed' then 1 else 0 end,
+    last_charge_at = case when p_status = 'pending' then last_charge_at end,
+    paid_at = case when p_status in ('paid', 'cash') then coalesce(paid_at, now()) else paid_at end
+  where id = p_sale_id returning * into sa;
+  if p_status = 'void' then
+    update raffle_items set status = 'available', won_kind = null where id = sa.item_id;
+    perform auction_recompute_item(sa.item_id);
+  end if;
+  return auction_sale_json(sa);
+end $$;
+revoke all on function auction_finalize_sale(uuid, text, text, text) from public, anon, authenticated;
+grant execute on function auction_finalize_sale(uuid, text, text, text) to service_role;
+
+-- Charges that were started but never answered (Square was slow, or the
+-- function stopped half-way). Picked up again after three minutes, for about
+-- an hour; after that the desk shows them for staff.
+create or replace function auction_stuck_sales()
+returns setof auction_sales language sql stable security definer set search_path = public as $$
+  select y.* from auction_sales y
+   where y.payment_status = 'pending' and y.bidder_id is not null and y.claim_token is null
+     and y.kind in ('bid', 'buy_now') and y.charge_attempts < 12
+     and coalesce(y.last_charge_at, y.created_at) < now() - interval '3 minutes'
+     and (y.kind = 'buy_now' or exists (select 1 from auction_settings s
+                                         where s.org_id = y.org_id and s.event_slug = y.event_slug and s.auto_charge));
+$$;
+revoke all on function auction_stuck_sales() from public, anon, authenticated;
+
+-- Edge Function: up to twenty stuck charges to try again (each still takes
+-- the charge lock below before Square is called).
+create or replace function auction_claim_stuck_sales(p_limit int default 20)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  sa auction_sales;
+  out_sales jsonb := '[]'::jsonb;
+begin
+  for sa in
+    update auction_sales x set charge_attempts = x.charge_attempts + 1
+     where x.id in (select y.id from auction_sales y
+                     where y.id in (select z.id from auction_stuck_sales() z)
+                     order by y.created_at limit greatest(1, least(coalesce(p_limit, 20), 50))
+                     for update skip locked)
+    returning x.*
+  loop
+    out_sales := out_sales || jsonb_build_array(auction_sale_json(sa));
+  end loop;
+  return out_sales;
+end $$;
+revoke all on function auction_claim_stuck_sales(int) from public, anon, authenticated;
+grant execute on function auction_claim_stuck_sales(int) to service_role;
+
 create or replace function auction_due_exists()
 returns boolean language sql stable security definer set search_path = public as $$
-  select exists (select 1 from auction_due_items());
+  select exists (select 1 from auction_due_items()) or exists (select 1 from auction_stuck_sales());
 $$;
 revoke all on function auction_due_exists() from public, anon, authenticated;
+
+-- Edge Function: take the charge lock on a sale. Null = someone else is
+-- charging it right now (or it is no longer unpaid). Returns the sale with
+-- what Square's idempotency key is made from.
+create or replace function auction_charge_begin(p_sale_id uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  sa auction_sales;
+begin
+  update auction_sales set last_charge_at = now()
+   where id = p_sale_id and payment_status in ('pending', 'failed')
+     and (last_charge_at is null or last_charge_at < now() - interval '2 minutes')
+  returning * into sa;
+  if not found then return null; end if;
+  return auction_sale_json(sa) || jsonb_build_object('decline_count', sa.decline_count);
+end $$;
+revoke all on function auction_charge_begin(uuid) from public, anon, authenticated;
+grant execute on function auction_charge_begin(uuid) to service_role;
+
+-- Edge Function: may this bidder save another card? (five an hour)
+create or replace function auction_card_attempt(p_bidder_id uuid)
+returns boolean language plpgsql security definer set search_path = public as $$
+declare
+  v_n int;
+begin
+  update auction_bidders set
+    card_changes = case when card_window_at is null or card_window_at < now() - interval '1 hour' then 1 else card_changes + 1 end,
+    card_window_at = case when card_window_at is null or card_window_at < now() - interval '1 hour' then now() else card_window_at end
+  where id = p_bidder_id returning card_changes into v_n;
+  return coalesce(v_n, 0) between 1 and 5;
+end $$;
+revoke all on function auction_card_attempt(uuid) from public, anon, authenticated;
+grant execute on function auction_card_attempt(uuid) to service_role;
+
+-- Payment server only: make a bidder record before the card is saved.
+-- Now refuses a flood of sign-ups (40 to one auction in ten minutes).
+create or replace function auction_register_bidder(p_event text, p_name text, p_email text, p_phone text,
+                                                   p_fulfil text, p_address jsonb default null)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_org uuid;
+  b auction_bidders;
+  v_email text := nullif(lower(btrim(coalesce(p_email, ''))), '');
+begin
+  if nullif(btrim(coalesce(p_name, '')), '') is null then raise exception 'Please give your name'; end if;
+  if v_email is null or position('@' in v_email) = 0 then raise exception 'Please give an email address'; end if;
+  if p_fulfil not in ('pickup', 'ship') then raise exception 'Choose pickup or shipping'; end if;
+  if p_fulfil = 'ship' and (p_address is null or nullif(btrim(coalesce(p_address->>'line1', '')), '') is null
+                            or nullif(btrim(coalesce(p_address->>'zip', '')), '') is null) then
+    raise exception 'Please give a shipping address';
+  end if;
+  select id into v_org from organizations where name = 'Ohio House Rabbit Rescue' limit 1;
+  if v_org is null then select id into v_org from organizations order by created_at limit 1; end if;
+  if v_org is null then raise exception 'No organization'; end if;
+  if not exists (select 1 from auction_settings s where s.org_id = v_org and s.event_slug = p_event) then
+    raise exception 'That auction is not set up.';
+  end if;
+  if (select count(*) from auction_bidders x
+       where x.org_id = v_org and x.event_slug = p_event and x.created_at > now() - interval '10 minutes') >= 40 then
+    raise exception 'A lot of people are signing up right now. Please try again in a few minutes.';
+  end if;
+  insert into auction_bidders (org_id, event_slug, name, email, phone, fulfil, address)
+  values (v_org, p_event, left(btrim(p_name), 80), v_email,
+          nullif(regexp_replace(coalesce(p_phone, ''), '[^0-9+]', '', 'g'), ''),
+          p_fulfil, case when p_fulfil = 'ship' then p_address end)
+  returning * into b;
+  return auction_bidder_json(b);
+end $$;
+revoke all on function auction_register_bidder(text, text, text, text, text, jsonb) from public, anon, authenticated;
+grant execute on function auction_register_bidder(text, text, text, text, text, jsonb) to service_role;
+
+-- Inside helpers: only other database functions use them.
+revoke all on function auction_recompute_item(uuid) from public, anon, authenticated;
+revoke all on function auction_sale_json(auction_sales) from public, anon, authenticated;
 
 -- Start the sale for each winner; the Edge Function charges them.
 create or replace function auction_close_due()
@@ -410,9 +578,10 @@ select cron.schedule('ohrr-auction-close', '*/5 * * * *',
   $$select public.call_ohrr_auction('{"action": "close-due"}'::jsonb) where public.auction_due_exists()$$);
 
 -- -------------------------------------------------------------
--- Check: three "true"
+-- Check: four "true"
 -- -------------------------------------------------------------
 select
+  exists (select 1 from information_schema.columns where table_name = 'auction_sales' and column_name = 'decline_count') as charge_guards,
   exists (select 1 from information_schema.columns where table_name = 'auction_settings' and column_name = 'square_application_id') as square_columns,
   exists (select 1 from auction_settings where event_slug = 'ohrr-online-auction') as online_auction_row,
   exists (select 1 from cron.job where jobname = 'ohrr-auction-close') as auto_close_scheduled;

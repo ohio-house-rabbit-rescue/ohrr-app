@@ -12,14 +12,22 @@
 //                    { offer_next_sale_id } pass it to the next bidder
 //   POST locations   staff { event } → the Square locations, to pick one
 //   POST close-due   the database, every five minutes (x-ohrr-secret):
-//                    charge the winners of every auction that charges itself
+//                    charge the winners of every auction that charges itself,
+//                    and try again any charge Square never answered
+//
+// Never twice: each charge takes a lock on its sale (auction_charge_begin),
+// and Square's idempotency key is made from the sale, the card, how many times
+// it was declined and the earlier payment, so a repeat of the same attempt is
+// answered with the same payment. Only a card problem marks a sale declined;
+// if Square is slow or down the sale stays unpaid and is tried again.
 //
 // The card number goes from Square's card form straight to Square; this
 // function only ever sees a one-time token, and the database keeps Square's
 // ids. Secrets (Supabase → Edge Functions → Secrets):
 //   SQUARE_ACCESS_TOKEN          the production access token
-//   SQUARE_SANDBOX_ACCESS_TOKEN  optional: the sandbox one, for test runs
-// Which one is used follows the auction's application id: "sandbox-…" = sandbox.
+//   SQUARE_SANDBOX_ACCESS_TOKEN  the sandbox one, for test runs
+// Which one is used follows the auction's application id: "sandbox-…" = sandbox
+// (and a sandbox auction never falls back to the real token).
 // SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY come with
 // every Edge Function. Deploy with "Verify JWT" OFF (the browsers call it
 // without a session; staff calls are checked against Postgres instead).
@@ -28,7 +36,7 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
-const SQUARE_VERSION = '2026-09-16'
+const SQUARE_VERSION = '2026-08-19'
 const noSession = { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
 const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: noSession })
 
@@ -121,6 +129,8 @@ interface Sale {
   total_cents: number
   payment_status: PaymentStatus
   stripe_payment_intent_id: string | null
+  decline_count?: number
+  receipt_url?: string | null
   buyer: { email: string | null; stripe_customer_id: string | null; stripe_payment_method_id: string | null; [k: string]: unknown }
   item: { title?: string } | null
   [k: string]: unknown
@@ -162,10 +172,10 @@ interface SquarePayment { id: string; status: string; receipt_url?: string }
 
 function squareFor(s: Settings) {
   const sandbox = (s.square_application_id ?? '').startsWith('sandbox-')
-  const token = sandbox
-    ? Deno.env.get('SQUARE_SANDBOX_ACCESS_TOKEN') || Deno.env.get('SQUARE_ACCESS_TOKEN')
-    : Deno.env.get('SQUARE_ACCESS_TOKEN')
-  if (!token) throw new HttpError(503, 'Card payments are not set up yet (the Square access token is missing).')
+  const token = Deno.env.get(sandbox ? 'SQUARE_SANDBOX_ACCESS_TOKEN' : 'SQUARE_ACCESS_TOKEN')
+  if (!token) {
+    throw new HttpError(503, `Card payments are not set up yet (the Square ${sandbox ? 'sandbox ' : ''}access token is missing).`)
+  }
   if (!s.square_location_id) throw new HttpError(503, 'Card payments are not set up yet (no Square location chosen).')
   const base = sandbox ? 'https://connect.squareupsandbox.com' : 'https://connect.squareup.com'
   return {
@@ -181,6 +191,23 @@ function squareFor(s: Settings) {
     },
   }
 }
+
+/** A problem with the card itself (declined, expired …), not with Square or OHRR. */
+const isCardProblem = (errors: SquareError[] | undefined) => Boolean(errors?.some((e) => e.category === 'PAYMENT_METHOD_ERROR'))
+
+/** Square wants E.164 (+16145551234); anything else is left out. */
+function e164(phone: string | null): string | undefined {
+  if (!phone) return undefined
+  const digits = phone.replace(/\D/g, '')
+  if (phone.trim().startsWith('+') && digits.length >= 8 && digits.length <= 15) return `+${digits}`
+  if (digits.length === 10) return `+1${digits}`
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
+  return undefined
+}
+
+/** Leave out empty fields (Square rejects empty strings in an address). */
+const compact = <T extends Record<string, unknown>>(o: T) =>
+  Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined && v !== null && v !== '')) as Partial<T>
 
 /** Square's error, in words a bidder can act on. */
 function squareMessage(errors: SquareError[] | undefined, fallback: string): string {
@@ -217,7 +244,7 @@ async function saveCard(s: Settings, bidder: Bidder, cardToken: string): Promise
       given_name: given,
       family_name: rest.join(' ') || undefined,
       email_address: bidder.email,
-      phone_number: bidder.phone || undefined,
+      phone_number: e164(bidder.phone),
       reference_id: `bidder-${bidder.bidder_no}`,
       note: `${auctionName(s)} — bidder #${bidder.bidder_no}`,
     })
@@ -234,7 +261,7 @@ async function saveCard(s: Settings, bidder: Bidder, cardToken: string): Promise
       cardholder_name: bidder.name,
       reference_id: `bidder-${bidder.bidder_no}`,
       billing_address: a?.line1
-        ? { address_line_1: a.line1, address_line_2: a.line2 || undefined, locality: a.city, administrative_district_level_1: a.state, postal_code: a.zip, country: 'US' }
+        ? compact({ address_line_1: a.line1, address_line_2: a.line2, locality: a.city, administrative_district_level_1: a.state, postal_code: a.zip, country: 'US' })
         : undefined,
     },
   })
@@ -255,34 +282,65 @@ async function saveCard(s: Settings, bidder: Bidder, cardToken: string): Promise
 
 type ChargeResult = { ok: true; sale: Sale } | { ok: false; error: string; sale: Sale }
 
-/** A short, stable key per attempt (Square allows 45 characters). */
-async function attemptKey(saleId: string, previous: string | null): Promise<string> {
-  if (!previous) return saleId
-  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(previous)))
-  return `${saleId}-${Array.from(h.slice(0, 4), (b) => b.toString(16).padStart(2, '0')).join('')}`
-}
+const hex8 = async (text: string) =>
+  Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))).slice(0, 4), (b) =>
+    b.toString(16).padStart(2, '0'),
+  ).join('')
 
 /**
- * Charge a sale to the winner's saved card. `onFailure`: a Buy it now that
- * fails is voided (the item goes straight back up); a winning bid that fails
- * is kept as 'failed' so the bidder can pay with another card, or staff can
- * pass it to the next bidder or take cash.
+ * Square's idempotency key for one attempt (45 characters at most): the same
+ * sale, card, decline count and earlier payment always give the same key.
  */
-async function chargeSale(sale: Sale, onFailure: 'failed' | 'void'): Promise<ChargeResult> {
+const attemptKey = async (saleId: string, cardId: string, declines: number, previous: string | null) =>
+  `${saleId}-${await hex8(`${cardId}|${declines}|${previous ?? ''}`)}`
+
+const busy = (sale: Sale): ChargeResult => ({
+  ok: false,
+  error: 'This payment is already being made. Check again in a couple of minutes.',
+  sale: publicSale(sale),
+})
+
+/**
+ * Charge a sale to the winner's saved card — the card they have NOW. A card
+ * problem: a Buy it now is voided (the item goes straight back up) and a
+ * winning bid is kept as 'failed' so the bidder can pay with another card, or
+ * staff can pass it to the next bidder or take cash (`onFailure`). Square slow
+ * or down: the sale stays unpaid and the five-minute check tries it again.
+ */
+async function chargeSale(input: Sale, onFailure: 'failed' | 'void'): Promise<ChargeResult> {
+  if (input.payment_status === 'paid' || input.payment_status === 'cash') return { ok: true, sale: publicSale(input) }
+  if (input.payment_status !== 'pending' && input.payment_status !== 'failed') {
+    return { ok: false, error: `This sale is ${input.payment_status}.`, sale: publicSale(input) }
+  }
+  if (!input.bidder_id) {
+    return { ok: false, error: 'This sale has no online bidder. Record how it was paid at the desk.', sale: publicSale(input) }
+  }
+  const bidder = await rpc<Bidder | null>(db, 'auction_bidder_secure', { p_bidder_id: input.bidder_id, p_token: null })
+  if (!bidder) throw new HttpError(404, 'Bidder not found.')
+  if (bidder.is_blocked) return { ok: false, error: 'This bidder is blocked.', sale: publicSale(input) }
+
+  // The lock: from here on nobody else charges this sale.
+  const sale = await rpc<Sale | null>(db, 'auction_charge_begin', { p_sale_id: input.sale_id })
+  if (!sale) return busy(input)
   const finalize = async (status: PaymentStatus, paymentId: string | null, failure?: string) =>
     publicSale(await rpc<Sale>(db, 'auction_finalize_sale', { p_sale_id: sale.sale_id, p_status: status, p_payment_intent: paymentId, p_failure: failure ?? null }))
-  const paid = async (p: SquarePayment) => {
-    if (p.receipt_url) await rpc(db, 'auction_set_receipt', { p_sale_id: sale.sale_id, p_receipt_url: p.receipt_url })
-    return { ok: true as const, sale: await finalize('paid', p.id) }
+  const paid = async (p: SquarePayment): Promise<ChargeResult> => {
+    const done = await finalize('paid', p.id)
+    if (!p.receipt_url) return { ok: true, sale: done }
+    try {
+      await rpc(db, 'auction_set_receipt', { p_sale_id: sale.sale_id, p_receipt_url: p.receipt_url })
+    } catch (e) {
+      console.error('receipt', e)
+    }
+    return { ok: true, sale: { ...done, receipt_url: p.receipt_url } }
   }
+  // Square slow, down or refusing for a reason that isn't the card: nothing
+  // changes (the lock runs out after two minutes, then it can be tried again).
+  const notNow = async (message: string): Promise<ChargeResult> => ({ ok: false, error: message, sale: publicSale(sale) })
 
-  if (sale.payment_status === 'paid' || sale.payment_status === 'cash') return { ok: true, sale: publicSale(sale) }
-  if (sale.payment_status !== 'pending' && sale.payment_status !== 'failed') {
-    return { ok: false, error: `This sale is ${sale.payment_status}.`, sale: publicSale(sale) }
-  }
   if (sale.total_cents <= 0) return { ok: true, sale: await finalize('paid', null) }
-  const buyer = sale.buyer
-  if (!buyer.stripe_customer_id || !buyer.stripe_payment_method_id) {
+  const cardId = bidder.stripe_payment_method_id
+  if (!bidder.card_ready || !bidder.stripe_customer_id || !cardId) {
     return { ok: false, error: 'There is no card on file for this bidder.', sale: await finalize(onFailure, null, 'No card on file') }
   }
 
@@ -293,23 +351,25 @@ async function chargeSale(sale: Sale, onFailure: 'failed' | 'void'): Promise<Cha
   const previous = sale.stripe_payment_intent_id
   if (previous) {
     const p = await sq.call<{ payment?: SquarePayment }>('GET', `/v2/payments/${encodeURIComponent(previous)}`)
-    const st = p.data.payment?.status
+    const st = p.ok ? p.data.payment?.status : undefined
     if (st === 'COMPLETED') return await paid(p.data.payment!)
-    if (st === 'APPROVED' || st === 'PENDING') return { ok: false, error: 'The payment is still going through. Check again in a minute.', sale: publicSale(sale) }
-    // FAILED or CANCELED: a fresh attempt below.
+    // Only a payment Square has finished with (FAILED or CANCELED) lets a new one start.
+    if (st !== 'FAILED' && st !== 'CANCELED') {
+      return await notNow(st ? 'The payment is still going through. Check again in a minute.' : 'We could not check with Square. We’ll try again in a few minutes.')
+    }
   }
 
   const title = sale.item?.title ?? 'auction item'
   const r = await sq.call<{ payment?: SquarePayment }>('POST', '/v2/payments', {
-    idempotency_key: await attemptKey(sale.sale_id, previous),
-    source_id: buyer.stripe_payment_method_id,
-    customer_id: buyer.stripe_customer_id,
+    idempotency_key: await attemptKey(sale.sale_id, cardId, sale.decline_count ?? 0, previous),
+    source_id: cardId,
+    customer_id: bidder.stripe_customer_id,
     amount_money: { amount: sale.total_cents, currency: 'USD' },
     location_id: sq.locationId,
     autocomplete: true,
     reference_id: sale.sale_id.slice(0, 40),
     note: `${auctionName(settings)}: ${title}`.slice(0, 500),
-    buyer_email_address: buyer.email ?? undefined,
+    buyer_email_address: bidder.email || undefined,
     // The bidder agreed when they saved the card; the close charges it without them.
     customer_details: { customer_initiated: sale.kind === 'buy_now', seller_keyed_in: false },
   })
@@ -318,8 +378,15 @@ async function chargeSale(sale: Sale, onFailure: 'failed' | 'void'): Promise<Cha
   if (r.ok && p && (p.status === 'APPROVED' || p.status === 'PENDING')) {
     return { ok: false, error: 'The payment is going through. Check again in a minute.', sale: await finalize('pending', p.id) }
   }
-  const message = squareMessage(r.data.errors, 'The card was not charged.')
-  return { ok: false, error: message, sale: await finalize(onFailure, p?.id ?? null, message) }
+  if (isCardProblem(r.data.errors) || (r.ok && p && (p.status === 'FAILED' || p.status === 'CANCELED'))) {
+    const message = squareMessage(r.data.errors, 'The card was not charged.')
+    return { ok: false, error: message, sale: await finalize(onFailure, p?.id ?? null, message) }
+  }
+  console.error('square payment', JSON.stringify(r.data.errors ?? []))
+  if (r.data.errors?.some((e) => e.code === 'IDEMPOTENCY_KEY_REUSED')) {
+    return await notNow('Square refused a repeat of this payment. OHRR staff will sort it out.')
+  }
+  return await notNow('We could not reach Square. We’ll try again in a few minutes — check Your bids.')
 }
 
 async function bidderByToken(token: unknown): Promise<Bidder> {
@@ -339,7 +406,7 @@ async function chargeAll(sales: Sale[], errors: { item_id?: string; error: strin
   const results: ChargeResult[] = []
   for (const sale of sales) {
     try {
-      results.push(await chargeSale(sale, 'failed'))
+      results.push(await chargeSale(sale, sale.kind === 'buy_now' ? 'void' : 'failed'))
     } catch (e) {
       errors.push({ item_id: sale.item_id, error: e instanceof Error ? e.message : 'Charge failed' })
     }
@@ -392,6 +459,9 @@ const routes: Record<string, Handler> = {
     const bidder = await bidderByToken(body.token)
     const cardToken = str(body.card_token, 500)
     if (!cardToken) throw new HttpError(400, 'Please enter a card.')
+    if (!(await rpc<boolean>(db, 'auction_card_attempt', { p_bidder_id: bidder.id }))) {
+      throw new HttpError(429, 'That is a lot of cards in one hour. Please try again later, or contact OHRR.')
+    }
     return json({ bidder: publicBidder(await saveCard(await settingsFor(bidder.event_slug), bidder, cardToken)) })
   },
 
@@ -400,6 +470,9 @@ const routes: Record<string, Handler> = {
     if (!isUuid(body.item_id)) throw new HttpError(400, 'Which item?')
     if (bidder.is_blocked) throw new HttpError(403, 'Bidding is not available for this registration. Please contact OHRR.')
     if (!bidder.card_ready) throw new HttpError(400, 'Please add a card first.')
+    const { data: item } = await db.from('raffle_items').select('event_slug').eq('id', body.item_id).maybeSingle()
+    if (!item) throw new HttpError(404, 'That item is not in the auction.')
+    if (item.event_slug !== bidder.event_slug) throw new HttpError(400, 'That item is in another auction. Please register for that auction to buy it.')
     // Locks the item and marks it sold-pending, so two people can't both buy it.
     const sale = await rpc<Sale>(db, 'auction_begin_sale', { p_item_id: body.item_id, p_bidder_id: bidder.id, p_kind: 'buy_now' })
     const result = await chargeSale(sale, 'void')
@@ -413,9 +486,8 @@ const routes: Record<string, Handler> = {
     const sale = await rpc<Sale | null>(db, 'auction_sale_get', { p_sale_id: body.sale_id })
     if (!sale || sale.bidder_id !== bidder.id) throw new HttpError(403, 'That sale is not yours.')
     if (sale.payment_status !== 'pending' && sale.payment_status !== 'failed') throw new HttpError(400, `This sale is already ${sale.payment_status}.`)
-    // Charge the card the bidder has NOW (they may have just changed it).
-    const fresh: Sale = { ...sale, buyer: { ...sale.buyer, stripe_customer_id: bidder.stripe_customer_id ?? null, stripe_payment_method_id: bidder.stripe_payment_method_id ?? null } }
-    const result = await chargeSale(fresh, 'failed')
+    // chargeSale charges the card the bidder has now (they may have just changed it).
+    const result = await chargeSale(sale, 'failed')
     return json(result, result.ok ? 200 : 402)
   },
 
@@ -466,7 +538,8 @@ async function closeDue(req: Request): Promise<Response> {
   if (!cfg || req.headers.get('x-ohrr-secret') !== cfg.trigger_secret) return json({ error: 'not allowed' }, 401)
   const errors: { item_id?: string; error: string }[] = []
   const sales = splitRows(await rpc(db, 'auction_close_due'), errors)
-  const results = await chargeAll(sales, errors)
+  const stuck = splitRows(await rpc(db, 'auction_claim_stuck_sales', { p_limit: 20 }), errors)
+  const results = await chargeAll([...sales, ...stuck], errors)
   return json({ charged: results.filter((r) => r.ok).length, declined: results.filter((r) => !r.ok).length, errors })
 }
 
@@ -480,7 +553,7 @@ Deno.serve(async (req) => {
     if (route === 'health') {
       const live = Boolean(Deno.env.get('SQUARE_ACCESS_TOKEN'))
       const sandbox = Boolean(Deno.env.get('SQUARE_SANDBOX_ACCESS_TOKEN'))
-      return json({ ok: true, provider: 'square', square: live || sandbox, square_live: live, square_sandbox: sandbox || live, supabase: Boolean(SERVICE_KEY) }, 200, headers)
+      return json({ ok: true, provider: 'square', square: live || sandbox, square_live: live, square_sandbox: sandbox, supabase: Boolean(SERVICE_KEY) }, 200, headers)
     }
     if (req.method !== 'POST') return json({ error: 'Use POST.' }, 405, headers)
     if (route === 'close-due') return await closeDue(req)
