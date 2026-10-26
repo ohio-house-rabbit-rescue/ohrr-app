@@ -1,4 +1,5 @@
-// Midwest BunFest Silent Auction — the public catalog. Shows every PUBLISHED
+// The auction catalog — BunFest's Silent Auction, or the OHRR Online Auction
+// at /auction (update 45: online only, one closing time, no sessions). Shows every PUBLISHED
 // item: available items first, then items already sold (badged "Sold", never
 // naming a winner). Hiding an item is staff unpublishing it.
 //
@@ -17,8 +18,9 @@ import { Icon } from '../../components/icons'
 import { RafflePhoto } from './RafflePhoto'
 import { formatValue, sessionLabel } from './types'
 import PresentedBy from '../sponsors/PresentedBy'
-import { bidLine, closesIn, money, type AuctionItem, type AuctionSettings } from '../auction/client'
+import { bidLine, cardPaymentsReady, closesIn, fmtWhen, money, type AuctionItem, type AuctionSettings } from '../auction/client'
 import { shipLine, useCatalog, useRememberedBidder } from '../auction/useAuction'
+import { useAuctionEvent } from '../auction/event'
 
 const FILTERS = ['All', 'Morning', 'Afternoon'] as const
 type Filter = (typeof FILTERS)[number]
@@ -35,12 +37,13 @@ export function soldLabel(item: AuctionItem): string {
 }
 
 function ItemCard({ item, now }: { item: AuctionItem; now: string }) {
+  const ev = useAuctionEvent()
   const value = formatValue(item.value_cents)
   const sold = item.status === 'won'
   const countdown = item.is_open ? closesIn(item.closes_at, now) : ''
   return (
     <Link
-      to={`/bunfest/auction/${item.id}`}
+      to={`${ev.base}/${item.id}`}
       className="group block overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:translate-y-0"
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
@@ -67,7 +70,7 @@ function ItemCard({ item, now }: { item: AuctionItem; now: string }) {
         </p>
         <div className="mt-2.5 flex items-center justify-between gap-2">
           <span className="flex flex-wrap items-center gap-1.5">
-            <SessionBadge session={item.session} />
+            {!ev.online && <SessionBadge session={item.session} />}
             {sold && <Badge tone="slate">{soldLabel(item)}</Badge>}
           </span>
           <Icon
@@ -83,11 +86,12 @@ function ItemCard({ item, now }: { item: AuctionItem; now: string }) {
 
 /** The strip above the list: your bidder number, or the way to get one. */
 function BidderStrip({ settings }: { settings: AuctionSettings | null }) {
+  const ev = useAuctionEvent()
   const me = useRememberedBidder()
   if (me) {
     return (
       <Link
-        to="/bunfest/auction/me"
+        to={`${ev.base}/me`}
         className="flex items-center gap-3 rounded-2xl border border-brand-blue/20 bg-brand-blue-50 px-4 py-3 text-sm text-ink transition hover:border-brand-blue/40"
       >
         <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-blue text-white">
@@ -101,21 +105,26 @@ function BidderStrip({ settings }: { settings: AuctionSettings | null }) {
       </Link>
     )
   }
-  if (settings?.bidding_enabled && settings.stripe_publishable_key) {
+  if (settings?.bidding_enabled && cardPaymentsReady(settings)) {
     return (
       <ActionCard
-        to="/bunfest/auction/register?next=/bunfest/auction"
+        to={`${ev.base}/register?next=${ev.base}`}
         title="Register to bid"
-        subtitle="Your name, email and a card — charged only if you win or use Buy now"
+        subtitle={
+          settings.auto_charge
+            ? 'Your name, email and a card — charged automatically only if you win'
+            : 'Your name, email and a card — charged only if you win or use Buy now'
+        }
         icon="gavel"
         tone="orange"
       />
     )
   }
-  return <QuietNote>Bidding opens online before BunFest; see the auction table on the day.</QuietNote>
+  return <QuietNote>{ev.online ? 'Bidding hasn’t opened yet — the items are here to look at first.' : 'Bidding opens online before BunFest; see the auction table on the day.'}</QuietNote>
 }
 
 export default function RaffleCatalog() {
+  const ev = useAuctionEvent()
   const { catalog, intro } = useCatalog(true)
   const items = catalog?.items ?? null
   const [filter, setFilter] = useState<Filter>('All')
@@ -134,27 +143,34 @@ export default function RaffleCatalog() {
 
   const introText = intro?.trim()
   const note = catalog?.settings?.bidding_note?.trim()
+  // The online auction closes all at once: say when.
+  const closes = ev.online ? catalog?.settings?.afternoon_closes_at ?? null : null
 
   return (
     <>
-      <PageHeader icon="award" title="Silent Auction" subtitle="Midwest BunFest 2026" />
+      <PageHeader icon={ev.online ? 'gavel' : 'award'} title={catalog?.settings?.title || ev.name} subtitle={ev.subtitle} />
       <Screen className="space-y-4">
-        <PresentedBy surface="silent-auction" />
+        {!ev.online && <PresentedBy surface="silent-auction" />}
         <Link
-          to="/bunfest"
+          to={ev.home.to}
           className="inline-flex items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
         >
-          <Icon name="arrowLeft" size={16} /> Midwest BunFest
+          <Icon name="arrowLeft" size={16} /> {ev.home.label}
         </Link>
 
         {introText && <p className="px-1 text-[13px] leading-relaxed text-slate-500">{introText}</p>}
 
+        {closes && (
+          <p className="px-1 text-sm font-bold text-ink">
+            {new Date(catalog!.now) < new Date(closes) ? `${closesIn(closes, catalog!.now)} · ${fmtWhen(closes)}` : `Closed ${fmtWhen(closes)}`}
+          </p>
+        )}
         {catalog && <BidderStrip settings={catalog.settings} />}
         {note && <p className="px-1 text-[13px] leading-relaxed text-slate-500">{note}</p>}
 
         {items !== null && items.length > 0 && (
           <div className="space-y-2">
-            <SegTabs options={FILTERS} value={filter} onChange={setFilter} />
+            {!ev.online && <SegTabs options={FILTERS} value={filter} onChange={setFilter} />}
             <button
               type="button"
               onClick={() => setAvailableOnly((v) => !v)}
@@ -189,7 +205,7 @@ export default function RaffleCatalog() {
           </div>
         ) : items.length === 0 ? (
           <Card className="text-center">
-            <p className="text-sm text-slate-600">No items yet — check back closer to BunFest.</p>
+            <p className="text-sm text-slate-600">{ev.online ? 'No items yet — check back soon.' : 'No items yet — check back closer to BunFest.'}</p>
           </Card>
         ) : list.length === 0 ? (
           <Card className="text-center">

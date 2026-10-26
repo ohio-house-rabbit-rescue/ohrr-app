@@ -418,6 +418,11 @@ export type Database = {
           // Update 44: Buy it now, pay at the table (absent until it runs).
           buy_now_at_table?: boolean
           helper_user_ids?: string[]
+          // Update 45: the Online Auction and Square (absent until it runs).
+          title?: string | null
+          auto_charge?: boolean
+          square_application_id?: string | null
+          square_location_id?: string | null
           updated_at: string
         }
         Insert: {
@@ -438,6 +443,10 @@ export type Database = {
           bidding_note?: string | null
           pickup_note?: string | null
           shipping_note?: string | null
+          title?: string | null
+          auto_charge?: boolean
+          square_application_id?: string | null
+          square_location_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -458,6 +467,10 @@ export type Database = {
           bidding_note?: string | null
           pickup_note?: string | null
           shipping_note?: string | null
+          title?: string | null
+          auto_charge?: boolean
+          square_application_id?: string | null
+          square_location_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -2818,6 +2831,8 @@ export type Database = {
       auction_helper_candidates: { Args: { p_org: string }; Returns: Json }
       auction_set_table_buy_now: { Args: { p_org: string; p_event: string; p_on?: boolean | null; p_helpers?: string[] | null }; Returns: Json }
       auction_item_label_code: { Args: { p_item_id: string }; Returns: string }
+      // The OHRR Online Auction (supabase/migrations/20261026100000_online_auction_square.sql)
+      auction_move_item: { Args: { p_item_id: string; p_event: string }; Returns: Json }
       delete_own_account: { Args: Record<string, never>; Returns: undefined }
       // Public Hop Shop shelf (supabase/migrations/20260921160000_public_shop.sql)
       hopshop_public_products: {

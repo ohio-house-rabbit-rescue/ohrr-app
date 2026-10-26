@@ -121,6 +121,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       { to: '/staff/events', title: 'Events', hint: 'BunFest and OHRR hoppenings', icon: 'calendar', group: 'events', show: canEvents },
       { to: '/staff/bunfest', title: 'BunFest content', hint: 'Schedule, vendors, rescues', icon: 'star', group: 'events', show: canEvents },
       { to: '/staff/raffle', title: 'Silent Auction', hint: 'Auction items, photos, won', icon: 'award', group: 'events', show: canEvents },
+      { to: '/staff/raffle?auction=online', title: 'Online Auction', hint: 'Its own items, one closing time, Square', icon: 'gavel', group: 'events', show: canEvents },
       { to: '/staff/auction-desk', title: 'Auction desk', hint: 'Close and charge, pickup, shipping', icon: 'gavel', group: 'events', show: canEvents },
       { to: '/staff/raffle-tickets', title: 'Raffle tickets', hint: 'The raffle table, draw winners', icon: 'ticket', group: 'events', show: canEvents || can('counter.use') },
       { to: '/staff/sponsors', title: 'Sponsors and partners', hint: 'Roster, perks, placements', icon: 'award', group: 'events', show: canEvents },

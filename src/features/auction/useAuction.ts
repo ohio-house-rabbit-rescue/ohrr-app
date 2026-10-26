@@ -1,5 +1,6 @@
 // Hooks for the auction screens: the catalog (polled, with a fallback for
-// before update 35 runs), one item from it, and a bidder's own page.
+// before update 35 runs), one item from it, and a bidder's own page. Each
+// reads the auction its screen is in (useAuctionEvent: BunFest or online).
 //
 // The fallback matters: `auction_catalog()` only exists once
 // supabase/migrations/20260930100000_silent_auction_bidding.sql has been pasted
@@ -9,7 +10,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
 import type { Database } from '../../lib/database.types'
-import { AUCTION_EVENT_SLUG } from '../raffle/types'
+import { useAuctionEvent } from './event'
 import {
   fetchCatalog,
   fetchMyPage,
@@ -58,20 +59,20 @@ export function rowToItem(r: ItemRow, s: SettingsRow | null): AuctionItem {
   }
 }
 
-async function readFallback(): Promise<{ catalog: Catalog; intro: string | null }> {
+async function readFallback(event: string): Promise<{ catalog: Catalog; intro: string | null }> {
   const [itemsRes, settingsRes] = await Promise.all([
     supabase
       .from('raffle_items')
       .select('*')
-      .eq('event_slug', AUCTION_EVENT_SLUG)
+      .eq('event_slug', event)
       .eq('is_published', true)
       .order('sort_order', { ascending: true })
       .order('title', { ascending: true }),
-    supabase.from('auction_settings').select('*').eq('event_slug', AUCTION_EVENT_SLUG).limit(1).maybeSingle(),
+    supabase.from('auction_settings').select('*').eq('event_slug', event).limit(1).maybeSingle(),
   ])
   if (itemsRes.error) throw itemsRes.error
   const settings = settingsRes.data ?? null
-  const rows = (itemsRes.data ?? []).filter((r) => r.is_published && r.event_slug === AUCTION_EVENT_SLUG)
+  const rows = (itemsRes.data ?? []).filter((r) => r.is_published && r.event_slug === event)
   return {
     catalog: { now: new Date().toISOString(), settings: null, items: rows.map((r) => rowToItem(r, settings)) },
     intro: settings?.intro_text ?? null,
@@ -91,6 +92,7 @@ export interface CatalogState {
 
 /** The catalog, refreshed every 15 s while the screen is open. */
 export function useCatalog(poll = true): CatalogState {
+  const event = useAuctionEvent().slug
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [fallback, setFallback] = useState(false)
   const [intro, setIntro] = useState<string | null>(null)
@@ -103,7 +105,7 @@ export function useCatalog(poll = true): CatalogState {
       return
     }
     try {
-      const c = await fetchCatalog(supabase)
+      const c = await fetchCatalog(supabase, event)
       if (!alive.current) return
       setCatalog({ ...c, items: c.items ?? [] })
       setIntro(c.settings?.intro_text ?? null)
@@ -112,7 +114,7 @@ export function useCatalog(poll = true): CatalogState {
     } catch {
       // Before update 35 (or if the function is unreachable): the table read.
       try {
-        const fb = await readFallback()
+        const fb = await readFallback(event)
         if (!alive.current) return
         setCatalog(fb.catalog)
         setIntro(fb.intro)
@@ -124,7 +126,7 @@ export function useCatalog(poll = true): CatalogState {
         setCatalog((c) => c ?? { now: new Date().toISOString(), settings: null, items: [] })
       }
     }
-  }, [])
+  }, [event])
 
   useEffect(() => {
     alive.current = true
@@ -162,6 +164,7 @@ export interface MyPageState {
  */
 export function useMyPage(token: string | null, opts: { poll?: boolean; remember?: boolean } = {}): MyPageState {
   const { poll = true, remember = false } = opts
+  const event = useAuctionEvent().slug
   const [page, setPage] = useState<MyPage | null | undefined>(token ? undefined : null)
   const [error, setError] = useState<string | null>(null)
   const alive = useRef(true)
@@ -180,8 +183,8 @@ export function useMyPage(token: string | null, opts: { poll?: boolean; remember
       if (!p) {
         // The device remembers a registration the database doesn't know (a
         // reset, or a link from another event): stop showing it as yours.
-        const mine = recallBidder()
-        if (mine && mine.access_token === token) forgetBidder()
+        const mine = recallBidder(event)
+        if (mine && mine.access_token === token) forgetBidder(event)
       }
     } catch (e) {
       if (!alive.current) return
@@ -190,7 +193,7 @@ export function useMyPage(token: string | null, opts: { poll?: boolean; remember
       setError(/could not find the function|schema cache|does not exist/i.test(msg) ? 'Online bidding hasn’t been set up for this event yet.' : msg || 'Could not load your bids.')
       setPage((p) => (p === undefined ? null : p))
     }
-  }, [token, remember])
+  }, [token, remember, event])
 
   useEffect(() => {
     alive.current = true
@@ -210,16 +213,18 @@ export function useMyPage(token: string | null, opts: { poll?: boolean; remember
 
 /** The bidder this device remembers (re-read on every render — it's tiny). */
 export function useRememberedBidder(): RememberedBidder | null {
-  const [b, setB] = useState<RememberedBidder | null>(() => recallBidder())
+  const event = useAuctionEvent().slug
+  const [b, setB] = useState<RememberedBidder | null>(() => recallBidder(event))
   useEffect(() => {
-    const onStorage = () => setB(recallBidder())
+    const onStorage = () => setB(recallBidder(event))
+    onStorage()
     window.addEventListener('storage', onStorage)
     window.addEventListener('focus', onStorage)
     return () => {
       window.removeEventListener('storage', onStorage)
       window.removeEventListener('focus', onStorage)
     }
-  }, [])
+  }, [event])
   return b
 }
 

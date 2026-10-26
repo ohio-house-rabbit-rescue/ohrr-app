@@ -2,7 +2,7 @@
 // close time, and — for a registered bidder while the item is open — the bid
 // form and Buy Now. Under it, the bid history (amounts and bidder numbers).
 //
-// Money moves only through the payment server (auctionApi) and Stripe; this
+// Money moves only through the payment server (auctionApi) and Square; this
 // file never sees a card. Every message here is written for the bidder.
 //
 // With "Buy it now, pay at the table" on (update 44), Buy it now holds the
@@ -33,6 +33,7 @@ import {
 } from './client'
 import { shipLine, useMyPage, useRememberedBidder } from './useAuction'
 import { BuyAtTable, HoldCard } from './BuyAtTable'
+import { useAuctionEvent } from './event'
 
 export function BidBox({
   item,
@@ -45,6 +46,7 @@ export function BidBox({
   now: string
   onChanged: () => Promise<void> | void
 }) {
+  const ev = useAuctionEvent()
   const me = useRememberedBidder()
   const token = me?.access_token ?? null
   // Who they are (pickup or shipping, card ready) — read once, not polled.
@@ -58,7 +60,7 @@ export function BidBox({
   const [hold, setHold] = useState<RememberedHold | null>(() => recallHolds().find((h) => h.item_id === item.id) ?? null)
   useEffect(() => setHold(recallHolds().find((h) => h.item_id === item.id) ?? null), [item.id])
   const canHold = atTable && item.status === 'available' && item.buy_now_cents != null && !(item.closes_at && new Date(now) >= new Date(item.closes_at))
-  const registerTo = `/bunfest/auction/register?next=${encodeURIComponent(`/bunfest/auction/${item.id}`)}`
+  const registerTo = `${ev.base}/register?next=${encodeURIComponent(`${ev.base}/${item.id}`)}`
 
   return (
     <div className="space-y-3">
@@ -146,12 +148,12 @@ export function BidBox({
           </div>
         ) : bidder.is_blocked ? (
           <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-600">
-            Bidding is not available for this registration. Please see the auction desk.
+            Bidding is not available for this registration. {ev.online ? 'Please email OHRR.' : 'Please see the auction desk.'}
           </p>
         ) : !bidder.card_ready ? (
           <div className="space-y-2 pt-1">
             <p className="text-sm text-slate-600">Add a card before bidding — it’s charged only if you win.</p>
-            <Link to="/bunfest/auction/me" className={`${btn.primary} min-h-[48px] w-full`}>
+            <Link to={`${ev.base}/me`} className={`${btn.primary} min-h-[48px] w-full`}>
               Add a card
             </Link>
           </div>
@@ -160,7 +162,6 @@ export function BidBox({
             item={item}
             token={token!}
             bidder={bidder}
-            publishableKey={settings?.stripe_publishable_key ?? null}
             cardBuyNow={!atTable}
             onChanged={onChanged}
           />
@@ -186,14 +187,12 @@ function BidForm({
   item,
   token,
   bidder,
-  publishableKey,
   cardBuyNow,
   onChanged,
 }: {
   item: AuctionItem
   token: string
   bidder: { fulfil: 'pickup' | 'ship' }
-  publishableKey: string | null
   /** Buy Now on the saved card (off when Buy it now is paid at the table). */
   cardBuyNow: boolean
   onChanged: () => Promise<void> | void
@@ -203,7 +202,8 @@ function BidForm({
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
   const [confirmBuy, setConfirmBuy] = useState(false)
-  const [bought, setBought] = useState(false)
+  const [bought, setBought] = useState<{ receipt: string | null } | null>(null)
+  const ev = useAuctionEvent()
 
   // Someone else bid: lift the box to the new minimum unless they typed more.
   useEffect(() => {
@@ -252,16 +252,7 @@ function BidForm({
     try {
       const r = await auctionApi.buyNow(token, item.id)
       if (r.ok) {
-        setBought(true)
-      } else if (r.requires_action) {
-        if (!publishableKey) throw new Error('Your bank asked for a check, but the auction is not set up to show it. Please see the auction desk.')
-        // Stripe's script only loads when a bank actually asks (keeps it out of the main bundle).
-        const { confirmPaymentAction } = await import('./CardSetup')
-        const c = await confirmPaymentAction(publishableKey, r.client_secret)
-        if (!c.ok) throw new Error(c.error ?? 'The bank did not approve the payment.')
-        const fin = await auctionApi.complete(token, r.sale.sale_id)
-        if (fin.sale.payment_status === 'paid') setBought(true)
-        else throw new Error(fin.sale.failure_message ?? 'The payment was not completed. The item is back on sale.')
+        setBought({ receipt: r.sale.receipt_url ?? null })
       } else {
         throw new Error(r.error || 'The payment did not go through. The item is back on sale.')
       }
@@ -279,10 +270,19 @@ function BidForm({
       <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3" role="status" aria-live="polite">
         <p className="font-display text-lg font-extrabold text-emerald-800">It’s yours.</p>
         <p className="text-sm text-emerald-900">
-          {money(total)} on your card. Stripe emails the receipt.{' '}
-          {bidder.fulfil === 'ship' && item.ship_fee_cents != null ? 'We’ll ship it to you.' : 'Pick it up at the auction table.'}
+          {money(total)} on your card.{' '}
+          {bidder.fulfil === 'ship' && item.ship_fee_cents != null
+            ? 'We’ll ship it to you.'
+            : ev.online
+              ? 'OHRR will email you about picking it up.'
+              : 'Pick it up at the auction table.'}
         </p>
-        <Link to="/bunfest/auction/me" className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-brand-blue">
+        {bought.receipt && (
+          <a href={bought.receipt} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-brand-blue">
+            Your receipt <Icon name="external" size={14} />
+          </a>
+        )}
+        <Link to={`${ev.base}/me`} className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-brand-blue">
           Your bids and wins <Icon name="chevron" size={16} />
         </Link>
       </div>

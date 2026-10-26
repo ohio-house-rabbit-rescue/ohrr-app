@@ -12,6 +12,7 @@ import { Navigate, useParams } from 'react-router-dom'
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase'
 import { useAuth } from '../../../lib/auth'
 import { fetchItemByCode } from '../../auction/client'
+import { auctionEventFor } from '../../auction/event'
 import { isSku, normalizeCode } from '../codes'
 
 export default function TagLanding() {
@@ -32,7 +33,7 @@ export default function TagLanding() {
       return
     }
     fetchItemByCode(supabase, code)
-      .then((item) => alive && setTo(item?.id ? `/bunfest/auction/${item.id}` : staff))
+      .then((item) => alive && setTo(item?.id ? `${auctionEventFor(item.event_slug).base}/${item.id}` : staff))
       .catch(() => alive && setTo(staff))
     return () => {
       alive = false

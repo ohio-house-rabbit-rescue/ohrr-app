@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { givingOptions, OHRR_EIN, type GivingOption } from '../data/giving'
 import { ohrr } from '../data/ohrr'
-import { Badge, PageHeader, Screen, SectionLabel } from '../components/ui'
+import { ActionCard, Badge, PageHeader, Screen, SectionLabel } from '../components/ui'
+import { useFeatureFlag } from '../features/settings/useSetting'
+import { ONLINE_AUCTION_FLAG } from '../features/settings/features'
 import { Icon } from '../components/icons'
 import { useWishListItems, type WishListItem } from '../features/giving/wishList'
 
@@ -127,6 +129,8 @@ export default function Give() {
   const featured = givingOptions.filter((g) => g.featured)
   const rest = givingOptions.filter((g) => !g.featured)
   const wishItems = useWishListItems()
+  // The Online Auction (update 45) shows here only while it's switched on.
+  const auction = useFeatureFlag(ONLINE_AUCTION_FLAG)
 
   return (
     <>
@@ -154,6 +158,10 @@ export default function Give() {
             </span>
           </a>
         ))}
+
+        {auction.value && (
+          <ActionCard to="/auction" title="Online Auction" subtitle="Bid on donated items — every winning bid helps the rabbits" icon="gavel" tone="orange" />
+        )}
 
         <div className="space-y-2.5">
           <SectionLabel>Every way to give</SectionLabel>

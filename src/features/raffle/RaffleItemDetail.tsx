@@ -1,4 +1,4 @@
-// One Silent Auction item: large photo, description, donor, value, session —
+// One auction item (BunFest's Silent Auction or the Online Auction): large photo, description, donor, value, session —
 // and, since update 35, the bidding box (running bid, next minimum, close
 // time, Place bid / Buy now for registered bidders) with the bid history.
 // Sold items stay visible with a "Sold" badge (no winner is ever named).
@@ -15,8 +15,11 @@ import { SessionBadge, soldLabel } from './RaffleCatalog'
 import { formatValue } from './types'
 import { useCatalogItem } from '../auction/useAuction'
 import { BidBox } from '../auction/BidBox'
+import { useAuctionEvent } from '../auction/event'
 
 export default function RaffleItemDetail() {
+  const ev = useAuctionEvent()
+  const auctionName = ev.online ? 'the Online Auction' : 'the Silent Auction'
   const { id } = useParams()
   const { item, state } = useCatalogItem(id)
 
@@ -34,9 +37,9 @@ export default function RaffleItemDetail() {
     return (
       <Screen className="space-y-4 text-center">
         <h1 className="pt-6 font-display text-xl font-extrabold text-ink">This item is no longer listed</h1>
-        <p className="text-sm text-slate-600">See what’s in the Silent Auction.</p>
-        <Link to="/bunfest/auction" className={`${btn.blue} mx-auto`}>
-          Back to the Silent Auction
+        <p className="text-sm text-slate-600">See what’s in {auctionName}.</p>
+        <Link to={ev.base} className={`${btn.blue} mx-auto`}>
+          Back to {auctionName}
         </Link>
       </Screen>
     )
@@ -63,8 +66,8 @@ export default function RaffleItemDetail() {
           </div>
         )}
         <Link
-          to="/bunfest/auction"
-          aria-label="Back to the Silent Auction"
+          to={ev.base}
+          aria-label={`Back to ${auctionName}`}
           className="absolute left-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-ink shadow-md backdrop-blur transition hover:bg-white"
         >
           <Icon name="arrowLeft" size={20} />
@@ -88,7 +91,7 @@ export default function RaffleItemDetail() {
             <p className="mt-1 text-sm font-semibold text-slate-500">Donated by {item.donated_by}</p>
           )}
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-            <SessionBadge session={item.session} />
+            {!ev.online && <SessionBadge session={item.session} />}
             {sold && <Badge tone="slate">{soldLabel(item)}</Badge>}
           </div>
         </div>
@@ -108,7 +111,7 @@ export default function RaffleItemDetail() {
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
-            to="/bunfest/auction"
+            to={ev.base}
             className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
           >
             <Icon name="arrowLeft" size={16} /> All auction items
@@ -116,13 +119,17 @@ export default function RaffleItemDetail() {
           <ShareButton
             label="Share this item"
             filename={`ohrr-auction-${item.id.slice(0, 8)}.png`}
-            caption={`${item.title} — Silent auction · Midwest BunFest. Bid in the OHRR app.`}
+            caption={
+              ev.online
+                ? `${item.title} — OHRR Online Auction. Bid in the OHRR app.`
+                : `${item.title} — Silent auction · Midwest BunFest. Bid in the OHRR app.`
+            }
             card={{
-              kicker: 'Silent auction',
+              kicker: ev.online ? 'Online auction' : 'Silent auction',
               title: item.title,
-              subtitle: 'Midwest BunFest · Ohio House Rabbit Rescue',
+              subtitle: ev.online ? 'Ohio House Rabbit Rescue' : 'Midwest BunFest · Ohio House Rabbit Rescue',
               photoUrl: item.photo_url ?? undefined,
-              link: appLink(`/bunfest/auction/${item.id}`),
+              link: appLink(`${ev.base}/${item.id}`),
               cta: 'Bid in the OHRR app',
             }}
           />

@@ -1,8 +1,8 @@
-// /bunfest/auction/me — the bidder's own page: who they are, the card on
-// file, their bids (high or outbid) and their wins (what they owe, how it
-// was paid, pickup or shipping). /bunfest/auction/me/:token is the same page
-// opened from a link on any device; that device then remembers the bidder.
-// Polled every 15 s so an outbid shows up on its own.
+// /bunfest/auction/me and /auction/me — the bidder's own page: who they are,
+// the card on file, their bids (high or outbid) and their wins (what they owe,
+// how it was paid, the receipt, pickup or shipping). …/me/:token is the same
+// page opened from a link on any device; that device then remembers the
+// bidder. Polled every 15 s so an outbid shows up on its own.
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../../lib/supabase'
@@ -12,6 +12,7 @@ import { staffInput } from '../../../components/staffui'
 import {
   auctionApi,
   bidLine,
+  cardPaymentsReady,
   closesIn,
   fmtWhen,
   forgetBidder,
@@ -27,17 +28,20 @@ import {
   type MyPage,
   type Sale,
 } from '../client'
-import CardSetup, { confirmPaymentAction } from '../CardSetup'
+import CardSetup from '../CardSetup'
 import { useMyPage, useRememberedBidder } from '../useAuction'
+import { useAuctionEvent } from '../event'
 
 export default function MyBids() {
+  const ev = useAuctionEvent()
   const { token: linkToken } = useParams()
   const me = useRememberedBidder()
   const token = linkToken ?? me?.access_token ?? null
   const { page, error, refresh } = useMyPage(token, { poll: true, remember: Boolean(linkToken) })
   const navigate = useNavigate()
 
-  const header = <PageHeader icon="gavel" title="Your bids" subtitle="Midwest BunFest Silent Auction" />
+  const header = <PageHeader icon="gavel" title="Your bids" subtitle={ev.online ? 'OHRR Online Auction' : 'Midwest BunFest Silent Auction'} />
+  const registerTo = `${ev.base}/register?next=${ev.base}/me`
 
   if (!token) {
     return (
@@ -48,9 +52,9 @@ export default function MyBids() {
             <p className="font-display text-lg font-extrabold text-ink">You haven’t registered on this phone</p>
             <p className="text-sm leading-relaxed text-slate-600">
               Register once and your bids and wins show here. If you registered on another device, open the link in
-              your registration email.
+              your bidder link.
             </p>
-            <Link to="/bunfest/auction/register?next=/bunfest/auction/me" className={`${btn.primary} min-h-[48px] w-full`}>
+            <Link to={registerTo} className={`${btn.primary} min-h-[48px] w-full`}>
               Register to bid
             </Link>
           </Card>
@@ -81,7 +85,7 @@ export default function MyBids() {
             <p className="text-sm leading-relaxed text-slate-600">
               {error ?? 'The link may be old, or bidding for this event hasn’t been set up yet.'}
             </p>
-            <Link to="/bunfest/auction/register?next=/bunfest/auction/me" className={`${btn.primary} min-h-[48px] w-full`}>
+            <Link to={registerTo} className={`${btn.primary} min-h-[48px] w-full`}>
               Register to bid
             </Link>
           </Card>
@@ -107,8 +111,8 @@ export default function MyBids() {
           <button
             type="button"
             onClick={() => {
-              forgetBidder()
-              navigate('/bunfest/auction/register?next=/bunfest/auction', { replace: true })
+              forgetBidder(ev.slug)
+              navigate(`${ev.base}/register?next=${ev.base}`, { replace: true })
             }}
             className="block min-h-[44px] text-sm font-bold text-slate-500"
           >
@@ -121,8 +125,9 @@ export default function MyBids() {
 }
 
 function BackToAuction() {
+  const ev = useAuctionEvent()
   return (
-    <Link to="/bunfest/auction" className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark">
+    <Link to={ev.base} className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark">
       <Icon name="arrowLeft" size={16} /> All auction items
     </Link>
   )
@@ -140,6 +145,8 @@ function WhoYouAre({
   settings: AuctionSettings | null
   onChanged: () => Promise<void>
 }) {
+  const ev = useAuctionEvent()
+  const pickupLabel = ev.online ? 'Pick up from OHRR' : 'Pick up at BunFest'
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(bidder.name)
   const [phone, setPhone] = useState(bidder.phone ?? '')
@@ -171,7 +178,7 @@ function WhoYouAre({
           <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Bidder</p>
           <p className="font-display text-2xl font-black text-ink">#{bidder.bidder_no}</p>
         </div>
-        {bidder.is_blocked && <Badge tone="slate">See the auction desk</Badge>}
+        {bidder.is_blocked && <Badge tone="slate">{ev.online ? 'Please email OHRR' : 'See the auction desk'}</Badge>}
       </div>
       {editing ? (
         <form onSubmit={save} className="space-y-3">
@@ -192,7 +199,7 @@ function WhoYouAre({
                 }`}
               >
                 <input type="radio" name="fulfil" className="sr-only" checked={fulfil === f} onChange={() => setFulfil(f)} />
-                {f === 'pickup' ? 'Pick up at BunFest' : 'Ship it to me'}
+                {f === 'pickup' ? pickupLabel : 'Ship it to me'}
               </label>
             ))}
           </div>
@@ -245,7 +252,7 @@ function WhoYouAre({
                   Ship to: {[a?.line1, a?.line2, [a?.city, a?.state].filter(Boolean).join(', '), a?.zip].filter(Boolean).join(', ')}
                 </>
               ) : (
-                'Pick up at BunFest'
+                pickupLabel
               )}
             </p>
             {bidder.fulfil === 'pickup' && settings?.pickup_note && <p className="mt-1 text-xs text-slate-500">{settings.pickup_note}</p>}
@@ -271,23 +278,8 @@ function CardOnFile({
   settings: AuctionSettings | null
   onChanged: () => Promise<void>
 }) {
-  const [secret, setSecret] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const pk = settings?.stripe_publishable_key ?? null
-
-  const start = async () => {
-    setBusy(true)
-    setError(null)
-    try {
-      const r = await auctionApi.newCard(token)
-      setSecret(r.client_secret)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'We could not start the card form.')
-    } finally {
-      setBusy(false)
-    }
-  }
+  const [open, setOpen] = useState(false)
+  const ready = cardPaymentsReady(settings)
 
   return (
     <Card className="space-y-3">
@@ -299,26 +291,26 @@ function CardOnFile({
       ) : (
         <p className="text-sm text-slate-600">No card yet — add one to bid.</p>
       )}
-      <p className="text-xs text-slate-500">Held by Stripe. Charged only if you win or use Buy now.</p>
-      {secret && pk ? (
+      <p className="text-xs text-slate-500">Held by Square. Charged only if you win or use Buy now.</p>
+      {open && ready ? (
         <CardSetup
-          publishableKey={pk}
-          clientSecret={secret}
+          applicationId={settings!.square_application_id!}
+          locationId={settings!.square_location_id!}
+          holder={() => ({ name: bidder.name, email: bidder.email, phone: bidder.phone ?? undefined, address: bidder.address })}
           buttonClassName={`${btn.primary} min-h-[48px] w-full disabled:opacity-60`}
           label="Save this card"
-          onSaved={async (id) => {
-            await auctionApi.cardSaved(token, id)
-            setSecret(null)
+          onToken={async (cardToken) => {
+            await auctionApi.newCard(token, cardToken)
+            setOpen(false)
             await onChanged()
           }}
         />
       ) : (
-        <button type="button" onClick={() => void start()} disabled={busy || !pk} className={`${btn.outline} min-h-[44px] disabled:opacity-60`}>
-          {busy ? 'One moment…' : bidder.card_ready ? 'Change card' : 'Add a card'}
+        <button type="button" onClick={() => setOpen(true)} disabled={!ready} className={`${btn.outline} min-h-[44px] disabled:opacity-60`}>
+          {bidder.card_ready ? 'Change card' : 'Add a card'}
         </button>
       )}
-      {!pk && <p className="text-xs text-slate-500">Card changes open once online bidding is switched on.</p>}
-      {error && <p className="text-sm font-semibold text-red-700">{error}</p>}
+      {!ready && <p className="text-xs text-slate-500">Card changes open once online bidding is switched on.</p>}
     </Card>
   )
 }
@@ -341,26 +333,16 @@ function Wins({ page, token, onChanged }: { page: MyPage; token: string; onChang
 }
 
 function WinCard({ sale, token, settings, onChanged }: { sale: Sale; token: string; settings: AuctionSettings | null; onChanged: () => Promise<void> }) {
+  const ev = useAuctionEvent()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const pk = settings?.stripe_publishable_key ?? null
 
   const pay = async () => {
     setBusy(true)
     setError(null)
     try {
       const r = await auctionApi.pay(token, sale.sale_id)
-      if (r.ok) {
-        /* paid */
-      } else if (r.requires_action) {
-        if (!pk) throw new Error('Your bank asked for a check we cannot show here. Please see the auction desk.')
-        const c = await confirmPaymentAction(pk, r.client_secret)
-        if (!c.ok) throw new Error(c.error ?? 'The bank did not approve the payment.')
-        const fin = await auctionApi.complete(token, sale.sale_id)
-        if (fin.sale.payment_status !== 'paid') throw new Error(fin.sale.failure_message ?? 'The payment was not completed.')
-      } else {
-        throw new Error(r.error || 'The payment did not go through.')
-      }
+      if (!r.ok) throw new Error(r.error || 'The payment did not go through.')
       await onChanged()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'The payment did not go through.')
@@ -373,7 +355,7 @@ function WinCard({ sale, token, settings, onChanged }: { sale: Sale; token: stri
   return (
     <Card className="space-y-2">
       <div className="flex items-start justify-between gap-3">
-        <Link to={`/bunfest/auction/${sale.item_id}`} className="min-w-0 font-display text-base font-extrabold text-ink hover:text-brand-blue">
+        <Link to={`${ev.base}/${sale.item_id}`} className="min-w-0 font-display text-base font-extrabold text-ink hover:text-brand-blue">
           {sale.item?.title ?? 'Auction item'}
         </Link>
         <Badge tone={tone}>{PAYMENT_LABEL[sale.payment_status]}</Badge>
@@ -384,7 +366,14 @@ function WinCard({ sale, token, settings, onChanged }: { sale: Sale; token: stri
         {sale.ship_fee_cents > 0 && <> = <span className="font-bold text-ink">{money(sale.total_cents)}</span></>}
         {sale.kind === 'buy_now' && <span className="ml-1.5 text-xs font-semibold text-slate-400">Buy Now</span>}
       </p>
-      {sale.payment_status === 'paid' && <p className="text-xs text-slate-500">Receipt sent by email by Stripe.</p>}
+      {sale.payment_status === 'paid' &&
+        (sale.receipt_url ? (
+          <a href={sale.receipt_url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-brand-blue">
+            Your receipt <Icon name="external" size={14} />
+          </a>
+        ) : (
+          <p className="text-xs text-slate-500">Paid on your card.</p>
+        ))}
       {sale.payment_status === 'failed' && (
         <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
           <p className="text-sm text-amber-900">{sale.failure_message ?? 'The card was declined.'}</p>
@@ -396,7 +385,9 @@ function WinCard({ sale, token, settings, onChanged }: { sale: Sale; token: stri
       )}
       {sale.payment_status === 'pending' && (
         <div className="space-y-2">
-          <p className="text-sm text-slate-600">Your card will be charged when the auction desk closes this item.</p>
+          <p className="text-sm text-slate-600">
+            {settings?.auto_charge ? 'Your card is charged automatically within a few minutes of the close.' : 'Your card will be charged when the auction desk closes this item.'}
+          </p>
           <button type="button" onClick={() => void pay()} disabled={busy} className={`${btn.outline} min-h-[44px] disabled:opacity-60`}>
             {busy ? 'Charging…' : 'Pay now'}
           </button>
@@ -428,6 +419,7 @@ function WinCard({ sale, token, settings, onChanged }: { sale: Sale; token: stri
 
 /* ------------------------------------------------------------------- bids */
 function Bids({ bids, now }: { bids: MyBid[]; now: string }) {
+  const ev = useAuctionEvent()
   // One row per item: the latest bid on it.
   const seen = new Set<string>()
   const rows = bids.filter((b) => {
@@ -448,7 +440,7 @@ function Bids({ bids, now }: { bids: MyBid[]; now: string }) {
           const sold = item.status === 'won'
           const high = b.is_high && !sold
           return (
-            <Link key={b.bid_id} to={`/bunfest/auction/${item.id}`} className="block">
+            <Link key={b.bid_id} to={`${ev.base}/${item.id}`} className="block">
               <Card className="flex items-center gap-3 transition hover:border-slate-300">
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-base font-extrabold text-ink">{item.title}</p>

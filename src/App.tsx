@@ -118,7 +118,8 @@ const ReceiveDelivery = lazy(() => import('./features/hopshop/ReceiveDelivery'))
 const Deliveries = lazy(() => import('./features/hopshop/DeliveriesPage'))
 const ItemPhotos = lazy(() => import('./features/scan/pages/ItemPhotos'))
 import { FeatureGate } from './features/settings/FeatureGate'
-import { SILENT_AUCTION_FLAG } from './features/settings/features'
+import { ONLINE_AUCTION_FLAG, SILENT_AUCTION_FLAG } from './features/settings/features'
+import { AuctionEventProvider, ONLINE_AUCTION } from './features/auction/event'
 
 // Every silent-auction page sits behind the Silent Auction switch (Staff → Features).
 const auctionGate = (page: React.ReactNode) => (
@@ -133,7 +134,21 @@ const PostQueue = lazy(() => import('./features/share/pages/PostQueue'))
 const Flyers = lazy(() => import('./features/share/pages/Flyers'))
 const BreedGuide = lazy(() => import('./features/breeds/pages/BreedGuide'))
 const RaffleDesk = lazy(() => import('./features/raffle/tickets/pages/RaffleDesk'))
-// Silent auction online bidding (update 35) — register, your bids, the staff desk. Stripe's form is big, so lazy.
+// The OHRR Online Auction (update 45): the same pages at /auction, its own items,
+// behind the Online Auction switch. A bidder's own page stays open when it's off.
+const online = (page: React.ReactNode, gate = true) => (
+  <AuctionEventProvider value={ONLINE_AUCTION}>
+    {gate ? (
+      <FeatureGate flag={ONLINE_AUCTION_FLAG} closedTitle="The online auction isn’t open right now" closedText="Its items and bidding appear here when OHRR opens the auction." backTo="/support" backLabel="Back to Ways to help">
+        {page}
+      </FeatureGate>
+    ) : (
+      page
+    )}
+  </AuctionEventProvider>
+)
+
+// Auction online bidding (updates 35, 45) — register, your bids, the staff desk. Lazy: only bidders need them.
 const AuctionRegister = lazy(() => import('./features/auction/pages/AuctionRegister'))
 const MyBids = lazy(() => import('./features/auction/pages/MyBids'))
 const AuctionDesk = lazy(() => import('./features/auction/pages/AuctionDesk'))
@@ -170,6 +185,11 @@ export default function App() {
         <Route path="/mailing-list" element={<MailingList />} />
         <Route path="/impact" element={<ImpactPage />} />
         <Route path="/raffle/tickets/:token" element={<Suspense fallback={null}><TicketPage /></Suspense>} />
+        <Route path="/auction" element={online(<RaffleCatalog />)} />
+        <Route path="/auction/register" element={online(<Suspense fallback={null}><AuctionRegister /></Suspense>)} />
+        <Route path="/auction/me" element={online(<Suspense fallback={null}><MyBids /></Suspense>, false)} />
+        <Route path="/auction/me/:token" element={online(<Suspense fallback={null}><MyBids /></Suspense>, false)} />
+        <Route path="/auction/:id" element={online(<RaffleItemDetail />)} />
         <Route path="/support/become-a-supporter" element={<BecomeSupporter />} />
         <Route path="/adopt/:id" element={<AdoptRabbit />} />
         <Route path="/events" element={<Events />} />

@@ -9,15 +9,18 @@
 //              bidder, paid at the desk, cancel, picked up, shipped, refund
 //   Bidders  — everyone registered; block / unblock
 // Data: auction_desk() (update 35), refreshed every 20 s and after each action.
-// Money moves only through the payment server (auctionApi.charge) and Stripe.
+// Money moves only through the payment server (auctionApi.charge) and Square.
+// ?auction=online is the same desk for the OHRR Online Auction (update 45):
+// no table holds or sessions; with "charge automatically" on, the database
+// closes and charges items itself and this desk is for the exceptions.
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage, supabase } from '../../../lib/supabase'
 import { Screen, Card, Badge, btn, QuietNote } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, staffInput } from '../../../components/staffui'
-import { AUCTION_EVENT_SLUG } from '../../raffle/types'
+import { AuctionEventProvider, BUNFEST_AUCTION, ONLINE_AUCTION, useAuctionEvent } from '../event'
 import {
   auctionApi,
   closesIn,
@@ -74,6 +77,17 @@ function isMissingFunction(msg: string): boolean {
 }
 
 export default function AuctionDesk() {
+  const [params] = useSearchParams()
+  const ev = params.get('auction') === 'online' ? ONLINE_AUCTION : BUNFEST_AUCTION
+  return (
+    <AuctionEventProvider value={ev}>
+      <Desk key={ev.slug} />
+    </AuctionEventProvider>
+  )
+}
+
+function Desk() {
+  const ev = useAuctionEvent()
   const { membership, can } = useAuth()
   const orgId = membership?.orgId ?? ''
   const allowed = can('events.bunfest.manage')
@@ -84,14 +98,14 @@ export default function AuctionDesk() {
 
   const refresh = useCallback(async () => {
     if (!orgId || !allowed) return
-    const { data: d, error: e } = await supabase.rpc('auction_desk', { p_org: orgId, p_event: AUCTION_EVENT_SLUG })
+    const { data: d, error: e } = await supabase.rpc('auction_desk', { p_org: orgId, p_event: ev.slug })
     if (e) {
       setError(errMessage(e))
       return
     }
     setError(null)
     setData(d as unknown as DeskData)
-  }, [orgId, allowed])
+  }, [orgId, allowed, ev.slug])
 
   useEffect(() => {
     void refresh()
@@ -112,17 +126,32 @@ export default function AuctionDesk() {
   return (
     <Screen className="space-y-4">
       <div className="pt-1">
+        <div className="mb-3 grid grid-cols-2 gap-1 rounded-full bg-slate-100 p-1" role="tablist" aria-label="Which auction">
+          {[BUNFEST_AUCTION, ONLINE_AUCTION].map((a) => (
+            <Link
+              key={a.slug}
+              to={a.online ? '/staff/auction-desk?auction=online' : '/staff/auction-desk'}
+              replace
+              role="tab"
+              aria-selected={a.slug === ev.slug}
+              className={`flex min-h-[40px] items-center justify-center rounded-full px-3 text-sm font-bold ${a.slug === ev.slug ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-500'}`}
+            >
+              {a.online ? 'Online Auction' : 'BunFest'}
+            </Link>
+          ))}
+        </div>
         <h1 className="font-display text-2xl font-black text-ink">Auction desk</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Close bidding and charge cards, record table sales, hand items over. Prices and the bidding switch are in{' '}
-          <Link to="/staff/raffle" className="font-bold text-brand-blue">
-            Silent Auction → Auction setup
+          {ev.online ? 'Charge winners, hand items over or ship them.' : 'Close bidding and charge cards, record table sales, hand items over.'} Prices and the
+          bidding switch are in{' '}
+          <Link to={ev.online ? '/staff/raffle?auction=online' : '/staff/raffle'} className="font-bold text-brand-blue">
+            {ev.online ? 'Auctions → Online Auction' : 'Silent Auction → Auction setup'}
           </Link>
           .
         </p>
       </div>
 
-      {orgId && <TableHolds orgId={orgId} onChange={refresh} />}
+      {orgId && !ev.online && <TableHolds orgId={orgId} onChange={refresh} />}
 
       {error && !data && (
         <Card className="space-y-2 border-amber-200 bg-amber-50/60">
@@ -146,6 +175,9 @@ export default function AuctionDesk() {
         <>
           <Totals t={data.totals} />
           <CloseAndCharge orgId={orgId} data={data} onDone={refresh} />
+          {data.settings?.auto_charge && (
+            <QuietNote>Winners are charged automatically within about 5 minutes of an item closing. Use Close &amp; charge only if you don’t want to wait.</QuietNote>
+          )}
           {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
           <div className="flex gap-2">
             <button type="button" className={pill(tab === 'items')} onClick={() => setTab('items')}>
@@ -197,7 +229,6 @@ function describe(r: ChargeResult): { title: string; line: string; tone: 'ok' | 
   const who = r.sale.buyer?.name ? `${r.sale.buyer.name}${r.sale.buyer.bidder_no ? ` (#${r.sale.buyer.bidder_no})` : ''}` : 'the buyer'
   const title = `${r.sale.item?.title ?? 'Item'} · ${money(r.sale.total_cents)}`
   if (r.ok) return { title, line: `Paid — ${who}`, tone: 'ok' }
-  if (r.requires_action) return { title, line: `${who}’s bank wants a check. Ask them to open Your bids and tap Pay now.`, tone: 'wait' }
   return { title, line: `Declined — ${who}: ${r.error}`, tone: 'bad' }
 }
 
@@ -227,6 +258,7 @@ function ResultList({ res }: { res: { results: ChargeResult[]; errors: { item_id
 }
 
 function CloseAndCharge({ orgId, data, onDone }: { orgId: string; data: DeskData; onDone: () => Promise<void> }) {
+  const ev = useAuctionEvent()
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -241,7 +273,7 @@ function CloseAndCharge({ orgId, data, onDone }: { orgId: string; data: DeskData
     setError(null)
     setRes(null)
     try {
-      const r = await auctionApi.charge(await staffJwt(), { org_id: orgId, event: AUCTION_EVENT_SLUG })
+      const r = await auctionApi.charge(await staffJwt(), { org_id: orgId, event: ev.slug })
       setRes(r)
       await onDone()
     } catch (e) {
@@ -320,6 +352,7 @@ function PayChip({ s }: { s: PaymentStatus }) {
 }
 
 function ItemCard({ item, now, settings, onChange }: { item: DeskItem; now: string; settings: AuctionSettings | null; onChange: () => Promise<void> }) {
+  const ev = useAuctionEvent()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
@@ -374,7 +407,7 @@ function ItemCard({ item, now, settings, onChange }: { item: DeskItem; now: stri
         <div className="min-w-0">
           <p className="font-display text-base font-extrabold text-ink">{item.title}</p>
           <p className="text-xs font-semibold text-slate-500">
-            {sessionLabel(item.session)}
+            {ev.online ? 'Online' : sessionLabel(item.session)}
             {!item.is_published && ' · hidden'}
             {item.closes_at && <> · {closed ? `closed ${fmtWhen(item.closes_at)}` : `${closesIn(item.closes_at, now)} (${fmtWhen(item.closes_at)})`}</>}
           </p>
@@ -485,15 +518,20 @@ function ItemCard({ item, now, settings, onChange }: { item: DeskItem; now: stri
             )}
             {sale.payment_status === 'paid' && sale.stripe_payment_intent_id && (
               <>
-                <a
-                  href={`https://dashboard.stripe.com/payments/${encodeURIComponent(sale.stripe_payment_intent_id)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={small}
-                >
-                  Refund in Stripe <Icon name="external" size={14} className="ml-1" />
-                </a>
-                <button type="button" disabled={busy} onClick={() => window.confirm('Mark this sale refunded? Do this after the refund is made in Stripe.') && void updateSale({ p_payment_status: 'refunded' })} className={danger}>
+                {sale.receipt_url && (
+                  <a href={sale.receipt_url} target="_blank" rel="noopener noreferrer" className={small}>
+                    Receipt <Icon name="external" size={14} className="ml-1" />
+                  </a>
+                )}
+                {/* Square ids live in the old stripe_* columns. Refunds are made in Square Dashboard → Transactions. */}
+                {settings?.square_application_id?.startsWith('sandbox-') ? (
+                  <span className="text-xs text-slate-500">Sandbox sale: refund it in the sandbox seller dashboard (Square Developer Console).</span>
+                ) : (
+                  <a href="https://app.squareup.com/dashboard/sales/transactions" target="_blank" rel="noopener noreferrer" className={small}>
+                    Refund in Square <Icon name="external" size={14} className="ml-1" />
+                  </a>
+                )}
+                <button type="button" disabled={busy} onClick={() => window.confirm('Mark this sale refunded? Do this after the refund is made in Square.') && void updateSale({ p_payment_status: 'refunded' })} className={danger}>
                   Mark refunded
                 </button>
               </>
