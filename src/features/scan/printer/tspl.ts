@@ -1,20 +1,22 @@
 // The print job for OHRR's Bluetooth label printer (Phomemo PM-249-WF, 4 in
 // shipping-label printer, 203 dpi; the driver puts it in the same "tspl-l3"
-// group as the PM-344-WF it was first taken for — same commands, same bytes). It speaks a TSPL dialect: a few text
-// commands, then the label as a 1-bit picture.
+// group as the PM-344-WF it was first taken for). It speaks a TSPL dialect: a
+// few text commands, then the label as a 1-bit picture.
 //
 // What the printer expects (from the open-source "labelife" driver,
 // github.com/thermal-label/labelife, MIT licence, (c) 2026 Mannes Brak — its
-// PM-249-WF and PM-344-WF profiles are marked untested, so the plain mode and the flip below
-// are there in case the first try comes out blank or reversed):
+// PM-249-WF and PM-344-WF profiles are marked untested, so the plain mode and
+// the flip below are there in case a print comes out blank or reversed):
 //
 //   \r\n DENSITY n \r\n REFERENCE 0,0 \r\n OFFSET 0 mm \r\n
 //   SIZE w mm,h mm \r\n GAP 2.00 mm,0.00 mm \r\n DIRECTION 0,0 \r\n CLS \r\n
 //   BITMAP 0,0,<bytes per row>,<rows>,4,<picture> \r\n PRINT 1,<copies> \n\r
 //
 // The picture: rows top to bottom, 8 dots per byte (leftmost dot = top bit),
-// 1 = black. Mode 4 sends it in 4 KB pieces, each "LZO1X" packed and led by its
-// length (4 bytes, little-endian), ending with a zero length. Mode 0 sends the
+// 0 = black, as plain TSPL has it. The driver says 1 = black, but OHRR's first
+// print on the PM-249-WF (2026-10-27) came out black with a white barcode.
+// Mode 4 sends it in 4 KB pieces, each "LZO1X" packed and led by its length
+// (4 bytes, little-endian), ending with a zero length. Mode 0 sends the
 // bytes as they are.
 
 export const PRINTER_DPI = 203
@@ -29,7 +31,7 @@ export interface JobOptions {
   darkness: Darkness
   /** Send the picture as it is (mode 0) instead of packed (mode 4). */
   plain: boolean
-  /** Swap black and white, for a printer that reads the bits the other way. */
+  /** Swap black and white (1 = black), for a printer that reads the bits the other way. */
   flip: boolean
   /** Shade photos with dots (labels with a photo) instead of a hard cut-off. */
   dither: boolean
@@ -58,7 +60,8 @@ export function toRaster(canvas: HTMLCanvasElement, opts: Pick<JobOptions, 'flip
     grey[i] = 255 - a * (255 - (0.299 * rgba[p] + 0.587 * rgba[p + 1] + 0.114 * rgba[p + 2]))
   }
   const bytesPerRow = (W + 7) >> 3
-  const bits = new Uint8Array(bytesPerRow * H)
+  // Start all white, so the spare dots at the end of each row stay blank.
+  const bits = new Uint8Array(bytesPerRow * H).fill(opts.flip ? 0 : 0xff)
   // A hard cut-off keeps barcodes and text crisp; dots (Floyd–Steinberg) keep photos readable.
   const cut = opts.dither ? 128 : 175
   for (let y = 0; y < H; y++) {
@@ -66,7 +69,12 @@ export function toRaster(canvas: HTMLCanvasElement, opts: Pick<JobOptions, 'flip
       const i = y * W + x
       const g = grey[i]
       const dark = g < cut
-      if (dark !== opts.flip) bits[y * bytesPerRow + (x >> 3)] |= 0x80 >> (x & 7)
+      if (dark) {
+        const k = y * bytesPerRow + (x >> 3)
+        const dot = 0x80 >> (x & 7)
+        if (opts.flip) bits[k] |= dot
+        else bits[k] &= ~dot
+      }
       if (opts.dither) {
         const err = g - (dark ? 0 : 255)
         if (x + 1 < W) grey[i + 1] += (err * 7) / 16
