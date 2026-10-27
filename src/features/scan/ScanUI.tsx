@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { Icon, type IconName } from '../../components/icons'
 import { itemPhotos } from './api'
 import PhotoGallery from '../../components/PhotoGallery'
+import { boxName } from './codes'
 import { KIND_META, extrasSummary, formatMoney, statusLabel, type TaggedItem } from './types'
 
 type BigTone = 'orange' | 'blue' | 'outline' | 'plain' | 'danger'
@@ -172,12 +173,18 @@ export function ItemCard({ item, big = false }: { item: TaggedItem; big?: boolea
         </p>
         {(item.donated_by || money) && (
           <p className="text-[15px] text-slate-600">
-            {item.donated_by && <span>From {item.donated_by}</span>}
+            {item.donated_by && <span>Gift of {item.donated_by}</span>}
             {item.donated_by && money && <span> · </span>}
             {money && <span>{item.kind === 'stock' ? `${money} each` : `Worth ${money}`}</span>}
           </p>
         )}
         {extrasSummary(item) && <p className="text-[15px] text-slate-600">{extrasSummary(item)}</p>}
+        {item.box && (
+          <p className="text-[15px] font-semibold text-slate-600">
+            In {boxName(item.box.code)}
+            {item.box.location ? ` · ${item.box.location}` : ''}
+          </p>
+        )}
         {item.description && <p className="text-[15px] leading-snug text-slate-500">{item.description}</p>}
         <p className="font-mono text-sm font-bold tracking-widest text-slate-400">{item.code}</p>
       </div>
