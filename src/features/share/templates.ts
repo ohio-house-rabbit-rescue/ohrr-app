@@ -176,7 +176,7 @@ export const EDUCATION_CARDS: EducationCard[] = [
     headline: 'Spay or neuter — it’s more than population control.',
     subline: 'Calmer, cleaner litter habits, and for females a much lower risk of uterine cancer. Ask about Fix-a-Bun.',
     caption:
-      'Spaying or neutering your rabbit isn’t just about litters. It means calmer behaviour, better litter-box habits and, for females, protection from uterine cancer. OHRR’s Fix-a-Bun program helps with the cost. 🐇',
+      'Spaying or neutering your rabbit isn’t just about litters. It means calmer behavior, better litter-box habits and, for females, protection from uterine cancer. OHRR’s Fix-a-Bun program helps with the cost. 🐇',
     path: '/learn',
     source: 'OHRR article “Spay/Neuter: It’s More than Population Control”; Fix-a-Bun program.',
   },

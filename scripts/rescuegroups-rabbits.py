@@ -1,7 +1,7 @@
 """Load OHRR's adoptable rabbits from its RescueGroups.org listing into the app.
 
 ohiohouserabbitrescue.org/adopt/adoptable-bunnies/ shows OHRR's rabbits
-through a RescueGroups.org toolkit frame (organisation 6091). The same
+through a RescueGroups.org toolkit frame (organization 6091). The same
 RescueGroups record also feeds Petfinder and Adopt-a-Pet, so it's the one
 source of truth. This script reads that public listing (read-only) and writes
 a Supabase migration that adds each rabbit to the `rabbits` table, keyed by

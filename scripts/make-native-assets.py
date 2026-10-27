@@ -9,7 +9,7 @@ Outputs (all under resources/, committed):
   icon-foreground.png   1024x1024  Android adaptive foreground: disc ~90% (the tool
                                    insets it 16.7% into the launcher safe zone)
   icon-background.png   1024x1024  solid brand blue
-  splash.png            2732x2732  blue, disc + mark centred (~24% of the width)
+  splash.png            2732x2732  blue, disc + mark centered (~24% of the width)
   splash-dark.png       2732x2732  same (the splash is brand blue in both themes)
 
 Plus the Android status-bar (notification) icon, which @capacitor/assets doesn't
@@ -35,7 +35,7 @@ SS = 4
 
 
 def disc_with_mark(size: int, disc_frac: float, mark_frac_of_disc: float = 0.9) -> Image.Image:
-    """Brand-blue square with a centred white disc holding the mark.
+    """Brand-blue square with a centered white disc holding the mark.
 
     The mark is a white square (its own background) so it is clipped to the disc:
     the corners vanish into the disc's white and only the Ohio shape shows.
@@ -70,7 +70,7 @@ def silhouette(size: int) -> Image.Image:
     for y in range(h):
         for x in range(w):
             r, g, b = px[x, y]
-            ink = 255 - min(r, g, b)  # 0 on white, large on any colour
+            ink = 255 - min(r, g, b)  # 0 on white, large on any color
             a = max(0, min(255, int(ink * 255 / 24)))  # cream bunny fill (min channel ~207) -> solid
             op[x, y] = (255, 255, 255, a)
     # Trim to content, then fit into the requested square with a little padding.

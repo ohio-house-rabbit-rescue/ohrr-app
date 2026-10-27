@@ -257,7 +257,7 @@ export function MoreDetailsFields({
             value={v.notes}
             onChange={(e) => set({ notes: e.target.value })}
             rows={3}
-            placeholder="Size, colour, anything a buyer or bidder would want to know"
+            placeholder="Size, color, anything a buyer or bidder would want to know"
             aria-label="Notes"
             className="w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-3 text-lg text-ink outline-none transition placeholder:text-slate-300 focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15"
           />

@@ -45,7 +45,7 @@ export default function BreedDetail() {
         </div>
         {b.colours && (
           <div>
-            <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Colours</p>
+            <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Colors</p>
             <p className="mt-1 text-sm text-slate-700">{b.colours}</p>
           </div>
         )}

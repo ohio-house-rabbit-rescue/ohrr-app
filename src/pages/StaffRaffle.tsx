@@ -1369,7 +1369,7 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
     await load()
   }
 
-  // Swap with the neighbour, then renumber every row whose position changed so
+  // Swap with the neighbor, then renumber every row whose position changed so
   // items that shared a sort_order (e.g. all 0) actually move.
   const move = async (id: string, dir: -1 | 1) => {
     const idx = items.findIndex((i) => i.id === id)

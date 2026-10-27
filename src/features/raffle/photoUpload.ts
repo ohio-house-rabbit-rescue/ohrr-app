@@ -11,7 +11,7 @@ const JPEG_QUALITY = 0.85
 type Drawable = ImageBitmap | HTMLImageElement
 
 async function loadDrawable(file: Blob): Promise<Drawable> {
-  // createImageBitmap honours the camera's EXIF orientation, so portrait shots
+  // createImageBitmap honors the camera's EXIF orientation, so portrait shots
   // come out upright. Older browsers fall back to an <img>.
   if (typeof createImageBitmap === 'function') {
     try {

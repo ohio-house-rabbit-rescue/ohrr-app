@@ -217,7 +217,7 @@ export async function paintLetter(canvas: HTMLCanvasElement, d: PaintableLetter,
   ctx.textAlign = 'left'
 }
 
-/** A certificate of appreciation — big, centred, made to be framed. */
+/** A certificate of appreciation — big, centered, made to be framed. */
 export async function paintCertificate(
   canvas: HTMLCanvasElement,
   d: {

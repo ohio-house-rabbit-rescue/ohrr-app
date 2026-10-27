@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom'
 // each page's blue band — the logo's own bunny on Home (and About), and one
 // item for each kind of page everywhere else, all in the same line weight
 // (the drawings are public/art/*.svg; the website has the same files). Each is
-// a small SVG used as a CSS mask, so it takes the band's colour (white here,
+// a small SVG used as a CSS mask, so it takes the band's color (white here,
 // soft blue on the website) and costs one ~0.3 KB file per page (the bunny ~5
 // KB). Decorative: hidden from screen readers, and never makes a band taller.
 
@@ -45,7 +45,7 @@ export function usePageArt(): ArtName | null {
   return artForPath(useLocation().pathname)
 }
 
-/** Position it with `className` (absolute; the colour is `currentColor`). */
+/** Position it with `className` (absolute; the color is `currentColor`). */
 export function PageArt({ name, className = '' }: { name: ArtName; className?: string }) {
   const url = `url(/art/${name}.svg)`
   return (

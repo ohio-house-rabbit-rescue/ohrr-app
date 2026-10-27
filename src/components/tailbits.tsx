@@ -61,7 +61,7 @@ export function ExampleBadge({ className = '' }: { className?: string }) {
 }
 
 // Account-free follow toggle. `compact` renders a round icon button for cards;
-// otherwise a labelled pill for detail pages.
+// otherwise a labeled pill for detail pages.
 export function FollowButton({ id, compact = false }: { id: string; compact?: boolean }) {
   const following = useFollowing()
   const on = following.has(id)

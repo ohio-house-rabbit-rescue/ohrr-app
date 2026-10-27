@@ -1,7 +1,7 @@
 // "What kind of bunny do I have?" — the rabbit breeds people in Ohio are most
 // likely to meet, with how to tell them apart. Facts are taken from each
 // breed's Wikipedia article (weights are ARBA figures where the article gives
-// them; captured 2026-09-21) and the ARBA recognised-breeds list; nothing here
+// them; captured 2026-09-21) and the ARBA recognized-breeds list; nothing here
 // is OHRR's own claim. Photos are freely licensed Wikimedia Commons images,
 // bundled in public/breeds/ and credited on the Settings screen.
 //
@@ -22,7 +22,7 @@ export interface Breed {
   origin: string
   /** how to tell it apart, in one or two plain sentences */
   look: string
-  /** colours / markings the standard recognises, when that is the point of the breed */
+  /** colors / markings the standard recognizes, when that is the point of the breed */
   colours?: string
   photo: string
   /** Wikipedia article this card was checked against */
@@ -54,7 +54,7 @@ export const BREEDS: Breed[] = [
     size: 'small',
     coat: 'short',
     weight: 'Up to 4 lb (ARBA)',
-    origin: 'Netherlands — bred by Adrian de Cock from the French Lop and the Netherland Dwarf; ARBA-recognised in 1979.',
+    origin: 'Netherlands — bred by Adrian de Cock from the French Lop and the Netherland Dwarf; ARBA-recognized in 1979.',
     look: 'One of the smallest lop-eared breeds: a compact, stocky body, short lopped ears and a broad head. One of the most popular pet breeds in the United States.',
     photo: '/breeds/holland-lop.jpg',
     source: `${W}Holland_Lop`,
@@ -66,7 +66,7 @@ export const BREEDS: Breed[] = [
     size: 'medium',
     coat: 'short',
     weight: 'About 4½–6½ lb (ideal 5½)',
-    origin: 'Recognised by ARBA. Not the same breed as the UK’s Miniature Lop or Dwarf Lop.',
+    origin: 'Recognized by ARBA. Not the same breed as the UK’s Miniature Lop or Dwarf Lop.',
     look: 'A lop that is noticeably bigger and rounder than a Holland Lop, with a thick, muscular body.',
     photo: '/breeds/mini-lop.jpg',
     source: `${W}Mini_Lop`,
@@ -78,7 +78,7 @@ export const BREEDS: Breed[] = [
     size: 'dwarf',
     coat: 'short',
     weight: '1.1–2.5 lb',
-    origin: 'Netherlands. Recognised by ARBA and the British Rabbit Council.',
+    origin: 'Netherlands. Recognized by ARBA and the British Rabbit Council.',
     look: 'One of the smallest breeds: a round, baby-faced head, short ears and big eyes. Often confused with the Polish, which has longer ears and a less rounded head.',
     photo: '/breeds/netherland-dwarf.jpg',
     source: `${W}Netherland_Dwarf_rabbit`,
@@ -90,7 +90,7 @@ export const BREEDS: Breed[] = [
     size: 'small',
     coat: 'mane',
     weight: '2.5–3.75 lb',
-    origin: 'Recognised by the British Rabbit Council and ARBA.',
+    origin: 'Recognized by the British Rabbit Council and ARBA.',
     look: 'A wool mane around the head like a lion’s, a compact upright body, a high head and short, well-furred ears of 2–3½ inches.',
     photo: '/breeds/lionhead.jpg',
     source: `${W}Lionhead_rabbit`,
@@ -114,7 +114,7 @@ export const BREEDS: Breed[] = [
     size: 'large',
     coat: 'rex',
     weight: '7½–10½ lb (ideal range)',
-    origin: 'The rex fur mutation appeared in France in the 19th century. Recognised by ARBA and the BRC.',
+    origin: 'The rex fur mutation appeared in France in the 19th century. Recognized by ARBA and the BRC.',
     look: 'The same velvet fur as the Mini Rex on a medium-to-large, rounded body, with a slightly broader head than other breeds.',
     photo: '/breeds/rex.jpg',
     source: `${W}Rex_rabbit`,
@@ -139,7 +139,7 @@ export const BREEDS: Breed[] = [
     coat: 'short',
     weight: '9–12 lb (does slightly larger)',
     origin: 'American, despite the name — the breed originated in California.',
-    look: 'A big, solid rabbit with upright ears. The white with pink eyes is the classic “New Zealand White”; red, black, blue and broken are recognised too.',
+    look: 'A big, solid rabbit with upright ears. The white with pink eyes is the classic “New Zealand White”; red, black, blue and broken are recognized too.',
     colours: 'White, red, black, blue, broken',
     photo: '/breeds/new-zealand.jpg',
     source: `${W}New_Zealand_rabbit`,
@@ -164,7 +164,7 @@ export const BREEDS: Breed[] = [
     coat: 'short',
     weight: '3½–5½ lb (ideal 4½)',
     origin: 'Historically the Hollander or Brabander; once the most popular breed of all, still in the top ten worldwide.',
-    look: 'The unmistakable pattern: a white blaze down the face, a white “saddle” around the shoulders and white front feet, with coloured cheeks, ears and hindquarters.',
+    look: 'The unmistakable pattern: a white blaze down the face, a white “saddle” around the shoulders and white front feet, with colored cheeks, ears and hindquarters.',
     photo: '/breeds/dutch.jpg',
     source: `${W}Dutch_rabbit`,
   },
@@ -187,7 +187,7 @@ export const BREEDS: Breed[] = [
     size: 'giant',
     coat: 'short',
     weight: 'About 10–15 lb; no maximum in the standard',
-    origin: 'France, 19th century, from English Lop and Flemish Giant stock. Recognised by ARBA and the BRC.',
+    origin: 'France, 19th century, from English Lop and Flemish Giant stock. Recognized by ARBA and the BRC.',
     look: 'A very large, heavy lop with a big head and thick ears that are much shorter than an English Lop’s.',
     photo: '/breeds/french-lop.jpg',
     source: `${W}French_Lop`,
@@ -199,7 +199,7 @@ export const BREEDS: Breed[] = [
     size: 'small',
     coat: 'wool',
     weight: '3–4 lb (ideal 3½)',
-    origin: 'United States. Recognised by ARBA.',
+    origin: 'United States. Recognized by ARBA.',
     look: 'Looks like a Holland Lop in a wool coat — short, dense wool like an Angora’s, on a very compact body.',
     photo: '/breeds/american-fuzzy-lop.jpg',
     source: `${W}American_Fuzzy_Lop`,
@@ -236,7 +236,7 @@ export const BREEDS: Breed[] = [
     coat: 'short',
     weight: '4½–6½ lb',
     origin: 'First appeared in the Netherlands in 1898.',
-    look: 'A compact, rounded rabbit with a glossy, short coat. The rich chocolate colour is the classic; lilac, black, blue and broken are recognised too.',
+    look: 'A compact, rounded rabbit with a glossy, short coat. The rich chocolate color is the classic; lilac, black, blue and broken are recognized too.',
     colours: 'Chocolate, lilac, black, blue, broken',
     photo: '/breeds/havana.jpg',
     source: `${W}Havana_rabbit`,
@@ -249,7 +249,7 @@ export const BREEDS: Breed[] = [
     coat: 'short',
     weight: '6½–9½ lb',
     origin: 'France.',
-    look: 'A breed defined by its colour rather than its shape: bands and patches of two colours split down the face and alternating on the ears, body and feet.',
+    look: 'A breed defined by its color rather than its shape: bands and patches of two colors split down the face and alternating on the ears, body and feet.',
     photo: '/breeds/harlequin.jpg',
     source: `${W}Harlequin_rabbit`,
   },
@@ -260,7 +260,7 @@ export const BREEDS: Breed[] = [
     size: 'medium',
     coat: 'wool',
     weight: 'About 5–8 lb',
-    origin: 'The Angoras are one of the oldest groups of breeds, kept for their wool; four Angora breeds are ARBA-recognised.',
+    origin: 'The Angoras are one of the oldest groups of breeds, kept for their wool; four Angora breeds are ARBA-recognized.',
     look: 'Wool everywhere — face, ears and feet included, with tufts on the ear tips. Needs grooming every day.',
     photo: '/breeds/english-angora.jpg',
     source: `${W}Angora_rabbit`,
@@ -273,7 +273,7 @@ export const BREEDS: Breed[] = [
     coat: 'short',
     weight: '5–8 lb',
     origin: 'England, 19th century.',
-    look: 'White with a butterfly marking on the nose, eye circles, cheek spots, coloured ears, a herringbone stripe down the back and a chain of spots along each side; long front legs and a curious, playful nature.',
+    look: 'White with a butterfly marking on the nose, eye circles, cheek spots, colored ears, a herringbone stripe down the back and a chain of spots along each side; long front legs and a curious, playful nature.',
     colours: 'Black, blue, chocolate, lilac, tortoise, gray, gold',
     photo: '/breeds/english-spot.jpg',
     source: `${W}English_Spot`,
@@ -286,7 +286,7 @@ export const BREEDS: Breed[] = [
     coat: 'short',
     weight: 'At least 11 lb (bucks) / 12 lb (does); no maximum',
     origin: 'France, where it is the Géant Papillon.',
-    look: 'A big white rabbit with black or blue markings: butterfly nose, eye circles, cheek spots, coloured ears, a stripe down the spine and spots along the sides.',
+    look: 'A big white rabbit with black or blue markings: butterfly nose, eye circles, cheek spots, colored ears, a stripe down the spine and spots along the sides.',
     photo: '/breeds/checkered-giant.jpg',
     source: `${W}Checkered_Giant_rabbit`,
   },
@@ -297,8 +297,8 @@ export const BREEDS: Breed[] = [
     size: 'small',
     coat: 'short',
     weight: '2½–4½ lb (ideal 3½)',
-    origin: 'Recognised by ARBA.',
-    look: 'White with coloured points — black, blue, chocolate or lilac — like a Californian, but small, and posed stretched out: the only “cylindrical” body type.',
+    origin: 'Recognized by ARBA.',
+    look: 'White with colored points — black, blue, chocolate or lilac — like a Californian, but small, and posed stretched out: the only “cylindrical” body type.',
     colours: 'White with black, blue, chocolate or lilac points',
     photo: '/breeds/himalayan.jpg',
     source: `${W}Himalayan_rabbit`,
@@ -310,7 +310,7 @@ export const BREEDS: Breed[] = [
     size: 'large',
     coat: 'short',
     weight: '9–12 lb (bucks 9–11, does 10–12)',
-    origin: 'Developed in North Canton, Ohio, by Walter B. Garland — a rare breed, recognised by ARBA.',
+    origin: 'Developed in North Canton, Ohio, by Walter B. Garland — a rare breed, recognized by ARBA.',
     look: 'A large rabbit with dense black fur evenly ticked with silver-white hairs.',
     photo: '/breeds/silver-fox.jpg',
     source: `${W}Silver_Fox_rabbit`,

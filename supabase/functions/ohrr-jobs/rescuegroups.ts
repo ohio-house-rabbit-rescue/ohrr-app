@@ -1,5 +1,5 @@
 // OHRR's adoptable rabbits, read from its public RescueGroups.org listing
-// (organisation 6091 — the listing ohiohouserabbitrescue.org/adopt/adoptable-bunnies/
+// (organization 6091 — the listing ohiohouserabbitrescue.org/adopt/adoptable-bunnies/
 // shows, which also feeds Petfinder and Adopt-a-Pet). The same rules as
 // scripts/rescuegroups-rabbits.py, which loaded the first rabbits by hand;
 // this runs every morning inside Supabase (the ohrr-jobs function). No imports,

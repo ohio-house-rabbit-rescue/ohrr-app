@@ -21,7 +21,7 @@ const ALL = 'All'
 const shortTrack = (t: string) => t.replace(/\s*Sessions$/i, '')
 
 export default function Schedule() {
-  // The whole programme is here, so "New for you" counts new talks as seen.
+  // The whole program is here, so "New for you" counts new talks as seen.
   useMarkSeen('bunfest')
   const [calOpen, setCalOpen] = useState(false)
   const saved = useSavedSessions()
@@ -45,7 +45,7 @@ export default function Schedule() {
     [tracks],
   )
   const [tab, setTab] = useState<string>(tabs[0])
-  // The programme can arrive after the first render and change the tabs.
+  // The program can arrive after the first render and change the tabs.
   const current = tabs.includes(tab) ? tab : tabs[0]
 
   const savedTalks = sorted.filter((s) => !s.isBreak && saved.has(s.id))
@@ -66,7 +66,7 @@ export default function Schedule() {
       <Screen className="space-y-3">
         {source === 'seed' && (
           <SampleNote>
-            This year’s programme appears here as soon as OHRR adds it (Staff → BunFest) — no app
+            This year’s program appears here as soon as OHRR adds it (Staff → BunFest) — no app
             update needed.
           </SampleNote>
         )}

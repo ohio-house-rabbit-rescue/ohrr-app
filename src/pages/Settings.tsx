@@ -74,7 +74,7 @@ export default function Settings() {
               <SectionLabel>Your account</SectionLabel>
               <Card className="space-y-3">
                 <p className="font-display text-[15px] font-extrabold text-ink">
-                  Save your favourites and My Bunny to an account
+                  Save your favorites and My Bunny to an account
                 </p>
                 <p className="text-sm leading-relaxed text-slate-600">
                   Sign in on any phone and they’re there — and choose what OHRR emails you about. It’s free, and the
@@ -204,7 +204,7 @@ export default function Settings() {
         )}
 
         {/* ---- Photo credits: one line, opened when someone wants them.
-             The licences require the credit to be available, not prominent. ---- */}
+             The licenses require the credit to be available, not prominent. ---- */}
         <details className="group rounded-2xl border border-slate-200/80 bg-white">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3.5 text-sm font-semibold text-slate-600">
             Photo credits

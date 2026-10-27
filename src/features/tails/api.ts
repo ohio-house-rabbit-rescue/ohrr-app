@@ -3,7 +3,7 @@
 // Stories arrive through the app's "Share your Happy Tail" form and land in the
 // Inbox; publishing one turns it into a `happy_tails` row that the public page
 // reads (supabase/migrations/20260922130000_tails_uploads_profile.sql). Until
-// OHRR publishes the first one, the page shows one story labelled "Example"
+// OHRR publishes the first one, the page shows one story labeled "Example"
 // (data/tails.ts), which goes away by itself with the first real one.
 import { useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
@@ -34,7 +34,7 @@ export interface TailsResult {
 }
 
 /**
- * Published stories; with none published, the one labelled example (source
+ * Published stories; with none published, the one labeled example (source
  * 'seed'). Empty while loading, so the example never flashes up before a real one.
  */
 export function useHappyTails(): TailsResult {

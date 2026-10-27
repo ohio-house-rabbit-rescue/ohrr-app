@@ -26,7 +26,7 @@ export const HOURS_FOR: { value: HoursFor; label: string; ask: { key: string; la
       { key: 'rank', label: 'Rank (optional)', placeholder: 'SSG' },
     ],
   },
-  { value: 'workplace', label: 'A workplace volunteer programme', ask: [{ key: 'employer', label: 'Employer', placeholder: 'Nationwide' }] },
+  { value: 'workplace', label: 'A workplace volunteer program', ask: [{ key: 'employer', label: 'Employer', placeholder: 'Nationwide' }] },
   { value: 'community', label: 'Court or community service', ask: [] },
 ]
 
@@ -339,7 +339,7 @@ export function outreach(c: Call, medium: Medium, org: OrgBits): Message {
           opt(areasText(c)),
           opt(perksText(c)),
           '',
-          'It works well as a team service day: colleagues can sign up for the same shift, and every shift is recorded, so we can confirm hours for your volunteer or matching-gift programme.',
+          'It works well as a team service day: colleagues can sign up for the same shift, and every shift is recorded, so we can confirm hours for your volunteer or matching-gift program.',
           '',
           `Sign up, or pass it to your team: ${link}`,
           '',
@@ -438,7 +438,7 @@ export function thankYou(c: Call, h: Helper, org: OrgBits, hoursFor?: HoursFor |
   const letterFor: Record<HoursFor, string> = {
     school: 'school',
     military: 'a military volunteer award',
-    workplace: 'your workplace programme',
+    workplace: 'your workplace program',
     community: 'community service',
     other: 'anything else',
   }

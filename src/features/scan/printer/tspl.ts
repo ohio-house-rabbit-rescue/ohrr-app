@@ -4,7 +4,7 @@
 // few text commands, then the label as a 1-bit picture.
 //
 // What the printer expects (from the open-source "labelife" driver,
-// github.com/thermal-label/labelife, MIT licence, (c) 2026 Mannes Brak — its
+// github.com/thermal-label/labelife, MIT license, (c) 2026 Mannes Brak — its
 // PM-249-WF and PM-344-WF profiles are marked untested, so the plain mode and
 // the flip below are there in case a print comes out blank or reversed):
 //
@@ -53,7 +53,7 @@ export function toRaster(canvas: HTMLCanvasElement, opts: Pick<JobOptions, 'flip
   const W = src.width
   const H = src.height
   const rgba = src.getContext('2d')!.getImageData(0, 0, W, H).data
-  // Grey levels, white where the picture is see-through.
+  // Gray levels, white where the picture is see-through.
   const grey = new Float32Array(W * H)
   for (let i = 0, p = 0; i < grey.length; i++, p += 4) {
     const a = rgba[p + 3] / 255

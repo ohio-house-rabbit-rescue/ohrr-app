@@ -3,7 +3,7 @@ import HeaderActions from './HeaderActions'
 import BackButton, { isRootPath } from './BackButton'
 
 // On a tab root: mark + name. Anywhere deeper: a Back arrow joins them, and on
-// a narrow phone the name gives way so Back, the mark and the four labelled
+// a narrow phone the name gives way so Back, the mark and the four labeled
 // actions all keep their full size. The gaps are a touch tighter than they
 // were so the labels fit beside the name at 375px.
 export default function OhrrTopBar() {

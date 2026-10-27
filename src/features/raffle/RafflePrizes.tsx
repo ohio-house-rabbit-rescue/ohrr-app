@@ -1,6 +1,6 @@
 // The ticket-raffle prizes staff scanned in (Scan an item → "Raffle prize").
 // Public read of raffle_prizes (RLS: published rows only). Available prizes
-// first, drawn ones greyed at the end. Nothing renders until there is at
+// first, drawn ones grayed at the end. Nothing renders until there is at
 // least one published prize, so the page reads the same as before until then.
 import { useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'

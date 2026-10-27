@@ -3,7 +3,7 @@
 //
 // Five kinds, because the people asking are different: a school giving credit,
 // a service member's command (the Military Outstanding Volunteer Service Medal),
-// an employer's volunteer programme, "to whom it may concern", and a
+// an employer's volunteer program, "to whom it may concern", and a
 // certificate of appreciation to frame. The volunteer's details (their
 // school, branch, employer) are remembered on their record from sign-up, so a
 // letter is a couple of taps. Every letter thanks them.

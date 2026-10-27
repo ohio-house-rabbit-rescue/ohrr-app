@@ -442,7 +442,7 @@ function MakeTimes({ types }: { types: BookingType[] }) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => window.confirm('Delete this time? Anyone booked on it is cancelled too.') && deleteSlot(s.id).then(loadSlots).catch((e) => setError(errMessage(e)))}
+                    onClick={() => window.confirm('Delete this time? Anyone booked on it is canceled too.') && deleteSlot(s.id).then(loadSlots).catch((e) => setError(errMessage(e)))}
                     className="text-red-600"
                     aria-label="Delete"
                   >

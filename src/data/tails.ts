@@ -39,7 +39,7 @@ export interface Tail {
   summary: string
   bonded?: boolean
   timeline: TimelineEntry[]
-  /** The built-in example below — never a real adoption; labelled "Example" wherever it shows. */
+  /** The built-in example below — never a real adoption; labeled "Example" wherever it shows. */
   example?: boolean
 }
 

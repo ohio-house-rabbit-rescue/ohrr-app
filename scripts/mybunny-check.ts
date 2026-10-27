@@ -164,7 +164,7 @@ ok(!all.includes('UID:r3@') === false, 'one-off included in bundle')
 ok(!/UID:r3@[\s\S]*?RRULE/.test(all.slice(all.indexOf('UID:r3@'), all.indexOf('END:VEVENT', all.indexOf('UID:r3@')))), 'one-off has no RRULE')
 
 eq(reminderFilename(nails, 'Clover'), 'nail-trim-clover.ics', 'filename slug')
-eq(reminderFilename({ ...nails, title: 'RHDV2 vaccine booster!' }, 'Señor Flops'), 'rhdv2-vaccine-booster-senor-flops.ics', 'filename slug normalises accents')
+eq(reminderFilename({ ...nails, title: 'RHDV2 vaccine booster!' }, 'Señor Flops'), 'rhdv2-vaccine-booster-senor-flops.ics', 'filename slug normalizes accents')
 
 const g = new URL(googleCalendarUrl(ev))
 eq(g.searchParams.get('dates'), '20261029T090000/20261029T093000', 'google dates')

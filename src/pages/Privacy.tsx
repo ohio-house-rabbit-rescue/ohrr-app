@@ -58,7 +58,7 @@ export default function Privacy() {
             provider (Supabase) in protected, scrambled form — nobody at OHRR can see it.
           </li>
           <li>
-            <strong>What you save:</strong> your favourite rabbits, the BunFest sessions you save, and My Bunny,
+            <strong>What you save:</strong> your favorite rabbits, the BunFest sessions you save, and My Bunny,
             with its photos — kept in a private folder only you can reach. Backup in My Bunny still makes a copy you
             keep yourself.
           </li>
@@ -74,7 +74,7 @@ export default function Privacy() {
         </P>
         <P>
           Only you can see what your account keeps. OHRR staff can see only the email list — the names, email
-          addresses and choices of people who asked for emails — never your favourites, sessions or My Bunny.
+          addresses and choices of people who asked for emails — never your favorites, sessions or My Bunny.
         </P>
         <P>
           <strong>Deleting your account:</strong> My OHRR → <strong>Delete my account</strong>. It removes your
@@ -90,7 +90,7 @@ export default function Privacy() {
             Reminders. "Remind me on this phone" and My Bunny's care reminders are scheduled by your phone itself —
             nothing about them is sent to us.
           </li>
-          <li>Without an account: your favourites, saved sessions and My Bunny, photos and all.</li>
+          <li>Without an account: your favorites, saved sessions and My Bunny, photos and all.</li>
         </UL>
 
         <H>Everything else</H>

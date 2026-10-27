@@ -146,7 +146,7 @@ export function HoldCard({ hold, onForget }: { hold: RememberedHold; onForget: (
   if (state === 'cancelled') {
     return (
       <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3" role="status">
-        <p className="font-display text-base font-extrabold text-ink">This hold was cancelled at the table</p>
+        <p className="font-display text-base font-extrabold text-ink">This hold was canceled at the table</p>
         <p className="text-sm text-slate-600">If that’s a mistake, please see an auction helper.</p>
         <button type="button" onClick={onForget} className="inline-flex min-h-[44px] items-center text-sm font-bold text-brand-blue">
           OK

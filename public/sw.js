@@ -87,7 +87,7 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(title, {
       body: data.body || '',
       icon: '/ohrr-mark.png',
-      // Android's status-bar icon: one colour, drawn from the transparency.
+      // Android's status-bar icon: one color, drawn from the transparency.
       badge: '/ohrr-badge.png',
       tag: data.tag || undefined,
       data: { url: data.url || '/' },

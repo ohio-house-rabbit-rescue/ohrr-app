@@ -162,7 +162,7 @@ export default function FoundReport() {
                 className={inputClass}
                 value={form.description}
                 onChange={set('description')}
-                placeholder="Colour, size, lop ears, collar…"
+                placeholder="Color, size, lop ears, collar…"
               />
             </label>
 

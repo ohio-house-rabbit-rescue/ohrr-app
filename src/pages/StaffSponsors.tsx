@@ -911,7 +911,7 @@ export default function StaffSponsors() {
     await load()
   }
 
-  // Reorder within a tier: swap with the neighbour, then renumber that tier 0..n.
+  // Reorder within a tier: swap with the neighbor, then renumber that tier 0..n.
   const move = async (item: SponsorRow, dir: -1 | 1) => {
     const group = items.filter((s) => s.tier === item.tier)
     const i = group.findIndex((s) => s.id === item.id)

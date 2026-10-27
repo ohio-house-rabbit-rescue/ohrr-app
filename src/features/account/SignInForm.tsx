@@ -172,7 +172,7 @@ export default function SignInForm({
       ? 'Enter your email and we’ll send a link to set a new password.'
       : forStaff
         ? 'Staff and volunteers use the same OHRR account as everyone else. Sign in, and the staff area opens.'
-        : 'One account for the OHRR app: your favourite rabbits, saved BunFest sessions and My Bunny on any phone, and the emails you want from OHRR.'
+        : 'One account for the OHRR app: your favorite rabbits, saved BunFest sessions and My Bunny on any phone, and the emails you want from OHRR.'
   const submitLabel =
     status === 'submitting'
       ? 'Working…'

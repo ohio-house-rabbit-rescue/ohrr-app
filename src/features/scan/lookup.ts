@@ -1,7 +1,7 @@
 // Best-effort product name for a retail barcode, from the Open Food Facts
 // family of databases (free, no key, CORS-friendly). Coverage is patchy, so
 // this only ever PRE-FILLS the name — the person confirms or types their own,
-// and we never store the database's photo (its licence needs attribution).
+// and we never store the database's photo (its license needs attribution).
 // Any failure or timeout is silent: the flow works exactly as before.
 import { isRetailBarcode } from './codes'
 

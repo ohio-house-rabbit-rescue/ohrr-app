@@ -661,7 +661,7 @@ function WaitingInvites({ orgId, reloadKey }: { orgId: string; reloadKey: string
                     disabled={busy}
                     className="min-h-[44px] flex-1 rounded-full bg-red-600 px-4 text-xs font-bold text-white disabled:opacity-60"
                   >
-                    {busy ? 'Cancelling…' : 'Cancel this invite'}
+                    {busy ? 'Canceling…' : 'Cancel this invite'}
                   </button>
                   <button
                     type="button"
@@ -1258,7 +1258,7 @@ function MemberCard({
         <div className="space-y-2">
           {cantShare && (
             <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
-              Greyed-out tasks: only someone who has this task can share it.
+              Grayed-out tasks: only someone who has this task can share it.
             </p>
           )}
           {AREAS.map(({ area, caps }) => (

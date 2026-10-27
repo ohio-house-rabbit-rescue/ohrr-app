@@ -115,7 +115,7 @@ export default function Flyers() {
       </button>
       {status && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{status}</p>}
       {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</p>}
-      <p className="text-xs text-slate-500">Prints on one US-Letter page, colour or black-and-white. Each flyer carries its own link, so the analytics show which ones bring people in.</p>
+      <p className="text-xs text-slate-500">Prints on one US-Letter page, color or black-and-white. Each flyer carries its own link, so the analytics show which ones bring people in.</p>
     </Screen>
   )
 }

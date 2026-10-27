@@ -171,7 +171,7 @@ export default function App() {
     <>
       {/* The browser tab / shared-link title for the current screen */}
       <PageTitle />
-      {/* Signed in: favourites, sessions, My Bunny and "last looked" follow the account */}
+      {/* Signed in: favorites, sessions, My Bunny and "last looked" follow the account */}
       <AccountSync />
       {/* Inside the phone app: My OHRR's "Remind me on this phone" */}
       <PhoneReminderScheduler />

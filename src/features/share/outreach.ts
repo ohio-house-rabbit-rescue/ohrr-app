@@ -30,7 +30,7 @@ ${SHARE_SITE}`
 export const OUTREACH: OutreachLetter[] = [
   {
     id: 'campus',
-    audience: 'Student organisations, service-learning and campus volunteer offices',
+    audience: 'Student organizations, service-learning and campus volunteer offices',
     when: 'Start of each term, and before service-hour deadlines',
     subject: 'Volunteer hours with the rabbits — one hour at a time',
     body: `Hello {{org}},
@@ -72,7 +72,7 @@ ${SIGN}`,
   },
   {
     id: 'store',
-    audience: 'Pet stores, feed stores and garden centres',
+    audience: 'Pet stores, feed stores and garden centers',
     when: 'February and March, before Easter',
     subject: 'Before Easter — a one-page "Is a rabbit right for us?" for your customers',
     body: `Hello {{org}},
@@ -91,7 +91,7 @@ ${SIGN}`,
   {
     id: 'school',
     audience: 'Schools, libraries, scouts and youth groups',
-    when: 'Before a term or a summer programme',
+    when: 'Before a term or a summer program',
     subject: 'A group visit to sit with the rabbits',
     body: `Hello {{org}},
 
@@ -126,7 +126,7 @@ ${SIGN}`,
   },
   {
     id: 'media',
-    audience: 'Community newsletters, neighbourhood groups and local media',
+    audience: 'Community newsletters, neighborhood groups and local media',
     when: 'Ahead of Midwest BunFest, adoption events and Easter',
     subject: 'Ohio House Rabbit Rescue — events and stories for your readers',
     body: `Hello {{org}},
