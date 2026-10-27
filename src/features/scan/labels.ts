@@ -61,6 +61,17 @@ export function saveLabelSize(s: LabelSize): void {
   }
 }
 
+/** The rescue's label size (app_settings row), shared by every phone and computer. */
+export const LABEL_SIZE_SETTING = 'label_size'
+
+/** A stored size, checked — null when missing or out of range. */
+export function labelSizeFrom(v: unknown): LabelSize | null {
+  const s = v as Partial<LabelSize> | null
+  if (!s || typeof s.wIn !== 'number' || typeof s.hIn !== 'number') return null
+  if (!(s.wIn >= 0.5 && s.hIn >= 0.5 && s.wIn <= 8.5 && s.hIn <= 11)) return null
+  return LABEL_SIZES.find((p) => p.wIn === s.wIn && p.hIn === s.hIn) ?? customLabelSize(s.wIn, s.hIn)
+}
+
 export function customLabelSize(wIn: number, hIn: number): LabelSize {
   const w = Math.round(wIn * 100) / 100
   const h = Math.round(hIn * 100) / 100

@@ -25,7 +25,9 @@ import { listItems, markLabelsPrinted } from '../api'
 import { listProducts, money, type StockCard } from '../../hopshop/api'
 import { BigButton, ErrorBox } from '../ScanUI'
 import { KIND_META, type TaggedItem } from '../types'
-import { LABEL_SIZES, customLabelSize, labelDataUrl, loadLabelSize, saveLabelSize, type AuctionLabel, type LabelItem, type LabelSize } from '../labels'
+import { LABEL_SIZES, LABEL_SIZE_SETTING, customLabelSize, labelDataUrl, labelSizeFrom, loadLabelSize, saveLabelSize, type AuctionLabel, type LabelItem, type LabelSize } from '../labels'
+import { setSetting, useSetting } from '../../settings/useSetting'
+import type { Json } from '../../../lib/database.types'
 import { AUCTION_EVENT_SLUG } from '../../raffle/types'
 import BluetoothPrint from '../printer/BluetoothPrint'
 
@@ -153,8 +155,13 @@ function productRow(p: StockCard): Row {
 
 export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   const shop = mode === 'shop'
-  const { membership } = useAuth()
+  const { membership, user, can } = useAuth()
   const orgId = membership?.orgId ?? ''
+  // The label size is the rescue's (one printer, one roll): whoever may manage
+  // settings sets it for every phone and computer; anyone else can still pick
+  // another size, for this device until the page is opened again.
+  const sharedSize = useSetting<Json>(LABEL_SIZE_SETTING, null)
+  const setsForAll = can('settings.manage')
   const [items, setItems] = useState<Row[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showPrice, setShowPrice] = useState(() => loadOn(PRICE_KEY))
@@ -254,11 +261,23 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, shown, size, showPrice, bidSheet])
 
-  const chooseSize = (s: LabelSize) => {
+  const showSize = (s: LabelSize) => {
     setSize(s)
     saveLabelSize(s)
     setCustomW(String(s.wIn))
     setCustomH(String(s.hIn))
+  }
+  const rescueSize = sharedSize.loading ? null : labelSizeFrom(sharedSize.value)
+  useEffect(() => {
+    if (rescueSize) showSize(rescueSize)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rescueSize?.key])
+  const chooseSize = (s: LabelSize) => {
+    showSize(s)
+    if (setsForAll && orgId)
+      setSetting(LABEL_SIZE_SETTING, { wIn: s.wIn, hIn: s.hIn }, { orgId, userId: user?.id }).catch((e) =>
+        setError(`The size is set on this device, but couldn’t be saved for everyone: ${errMessage(e)}`),
+      )
   }
   const applyCustom = () => {
     const w = Number(customW)
@@ -361,7 +380,13 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <p className="text-base font-bold text-ink">Label size</p>
-          <p className="text-sm text-slate-500">The size of the labels in your printer. Remembered on this device.</p>
+          <p className="text-sm text-slate-500">
+            {setsForAll
+              ? 'The size of the labels in the printer. Saved for the whole rescue — every phone and computer prints this size.'
+              : rescueSize
+                ? `The rescue’s size is ${rescueSize.label}. Picking another one changes this device only.`
+                : 'The size of the labels in your printer. Remembered on this device.'}
+          </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {LABEL_SIZES.map((s) => (
               <button
