@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { errMessage } from '../../../lib/supabase'
 import { isNative } from '../../../native/platform'
 import { isIphone } from '../../account/push'
+import { Icon } from '../../../components/icons'
 import { BigButton } from '../ScanUI'
 import { renderLabel, type LabelItem, type LabelSize } from '../labels'
 import { PRINTER_DPI, buildJob, toRaster, type Darkness } from './tspl'
@@ -52,6 +53,7 @@ export default function BluetoothPrint({
   setBusy,
   onPrinted,
   onError,
+  compact = false,
 }: {
   labels: BtLabel[]
   size: LabelSize
@@ -60,6 +62,8 @@ export default function BluetoothPrint({
   /** Called once everything is sent: the codes printed and a note to show. */
   onPrinted: (codes: string[], note: string) => void
   onError: (msg: string | null) => void
+  /** In a page's sticky footer: a shorter button, one line under it, and nothing at all where Bluetooth can't work. */
+  compact?: boolean
 }) {
   const [opts, setOpts] = useState<BtOptions>(loadOpts)
   const [open, setOpen] = useState(false)
@@ -67,6 +71,7 @@ export default function BluetoothPrint({
 
   if (!bluetoothAvailable()) {
     // Safari on iPhone, Firefox: no Bluetooth for web pages.
+    if (compact) return null
     return (
       <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
         {isIphone()
@@ -138,22 +143,51 @@ export default function BluetoothPrint({
     `min-h-[44px] rounded-full px-4 text-[15px] font-bold transition ${on ? 'bg-brand-blue text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600'}`
   const check = 'flex min-h-[44px] items-start gap-2 text-[15px] text-slate-700'
 
-  return (
-    <div className="space-y-2">
-      <BigButton onClick={() => void print()} disabled={!!busy || labels.length === 0} icon="printer" tone="blue">
-        {busy ?? `Print ${plural(total)} by Bluetooth`}
-      </BigButton>
-      <div className="flex flex-wrap items-center gap-x-3 text-sm text-slate-600">
-        <span>{name ? `Printer: ${name}` : 'The first time, pick the printer from the list (its name starts PM-).'}</span>
-        <button type="button" onClick={() => void change()} disabled={!!busy} className="min-h-[44px] font-bold text-brand-blue">
-          {name ? 'Change' : 'Pick the printer'}
-        </button>
+  // Which printer, and the way to pick or change it. Under the button, or
+  // (compact) at the top of the settings.
+  const printerRow = (
+    <div className="flex flex-wrap items-center gap-x-3 text-sm text-slate-600">
+      <span>{name ? `Printer: ${name}` : 'The first time, pick the printer from the list (its name starts PM-).'}</span>
+      <button type="button" onClick={() => void change()} disabled={!!busy} className="min-h-[44px] font-bold text-brand-blue">
+        {name ? 'Change' : 'Pick the printer'}
+      </button>
+      {!compact && (
         <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="min-h-[44px] font-bold text-brand-blue">
           {open ? 'Hide printer settings' : 'Printer settings'}
         </button>
-      </div>
+      )}
+    </div>
+  )
+
+  return (
+    <div className="space-y-2">
+      {compact ? (
+        <div className="flex gap-2">
+          <BigButton onClick={() => void print()} disabled={!!busy || labels.length === 0} icon="printer" tone="blue" className="!min-h-[52px] flex-1 text-base">
+            {busy ?? `${plural(total)} by Bluetooth`}
+          </BigButton>
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-label="Printer settings"
+            title="Printer settings"
+            className={`inline-flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl border-2 ${open ? 'border-brand-blue bg-brand-blue-50 text-brand-blue' : 'border-slate-200 bg-white text-slate-600'}`}
+          >
+            <Icon name="settings" size={22} />
+          </button>
+        </div>
+      ) : (
+        <>
+          <BigButton onClick={() => void print()} disabled={!!busy || labels.length === 0} icon="printer" tone="blue">
+            {busy ?? `Print ${plural(total)} by Bluetooth`}
+          </BigButton>
+          {printerRow}
+        </>
+      )}
       {open && (
         <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
+          {compact && printerRow}
           <p className="text-base font-bold text-ink">Darkness</p>
           <div className="flex flex-wrap gap-2">
             {(['light', 'normal', 'dark'] as Darkness[]).map((d) => (

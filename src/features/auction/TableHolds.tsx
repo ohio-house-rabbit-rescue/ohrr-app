@@ -125,7 +125,7 @@ export default function TableHolds({ orgId, onChange }: { orgId: string; onChang
       <Card className="space-y-1 border-amber-200 bg-amber-50/60">
         <p className="font-display text-base font-extrabold text-ink">Buy it now at the table</p>
         <p className="text-sm leading-relaxed text-slate-700">
-          {isMissing(error) ? 'Needs database update 44 (RUN-THIS-IN-SUPABASE.sql). Until it’s run, record Buy it now buyers with “Record a table sale”.' : error}
+          {isMissing(error) ? 'Table holds aren’t switched on yet — ask an admin. Until then, record Buy it now buyers with “Record a table sale”.' : error}
         </p>
       </Card>
     )

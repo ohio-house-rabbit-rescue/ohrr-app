@@ -28,7 +28,7 @@ export default function StaffMyHours() {
         if (!alive) return
         setError(
           isMissingFunction(e)
-            ? 'This needs database update 28 (staff levels and volunteer hours), which isn’t in yet.'
+            ? 'Volunteer hours aren’t switched on yet — ask an admin.'
             : errMessage(e),
         )
       })

@@ -168,7 +168,7 @@ export default function StaffGuardians() {
       {missing && (
         <Card className="border-amber-200 bg-amber-50">
           <p className="text-sm leading-relaxed text-slate-700">
-            This list switches on with <strong>update 29</strong> (RUN-THIS-IN-SUPABASE.sql in the Drive). Until then the app
+            This list isn’t switched on yet — ask an admin. Until then the app
             and website show the 2026 names from the old site’s graphic.
           </p>
         </Card>

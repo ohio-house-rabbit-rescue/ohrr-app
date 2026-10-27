@@ -549,7 +549,7 @@ export default function CatalogFlow() {
         (err) => {
           setDropoffNote(
             isNeeds40(err)
-              ? 'Drop-offs need database update 40. Until then the donor is saved on each item.'
+              ? 'Drop-offs aren’t switched on yet — ask an admin. Until then the donor is saved on each item.'
               : `The drop-off didn’t save (${errMessage(err)}). The donor is saved on each item.`,
           )
           return null
@@ -1196,18 +1196,18 @@ export default function CatalogFlow() {
           )}
           {done && s.planSkipped && (
             <div role="status" className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
-              The item is saved. Where it’s headed, size, use-by and the drop-off need database update 40.
+              The item is saved. Where it’s headed, size, use-by and the drop-off aren’t switched on yet — ask an admin.
             </div>
           )}
           {done && s.receivingSkipped && (
             <div role="status" className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
-              The item is saved. Donation or bought, what we paid, where it was bought and what it’s for need database update 47; add them from the item
+              The item is saved. Donation or bought, what we paid, where it was bought and what it’s for aren’t switched on yet — ask an admin; add them from the item
               once it has run.
             </div>
           )}
           {done && s.detailsSkipped && (
             <div role="status" className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
-              The item is saved. How many, the price and the other details need database update 39; add them from the item once it has run.
+              The item is saved. How many, the price and the other details aren’t switched on yet — ask an admin; add them from the item once they are.
             </div>
           )}
           {done && (s.photosFailed > 0 || s.photosNote) && (

@@ -88,7 +88,7 @@ export default function DropoffDetail() {
       // The items' donor name and date follow the drop-off; read them back.
       void load()
     } catch (err) {
-      setFormError(isNeeds40(err) ? 'This needs database update 40.' : errMessage(err))
+      setFormError(isNeeds40(err) ? 'This isn’t switched on yet — ask an admin.' : errMessage(err))
     } finally {
       setSaving(false)
     }
@@ -133,7 +133,7 @@ export default function DropoffDetail() {
       const d = await setDropoffThanked(orgId, data.id, thanked)
       setData((cur) => (cur ? { ...cur, ...d } : cur))
     } catch (e) {
-      setMsg(isNeeds40(e) ? 'This needs database update 40.' : errMessage(e))
+      setMsg(isNeeds40(e) ? 'This isn’t switched on yet — ask an admin.' : errMessage(e))
     } finally {
       setThanking(false)
     }
@@ -153,7 +153,7 @@ export default function DropoffDetail() {
         {!allowed ? (
           <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-base text-slate-600">Drop-offs are for the people who sort donations.</p>
         ) : phase === 'needs40' ? (
-          <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-base text-slate-600">This needs database update 40.</p>
+          <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-base text-slate-600">This isn’t switched on yet — ask an admin.</p>
         ) : phase === 'missing' ? (
           <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-base text-slate-500">That drop-off isn’t here any more.</p>
         ) : phase === 'error' ? (

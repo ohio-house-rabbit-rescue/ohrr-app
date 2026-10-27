@@ -232,12 +232,12 @@ export default function StaffInbox() {
                         <Field key={key} label={labelOf(key)} value={valueText(key, value)} />
                       ))}
                     </dl>
-                    {r.kind === 'volunteer-application' && (
+                    {r.kind === 'volunteer-application' && r.status !== 'done' && (
                       <Link
-                        to="/staff/volunteers"
-                        className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-brand-blue"
+                        to="/staff/volunteers#applications"
+                        className="inline-flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl bg-brand-blue font-display text-base font-extrabold text-white"
                       >
-                        Approve or decline in Volunteers <Icon name="chevron" size={14} />
+                        <Icon name="check" size={18} /> Approve or decline in Volunteers
                       </Link>
                     )}
                     {r.kind === 'happy-tail' && <PublishTail row={r} payload={payload} onPublished={() => void setStatus(r, 'done')} />}

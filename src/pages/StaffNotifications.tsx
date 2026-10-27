@@ -190,7 +190,7 @@ export default function StaffNotifications() {
       {counts === 'missing' && (
         <Card className="border-amber-200 bg-amber-50">
           <p className="text-sm leading-relaxed text-slate-700">
-            Phone notifications switch on with <strong>update 32</strong> (RUN-THIS-IN-SUPABASE.sql in the Drive).
+            Phone notifications aren’t switched on yet — ask an admin.
           </p>
         </Card>
       )}

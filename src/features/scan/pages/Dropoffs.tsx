@@ -53,7 +53,7 @@ export default function Dropoffs() {
       {!allowed ? (
         <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-base text-slate-600">Drop-offs are for the people who sort donations.</p>
       ) : needs40 ? (
-        <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-base text-slate-600">This needs database update 40.</p>
+        <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-base text-slate-600">This isn’t switched on yet — ask an admin.</p>
       ) : (
         <>
           <Link

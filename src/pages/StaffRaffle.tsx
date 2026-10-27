@@ -33,6 +33,7 @@ import {
   AUCTION_SESSIONS,
   centsToDollars,
   dollarsToCents,
+  eventDay,
   eventTimeToIso,
   formatEventTime,
   formatValue,
@@ -44,6 +45,7 @@ import {
   type AuctionSettings,
 } from '../features/raffle/types'
 import { GivenByCompany } from '../features/bunfest/GivenByCompany'
+import { useBunfestEvent } from '../lib/events'
 import { auctionApi, fmtWhen, money, ONLINE_AUCTION_EVENT } from '../features/auction/client'
 import { AuctionEventProvider, BUNFEST_AUCTION, ONLINE_AUCTION, useAuctionEvent } from '../features/auction/event'
 
@@ -536,7 +538,7 @@ function ItemCard({
     setError(null)
     const { error } = await supabase.rpc('auction_move_item', { p_item_id: item.id, p_event: other.slug })
     setBusy(false)
-    if (error) setError(/could not find the function|PGRST202/i.test(error.message) ? 'Moving items needs database update 45.' : errMessage(error))
+    if (error) setError(/could not find the function|PGRST202/i.test(error.message) ? 'Moving items isn’t switched on yet — ask an admin.' : errMessage(error))
     else onChanged()
   }
 
@@ -546,7 +548,7 @@ function ItemCard({
     setError(null)
     const { data, error } = await supabase.rpc('auction_item_label_code', { p_item_id: item.id })
     setBusy(false)
-    if (error) setError(/could not find the function|PGRST202/i.test(error.message) ? 'Printing a label from here needs database update 44.' : errMessage(error))
+    if (error) setError(/could not find the function|PGRST202/i.test(error.message) ? 'Printing a label from here isn’t switched on yet — ask an admin.' : errMessage(error))
     else if (data) navigate(`/staff/labels?code=${encodeURIComponent(data)}`)
   }
 
@@ -857,6 +859,10 @@ function SetupPanel({
   onSaved: () => void
 }) {
   const ev = useAuctionEvent()
+  // BunFest day comes from the event record, so next year's auction needs no code change.
+  const bunfest = useBunfestEvent()
+  const day = eventDay(bunfest.startsAt)
+  const dayText = new Date(`${day}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState('')
   const [closesAt, setClosesAt] = useState('')
@@ -931,8 +937,8 @@ function SetupPanel({
         : {
             org_id: orgId,
             event_slug: ev.slug,
-            morning_closes_at: eventTimeToIso(morning),
-            afternoon_closes_at: eventTimeToIso(afternoon),
+            morning_closes_at: eventTimeToIso(morning, day),
+            afternoon_closes_at: eventTimeToIso(afternoon, day),
             intro_text: intro.trim() || null,
             raffle_ticket_price_cents: dollarsToCents(ticketPrice),
             raffle_bundle_qty: bundle_qty,
@@ -1019,7 +1025,7 @@ function SetupPanel({
             ) : (
               <>
                 <p className="text-xs leading-relaxed text-slate-500">
-                  Close times are on BunFest day (Oct 25, 2026), Eastern time. Visitors see the session
+                  Close times are on BunFest day ({dayText}), Eastern time. Visitors see the session
                   names on each item, not these times.
                 </p>
                 <div className="flex gap-3">
@@ -1277,7 +1283,7 @@ function SetupPanel({
                 </>
               ) : (
                 <p className="text-xs leading-relaxed text-slate-500">
-                  The online-bidding switch, prices and Square details appear here once update 35 (RUN-THIS-IN-SUPABASE.sql) has been
+                  The online-bidding switch, prices and Square details aren’t switched on yet — ask an admin. They appear here once that has been
                   run on the database.
                 </p>
               )}

@@ -144,7 +144,7 @@ export default function StaffSupporters() {
       {missing ? (
         <Card className="border-amber-200 bg-amber-50">
           <p className="text-sm text-amber-900">
-            The email list arrives with database update 31. Until it’s run, mailing-list sign-ups keep landing in the
+            The email list isn’t switched on yet — ask an admin. Until it is, mailing-list sign-ups keep landing in the
             Inbox.
           </p>
         </Card>

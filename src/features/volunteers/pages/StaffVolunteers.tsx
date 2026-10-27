@@ -15,7 +15,7 @@
 // straight away (still marked self-reported); "To confirm" lists them under
 // "Counted straight away" so staff can un-confirm any that look wrong.
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage, supabase } from '../../../lib/supabase'
 import { Screen, Card, Badge, btn } from '../../../components/ui'
@@ -26,6 +26,7 @@ import { copyText, shareText } from '../../share/share'
 import { bccMailto, exportCsv, toCsv } from '../../../lib/exportFile'
 import {
   approveVolunteer,
+  closeApplicationRequests,
   declineVolunteer,
   deleteHoursEntry,
   deleteVolunteer,
@@ -218,11 +219,17 @@ function appliedWhen(iso: string | null | undefined): string {
 function Applications({ rows, userId, onChanged }: { rows: VolunteerRow[]; userId: string | null; onChanged: () => Promise<void> }) {
   // Decided here just now: kept on screen so staff can send the email.
   const [decided, setDecided] = useState<Record<string, Decision>>({})
+  const { hash } = useLocation()
   const waiting = rows
     .filter((r) => r.review_status === 'pending')
     .sort((a, b) => (b.applied_at ?? '').localeCompare(a.applied_at ?? ''))
   const recent = rows.filter((r) => decided[r.id] && r.review_status !== 'pending')
-  if (waiting.length === 0 && recent.length === 0) return null
+  const shown = waiting.length > 0 || recent.length > 0
+  // Opened from the Inbox's "Approve or decline" button: land on this section.
+  useEffect(() => {
+    if (hash === '#applications' && shown) document.getElementById('applications')?.scrollIntoView({ block: 'start' })
+  }, [hash, shown])
+  if (!shown) return null
 
   return (
     <section id="applications" className="space-y-2.5">
@@ -268,6 +275,7 @@ function Applicant({ v, userId, onDecided }: { v: VolunteerRow; userId: string |
     setError(null)
     try {
       await fn()
+      await closeApplicationRequests(v.org_id, v.email)
       await onDecided(d)
     } catch (e) {
       setError(errMessage(e))
@@ -805,11 +813,14 @@ function VolunteerDetail({ v, onChanged }: { v: VolunteerRow; onChanged: () => P
               )}
               <button
                 type="button"
-                onClick={() => deleteHoursEntry(h.id).then(load).then(onChanged).catch((e) => setError(errMessage(e)))}
-                aria-label="Delete this entry"
-                className="shrink-0 text-red-600"
+                onClick={() =>
+                  window.confirm(`Remove ${hoursLabel(Number(h.hours))} on ${h.on_date}? This can’t be undone.`) &&
+                  deleteHoursEntry(h.id).then(load).then(onChanged).catch((e) => setError(errMessage(e)))
+                }
+                aria-label="Remove this entry"
+                className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full text-red-600 hover:bg-red-50"
               >
-                <Icon name="trash" size={15} />
+                <Icon name="trash" size={18} />
               </button>
             </li>
           ))}
@@ -1098,17 +1109,20 @@ function ToConfirm({
             <button
               type="button"
               onClick={() => setHoursStatus(h.id, 'confirmed').then(onChanged).catch((e) => setError(errMessage(e)))}
-              className="shrink-0 rounded-full bg-green-600 px-3.5 py-2 text-xs font-bold text-white"
+              className="min-h-[44px] shrink-0 rounded-full bg-green-600 px-4 text-[15px] font-bold text-white"
             >
               Confirm
             </button>
             <button
               type="button"
-              onClick={() => deleteHoursEntry(h.id).then(onChanged).catch((e) => setError(errMessage(e)))}
-              aria-label="Delete"
-              className="shrink-0 self-center text-red-600"
+              onClick={() =>
+                window.confirm(`Remove ${nameOf(h.volunteer_id)}’s ${hoursLabel(Number(h.hours))}? This can’t be undone.`) &&
+                deleteHoursEntry(h.id).then(onChanged).catch((e) => setError(errMessage(e)))
+              }
+              aria-label="Remove"
+              className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center self-center rounded-full text-red-600 hover:bg-red-50"
             >
-              <Icon name="trash" size={16} />
+              <Icon name="trash" size={18} />
             </button>
           </div>
         </Card>

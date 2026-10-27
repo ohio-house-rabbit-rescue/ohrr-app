@@ -1,21 +1,30 @@
-// Staff → Volunteer calls → one call. Four tabs, in the order the work happens:
+// Staff → Volunteer calls → one call. The five steps of a call, in the order
+// the work happens (the list on Volunteer calls says the same):
 //
-//   Sign-ups         who's down for which shift, and where they came from
-//   Spread the word  the call said every way — post, story, text, email to a
-//                    company, email to a group, printed letter, flyer,
-//                    newsletter — each with its own tracked link, ready to
-//                    share, copy, print or send
-//   On the day       tap "Here" as people arrive; add anyone who walks in.
-//                    Not a time clock: being here for a shift counts the shift
-//   Thank everyone   everyone who came, with their hours here, this year and
-//                    in all — a thank-you by email or text, and their letter
+//   1 The call         what it's for, when, how many — Edit the call
+//   2 Spread the word  the call said every way — post, story, text, email to a
+//                      company, email to a group, printed letter, flyer,
+//                      newsletter — each with its own tracked link, ready to
+//                      share, copy, print or send
+//   3 Sign-ups         who's down for which shift, and where they came from
+//   4 On the day       tap "Here" as people arrive; add anyone who walks in.
+//                      Not a time clock: being here for a shift counts the shift
+//   5 Thank everyone   everyone who came, with their hours here, this year and
+//                      in all — a thank-you by email or text, their letter, and
+//                      the "I'm done" summary to print or send
+//
+// The page opens on the step the date calls for: before the day, Spread the
+// word (or Sign-ups once it's full); on the day, On the day; after, Thank
+// everyone. ?tab= picks one (the step rows on Volunteer calls link here).
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
 import { Screen, Card, Badge, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
+import { pill, WorkingOn } from '../../../components/StaffJob'
+import ExportButtons from '../../../components/ExportButtons'
 import { renderCard, canvasToBlob } from '../../share/render'
 import { renderFlyer, type Flyer } from '../../share/flyers'
 import { copyText, sharePng, shareText } from '../../share/share'
@@ -39,12 +48,32 @@ import {
   type Shift,
 } from '../calls'
 import { addWalkIn, callRoster, callSources, callThanks, hoursForByEmail, loadCall, markThanked, setAttendance, type CallRow, type RosterLine } from '../callsApi'
+import { callSheet, callSummaryPdf, callTotals } from '../callSummary'
 import { paintLetter } from '../paint'
 import { useOrgBits } from '../orgBits'
 import CallEditor from './CallEditor'
 import { Explain, StaffTitle } from '../../../components/StaffTitle'
 
-type Tab = 'signups' | 'share' | 'day' | 'thanks'
+type Tab = 'share' | 'signups' | 'day' | 'thanks'
+
+/** The steps after "1 The call", in order. */
+const STEPS: { tab: Tab; n: number; label: string }[] = [
+  { tab: 'share', n: 2, label: 'Spread the word' },
+  { tab: 'signups', n: 3, label: 'Sign-ups' },
+  { tab: 'day', n: 4, label: 'On the day' },
+  { tab: 'thanks', n: 5, label: 'Thank everyone' },
+]
+const isTab = (s: string | null): s is Tab => STEPS.some((x) => x.tab === s)
+
+const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+
+/** The step the date calls for. */
+function stepForDate(call: CallRow, taken: number, places: number): Tab {
+  const t = today()
+  if (call.on_date < t) return 'thanks'
+  if (call.on_date === t) return 'day'
+  return taken >= places && places > 0 ? 'signups' : 'share'
+}
 
 /** The call with its shifts, as the messages and lists want it. */
 function asCall(row: CallRow, roster: RosterLine[]): Call {
@@ -57,15 +86,30 @@ function asCall(row: CallRow, roster: RosterLine[]): Call {
   return { ...row, shifts: [...bySlot.values()].sort((a, b) => a.starts_at.localeCompare(b.starts_at)) }
 }
 
+/** "Step 2 of 5 · Spread the word" over the step's content. */
+function StepLine({ n, label }: { n: number; label: string }) {
+  return (
+    <p className="flex items-center gap-2 text-sm font-bold text-slate-500" aria-label={`Step ${n} of 5`}>
+      Step {n} of 5 · {label}
+      <span className="flex gap-1" aria-hidden="true">
+        {Array.from({ length: 5 }, (_, i) => (
+          <span key={i} className={`h-2 w-2 rounded-full ${i < n ? 'bg-brand-orange' : 'bg-slate-200'}`} />
+        ))}
+      </span>
+    </p>
+  )
+}
+
 export default function StaffCall() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
   const { membership } = useAuth()
   const orgId = membership?.orgId ?? ''
   const org = useOrgBits()
   const [row, setRow] = useState<CallRow | null | undefined>(id === 'new' ? null : undefined)
   const [roster, setRoster] = useState<RosterLine[]>([])
-  const [tab, setTab] = useState<Tab>('signups')
+  const [picked, setPicked] = useState<Tab | null>(() => (isTab(params.get('tab')) ? (params.get('tab') as Tab) : null))
   const [editing, setEditing] = useState(id === 'new')
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
@@ -87,16 +131,19 @@ export default function StaffCall() {
   if (id === 'new' || editing) {
     return (
       <Screen className="space-y-4">
-        <StaffTitle title={id === 'new' ? 'A new volunteer call' : 'Edit the call'}>
-          <p>Say what you need once — the shifts, the posts, the emails and the letters all come from it.</p>
-        </StaffTitle>
+        <div className="space-y-2">
+          <StepLine n={1} label="The call" />
+          <StaffTitle title={id === 'new' ? 'A new volunteer call' : 'Edit the call'}>
+            <p>Say what you need once — the shifts, the posts, the emails and the letters all come from it.</p>
+          </StaffTitle>
+        </div>
         <CallEditor
           orgId={orgId}
           initial={id === 'new' ? null : (row ?? null)}
           onSaved={(saved, msg) => {
             setEditing(false)
             setNote(msg ?? null)
-            if (saved !== id) navigate(`/staff/calls/${saved}`, { replace: true })
+            if (saved !== id) navigate(`/staff/calls/${saved}?tab=share`, { replace: true })
             else void load()
           }}
           onCancel={() => (id === 'new' ? navigate('/staff/calls') : setEditing(false))}
@@ -120,58 +167,63 @@ export default function StaffCall() {
   const call = asCall(row, roster)
   const places = (call.shifts ?? []).reduce((n, s) => n + s.capacity, 0)
   const taken = (call.shifts ?? []).reduce((n, s) => n + Math.min(s.capacity, s.taken), 0)
+  const tab: Tab = picked ?? stepForDate(row, taken, places)
+  const step = STEPS.find((s) => s.tab === tab)!
+  const pick = (t: Tab) => {
+    setPicked(t)
+    setParams({ tab: t }, { replace: true })
+  }
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <Link to="/staff/calls" className="inline-flex items-center gap-1 text-sm font-bold text-brand-blue">
-          <Icon name="arrowLeft" size={15} /> All calls
-        </Link>
-        <h1 className="mt-1 font-display text-2xl font-black text-ink">{call.title}</h1>
-        <p className="text-sm text-slate-600">{whenText(call, true)}</p>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Badge tone={taken >= places ? 'blue' : 'orange'}>
-            {taken} of {places} places filled
-          </Badge>
-          {!row.is_published && <Badge tone="slate">Hidden</Badge>}
-          <button type="button" onClick={() => setEditing(true)} className="ml-auto text-sm font-bold text-brand-blue">
-            Edit
-          </button>
-        </div>
+      <WorkingOn
+        icon="users"
+        label="Working on"
+        tone="blue"
+        name={call.title}
+        line={`${whenText(call, true)} · ${taken} of ${places} places filled${row.is_published ? '' : ' · hidden from the public'}`}
+        changeTo="/staff/calls"
+        changeLabel="All calls"
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => setEditing(true)} className={pill.outline}>
+          <Icon name="settings" size={16} /> 1 · Edit the call
+        </button>
+        {!row.is_published && <Badge tone="slate">Hidden</Badge>}
       </div>
 
       {note && <p className="rounded-xl bg-brand-blue-50 px-3 py-2 text-sm text-brand-blue">{note}</p>}
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {(
-          [
-            ['signups', 'Sign-ups'],
-            ['share', 'Spread the word'],
-            ['day', 'On the day'],
-            ['thanks', 'Thank everyone'],
-          ] as [Tab, string][]
-        ).map(([t, label]) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTab(t)}
-            className={`min-h-[44px] rounded-full px-2 text-sm font-bold ${tab === t ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist" aria-label="The steps of this call">
+        {STEPS.map((s) => {
+          const on = tab === s.tab
+          return (
+            <button
+              key={s.tab}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => pick(s.tab)}
+              className={`inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-full px-2 text-sm font-bold ${on ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
+            >
+              <span className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold ${on ? 'bg-white text-brand-blue' : 'bg-brand-blue text-white'}`}>{s.n}</span>
+              {s.label}
+            </button>
+          )
+        })}
       </div>
+      <StepLine n={step.n} label={step.label} />
 
       <FormError>{error}</FormError>
-      {tab === 'signups' && <SignupsTab call={call} roster={roster} />}
       {tab === 'share' && <ShareTab call={call} org={org} />}
+      {tab === 'signups' && <SignupsTab call={call} roster={roster} />}
       {tab === 'day' && <DayTab call={call} roster={roster} reload={load} />}
-      {tab === 'thanks' && <ThanksTab call={call} org={org} orgId={orgId} />}
+      {tab === 'thanks' && <ThanksTab call={call} roster={roster} org={org} orgId={orgId} />}
     </Screen>
   )
 }
 
-/* ================================================================ sign-ups */
+/* ================================================================ 3 sign-ups */
 
 function SignupsTab({ call, roster }: { call: Call; roster: RosterLine[] }) {
   const [sources, setSources] = useState<{ source: string; people: number }[] | null>(null)
@@ -193,11 +245,11 @@ function SignupsTab({ call, roster }: { call: Call; roster: RosterLine[] }) {
               setCopied(await copyText(link))
               setTimeout(() => setCopied(false), 1500)
             }}
-            className={`${btn.outline} flex-1 !py-2 text-sm`}
+            className={`${btn.outline} min-h-[44px] flex-1 text-sm`}
           >
             {copied ? 'Copied' : 'Copy the link'}
           </button>
-          <a href={link} target="_blank" rel="noopener noreferrer" className={`${btn.outline} flex-1 !py-2 text-sm`}>
+          <a href={link} target="_blank" rel="noopener noreferrer" className={`${btn.outline} min-h-[44px] flex-1 text-sm`}>
             Open it
           </a>
         </div>
@@ -256,7 +308,7 @@ function SignupsTab({ call, roster }: { call: Call; roster: RosterLine[] }) {
   )
 }
 
-/* ================================================================ spread the word */
+/* ================================================================ 2 spread the word */
 
 /** Put the group's name where the message says {{org}}. */
 function fillOrg(body: string, to: string): string {
@@ -264,6 +316,9 @@ function fillOrg(body: string, to: string): string {
   if (name) return body.replaceAll('{{org}}', name)
   return body.replace('Hello {{org}},', 'Hello,').replace('Dear friends at {{org}},', 'Dear friends,').replaceAll('{{org}}', 'your organization')
 }
+
+const act = `${btn.primary} min-h-[44px] text-sm`
+const actOutline = `${btn.outline} min-h-[44px] text-sm`
 
 function ShareTab({ call, org }: { call: Call; org: OrgBits }) {
   const [open, setOpen] = useState<Medium | null>('facebook')
@@ -392,35 +447,35 @@ function ShareTab({ call, org }: { call: Call; org: OrgBits }) {
                 {m.id !== 'flyer' && <textarea readOnly className={`${staffInput} !mt-0 min-h-[160px] text-sm`} value={text} />}
                 <div className="flex flex-wrap gap-2">
                   {(m.id === 'facebook' || m.id === 'instagram') && (
-                    <button type="button" disabled={!!busy} onClick={() => picture('square', m.id)} className={`${btn.primary} !py-2 text-sm`}>
+                    <button type="button" disabled={!!busy} onClick={() => picture('square', m.id)} className={act}>
                       {busy === `${m.id}-pic` ? 'Making it…' : 'Make the picture and share'}
                     </button>
                   )}
                   {m.id === 'story' && (
-                    <button type="button" disabled={!!busy} onClick={() => picture('story', 'story')} className={`${btn.primary} !py-2 text-sm`}>
+                    <button type="button" disabled={!!busy} onClick={() => picture('story', 'story')} className={act}>
                       {busy === 'story-pic' ? 'Making it…' : 'Make the story picture'}
                     </button>
                   )}
                   {m.id === 'text' && (
-                    <a href={`sms:?&body=${encodeURIComponent(text)}`} className={`${btn.primary} !py-2 text-sm`}>
+                    <a href={`sms:?&body=${encodeURIComponent(text)}`} className={act}>
                       Open Messages
                     </a>
                   )}
                   {(m.id === 'email-business' || m.id === 'email-groups') && (
                     <a
                       href={`mailto:?subject=${encodeURIComponent(fillOrg(msg.subject ?? '', to))}&body=${encodeURIComponent(fillOrg(msg.body, to))}`}
-                      className={`${btn.primary} !py-2 text-sm`}
+                      className={act}
                     >
                       Open an email
                     </a>
                   )}
                   {m.id === 'letter' && (
-                    <button type="button" disabled={!!busy} onClick={letter} className={`${btn.primary} !py-2 text-sm`}>
+                    <button type="button" disabled={!!busy} onClick={letter} className={act}>
                       {busy === 'letter' ? 'Making it…' : 'Make the printable letter'}
                     </button>
                   )}
                   {m.id === 'flyer' && (
-                    <button type="button" disabled={!!busy} onClick={flyer} className={`${btn.primary} !py-2 text-sm`}>
+                    <button type="button" disabled={!!busy} onClick={flyer} className={act}>
                       {busy === 'flyer' ? 'Making it…' : 'Make the flyer'}
                     </button>
                   )}
@@ -430,13 +485,13 @@ function ShareTab({ call, org }: { call: Call; org: OrgBits }) {
                       onClick={async () => {
                         if (await copyText(m.id === 'text' || m.id === 'story' ? msg.body : text)) say('Copied.')
                       }}
-                      className={`${btn.outline} !py-2 text-sm`}
+                      className={actOutline}
                     >
                       Copy the words
                     </button>
                   )}
                   {(m.id === 'text' || m.id === 'newsletter') && (
-                    <button type="button" onClick={() => void shareText(text)} className={`${btn.outline} !py-2 text-sm`}>
+                    <button type="button" onClick={() => void shareText(text)} className={actOutline}>
                       Share…
                     </button>
                   )}
@@ -456,7 +511,7 @@ function ShareTab({ call, org }: { call: Call; org: OrgBits }) {
   )
 }
 
-/* ================================================================ on the day */
+/* ================================================================ 4 on the day */
 
 function DayTab({ call, roster, reload }: { call: Call; roster: RosterLine[]; reload: () => Promise<void> }) {
   const [busy, setBusy] = useState<string | null>(null)
@@ -490,8 +545,14 @@ function DayTab({ call, roster, reload }: { call: Call; roster: RosterLine[]; re
     setBusy(null)
   }
 
+  const booked = roster.filter((r) => r.booking_id && r.status !== 'cancelled')
+  const here = booked.filter((r) => r.status === 'checked_in').length
+
   return (
     <div className="space-y-3">
+      <p className="font-display text-lg font-extrabold text-ink">
+        {here} of {booked.length} here
+      </p>
       <Explain label="How checking in works">
         <p>
           Tap <strong>Here</strong> as people arrive. Being here for a shift counts the whole shift — no clocking in
@@ -501,13 +562,13 @@ function DayTab({ call, roster, reload }: { call: Call; roster: RosterLine[]; re
       <FormError>{error}</FormError>
       {(call.shifts ?? []).map((s) => {
         const people = roster.filter((r) => r.slot_id === s.slot_id && r.booking_id)
-        const here = people.filter((p) => p.status === 'checked_in').length
+        const hereNow = people.filter((p) => p.status === 'checked_in').length
         return (
           <Card key={s.slot_id} className="space-y-2">
             <div className="flex items-baseline justify-between gap-2">
               <p className="font-display text-lg font-extrabold text-ink">{fmtShift(s)}</p>
               <span className="text-sm font-bold text-slate-600">
-                {here} of {people.length} here
+                {hereNow} of {people.length} here
               </span>
             </div>
             <ul className="divide-y divide-slate-100">
@@ -525,7 +586,7 @@ function DayTab({ call, roster, reload }: { call: Call; roster: RosterLine[]; re
                       disabled={busy === p.booking_id}
                       aria-pressed={isHere}
                       onClick={() => mark(p.booking_id!, isHere ? 'confirmed' : 'checked_in')}
-                      className={`inline-flex min-h-[48px] min-w-[5.5rem] items-center justify-center gap-1 rounded-full px-4 text-sm font-bold ${
+                      className={`inline-flex min-h-[48px] min-w-[5.5rem] items-center justify-center gap-1 rounded-full px-4 text-[15px] font-bold ${
                         isHere ? 'bg-green-600 text-white' : 'border-2 border-green-600 text-green-700'
                       }`}
                     >
@@ -542,7 +603,7 @@ function DayTab({ call, roster, reload }: { call: Call; roster: RosterLine[]; re
                         type="button"
                         disabled={busy === p.booking_id}
                         onClick={() => mark(p.booking_id!, away ? 'confirmed' : 'no_show')}
-                        className={`min-h-[48px] rounded-full px-3 text-xs font-bold ${away ? 'bg-slate-200 text-slate-700' : 'border border-slate-200 text-slate-500'}`}
+                        className={`min-h-[48px] rounded-full px-3 text-sm font-bold ${away ? 'bg-slate-200 text-slate-700' : 'border border-slate-300 text-slate-600'}`}
                       >
                         {away ? 'Undo' : 'Didn’t come'}
                       </button>
@@ -553,31 +614,45 @@ function DayTab({ call, roster, reload }: { call: Call; roster: RosterLine[]; re
             </ul>
             {walkIn === s.slot_id ? (
               <div className="space-y-2 rounded-xl bg-slate-50 p-3">
-                <input className={`${staffInput} !mt-0`} placeholder="Their name" value={w.name} onChange={(e) => setW({ ...w, name: e.target.value })} />
-                <input className={`${staffInput} !mt-0`} type="email" placeholder="Their email — it’s how their hours count" value={w.email} onChange={(e) => setW({ ...w, email: e.target.value })} />
-                <input className={`${staffInput} !mt-0`} type="tel" placeholder="Phone (optional)" value={w.phone} onChange={(e) => setW({ ...w, phone: e.target.value })} />
+                <p className="font-display text-[15px] font-extrabold text-ink">Someone walked in to help</p>
+                <label className="block text-sm font-semibold text-slate-700">
+                  Their name
+                  <input className={staffInput} value={w.name} onChange={(e) => setW({ ...w, name: e.target.value })} autoComplete="off" />
+                </label>
+                <label className="block text-sm font-semibold text-slate-700">
+                  Their email
+                  <input className={staffInput} type="email" value={w.email} onChange={(e) => setW({ ...w, email: e.target.value })} autoComplete="off" />
+                  <span className="mt-1 block text-xs font-normal text-slate-500">It’s how their hours count.</span>
+                </label>
+                <label className="block text-sm font-semibold text-slate-700">
+                  Phone (optional)
+                  <input className={staffInput} type="tel" value={w.phone} onChange={(e) => setW({ ...w, phone: e.target.value })} autoComplete="off" />
+                </label>
                 {call.areas.length > 0 && (
-                  <select className={`${staffInput} !mt-0`} value={w.area} onChange={(e) => setW({ ...w, area: e.target.value })}>
-                    <option value="">Area (optional)</option>
-                    {call.areas.map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Area (optional)
+                    <select className={staffInput} value={w.area} onChange={(e) => setW({ ...w, area: e.target.value })}>
+                      <option value="">Not picked</option>
+                      {call.areas.map((a) => (
+                        <option key={a} value={a}>
+                          {a}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 )}
                 <div className="flex gap-2">
-                  <button type="button" disabled={busy === `walk-${s.slot_id}`} onClick={() => addOne(s.slot_id)} className={`${btn.primary} flex-1 !py-2 text-sm`}>
+                  <button type="button" disabled={busy === `walk-${s.slot_id}` || !w.name.trim()} onClick={() => addOne(s.slot_id)} className={`${act} flex-1`}>
                     Add and mark here
                   </button>
-                  <button type="button" onClick={() => setWalkIn(null)} className={`${btn.outline} !py-2 text-sm`}>
+                  <button type="button" onClick={() => setWalkIn(null)} className={actOutline}>
                     Cancel
                   </button>
                 </div>
               </div>
             ) : (
-              <button type="button" onClick={() => setWalkIn(s.slot_id)} className="text-sm font-bold text-brand-blue">
-                + Someone walked in to help
+              <button type="button" onClick={() => setWalkIn(s.slot_id)} className={pill.outline}>
+                <Icon name="plus" size={16} /> Someone walked in to help
               </button>
             )}
           </Card>
@@ -587,14 +662,15 @@ function DayTab({ call, roster, reload }: { call: Call; roster: RosterLine[]; re
   )
 }
 
-/* ================================================================ thank everyone */
+/* ================================================================ 5 thank everyone */
 
 const LETTER_FOR: Record<HoursFor, string> = { school: 'school', military: 'military', workplace: 'workplace', community: 'general', other: 'general' }
 
-function ThanksTab({ call, org, orgId }: { call: Call; org: OrgBits; orgId: string }) {
+function ThanksTab({ call, roster, org, orgId }: { call: Call; roster: RosterLine[]; org: OrgBits; orgId: string }) {
   const [people, setPeople] = useState<Helper[] | null>(null)
   const [purpose, setPurpose] = useState<Record<string, HoursFor | null>>({})
   const [error, setError] = useState<string | null>(null)
+  const [onlyWaiting, setOnlyWaiting] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -609,7 +685,11 @@ function ThanksTab({ call, org, orgId }: { call: Call; org: OrgBits; orgId: stri
     void load()
   }, [load])
 
-  const thanked = useMemo(() => (people ?? []).filter((p) => p.thanked_at).length, [people])
+  const totals = useMemo(() => callTotals(roster, people ?? []), [roster, people])
+  const shown = useMemo(() => {
+    const list = [...(people ?? [])].sort((a, b) => Number(!!a.thanked_at) - Number(!!b.thanked_at) || a.name.localeCompare(b.name))
+    return onlyWaiting ? list.filter((p) => !p.thanked_at) : list
+  }, [people, onlyWaiting])
 
   const done = async (email: string) => {
     try {
@@ -621,66 +701,104 @@ function ThanksTab({ call, org, orgId }: { call: Call; org: OrgBits; orgId: stri
   }
 
   if (!people) return error ? <FormError>{error}</FormError> : <Spinner />
-  if (people.length === 0)
-    return (
-      <Card className="text-center text-sm leading-relaxed text-slate-600">
-        Nobody is marked as here yet. On the day, tap <strong>Here</strong> for each person under “On the day” — then
-        everyone who came appears here to be thanked, with their hours.
-      </Card>
-    )
 
   return (
     <div className="space-y-3">
-      <Card className="space-y-1">
-        <p className="font-display text-[15px] font-extrabold text-ink">
-          {thanked} of {people.length} thanked
-        </p>
+      {/* The "I'm done" summary: the totals, what's still waiting, and the record to print or send. */}
+      <Card className="space-y-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {(
+            [
+              [totals.signedUp, 'signed up'],
+              [totals.came, 'came'],
+              [fmtHours(totals.hours), totals.hours === 1 ? 'hour given' : 'hours given'],
+              [totals.toThank, 'still to thank'],
+            ] as [string | number, string][]
+          ).map(([big, small]) => (
+            <div key={small} className="rounded-xl bg-brand-blue-50 px-3 py-2.5 text-center">
+              <p className="font-display text-2xl font-black leading-none text-ink">{big}</p>
+              <p className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">{small}</p>
+            </div>
+          ))}
+        </div>
+        {totals.noShow > 0 && (
+          <p className="text-sm text-slate-600">
+            {totals.noShow} signed up but didn’t come.
+          </p>
+        )}
+        <ExportButtons
+          spec={() => callSheet(call, roster, people)}
+          label="Spreadsheet"
+          pdf={{
+            label: 'Summary (PDF)',
+            title: `Volunteers — ${call.title}`,
+            filename: `ohrr-volunteers-${call.slug || 'call'}-${call.on_date}`,
+            build: () => callSummaryPdf(call, roster, people, org),
+          }}
+        />
         <Explain label="About the thank-yous">
           <p>
             Each thank-you gives their hours here, this year and in all, and links to their own hours page. Send it by
-            email or text, then tick it off.
+            email or text, then tick it off. The summary lists every shift, who came and who still needs thanking.
           </p>
         </Explain>
       </Card>
       <FormError>{error}</FormError>
-      {people.map((p) => {
-        const t = thankYou(call, p, org, purpose[p.email.toLowerCase()] ?? null)
-        const kind = LETTER_FOR[purpose[p.email.toLowerCase()] ?? 'other']
-        return (
-          <Card key={p.email} className="space-y-2">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate font-display text-base font-extrabold text-ink">{p.name}</p>
-                <p className="text-sm text-slate-600">
-                  {fmtHours(p.hours_here)} h here · {fmtHours(p.hours_year)} h this year · {fmtHours(p.hours_all)} h in all
-                </p>
-              </div>
-              {p.thanked_at && <Badge tone="blue">Thanked</Badge>}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <a href={`mailto:${p.email}?subject=${encodeURIComponent(t.subject)}&body=${encodeURIComponent(t.body)}`} className={`${btn.primary} !py-2 text-sm`}>
-                <Icon name="mail" size={15} /> Email thank-you
-              </a>
-              {p.phone && (
-                <a href={`sms:${p.phone.replace(/[^\d+]/g, '')}?&body=${encodeURIComponent(t.sms)}`} className={`${btn.outline} !py-2 text-sm`}>
-                  Text
-                </a>
-              )}
-              {!p.thanked_at && (
-                <button type="button" onClick={() => void done(p.email)} className={`${btn.outline} !py-2 text-sm`}>
-                  <Icon name="check" size={15} /> Mark thanked
-                </button>
-              )}
-              <Link
-                to={`/staff/hours-letter?email=${encodeURIComponent(p.email)}&name=${encodeURIComponent(p.name)}&kind=${kind}`}
-                className="inline-flex items-center px-2 text-sm font-bold text-brand-blue underline underline-offset-2"
-              >
-                Hours letter
-              </Link>
-            </div>
-          </Card>
-        )
-      })}
+
+      {people.length === 0 ? (
+        <Card className="text-center text-sm leading-relaxed text-slate-600">
+          Nobody is marked as here yet. On the day, tap <strong>Here</strong> for each person under “4 On the day” — then
+          everyone who came appears here to be thanked, with their hours.
+        </Card>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-display text-[15px] font-extrabold text-ink">
+              {totals.thanked} of {people.length} thanked
+            </p>
+            {totals.toThank > 0 && totals.thanked > 0 && (
+              <button type="button" onClick={() => setOnlyWaiting((v) => !v)} aria-pressed={onlyWaiting} className={`ml-auto ${onlyWaiting ? pill.blue : pill.outline}`}>
+                Still to thank ({totals.toThank})
+              </button>
+            )}
+          </div>
+          {shown.map((p) => {
+            const t = thankYou(call, p, org, purpose[p.email.toLowerCase()] ?? null)
+            const kind = LETTER_FOR[purpose[p.email.toLowerCase()] ?? 'other']
+            return (
+              <Card key={p.email} className="space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-display text-base font-extrabold text-ink">{p.name}</p>
+                    <p className="text-sm text-slate-600">
+                      {fmtHours(p.hours_here)} h here · {fmtHours(p.hours_year)} h this year · {fmtHours(p.hours_all)} h in all
+                    </p>
+                  </div>
+                  {p.thanked_at && <Badge tone="blue">Thanked</Badge>}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <a href={`mailto:${p.email}?subject=${encodeURIComponent(t.subject)}&body=${encodeURIComponent(t.body)}`} className={act}>
+                    <Icon name="mail" size={15} /> Email thank-you
+                  </a>
+                  {p.phone && (
+                    <a href={`sms:${p.phone.replace(/[^\d+]/g, '')}?&body=${encodeURIComponent(t.sms)}`} className={actOutline}>
+                      Text
+                    </a>
+                  )}
+                  {!p.thanked_at && (
+                    <button type="button" onClick={() => void done(p.email)} className={actOutline}>
+                      <Icon name="check" size={15} /> Mark thanked
+                    </button>
+                  )}
+                  <Link to={`/staff/hours-letter?email=${encodeURIComponent(p.email)}&name=${encodeURIComponent(p.name)}&kind=${kind}`} className={pill.soft}>
+                    <Icon name="file" size={15} /> Hours letter
+                  </Link>
+                </div>
+              </Card>
+            )
+          })}
+        </>
+      )}
     </div>
   )
 }

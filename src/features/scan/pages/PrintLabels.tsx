@@ -3,8 +3,10 @@
 //                           name + donor (one per piece for a lot of 50)
 //   /staff/hopshop/labels   Hop Shop price labels: QR + barcode + SKU + name +
 //                           price (one per item in stock)
-// Pick the items (the unprinted ones are ticked by default) and how many
-// copies of each, then Print — on a laptop or a phone that sees the printer —
+// Step 2 of an item's job (Receive → Label → Put away → Sort → Sell) and step 3
+// of the Hop Shop's (Order → Delivery → Price labels → Shelf → Sell). Three
+// parts: A the label size (one line once set), B tick the items, C print —
+// always in the footer. Pick the items and how many copies of each, then Print — on a laptop or a phone that sees the printer —
 // or make a PDF, one label per page, to print from wherever the printer is —
 // or send them straight to OHRR's Bluetooth label printer (printer/).
 // ?code=X (repeatable) ticks just those; &copies=N sets their copies;
@@ -12,18 +14,17 @@
 // Silent Auction items print as bid-sheet labels (prices, "Scan to buy it
 // now") unless "Bid-sheet labels" is unticked (update 44).
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage, supabase } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
-import { Screen } from '../../../components/ui'
 import { Spinner } from '../../../components/staffui'
 import type { IconName } from '../../../components/icons'
 import { isNative } from '../../../native/platform'
 import { shareFileNative } from '../../../native/share'
 import { listItems, markLabelsPrinted } from '../api'
 import { listProducts, money, type StockCard } from '../../hopshop/api'
-import { BigButton, ErrorBox } from '../ScanUI'
+import { BigButton, ErrorBox, StepShell } from '../ScanUI'
 import { KIND_META, type TaggedItem } from '../types'
 import {
   LABEL_SIZES,
@@ -45,7 +46,7 @@ import { setSetting, useSetting } from '../../settings/useSetting'
 import type { Json } from '../../../lib/database.types'
 import { AUCTION_EVENT_SLUG } from '../../raffle/types'
 import BluetoothPrint from '../printer/BluetoothPrint'
-import { Explain, StaffTitle } from '../../../components/StaffTitle'
+import { Part, PartBadge, StepButton, pill } from '../../../components/StaffJob'
 
 type Mode = 'items' | 'shop'
 
@@ -181,6 +182,7 @@ function productRow(p: StockCard): Row {
 
 export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   const shop = mode === 'shop'
+  const navigate = useNavigate()
   const { membership, user, can } = useAuth()
   const orgId = membership?.orgId ?? ''
   // The label size is the rescue's (one printer, one roll). The last size picked
@@ -329,6 +331,9 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   }, [selected, shown, size, showPrice, bidSheet])
 
   const [customOpen, setCustomOpen] = useState(false)
+  // A: the size folds to one line once it's set; B: the filters fold behind one pill.
+  const [sizeOpen, setSizeOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const showSize = (s: LabelSize, at: number) => {
     setSize(s)
     saveLabelSize(s, at)
@@ -436,330 +441,391 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
     ticked: picked.size,
   }
 
+  const sizeLine = `${size.label}${shop && !showPrice ? ' · no price' : ''}`
+  const filterWords = [
+    SHOW_OPTIONS.find((o) => o.value === view.show)?.label,
+    WHEN_OPTIONS.find((o) => o.value === view.when)?.label,
+    view.kind === 'all' ? null : (kinds.find(([v]) => v === view.kind)?.[1] ?? view.kind),
+    SORT_OPTIONS.find((o) => o.value === view.sort)?.label,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
   return (
     <>
-      <Screen className="space-y-4 print:hidden">
-        <div className="pt-1">
-          <Link to={shop ? '/staff/hopshop' : '/staff/items'} className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
-            <Icon name="arrowLeft" size={20} /> {shop ? 'Hop Shop inventory' : 'Items'}
-          </Link>
-          <StaffTitle title={shop ? 'Hop Shop labels' : 'Print labels'} flow={['Label size', 'Tick items', 'Print']}>
-            <p>
-              {shop
-                ? 'A price label for each item on the shelf: the name, the price and its SKU. The barcode scans at the till; the QR code opens the item.'
-                : 'A label per donation — or a copy for every piece: the QR code opens it, the barcode scans at the till or desk, and the DON number can be typed. Any label printer works.'}
-            </p>
-          </StaffTitle>
-          <p className="mt-1 text-sm">
-            <Link to={shop ? '/staff/labels' : '/staff/hopshop/labels'} className="inline-flex min-h-[44px] items-center font-bold text-brand-blue">
-              {shop ? 'Donation labels →' : 'Hop Shop price labels →'}
-            </Link>
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <label htmlFor="label-size" className="text-base font-bold text-ink">
-            Label size
-          </label>
-          <select
-            id="label-size"
-            value={customOpen || size.key.startsWith('custom:') ? 'custom' : size.key}
-            onChange={(e) => {
-              const s = LABEL_SIZES.find((x) => x.key === e.target.value)
-              if (s) chooseSize(s)
-              else setCustomOpen(true)
-            }}
-            className={SELECT}
-          >
-            {LABEL_SIZES.map((s) => (
-              <option key={s.key} value={s.key}>
-                {s.label}
-              </option>
-            ))}
-            <option value="custom">{size.key.startsWith('custom:') ? size.label : 'Another size…'}</option>
-          </select>
-          <p className="mt-1 text-sm text-slate-500">
-            {setsForAll
-              ? 'Stays until someone changes it — for the whole rescue, on every phone and computer.'
-              : rescueSize
-                ? `Stays until it’s changed. The rescue’s size is ${rescueSize.label}.`
-                : 'Stays on this device until it’s changed.'}
-          </p>
-          {(customOpen || size.key.startsWith('custom:')) && (
-            <div className="mt-3 flex flex-wrap items-end gap-2">
-              <label className="text-sm font-bold text-slate-600">
-                Width (in)
-                <input type="number" step="0.05" min="0.5" max="8.5" value={customW} onChange={(e) => setCustomW(e.target.value)} className="mt-1 block w-24 rounded-xl border-2 border-slate-200 px-3 py-2 text-base text-ink" />
-              </label>
-              <label className="text-sm font-bold text-slate-600">
-                Height (in)
-                <input type="number" step="0.05" min="0.5" max="11" value={customH} onChange={(e) => setCustomH(e.target.value)} className="mt-1 block w-24 rounded-xl border-2 border-slate-200 px-3 py-2 text-base text-ink" />
-              </label>
-              <button type="button" onClick={applyCustom} className="min-h-[44px] rounded-xl border-2 border-brand-blue/50 px-4 text-[15px] font-bold text-brand-blue">
-                Use this size
-              </button>
-            </div>
-          )}
-          {shop && (
-            <label className="mt-3 flex min-h-[44px] items-center gap-2 text-[15px] font-bold text-slate-700">
-              <input
-                type="checkbox"
-                checked={showPrice}
-                onChange={(e) => {
-                  setShowPrice(e.target.checked)
-                  saveOn(PRICE_KEY, e.target.checked)
-                }}
-                className="h-6 w-6 accent-brand-blue"
-              />
-              Show the price on the label
-            </label>
-          )}
-          {!shop && (items ?? []).some((r) => r.label.auction) && (
-            <label className="mt-3 flex min-h-[44px] items-start gap-2 text-[15px] font-bold text-slate-700">
-              <input
-                type="checkbox"
-                checked={bidSheet}
-                onChange={(e) => {
-                  setBidSheet(e.target.checked)
-                  saveOn(SHEET_KEY, e.target.checked)
-                }}
-                className="mt-0.5 h-6 w-6 shrink-0 accent-brand-blue"
-              />
-              <span>
-                Bid-sheet labels for Silent Auction items
-                <span className="block text-sm font-semibold text-slate-500">Starting bid, raise, Buy it now price and “Scan to buy it now”. 3 × 2 in or bigger reads best.</span>
-              </span>
-            </label>
-          )}
-          {preview && (
-            <div className="mt-4">
-              <p className="mb-1 text-sm font-bold text-slate-600">Preview · {size.label}</p>
-              <img src={preview} alt="Label preview" className="w-full max-w-sm rounded-lg border border-slate-200 shadow-sm" style={{ aspectRatio: `${size.wIn} / ${size.hIn}` }} />
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {isNative ? (
-            <BigButton onClick={() => void pdf()} disabled={!!busy || selected.length === 0} icon="printer" className="col-span-2">
-              {busy ?? `Print or share ${plural(totalLabels)}`}
-            </BigButton>
-          ) : (
+      <div className="print:hidden">
+        <StepShell
+          title={shop ? 'Hop Shop price labels' : 'Print labels'}
+          help={
+            shop
+              ? 'A price label for each item on the shelf: the name, the price and its SKU.'
+              : 'A label for each donation or prize — or a copy for every piece. Any label printer works.'
+          }
+          explain={
             <>
-              <BigButton onClick={() => void print()} disabled={!!busy || selected.length === 0} icon="printer">
-                {busy ?? `Print ${totalLabels}`}
-              </BigButton>
-              <BigButton onClick={() => void pdf()} disabled={!!busy || selected.length === 0} tone="outline">
-                PDF
-              </BigButton>
+              <p>
+                {shop
+                  ? 'The barcode scans at the till; the QR code opens the item. '
+                  : 'The QR code opens the item, the barcode scans at the till or desk, and the number can be typed. '}
+                {isNative
+                  ? 'Print or share: in the share sheet choose the printer’s app — for OHRR’s Phomemo and Omezizy printers that is Labelife: PDF processing → pick the label size → Print. AirPrint works for printers that have it.'
+                  : 'In the print dialog choose the label printer and its label size; margins are zero. “Save as PDF” works too.'}
+              </p>
+              <p>Printing marks each label as printed for everyone, on every phone and computer, so nothing prints twice.</p>
             </>
-          )}
-        </div>
-        <BluetoothPrint
-          labels={selected.map((i) => ({ code: i.code, item: toLabel(i), copies: copiesOf(i.code) }))}
-          size={size}
-          busy={busy}
-          setBusy={setBusy}
-          onError={setError}
-          onPrinted={(codes, msg) => {
-            setNote(msg)
-            void markPrinted(codes)
-          }}
-        />
-        {note && (
-          <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            {note}{' '}
-            {lastMarked.length > 0 && (
-              <button type="button" onClick={() => void markPrinted(lastMarked, false)} className="font-bold text-brand-blue">
-                Undo — mark not printed
-              </button>
-            )}
-          </p>
-        )}
-        <Explain label="About printing">
-          <p>
-            {isNative
-              ? 'Print or share: in the share sheet choose the printer’s app — for OHRR’s Phomemo and Omezizy printers that is Labelife: PDF processing → pick the label size → Print. AirPrint works for printers that have it.'
-              : 'In the print dialog choose the label printer and its label size; margins are zero. “Save as PDF” works too.'}
-          </p>
-        </Explain>
+          }
+          explainLabel="About printing"
+          step={shop ? 3 : 2}
+          of={5}
+          stepName={shop ? 'Labels' : 'Label'}
+          onBack={() => navigate(shop ? '/staff/hopshop' : '/staff/items')}
+          backLabel={shop ? 'Hop Shop' : 'Items'}
+          footer={
+            <div className="space-y-2">
+              <p className="flex items-center gap-2 text-sm font-bold text-slate-600">
+                <PartBadge n="C" />
+                {selected.length === 0
+                  ? 'Print — tick an item first'
+                  : `Print ${plural(totalLabels)}${totalLabels !== selected.length ? ` for ${selected.length} items` : ''} · ${size.label.replace(/\s*\(.*\)\s*$/, '')}`}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {isNative ? (
+                  <BigButton onClick={() => void pdf()} disabled={!!busy || selected.length === 0} icon="printer" className="col-span-2">
+                    {busy ?? `Print or share ${plural(totalLabels)}`}
+                  </BigButton>
+                ) : (
+                  <>
+                    <BigButton onClick={() => void print()} disabled={!!busy || selected.length === 0} icon="printer">
+                      {busy ?? `Print ${totalLabels}`}
+                    </BigButton>
+                    <BigButton onClick={() => void pdf()} disabled={!!busy || selected.length === 0} tone="outline">
+                      PDF
+                    </BigButton>
+                  </>
+                )}
+              </div>
+              <BluetoothPrint
+                labels={selected.map((i) => ({ code: i.code, item: toLabel(i), copies: copiesOf(i.code) }))}
+                size={size}
+                busy={busy}
+                setBusy={setBusy}
+                onError={setError}
+                onPrinted={(codes, msg) => {
+                  setNote(msg)
+                  void markPrinted(codes)
+                }}
+                compact
+              />
+              {note && (
+                <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  <span className="flex-1">{note}</span>
+                  {lastMarked.length > 0 && (
+                    <button type="button" onClick={() => void markPrinted(lastMarked, false)} className={pill.outline}>
+                      Undo — mark not printed
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <StepButton to={shop ? '/staff/labels' : '/staff/hopshop/labels'} icon="printer">
+                {shop ? 'Donation labels instead' : 'Hop Shop price labels instead'}
+              </StepButton>
+            </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <label className="text-sm font-bold text-slate-600">
-            Show
-            <select value={view.show} onChange={(e) => setView({ show: e.target.value as ListView['show'] })} className={SELECT}>
-              {SHOW_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label} ({counts[o.value]})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm font-bold text-slate-600">
-            Added
-            <select value={view.when} onChange={(e) => setView({ when: e.target.value as ListView['when'] })} className={SELECT}>
-              {WHEN_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          {kinds.length > 1 && (
-            <label className="text-sm font-bold text-slate-600">
-              {shop ? 'Type' : 'Kind'}
-              <select value={view.kind} onChange={(e) => setView({ kind: e.target.value })} className={SELECT}>
-                <option value="all">All</option>
-                {kinds.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <label className="text-sm font-bold text-slate-600">
-            Sort
-            <select value={view.sort} onChange={(e) => setView({ sort: e.target.value as ListView['sort'] })} className={SELECT}>
-              {SORT_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-2">
-          <span className="text-sm text-slate-600">
-            {shown.length} shown · {picked.size} ticked
-          </span>
-          {shown.length > 0 && (
-            <button type="button" onClick={() => setPicked((p) => new Set([...p, ...shown.map((i) => i.code)]))} className="min-h-[44px] px-2 text-[15px] font-bold text-brand-blue">
-              Tick all {shown.length}
-            </button>
-          )}
-          {picked.size > 0 && (
-            <button type="button" onClick={() => setPicked(new Set())} className="min-h-[44px] px-2 text-[15px] font-bold text-brand-blue">
-              Untick all
-            </button>
-          )}
-        </div>
-        <div className="relative">
-          <Icon name="search" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={shop ? 'Search by name, type or SKU' : 'Search by name, donor or code'}
-            aria-label="Search items"
-            className="w-full rounded-2xl border-2 border-slate-200 bg-white py-3 pl-11 pr-4 text-base text-ink outline-none focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15"
-          />
-        </div>
+            {/* A · the label size: one line once it's set, the full choice behind Change */}
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+              <Part n="A" hint={sizeOpen ? 'the rescue’s printer' : undefined}>
+                Label size
+              </Part>
+              {!sizeOpen ? (
+                <div className="flex items-center gap-3">
+                  {preview && (
+                    <img
+                      src={preview}
+                      alt="Label preview"
+                      className="h-12 shrink-0 rounded border border-slate-200 bg-white"
+                      style={{ aspectRatio: `${size.wIn} / ${size.hIn}` }}
+                    />
+                  )}
+                  <span className="min-w-0 flex-1 text-base font-bold text-ink">{sizeLine}</span>
+                  <button type="button" onClick={() => setSizeOpen(true)} className={pill.outline}>
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <label htmlFor="label-size" className="text-sm font-bold text-slate-600">
+                    The printer’s labels
+                    <select
+                      id="label-size"
+                      value={customOpen || size.key.startsWith('custom:') ? 'custom' : size.key}
+                      onChange={(e) => {
+                        const s = LABEL_SIZES.find((x) => x.key === e.target.value)
+                        if (s) chooseSize(s)
+                        else setCustomOpen(true)
+                      }}
+                      className={SELECT}
+                    >
+                      {LABEL_SIZES.map((s) => (
+                        <option key={s.key} value={s.key}>
+                          {s.label}
+                        </option>
+                      ))}
+                      <option value="custom">{size.key.startsWith('custom:') ? size.label : 'Another size…'}</option>
+                    </select>
+                  </label>
+                  <p className="text-sm text-slate-500">
+                    {setsForAll
+                      ? 'Stays until someone changes it — for the whole rescue, on every phone and computer.'
+                      : rescueSize
+                        ? `Stays until it’s changed. The rescue’s size is ${rescueSize.label}.`
+                        : 'Stays on this device until it’s changed.'}
+                  </p>
+                  {(customOpen || size.key.startsWith('custom:')) && (
+                    <div className="flex flex-wrap items-end gap-2">
+                      <label className="text-sm font-bold text-slate-600">
+                        Width (in)
+                        <input type="number" step="0.05" min="0.5" max="8.5" value={customW} onChange={(e) => setCustomW(e.target.value)} className="mt-1 block w-24 rounded-xl border-2 border-slate-200 px-3 py-2 text-base text-ink" />
+                      </label>
+                      <label className="text-sm font-bold text-slate-600">
+                        Height (in)
+                        <input type="number" step="0.05" min="0.5" max="11" value={customH} onChange={(e) => setCustomH(e.target.value)} className="mt-1 block w-24 rounded-xl border-2 border-slate-200 px-3 py-2 text-base text-ink" />
+                      </label>
+                      <button type="button" onClick={applyCustom} className="min-h-[44px] rounded-xl border-2 border-brand-blue/50 px-4 text-[15px] font-bold text-brand-blue">
+                        Use this size
+                      </button>
+                    </div>
+                  )}
+                  {shop && (
+                    <label className="flex min-h-[44px] items-center gap-2 text-[15px] font-bold text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={showPrice}
+                        onChange={(e) => {
+                          setShowPrice(e.target.checked)
+                          saveOn(PRICE_KEY, e.target.checked)
+                        }}
+                        className="h-6 w-6 accent-brand-blue"
+                      />
+                      Show the price on the label
+                    </label>
+                  )}
+                  {!shop && (items ?? []).some((r) => r.label.auction) && (
+                    <label className="flex min-h-[44px] items-start gap-2 text-[15px] font-bold text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={bidSheet}
+                        onChange={(e) => {
+                          setBidSheet(e.target.checked)
+                          saveOn(SHEET_KEY, e.target.checked)
+                        }}
+                        className="mt-0.5 h-6 w-6 shrink-0 accent-brand-blue"
+                      />
+                      <span>
+                        Bid-sheet labels for Silent Auction items
+                        <span className="block text-sm font-semibold text-slate-500">Starting bid, raise, Buy it now price and “Scan to buy it now”. 3 × 2 in or bigger reads best.</span>
+                      </span>
+                    </label>
+                  )}
+                  {preview && (
+                    <div>
+                      <p className="mb-1 text-sm font-bold text-slate-600">Preview · {size.label}</p>
+                      <img src={preview} alt="Label preview" className="w-full max-w-sm rounded-lg border border-slate-200 shadow-sm" style={{ aspectRatio: `${size.wIn} / ${size.hIn}` }} />
+                    </div>
+                  )}
+                  <button type="button" onClick={() => setSizeOpen(false)} className={pill.blue}>
+                    <Icon name="check" size={16} /> Done
+                  </button>
+                </>
+              )}
+            </div>
 
-        <ErrorBox>{error}</ErrorBox>
-        {items === null && !error && <Spinner />}
-        {items && shown.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-base text-slate-500">
-            {view.show === 'unprinted' && view.when === 'any' && view.kind === 'all' && !q.trim() ? 'Every label has been printed.' : 'Nothing matches. Try Any time, All, or a different search.'}
-          </div>
-        )}
-        {groups.map((g) => (
-          <section key={g.heading || 'all'} className="space-y-2">
-            {g.heading && (
-              <div className="flex items-center justify-between gap-2 pt-2">
-                <h2 className="font-display text-base font-extrabold text-ink">
-                  {g.heading} <span className="font-sans text-sm font-semibold text-slate-500">· {g.rows.length}</span>
-                </h2>
+            {/* B · tick the items */}
+            <div className="space-y-3">
+              <Part n="B" hint={picked.size ? `${picked.size} ticked` : undefined}>
+                Tick the items
+              </Part>
+              <div className="relative">
+                <Icon name="search" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="search"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder={shop ? 'Search by name, type or SKU' : 'Search by name, donor or code'}
+                  aria-label="Search items"
+                  className="w-full rounded-2xl border-2 border-slate-200 bg-white py-3 pl-11 pr-4 text-base text-ink outline-none focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => setFiltersOpen((o) => !o)} aria-expanded={filtersOpen} className={filtersOpen ? pill.blue : pill.outline}>
+                  <Icon name="chevron" size={16} className={`transition ${filtersOpen ? 'rotate-90' : ''}`} /> Showing: {filterWords}
+                </button>
+                {shown.length > 0 && (
+                  <button type="button" onClick={() => setPicked((p) => new Set([...p, ...shown.map((i) => i.code)]))} className={pill.outline}>
+                    Tick all {shown.length}
+                  </button>
+                )}
+                {picked.size > 0 && (
+                  <button type="button" onClick={() => setPicked(new Set())} className={pill.outline}>
+                    Untick all
+                  </button>
+                )}
+              </div>
+              {filtersOpen && (
+                <div className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 bg-white p-3">
+                  <label className="text-sm font-bold text-slate-600">
+                    Show
+                    <select value={view.show} onChange={(e) => setView({ show: e.target.value as ListView['show'] })} className={SELECT}>
+                      {SHOW_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label} ({counts[o.value]})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-sm font-bold text-slate-600">
+                    Added
+                    <select value={view.when} onChange={(e) => setView({ when: e.target.value as ListView['when'] })} className={SELECT}>
+                      {WHEN_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {kinds.length > 1 && (
+                    <label className="text-sm font-bold text-slate-600">
+                      {shop ? 'Type' : 'Kind'}
+                      <select value={view.kind} onChange={(e) => setView({ kind: e.target.value })} className={SELECT}>
+                        <option value="all">All</option>
+                        {kinds.map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <label className="text-sm font-bold text-slate-600">
+                    Sort
+                    <select value={view.sort} onChange={(e) => setView({ sort: e.target.value as ListView['sort'] })} className={SELECT}>
+                      {SORT_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+
+              <ErrorBox>{error}</ErrorBox>
+              {items === null && !error && <Spinner />}
+              {items && shown.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-base text-slate-500">
+                  {view.show === 'unprinted' && view.when === 'any' && view.kind === 'all' && !q.trim() ? 'Every label has been printed.' : 'Nothing matches. Try Any time, All, or a different search.'}
+                </div>
+              )}
+              {groups.map((g) => (
+                <section key={g.heading || 'all'} className="space-y-2">
+                  {g.heading && (
+                    <div className="flex items-center justify-between gap-2 pt-2">
+                      <h2 className="font-display text-base font-extrabold text-ink">
+                        {g.heading} <span className="font-sans text-sm font-semibold text-slate-500">· {g.rows.length}</span>
+                      </h2>
+                      <button type="button" onClick={() => setPicked((p) => new Set([...p, ...g.rows.map((i) => i.code)]))} className={pill.soft}>
+                        Tick these {g.rows.length}
+                      </button>
+                    </div>
+                  )}
+                  <ul className="space-y-2">
+                    {g.rows.map((i) => {
+                      const on = picked.has(i.code)
+                      return (
+                        <li key={i.key}>
+                          <label className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-3 transition ${on ? 'border-brand-blue bg-brand-blue-50/50' : 'border-slate-200 bg-white'}`}>
+                            <input type="checkbox" checked={on} onChange={() => toggle(i.code)} className="h-6 w-6 shrink-0 accent-brand-blue" aria-label={`Print a label for ${i.title}`} />
+                            {i.photo_url ? (
+                              <img src={i.photo_url} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" loading="lazy" />
+                            ) : (
+                              <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
+                                <Icon name={i.icon} size={22} />
+                              </span>
+                            )}
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate font-display text-base font-extrabold text-ink">{i.title}</span>
+                              <span className="block truncate text-sm text-slate-600">
+                                {i.sub}
+                                {i.label_printed_at ? ' · printed' : ''}
+                              </span>
+                            </span>
+                            <span className="shrink-0 font-mono text-xs font-bold text-slate-400">{i.code}</span>
+                          </label>
+                          {on && (
+                            <div className="mt-1.5 flex flex-wrap items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2">
+                              <span className="text-sm font-bold text-slate-600">Copies</span>
+                              <button
+                                type="button"
+                                onClick={() => setCopies(i.code, copiesOf(i.code) - 1)}
+                                disabled={copiesOf(i.code) <= 1}
+                                aria-label={`One copy fewer of ${i.title}`}
+                                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-ink shadow-sm ring-1 ring-slate-200 transition active:scale-95 disabled:opacity-30"
+                              >
+                                <Icon name="minus" size={20} />
+                              </button>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={copyText[i.code] ?? '1'}
+                                onChange={(e) => setCopyText((c) => ({ ...c, [i.code]: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) }))}
+                                onBlur={() => setCopies(i.code, copiesOf(i.code))}
+                                aria-label={`Copies of ${i.title}`}
+                                className="h-11 w-16 rounded-xl border-2 border-slate-200 bg-white text-center font-display text-lg font-black text-ink outline-none focus:border-brand-blue"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setCopies(i.code, copiesOf(i.code) + 1)}
+                                disabled={copiesOf(i.code) >= MAX_COPIES}
+                                aria-label={`One copy more of ${i.title}`}
+                                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-blue text-white shadow-sm transition active:scale-95 disabled:opacity-30"
+                              >
+                                <Icon name="plus" size={20} />
+                              </button>
+                              {(i.quantity ?? 0) > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setCopies(i.code, i.quantity ?? 1)}
+                                  aria-pressed={copiesOf(i.code) === clampCopies(i.quantity ?? 1)}
+                                  className="min-h-[44px] rounded-xl border-2 border-brand-blue/50 bg-white px-3 text-[15px] font-bold text-brand-blue"
+                                >
+                                  {shop ? 'One per item in stock' : 'One per piece'} ({clampCopies(i.quantity ?? 1)})
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </section>
+              ))}
+              {shown.length > limit && (
                 <button
                   type="button"
-                  onClick={() => setPicked((p) => new Set([...p, ...g.rows.map((i) => i.code)]))}
-                  className="min-h-[44px] px-2 text-[15px] font-bold text-brand-blue"
+                  onClick={() => setLimit((l) => l + PAGE_SIZE)}
+                  className="min-h-[48px] w-full rounded-2xl border-2 border-brand-blue/50 bg-white text-[15px] font-bold text-brand-blue"
                 >
-                  Tick these {g.rows.length}
+                  Show {Math.min(PAGE_SIZE, shown.length - limit)} more ({shown.length - limit} not shown yet)
                 </button>
-              </div>
-            )}
-        <ul className="space-y-2">
-          {g.rows.map((i) => {
-            const on = picked.has(i.code)
-            return (
-              <li key={i.key}>
-                <label className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-3 transition ${on ? 'border-brand-blue bg-brand-blue-50/50' : 'border-slate-200 bg-white'}`}>
-                  <input type="checkbox" checked={on} onChange={() => toggle(i.code)} className="h-6 w-6 shrink-0 accent-brand-blue" aria-label={`Print a label for ${i.title}`} />
-                  {i.photo_url ? (
-                    <img src={i.photo_url} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" loading="lazy" />
-                  ) : (
-                    <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
-                      <Icon name={i.icon} size={22} />
-                    </span>
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-display text-base font-extrabold text-ink">{i.title}</span>
-                    <span className="block truncate text-sm text-slate-600">
-                      {i.sub}
-                      {i.label_printed_at ? ' · printed' : ''}
-                    </span>
-                  </span>
-                  <span className="shrink-0 font-mono text-xs font-bold text-slate-400">{i.code}</span>
-                </label>
-                {on && (
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2">
-                    <span className="text-sm font-bold text-slate-600">Copies</span>
-                    <button
-                      type="button"
-                      onClick={() => setCopies(i.code, copiesOf(i.code) - 1)}
-                      disabled={copiesOf(i.code) <= 1}
-                      aria-label={`One copy fewer of ${i.title}`}
-                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-ink shadow-sm ring-1 ring-slate-200 transition active:scale-95 disabled:opacity-30"
-                    >
-                      <Icon name="minus" size={20} />
-                    </button>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={copyText[i.code] ?? '1'}
-                      onChange={(e) => setCopyText((c) => ({ ...c, [i.code]: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) }))}
-                      onBlur={() => setCopies(i.code, copiesOf(i.code))}
-                      aria-label={`Copies of ${i.title}`}
-                      className="h-11 w-16 rounded-xl border-2 border-slate-200 bg-white text-center font-display text-lg font-black text-ink outline-none focus:border-brand-blue"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setCopies(i.code, copiesOf(i.code) + 1)}
-                      disabled={copiesOf(i.code) >= MAX_COPIES}
-                      aria-label={`One copy more of ${i.title}`}
-                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-blue text-white shadow-sm transition active:scale-95 disabled:opacity-30"
-                    >
-                      <Icon name="plus" size={20} />
-                    </button>
-                    {(i.quantity ?? 0) > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setCopies(i.code, i.quantity ?? 1)}
-                        aria-pressed={copiesOf(i.code) === clampCopies(i.quantity ?? 1)}
-                        className="min-h-[44px] rounded-xl border-2 border-brand-blue/50 bg-white px-3 text-[15px] font-bold text-brand-blue"
-                      >
-                        {shop ? 'One per item in stock' : 'One per piece'} ({clampCopies(i.quantity ?? 1)})
-                      </button>
-                    )}
-                  </div>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-          </section>
-        ))}
-        {shown.length > limit && (
-          <button
-            type="button"
-            onClick={() => setLimit((l) => l + PAGE_SIZE)}
-            className="min-h-[48px] w-full rounded-2xl border-2 border-brand-blue/50 bg-white text-[15px] font-bold text-brand-blue"
-          >
-            Show {Math.min(PAGE_SIZE, shown.length - limit)} more ({shown.length - limit} not shown yet)
-          </button>
-        )}
-      </Screen>
+              )}
+            </div>
+          </div>
+        </StepShell>
+      </div>
 
       {/* print-only: one label per page at the label's size */}
       <div className="hidden print:block">

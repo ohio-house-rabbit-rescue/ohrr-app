@@ -98,9 +98,9 @@ export default function CounterHome() {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block font-display text-xl font-black">{t.title}</span>
-              <span className="mt-0.5 block text-sm text-white/90">{t.sub}</span>
+              <span className={`mt-0.5 block text-sm ${t.tone === 'orange' ? 'text-ink/80' : 'text-white/90'}`}>{t.sub}</span>
             </span>
-            <Icon name="chevron" size={22} className="shrink-0 text-white/70" />
+            <Icon name="chevron" size={22} className={`shrink-0 ${t.tone === 'orange' ? 'text-ink/60' : 'text-white/70'}`} />
           </Link>
         ))}
       </div>
@@ -129,7 +129,7 @@ export default function CounterHome() {
             <span>
               This phone: <strong className="text-ink">{device.name}</strong>
             </span>
-            <button type="button" onClick={() => setNaming(true)} className="font-bold text-brand-blue">
+            <button type="button" onClick={() => setNaming(true)} className="min-h-[44px] px-2 text-[15px] font-bold text-brand-blue">
               Change
             </button>
           </p>
@@ -137,8 +137,8 @@ export default function CounterHome() {
       </div>
 
       {(isManager || can('counter.use')) && mode === 'bunfest' && (
-        <Link to="/staff/counter/door/setup" className="block text-center text-sm font-bold text-brand-blue">
-          Door setup — the ticket list and prices
+        <Link to="/staff/counter/door/setup" className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white text-[15px] font-bold text-brand-blue">
+          <Icon name="settings" size={18} /> Door setup — the ticket list and prices
         </Link>
       )}
     </div>

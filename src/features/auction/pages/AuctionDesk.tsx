@@ -160,7 +160,7 @@ function Desk() {
           <p className="font-display text-base font-extrabold text-ink">The desk isn’t ready yet</p>
           {isMissingFunction(error) ? (
             <p className="text-sm leading-relaxed text-slate-700">
-              The database update for online bidding (update 35, <code>RUN-THIS-IN-SUPABASE.sql</code>) hasn’t been run. Until
+              Online bidding isn’t switched on yet — ask an admin. Until
               it is, the Silent Auction screen still marks items won by hand.
             </p>
           ) : (

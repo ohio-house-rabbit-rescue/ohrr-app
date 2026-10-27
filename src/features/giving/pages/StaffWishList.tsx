@@ -242,7 +242,7 @@ export default function StaffWishList() {
       {missing && (
         <Card className="border-amber-200 bg-amber-50">
           <p className="text-sm leading-relaxed text-slate-700">
-            Wish list items switch on with <strong>update 32</strong> (RUN-THIS-IN-SUPABASE.sql in the Drive). Until then
+            Wish list items aren’t switched on yet — ask an admin. Until then
             the Support page shows the button to the whole list, as it does now.
           </p>
         </Card>

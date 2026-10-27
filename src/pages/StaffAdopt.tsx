@@ -204,7 +204,7 @@ function RescueGroupsCheck({ orgId, canRefresh, onRefreshed }: { orgId: string; 
   if (check === 'missing')
     return (
       <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-500">
-        Keeping this list up to date from RescueGroups every morning switches on with update 32.
+        Keeping this list up to date from RescueGroups every morning isn’t switched on yet — ask an admin.
       </p>
     )
 

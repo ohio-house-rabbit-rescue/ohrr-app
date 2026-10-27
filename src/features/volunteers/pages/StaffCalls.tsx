@@ -1,14 +1,16 @@
-// Staff → Volunteer calls: every need OHRR has put out, soonest first, with
-// how full each one is — and the button to put out a new one.
+// Staff → Volunteer calls: where the job starts. The five steps of a call,
+// each with its button (the next call to share, today's call to check in, the
+// last call to thank), then every call OHRR has put out, soonest first.
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
-import { Screen, Card, Badge, btn } from '../../../components/ui'
+import { Screen, Card, Badge } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError } from '../../../components/staffui'
+import { StepButton, StepRow, StepRows } from '../../../components/StaffJob'
 import { fmtClock, fmtDay } from '../calls'
-import { callRoster, listCalls, type CallRow } from '../callsApi'
+import { callRoster, callThanks, listCalls, type CallRow } from '../callsApi'
 import StaffCall from './StaffCall'
 import { StaffTitle } from '../../../components/StaffTitle'
 
@@ -20,11 +22,24 @@ export function StaffCallRoute() {
 
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 
+interface Fill {
+  taken: number
+  places: number
+}
+/** How the thanking stands on a past call. */
+interface Thanks {
+  came: number
+  thanked: number
+}
+
+const short = (t: string) => (t.length > 28 ? `${t.slice(0, 26).trim()}…` : t)
+
 export default function StaffCalls() {
   const { membership } = useAuth()
   const orgId = membership?.orgId ?? ''
   const [rows, setRows] = useState<CallRow[] | null>(null)
-  const [fill, setFill] = useState<Record<string, { taken: number; places: number }>>({})
+  const [fill, setFill] = useState<Record<string, Fill>>({})
+  const [thanks, setThanks] = useState<Record<string, Thanks>>({})
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -49,6 +64,18 @@ export default function StaffCalls() {
           }),
         )
         if (active) setFill(Object.fromEntries(entries))
+        // Who still needs thanking on the recent past ones.
+        const past = list
+          .filter((c) => c.on_date < today())
+          .sort((a, b) => b.on_date.localeCompare(a.on_date))
+          .slice(0, 8)
+        const t = await Promise.all(
+          past.map(async (c) => {
+            const people = await callThanks(c.id).catch(() => [])
+            return [c.id, { came: people.length, thanked: people.filter((p) => p.thanked_at).length }] as const
+          }),
+        )
+        if (active) setThanks(Object.fromEntries(t))
       })
       .catch((e) => setError(errMessage(e)))
     return () => {
@@ -57,20 +84,60 @@ export default function StaffCalls() {
   }, [orgId])
 
   const upcoming = (rows ?? []).filter((c) => c.on_date >= today()).sort((a, b) => a.on_date.localeCompare(b.on_date))
-  const past = (rows ?? []).filter((c) => c.on_date < today())
+  const past = (rows ?? []).filter((c) => c.on_date < today()).sort((a, b) => b.on_date.localeCompare(a.on_date))
+
+  // The call each step's button opens.
+  const todays = upcoming.find((c) => c.on_date === today())
+  const next = upcoming.find((c) => c.on_date > today()) ?? todays
+  const nextFill = next ? fill[next.id] : undefined
+  const toThank = past.find((c) => thanks[c.id] && thanks[c.id].came > thanks[c.id].thanked)
+  const toThankCount = toThank ? thanks[toThank.id].came - thanks[toThank.id].thanked : 0
 
   return (
     <Screen className="space-y-4">
-      <StaffTitle title="Volunteer calls" flow={['Put out a call', 'Spread the word', 'Sign-ups', 'On the day', 'Thank everyone']}>
+      <StaffTitle title="Volunteer calls">
         <p>
           Put out a need once — “5 people for 2-hour shifts at BunFest” — and it makes the shifts, writes the posts,
-          texts, emails, letters and flyers, takes the sign-ups, and helps you thank everyone afterwards.
+          texts, emails, letters and flyers, takes the sign-ups, and helps you thank everyone afterwards. Every call
+          goes through the five steps below; each one is a tab on the call’s page.
         </p>
       </StaffTitle>
 
-      <Link to="/staff/calls/new" className={`${btn.primary} w-full`}>
-        <Icon name="plus" size={16} /> Put out a new call
-      </Link>
+      <StepRows label="How a volunteer call runs">
+        <StepRow n={1} name="Put out a call">
+          <StepButton to="/staff/calls/new" tone="orange" icon="plus">
+            Put out a new call
+          </StepButton>
+        </StepRow>
+        <StepRow n={2} name="Spread the word" hint={next ? undefined : 'posts, texts, emails, letters, flyers'}>
+          {next && (
+            <StepButton to={`/staff/calls/${next.id}?tab=share`} icon="external">
+              Share {short(next.title)}
+            </StepButton>
+          )}
+        </StepRow>
+        <StepRow n={3} name="Sign-ups" hint={next ? undefined : 'who’s coming, and where they heard'}>
+          {next && (
+            <StepButton to={`/staff/calls/${next.id}?tab=signups`} icon="users">
+              {nextFill ? `${nextFill.taken} of ${nextFill.places} places filled` : 'See who’s signed up'}
+            </StepButton>
+          )}
+        </StepRow>
+        <StepRow n={4} name="On the day" hint={todays ? undefined : 'tap Here as people arrive'}>
+          {todays && (
+            <StepButton to={`/staff/calls/${todays.id}?tab=day`} tone="orange" icon="check">
+              Check people in: {short(todays.title)}
+            </StepButton>
+          )}
+        </StepRow>
+        <StepRow n={5} name="Thank everyone" hint={toThank ? undefined : 'thank-yous, hours letters, the summary'}>
+          {toThank && (
+            <StepButton to={`/staff/calls/${toThank.id}?tab=thanks`} icon="mail" count={toThankCount}>
+              Thank {short(toThank.title)}
+            </StepButton>
+          )}
+        </StepRow>
+      </StepRows>
 
       <FormError>{error}</FormError>
       {rows === null && !error && <Spinner />}
@@ -78,18 +145,19 @@ export default function StaffCalls() {
         <Card className="text-center text-sm leading-relaxed text-slate-600">No calls yet. Start with BunFest — the form can fill itself in from it.</Card>
       )}
 
-      {upcoming.length > 0 && <CallList title="Coming up" rows={upcoming} fill={fill} />}
-      {past.length > 0 && <CallList title="Done" rows={past} fill={fill} past />}
+      {upcoming.length > 0 && <CallList title="Coming up" rows={upcoming} fill={fill} thanks={thanks} />}
+      {past.length > 0 && <CallList title="Done" rows={past} fill={fill} thanks={thanks} past />}
     </Screen>
   )
 }
 
-function CallList({ title, rows, fill, past }: { title: string; rows: CallRow[]; fill: Record<string, { taken: number; places: number }>; past?: boolean }) {
+function CallList({ title, rows, fill, thanks, past }: { title: string; rows: CallRow[]; fill: Record<string, Fill>; thanks: Record<string, Thanks>; past?: boolean }) {
   return (
     <section className="space-y-2">
       <p className="px-1 text-xs font-extrabold uppercase tracking-wider text-slate-400">{title}</p>
       {rows.map((c) => {
         const f = fill[c.id]
+        const t = thanks[c.id]
         return (
           <Link key={c.id} to={`/staff/calls/${c.id}`} className="block">
             <Card className="flex items-center gap-3 transition hover:border-slate-300">
@@ -104,7 +172,9 @@ function CallList({ title, rows, fill, past }: { title: string; rows: CallRow[];
                       {f.taken} of {f.places} places filled
                     </Badge>
                   )}
-                  {past && <Badge tone="slate">Thank everyone →</Badge>}
+                  {past && t && t.came === 0 && <Badge tone="slate">Nobody marked here</Badge>}
+                  {past && t && t.came > 0 && t.thanked < t.came && <Badge tone="orange">{t.came - t.thanked} to thank</Badge>}
+                  {past && t && t.came > 0 && t.thanked >= t.came && <Badge tone="blue">All thanked</Badge>}
                   {!c.is_published && <Badge tone="slate">Hidden</Badge>}
                 </span>
               </span>

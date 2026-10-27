@@ -323,7 +323,7 @@ export default function ScanFlow() {
               })) ?? saved
             if (saved.receiving_skipped) {
               warned = true
-              setError('Saved. Donation or bought, what we paid, where it was bought and what it’s for need database update 47.')
+              setError('Saved. Donation or bought, what we paid, where it was bought and what it’s for aren’t switched on yet — ask an admin.')
             }
           } catch (err) {
             // Without update 40 a value is always "for one": save the lot's value as one piece's.
@@ -336,7 +336,7 @@ export default function ScanFlow() {
               }
             }
             warned = true
-            setError(isNeeds40(err) ? 'Saved. Where it’s headed, value for the lot, size and use-by need database update 40.' : `Saved, but not where it’s headed: ${errMessage(err)}`)
+            setError(isNeeds40(err) ? 'Saved. Where it’s headed, value for the lot, size and use-by aren’t switched on yet — ask an admin.' : `Saved, but not where it’s headed: ${errMessage(err)}`)
           }
         }
       }

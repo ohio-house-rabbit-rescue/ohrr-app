@@ -155,12 +155,22 @@ function tzOffsetMs(ts: number, timeZone: string): number {
   return asIfUtc - ts
 }
 
+// A timestamp → "2026-10-25", the calendar day in the event's zone. Used to
+// take BunFest day from the event record instead of a date typed into the code.
+export function eventDay(iso: string | null | undefined): string {
+  const d = iso ? new Date(iso) : null
+  if (!d || Number.isNaN(d.getTime())) return AUCTION_EVENT_DATE
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: AUCTION_EVENT_TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d)
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
+  return `${get('year')}-${get('month')}-${get('day')}`
+}
+
 // "14:30" (a <input type="time"> value) → ISO timestamptz for that wall-clock
-// time on BunFest day in the event's zone. Empty input → null.
-export function eventTimeToIso(time: string): string | null {
+// time on BunFest day (`day`, "2026-10-25") in the event's zone. Empty input → null.
+export function eventTimeToIso(time: string, day: string = AUCTION_EVENT_DATE): string | null {
   const m = /^(\d{1,2}):(\d{2})/.exec(time.trim())
   if (!m) return null
-  const [y, mo, d] = AUCTION_EVENT_DATE.split('-').map(Number)
+  const [y, mo, d] = day.split('-').map(Number)
   const wall = Date.UTC(y, mo - 1, d, Number(m[1]), Number(m[2]))
   let ts = wall - tzOffsetMs(wall, AUCTION_EVENT_TZ)
   ts = wall - tzOffsetMs(ts, AUCTION_EVENT_TZ)

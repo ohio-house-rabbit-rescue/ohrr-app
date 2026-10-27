@@ -7,6 +7,7 @@ import { useBunfestEvent } from '../../../lib/events'
 import { Card, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { FormError, staffInput } from '../../../components/staffui'
+import { Needed, Part } from '../../../components/StaffJob'
 import { fmtClock, lengthText, needText, plannedShifts, type Call } from '../calls'
 import { deleteCall, saveCall, setCallApproval, type CallRow } from '../callsApi'
 import { APPROVAL_KINDS, kindLabel } from '../approval'
@@ -129,7 +130,7 @@ export default function CallEditor({
         r.orphaned > 0
           ? `Saved. ${r.orphaned} ${r.orphaned === 1 ? 'shift has' : 'shifts have'} people on ${r.orphaned === 1 ? 'it' : 'them'} but no longer fit${r.orphaned === 1 ? 's' : ''} the hours — ${r.orphaned === 1 ? 'it’s' : 'they’re'} closed to new sign-ups; check under Sign-ups.`
           : '',
-        !roleSaved && d.approval_role ? 'Anyone can sign up for now: “Who can sign up” starts working once update 25 has been run in Supabase.' : '',
+        !roleSaved && d.approval_role ? 'Anyone can sign up for now: “Who can sign up” isn’t switched on yet — ask an admin.' : '',
       ].filter(Boolean)
       onSaved(r.id, notes.length ? notes.join(' ') : undefined)
     } catch (err) {
@@ -148,13 +149,16 @@ export default function CallEditor({
       {note && <p className="rounded-xl bg-brand-blue-50 px-3 py-2 text-sm text-brand-blue">{note}</p>}
 
       <Card className="space-y-3">
-        <label className="block text-sm font-semibold text-slate-700">
+        <Part n="A" hint="needed">
           What it’s for
+        </Part>
+        <label className="block text-sm font-semibold text-slate-700">
+          What it’s for <Needed />
           <input className={staffInput} required value={d.title} onChange={txt('title')} placeholder="Midwest BunFest 2026" />
           <span className="mt-1 block text-xs font-normal text-slate-500">Say the event, not “volunteers” — posts read “Volunteers needed — {d.title || 'this'}”.</span>
         </label>
         <label className="block text-sm font-semibold text-slate-700">
-          One line about it
+          One line about it (optional)
           <input className={staffInput} value={d.summary} onChange={txt('summary')} placeholder="Help run the festival — a day of bunnies, education and fun." />
         </label>
         <label className="block text-sm font-semibold text-slate-700">
@@ -168,9 +172,11 @@ export default function CallEditor({
       </Card>
 
       <Card className="space-y-3">
-        <p className="font-display text-[15px] font-extrabold text-ink">When, and how many</p>
+        <Part n="B" hint="needed">
+          When, and how many
+        </Part>
         <label className="block text-sm font-semibold text-slate-700">
-          The day
+          The day <Needed />
           <input type="date" className={staffInput} required value={d.on_date} onChange={txt('on_date')} />
         </label>
         <div className="grid grid-cols-2 gap-3">
@@ -232,7 +238,9 @@ export default function CallEditor({
       </Card>
 
       <Card className="space-y-3">
-        <p className="font-display text-[15px] font-extrabold text-ink">For the people signing up</p>
+        <Part n="C" hint="optional">
+          For the people signing up
+        </Part>
         <label className="block text-sm font-semibold text-slate-700">
           Areas to pick from — one per line (optional)
           <textarea className={staffInput} rows={3} value={d.areas} onChange={txt('areas')} placeholder={'Glamour Shots\nHop Shop'} />
@@ -279,13 +287,14 @@ export default function CallEditor({
 
       <FormError>{error}</FormError>
       <div className="flex gap-2">
-        <button type="submit" disabled={busy || shifts.length === 0} className={`${btn.primary} flex-1 disabled:opacity-60`}>
+        <button type="submit" disabled={busy || shifts.length === 0} className={`${btn.primary} min-h-[52px] flex-1 text-base disabled:opacity-60`}>
           {busy ? 'Saving…' : initial ? 'Save' : 'Save and make the shifts'}
         </button>
-        <button type="button" onClick={onCancel} className={`${btn.outline} shrink-0`}>
+        <button type="button" onClick={onCancel} className={`${btn.outline} min-h-[52px] shrink-0`}>
           Cancel
         </button>
       </div>
+      {!initial && <p className="text-center text-sm text-slate-500">Next: step 2, Spread the word.</p>}
       {initial &&
         onDeleted &&
         (confirmDelete ? (

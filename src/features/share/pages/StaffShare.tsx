@@ -70,9 +70,10 @@ export default function StaffShare() {
 
   return (
     <Screen className="space-y-4">
-      <StaffTitle title="Share kit" flow={['Pick a post', 'Share', 'Paste the caption', 'Post']}>
+      <StaffTitle title="Share kit" flow={['Write', 'Send for approval', 'Approved', 'Released']}>
         <p>
-          Pick something, tap <strong>Share</strong>, choose Instagram, Facebook or TikTok. The picture and the caption are made for you.
+          Pick something: the picture and the caption are made for you. Check the caption, then send it to the post queue. Whoever releases posts approves it and
+          puts it on Instagram, Facebook or TikTok.
         </p>
       </StaffTitle>
 
@@ -180,7 +181,10 @@ function PostRow({ post, onPick }: { post: CardPost; onPick: () => void }) {
 
 function Composer({ post, onBack }: { post: CardPost; onBack: () => void }) {
   const navigate = useNavigate()
-  const { membership, user } = useAuth()
+  const { membership, user, can } = useAuth()
+  // Posting straight from here skips the queue's approval, so only the people
+  // who release posts get the Share button; everyone else saves to the queue.
+  const canPublish = can('social.publish')
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [format, setFormat] = useState<CardFormat>('square')
   const [caption, setCaption] = useState(post.caption)
@@ -280,12 +284,22 @@ function Composer({ post, onBack }: { post: CardPost; onBack: () => void }) {
       </div>
       {busy && <p className="text-center text-xs text-slate-500">Drawing…</p>}
 
-      <button type="button" onClick={() => void share()} disabled={busy} className={`${btn.primary} w-full py-4 text-base disabled:opacity-60`}>
-        <Icon name="external" size={18} /> {shareable ? 'Share' : 'Save image + copy caption'}
+      <Card className="space-y-2">
+        <label className="block text-sm font-semibold text-slate-700">
+          Caption (edit if you like)
+          <textarea className={staffInput} rows={5} value={caption} onChange={(e) => setCaption(e.target.value)} />
+        </label>
+      </Card>
+
+      <button type="button" onClick={() => void queue()} disabled={busy} className={`${btn.primary} w-full py-4 text-base disabled:opacity-60`}>
+        <Icon name="calendar" size={18} /> Send to the post queue
       </button>
-      <button type="button" onClick={() => void queue()} disabled={busy} className={`${btn.blue} w-full disabled:opacity-60`}>
-        <Icon name="calendar" size={16} /> Save to the post queue (post later)
-      </button>
+      <p className="text-center text-sm text-slate-500">Whoever releases posts gets it, approves it and posts it.</p>
+      {canPublish && (
+        <button type="button" onClick={() => void share()} disabled={busy} className={`${btn.blue} w-full disabled:opacity-60`}>
+          <Icon name="external" size={16} /> {shareable ? 'Share it now' : 'Save image + copy caption'}
+        </button>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <button type="button" onClick={() => void save()} disabled={busy} className={`${btn.outline} w-full`}>
           Save image
@@ -297,17 +311,13 @@ function Composer({ post, onBack }: { post: CardPost; onBack: () => void }) {
       {status && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{status}</p>}
       {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
 
-      <Card className="space-y-2">
-        <label className="block text-sm font-semibold text-slate-700">
-          Caption (edit if you like)
-          <textarea className={staffInput} rows={7} value={caption} onChange={(e) => setCaption(e.target.value)} />
-        </label>
+      {canPublish && (
         <Explain label="How to post">
           <p>
-            <strong>How to post:</strong> Share → pick Instagram (Feed or Story) or Facebook → the picture is already there → paste the caption → Post. TikTok: Share → TikTok → add the image as a photo post.
+            <strong>How to post:</strong> Share it now → pick Instagram (Feed or Story) or Facebook → the picture is already there → paste the caption → Post. TikTok: Share → TikTok → add the image as a photo post.
           </p>
         </Explain>
-      </Card>
+      )}
     </Screen>
   )
 }

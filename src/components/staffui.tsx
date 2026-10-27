@@ -3,9 +3,11 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { Icon } from './icons'
 
-// Shared form input styling, matching the public app's forms.
+// Shared form input styling, matching the public app's forms. 16px text and
+// 44px tall: anything smaller makes an iPhone zoom in when it's tapped, and
+// older volunteers miss it (staff audit, 2026-10-27).
 export const staffInput =
-  'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
+  'mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
 
 /**
  * A password box with a Show / Hide button inside it, so people can check

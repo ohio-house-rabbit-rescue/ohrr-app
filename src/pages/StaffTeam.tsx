@@ -48,7 +48,7 @@ function joinUrl(code: string): string {
 }
 
 /** Shown wherever inviting needs update 30 and it hasn't been run. */
-const NEEDS_UPDATE_30 = 'Invites switch on with update 30 (RUN-THIS-IN-SUPABASE.sql in the Drive).'
+const NEEDS_UPDATE_30 = 'Invites aren’t switched on yet — ask an admin.' // database update 30
 
 interface Member {
   id: string
@@ -194,7 +194,7 @@ function HowAccessWorks({ tiersReady }: { tiersReady: boolean }) {
           they use their private volunteer link. Only people who work in the staff area (the Counter, check-in,
           editing) need one.
         </p>
-        {!tiersReady && <p className="text-xs text-slate-500">The ten levels and end dates arrive with update 30.</p>}
+        {!tiersReady && <p className="text-xs text-slate-500">The ten levels and end dates aren’t switched on yet — ask an admin.</p>}
       </div>
     </Explain>
   )

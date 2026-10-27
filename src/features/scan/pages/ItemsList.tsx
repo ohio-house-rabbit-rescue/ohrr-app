@@ -12,13 +12,14 @@
 // An item opened from here carries ?back=items: once its edit is saved the
 // scan flow comes back here with "Saved: …" at the top, and the list opens
 // on the same tab, filter and search it was left on (kept for this visit).
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { PERMISSION_CATALOG } from '../../../lib/capabilities'
 import { errMessage } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
 import { StaffTitle } from '../../../components/StaffTitle'
+import { StepRow, StepRows } from '../../../components/StaffJob'
 import { Screen } from '../../../components/ui'
 import { Spinner } from '../../../components/staffui'
 import ExportButtons from '../../../components/ExportButtons'
@@ -93,19 +94,6 @@ function saveView(v: View) {
 }
 
 const PLACE: Record<HeadedFor, string> = { raffle: 'the raffle', auction: 'the Silent Auction', shop: 'the Hop Shop', rabbits: 'our own use', event: 'the event' }
-
-/** One step of the five, with its buttons beside it. */
-function StepRow({ n, name, children }: { n: number; name: string; children: ReactNode }) {
-  return (
-    <li className="flex items-start gap-3 px-3 py-2.5">
-      <span className="mt-2.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-blue text-[13px] font-extrabold text-white">{n}</span>
-      <div className="min-w-0 flex-1">
-        <p className="pt-2.5 text-[15px] font-extrabold leading-none text-ink">{name}</p>
-        <div className="mt-2 flex flex-wrap items-center gap-2">{children}</div>
-      </div>
-    </li>
-  )
-}
 
 export default function ItemsList() {
   const { membership, can } = useAuth()
@@ -291,7 +279,7 @@ export default function ItemsList() {
       )}
 
       {/* OHRR 2026-10-27: "I see step one and I see step two, but what I don't see is 3, 4, and 5 in your process … people look for 3, 4, and 5". Each step is a row with its own buttons. */}
-      <ol className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white" aria-label="How an item moves through OHRR">
+      <StepRows label="How an item moves through OHRR">
         <StepRow n={1} name="Receive">
           <Link to="/staff/catalog" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-brand-orange px-4 text-[15px] font-extrabold text-ink shadow-sm">
             <Icon name="camera" size={18} /> Receive items
@@ -343,7 +331,7 @@ export default function ItemsList() {
             </Link>
           )}
         </StepRow>
-      </ol>
+      </StepRows>
 
       <div id="item-tabs" className="-mx-5 flex scroll-mt-20 gap-2 overflow-x-auto px-5 pb-1" role="group" aria-label="Which items">
         {(['donation', 'event', ...ITEM_KINDS, 'all'] as Filter[]).map((f) => {

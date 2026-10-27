@@ -785,7 +785,7 @@ export default function StaffSponsorRenewals() {
       {renewalsState === 'missing' && (
         <div className="print:hidden">
           <QuietNote>
-            Saving contacts, notes and who has been asked needs the latest database update (update 24). Until
+            Saving contacts, notes and who has been asked isn’t switched on yet — ask an admin. Until
             it’s run, this still lists who is ending, and “Renewed — add a year” works.
           </QuietNote>
         </div>

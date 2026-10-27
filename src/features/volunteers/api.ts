@@ -113,6 +113,31 @@ export async function declineVolunteer(id: string, userId: string | null): Promi
   if (error) throw error
 }
 
+/**
+ * The same application also lands in the Inbox as a request. Once it's been
+ * approved or declined here, mark those requests done so it isn't a to-do in
+ * two places (staff audit, 2026-10-27). Needs the Inbox permission; anyone
+ * without it just leaves the request for whoever has it.
+ */
+export async function closeApplicationRequests(orgId: string, email: string | null): Promise<void> {
+  const addr = (email ?? '').trim().toLowerCase()
+  if (!addr) return
+  try {
+    const { data } = await supabase
+      .from('requests')
+      .select('id')
+      .eq('org_id', orgId)
+      .eq('kind', 'volunteer-application')
+      .in('status', ['new', 'in_progress'])
+      .ilike('email', addr)
+    for (const r of data ?? []) {
+      await supabase.rpc('set_request_status', { p_id: r.id, p_status: 'done', p_notes: null })
+    }
+  } catch {
+    /* the approval itself is saved either way */
+  }
+}
+
 /** How many applications are waiting (0 before update 25 runs). */
 export async function countApplications(orgId: string): Promise<number> {
   const { count, error } = await supabase
