@@ -8,6 +8,8 @@
 // Every call is an RPC (SECURITY DEFINER, checked in the database); before
 // update 46 they answer "This needs database update 46."
 import { supabase } from '../../lib/supabase'
+import { boxName } from './codes'
+import { LABEL_SIZES, type LabelItem } from './labels'
 import type { ItemKind } from './types'
 
 export interface BoxItem {
@@ -38,6 +40,43 @@ export interface BoxPutResult {
   moved: { code: string; title: string; from: string }[]
   /** Codes that aren't any item. */
   not_found: string[]
+}
+
+/** Box labels are 4 × 6 in (OHRR, 2026-10-27). */
+export const BOX_SIZE = LABEL_SIZES.find((s) => s.key === '4x6')!
+
+export function boxLabel(box: Box): LabelItem {
+  return { code: box.code, title: boxName(box.code), box: { items: box.items.map((i) => ({ code: i.code, title: i.title })), location: box.location } }
+}
+
+/**
+ * The box being filled in "Receive into boxes" (Add a donation): every item
+ * saved goes in it until "Box is full". Kept on this device, across days, so
+ * a box half filled today carries on tomorrow.
+ */
+export interface PackingBox {
+  code: string
+  box_no: number
+}
+
+const PACKING_KEY = 'ohrr.catalog.box'
+
+export function loadPackingBox(): PackingBox | null {
+  try {
+    const b = JSON.parse(localStorage.getItem(PACKING_KEY) ?? 'null') as PackingBox | null
+    return b && typeof b.code === 'string' && typeof b.box_no === 'number' ? b : null
+  } catch {
+    return null
+  }
+}
+
+export function savePackingBox(b: PackingBox | null): void {
+  try {
+    if (b) localStorage.setItem(PACKING_KEY, JSON.stringify(b))
+    else localStorage.removeItem(PACKING_KEY)
+  } catch {
+    /* private mode */
+  }
 }
 
 export const NEEDS_46 = 'Boxes need database update 46 — it is in RUN-THIS-IN-SUPABASE.sql.'

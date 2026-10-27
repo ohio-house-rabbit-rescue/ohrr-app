@@ -14,6 +14,13 @@
 // for them (and retries once); if a photo still fails, the item is saved
 // with the others and the Saved screen says so, with "Try again".
 //
+// Receive into boxes (?box=1, OHRR 2026-10-27: "we need to input them to the
+// app, print a label then put in a box"): start a box and write its number on
+// it; every item saved goes in that box and its label prints from the Saved
+// screen; "Box is full" closes it and starts the next. Box labels wait until
+// the sorting is done (the 4 × 6 roll goes in then) and print together from
+// Boxes, to stick over the number written on each box.
+//
 // The two hidden file inputs are rendered ONCE, outside the screens: the
 // camera's answer arrives on the element that opened it, and if that element
 // has been swapped for a new one in the meantime the photo is lost.
@@ -31,6 +38,7 @@ import {
   dataUrlToBlob,
   isNeeds40,
   listItems,
+  markLabelsPrinted,
   recentDonors,
   setItemPhotos,
   startDropoff,
@@ -39,11 +47,16 @@ import {
 import { BigButton, BigInput, ErrorBox, MoneyInput, StepShell } from '../ScanUI'
 import { KIND_META, dollarsToCents, extrasSummary, usDate, type TaggedItem } from '../types'
 import { HeadedForChips, MoreDetailsFields, QuantityField, ValueFields, emptyExtras, useCatalogSuggestions, type Extras } from '../DetailsFields'
+import { boxByCode, loadPackingBox, newBox, putInBox, savePackingBox, type PackingBox } from '../boxes'
+import { tellOthersLabelsChanged } from '../labelSync'
+import { useLabelSize } from '../useLabelSize'
+import BluetoothPrint from '../printer/BluetoothPrint'
+import { bluetoothAvailable } from '../printer/bluetooth'
 
 /** "$35" or "$12.50". */
 const usd = (cents: number) => (cents % 100 === 0 ? `$${cents / 100}` : `$${(cents / 100).toFixed(2)}`)
 
-type Step = 'start' | 'name' | 'saved'
+type Step = 'start' | 'name' | 'saved' | 'full'
 
 // Web Speech API (Chrome, Edge, Safari). Missing inside the iPhone app's web
 // view → the mic is hidden and the keyboard's own dictation key does the job.
@@ -122,6 +135,12 @@ interface Saved {
   auction?: { start: number | null; buyNow: number | null }
   /** It stayed a donation headed for the auction, or its prices didn't save: why. */
   auctionNote?: string
+  /** Put in the box being filled: its number and how many are in it now. */
+  inBox?: { no: number; count: number | null }
+  /** It was meant for the box being filled and didn't go in: why. */
+  boxNote?: string
+  /** Its label went to the Bluetooth printer. */
+  printed?: string
   error?: string
 }
 
@@ -161,6 +180,19 @@ export default function CatalogFlow() {
   const [donors, setDonors] = useState<string[]>([])
   const [listening, setListening] = useState(false)
   const suggestions = useCatalogSuggestions(orgId)
+  // Receive into boxes: the box being filled, how many are in it, and the one just closed.
+  const wantsBoxes = params.get('box') === '1'
+  const [box, setBoxState] = useState<PackingBox | null>(loadPackingBox)
+  const [boxCount, setBoxCount] = useState<number | null>(null)
+  const [boxBusy, setBoxBusy] = useState(false)
+  const [fullBox, setFullBox] = useState<{ box: PackingBox; count: number | null } | null>(null)
+  const setBox = (b: PackingBox | null) => {
+    setBoxState(b)
+    savePackingBox(b)
+  }
+  // The item labels print at the size in the printer; the box labels wait.
+  const labelSize = useLabelSize()
+  const [printBusy, setPrintBusy] = useState<string | null>(null)
   // "More details" stays open or closed on this phone, as the person left it.
   const [more, setMore] = useState(() => {
     try {
@@ -207,6 +239,61 @@ export default function CatalogFlow() {
       alive = false
     }
   }, [orgId])
+
+  // How many are in the box being filled (it may have been deleted on another phone).
+  useEffect(() => {
+    if (!orgId || !box) {
+      setBoxCount(null)
+      return
+    }
+    let alive = true
+    boxByCode(orgId, box.code)
+      .then((b) => {
+        if (!alive) return
+        if (b) setBoxCount(b.items.length)
+        else setBox(null)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId, box?.code])
+
+  /* ------------------------------------------------ boxes */
+  /** A new box with the next number: write it on the box, then add items. */
+  const startBox = async () => {
+    setBoxBusy(true)
+    setError(null)
+    try {
+      const b = await newBox(orgId)
+      setBox({ code: b.code, box_no: b.box_no })
+      setBoxCount(0)
+      setFullBox(null)
+      setStep('start')
+    } catch (err) {
+      setError(errMessage(err))
+    } finally {
+      setBoxBusy(false)
+    }
+  }
+
+  /** The box is full: its label waits; the next box starts when they say. */
+  const boxIsFull = () => {
+    if (!box) return
+    setFullBox({ box, count: boxCount })
+    setBox(null)
+    setError(null)
+    setStep('full')
+  }
+
+  /** Not full after all: carry on filling it. */
+  const reopenBox = () => {
+    if (!fullBox) return
+    setBox(fullBox.box)
+    setFullBox(null)
+    setStep('start')
+  }
 
   /* ------------------------------------------------ photos */
   const setShot = (key: number, patch: Partial<Shot>) => setShots((list) => list.map((s) => (s.key === key ? { ...s, ...patch } : s)))
@@ -389,6 +476,7 @@ export default function CatalogFlow() {
     const donatedBy = current?.donor ?? ''
     const snap = draft
     const list = shots
+    const packing = box
     recogRef.current?.stop?.()
     setError(null)
     const waiting = list.some((s) => !s.url)
@@ -445,7 +533,21 @@ export default function CatalogFlow() {
             auctionNote = auction ? msg : `Saved as a donation headed for the Silent Auction; it didn’t move in (${msg}). Move it from the item.`
           }
         }
-        setSaved((s) => (s ? { ...s, phase: 'saved', item, photosFailed, photosNote, detailsSkipped, planSkipped, auction, auctionNote } : s))
+        // Into the box being filled.
+        let inBox: Saved['inBox']
+        let boxNote: string | undefined
+        if (packing) {
+          try {
+            const r = await putInBox(orgId, packing.code, [item.code])
+            const count = r.box ? r.box.items.length : null
+            inBox = { no: packing.box_no, count }
+            if (count != null) setBoxCount(count)
+            item = { ...item, box: { code: packing.code, box_no: packing.box_no, location: r.box?.location ?? null } }
+          } catch (err) {
+            boxNote = `It’s saved, but it didn’t go in Box ${packing.box_no}: ${errMessage(err)} Put it in from the box’s page.`
+          }
+        }
+        setSaved((s) => (s ? { ...s, phase: 'saved', item, photosFailed, photosNote, detailsSkipped, planSkipped, auction, auctionNote, inBox, boxNote } : s))
         setToday((n) => (n ?? 0) + 1)
         setUnprinted((n) => (n ?? 0) + 1)
         if (donatedBy) setDonors((d) => [donatedBy, ...d.filter((x) => x.toLowerCase() !== donatedBy.toLowerCase())].slice(0, 12))
@@ -475,6 +577,18 @@ export default function CatalogFlow() {
     }
   }
 
+  /** Its label went to the Bluetooth printer: marked printed for everyone. */
+  const labelPrinted = async (code: string, msg: string) => {
+    setSaved((s) => (s && s.item?.code === code ? { ...s, printed: msg } : s))
+    try {
+      await markLabelsPrinted(orgId, [code])
+      tellOthersLabelsChanged(orgId)
+      setUnprinted((n) => (n == null ? n : Math.max(0, n - 1)))
+    } catch {
+      /* it printed; Print labels can mark it */
+    }
+  }
+
   /** Back to the form with everything still filled in (after a failed save). */
   const backToForm = () => {
     setStep('name')
@@ -499,20 +613,66 @@ export default function CatalogFlow() {
 
   /* ================================================= start */
   if (step === 'start') {
+    const boxes = wantsBoxes || !!box
     screen = (
       <StepShell
-        title="Add a donation"
-        help="Something given to OHRR: photo, name, how many, what it’s worth. Sort it later, or tick where it’s headed."
+        title={boxes ? 'Receive into boxes' : 'Add a donation'}
+        help={
+          boxes
+            ? 'Start a box and write its number on it. Add each item, print its label, put it in the box. Tap Box is full, then start the next one.'
+            : 'Something given to OHRR: photo, name, how many, what it’s worth. Sort it later, or tick where it’s headed.'
+        }
         onBack={() => navigate('/staff')}
         backLabel="Dashboard"
         footer={
-          <BigButton onClick={begin} icon="camera">
-            {current ? 'Next item — open the camera' : 'Start — open the camera'}
-          </BigButton>
+          wantsBoxes && !box ? (
+            <BigButton onClick={() => void startBox()} disabled={boxBusy} icon="box">
+              {boxBusy ? 'Starting the box…' : 'Start a box'}
+            </BigButton>
+          ) : (
+            <BigButton onClick={begin} icon="camera">
+              {current || (box && boxCount) ? 'Next item — open the camera' : 'Start — open the camera'}
+            </BigButton>
+          )
         }
       >
         <div className="space-y-4">
           <ErrorBox>{error}</ErrorBox>
+          {box ? (
+            <div className="rounded-3xl border-2 border-brand-orange bg-brand-orange-50 p-4 text-center">
+              <p className="text-sm font-bold uppercase tracking-wide text-slate-600">Filling</p>
+              <p className="font-display text-5xl font-black leading-tight text-ink">Box {box.box_no}</p>
+              <p className="mt-1 text-lg font-bold text-ink">Write {box.box_no} on the box.</p>
+              <p className="text-[15px] text-slate-600">
+                {boxCount == null ? '' : `${boxCount} item${boxCount === 1 ? '' : 's'} in it so far · `}
+                <Link to={`/staff/boxes/${box.code}`} className="font-bold text-brand-blue">
+                  See what’s in it
+                </Link>
+              </p>
+              <div className="mt-3">
+                <BigButton tone="outline" icon="check" onClick={boxIsFull}>
+                  Box is full
+                </BigButton>
+              </div>
+            </div>
+          ) : wantsBoxes ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-[15px] text-slate-600">
+              <p className="text-base font-bold text-ink">How it works</p>
+              <ol className="mt-1 list-decimal space-y-1 pl-5">
+                <li>Start a box — the app gives it the next number. Write the number on the box.</li>
+                <li>For each item: photo, say the name, Save, print its label, put it in the box.</li>
+                <li>Tap Box is full, and start the next box.</li>
+                <li>When the sorting is done, put the 4 × 6 roll in the printer and print all the box labels from Boxes. Stick each one over the number.</li>
+              </ol>
+            </div>
+          ) : (
+            <p className="text-center text-[15px] text-slate-500">
+              Packing them into boxes as you go?{' '}
+              <button type="button" onClick={() => void startBox()} disabled={boxBusy} className="min-h-[44px] font-bold text-brand-blue">
+                {boxBusy ? 'Starting…' : 'Start a box'}
+              </button>
+            </p>
+          )}
           {current ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Adding to the drop-off from</p>
@@ -608,16 +768,58 @@ export default function CatalogFlow() {
         </div>
       </StepShell>
     )
+  } else if (step === 'full' && fullBox) {
+    /* ================================================= box is full */
+    const n = fullBox.count
+    screen = (
+      <StepShell
+        title={`Box ${fullBox.box.box_no} is full`}
+        help="Its label waits until the sorting is done."
+        onBack={reopenBox}
+        backLabel="Not full yet"
+        footer={
+          <div className="space-y-2">
+            <BigButton onClick={() => void startBox()} disabled={boxBusy} icon="box">
+              {boxBusy ? 'Starting the box…' : 'Start the next box'}
+            </BigButton>
+            <BigButton tone="plain" onClick={() => navigate('/staff/boxes')}>
+              I’m done for now
+            </BigButton>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <ErrorBox>{error}</ErrorBox>
+          <div className="rounded-3xl border border-slate-200 bg-white p-4 text-center">
+            <p className="font-display text-5xl font-black leading-tight text-ink">Box {fullBox.box.box_no}</p>
+            {n != null && (
+              <p className="text-lg font-bold text-slate-600">
+                {n} item{n === 1 ? '' : 's'} in it
+              </p>
+            )}
+            <Link to={`/staff/boxes/${fullBox.box.code}`} className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue">
+              See what’s in it
+            </Link>
+          </div>
+          <p className="text-base text-slate-600">
+            When every box is done, put the 4 × 6 roll in the printer, open <span className="font-bold">Boxes</span> and print all the waiting box labels at
+            once. Stick each label over the number you wrote on the box.
+          </p>
+        </div>
+      </StepShell>
+    )
   } else if (step === 'saved' && saved) {
     /* ================================================= saved */
     const s = saved
     const done = s.phase === 'saved' && s.item
     const title = s.phase === 'saved' ? 'Saved' : s.phase === 'failed' ? 'Didn’t save' : s.phase === 'photo' ? 'Saving the photos…' : 'Saving…'
     const main = s.previews[0] ?? s.item?.photo_url ?? null
+    // Its label straight to the Bluetooth printer (a bid-sheet label needs the Print labels page for its prices).
+    const btLabel = done && !s.auction && bluetoothAvailable()
     screen = (
       <StepShell
         title={title}
-        help={done ? 'Next item opens the camera. Labels can also be printed all at once later.' : undefined}
+        help={done ? (box ? `Print its label, put it in Box ${box.box_no}, then Next item.` : 'Next item opens the camera. Labels can also be printed all at once later.') : undefined}
         onBack={s.phase === 'failed' ? backToForm : undefined}
         backLabel="Back"
         footer={
@@ -627,15 +829,25 @@ export default function CatalogFlow() {
                 Try again
               </BigButton>
             ) : (
-              <BigButton onClick={startItem} disabled={!done} icon="camera">
+              <BigButton onClick={startItem} disabled={!done || !!printBusy} icon="camera">
                 {done ? 'Next item' : s.phase === 'photo' ? 'Saving the photos…' : 'Saving…'}
               </BigButton>
             )}
             <div className="grid grid-cols-2 gap-2">
-              <BigButton onClick={() => s.item && navigate(`/staff/labels?code=${encodeURIComponent(s.item.code)}`)} disabled={!done} tone="outline" icon="printer">
-                {s.auction ? 'Print the bid-sheet label' : 'Print this label'}
-              </BigButton>
-              <BigButton onClick={finish} disabled={!done && s.phase !== 'failed'} tone="plain">
+              {box ? (
+                <BigButton onClick={boxIsFull} disabled={(!done && s.phase !== 'failed') || !!printBusy} tone="outline" icon="check">
+                  Box is full
+                </BigButton>
+              ) : btLabel ? (
+                <BigButton onClick={() => s.item && navigate(`/staff/labels?code=${encodeURIComponent(s.item.code)}`)} disabled={!done} tone="plain" icon="printer">
+                  Labels page
+                </BigButton>
+              ) : (
+                <BigButton onClick={() => s.item && navigate(`/staff/labels?code=${encodeURIComponent(s.item.code)}`)} disabled={!done} tone="outline" icon="printer">
+                  {s.auction ? 'Print the bid-sheet label' : 'Print this label'}
+                </BigButton>
+              )}
+              <BigButton onClick={finish} disabled={(!done && s.phase !== 'failed') || !!printBusy} tone="plain">
                 {current?.id ? 'Finish this drop-off' : 'I’m done'}
               </BigButton>
             </div>
@@ -655,7 +867,7 @@ export default function CatalogFlow() {
             )}
             <div className="min-w-0 flex-1 space-y-1">
               <p className="font-display text-[22px] font-black leading-tight text-ink">{s.title}</p>
-              {s.donatedBy && <p className="text-[15px] text-slate-600">From {s.donatedBy}</p>}
+              {s.donatedBy && <p className="text-[15px] text-slate-600">Gift of {s.donatedBy}</p>}
               {s.item && extrasSummary(s.item) && <p className="text-[15px] text-slate-600">{extrasSummary(s.item)}</p>}
               <p className="text-sm text-slate-500">
                 {s.auction ? 'In the Silent Auction' : 'Donation'}
@@ -672,8 +884,45 @@ export default function CatalogFlow() {
                   <Icon name="clock" size={18} /> {s.phase === 'photo' ? 'Saving the photos…' : 'Saving…'}
                 </p>
               ) : null}
+              {done && s.inBox && (
+                <p className="text-[15px] font-bold text-brand-orange">
+                  In Box {s.inBox.no}
+                  {s.inBox.count != null ? ` · ${s.inBox.count} item${s.inBox.count === 1 ? '' : 's'} in it` : ''}
+                </p>
+              )}
             </div>
           </div>
+          {done && s.boxNote && (
+            <div role="status" className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
+              {s.boxNote}
+            </div>
+          )}
+          {btLabel && s.item && (
+            <BluetoothPrint
+              labels={[
+                {
+                  code: s.item.code,
+                  item: { code: s.item.code, title: s.item.title, donated_by: s.item.donated_by, photo_url: s.item.photo_url, kindLabel: null },
+                  copies: 1,
+                },
+              ]}
+              size={labelSize}
+              busy={printBusy}
+              setBusy={setPrintBusy}
+              onError={setError}
+              onPrinted={(_codes, msg) => void labelPrinted(s.item!.code, msg)}
+            />
+          )}
+          {done && !btLabel && box && (
+            <BigButton onClick={() => s.item && navigate(`/staff/labels?code=${encodeURIComponent(s.item.code)}`)} tone="outline" icon="printer">
+              {s.auction ? 'Print the bid-sheet label' : 'Print this label'}
+            </BigButton>
+          )}
+          {s.printed && (
+            <p role="status" className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-[15px] font-bold text-green-800">
+              <Icon name="check" size={18} className="shrink-0" /> {s.printed}
+            </p>
+          )}
           {s.previews.length > 1 && (
             <div className="flex gap-2" aria-label="All the photos">
               {s.previews.map((p, i) => (
@@ -733,7 +982,9 @@ export default function CatalogFlow() {
     screen = (
       <StepShell
         title="What is it?"
-        help={current?.donor ? `From ${current.donor}. Say or type the name, then Save.` : 'Say or type the name, then Save.'}
+        help={[current?.donor ? `Gift of ${current.donor}.` : null, box ? `Going in Box ${box.box_no}.` : null, 'Say or type the name, then Save.']
+          .filter(Boolean)
+          .join(' ')}
         onBack={() => setStep('start')}
         backLabel="Pause"
         footer={

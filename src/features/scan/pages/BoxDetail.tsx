@@ -15,14 +15,11 @@ import Scanner from '../Scanner'
 import { BigButton, ErrorBox } from '../ScanUI'
 import { listItems } from '../api'
 import { boxName, isBoxCode, normalizeCode } from '../codes'
-import { LABEL_SIZES, labelDataUrl, labelsPdf, type LabelItem } from '../labels'
+import { labelDataUrl, labelsPdf } from '../labels'
 import { PAGE_SIZE, filterRows, groupByDay, type ListRow } from '../labelList'
 import BluetoothPrint from '../printer/BluetoothPrint'
 import { KIND_META, type TaggedItem } from '../types'
-import { boxByCode, deleteBox, markBoxesPrinted, packingListPdf, putInBox, saveBox, takeOutOfBox, type Box, type BoxPutResult } from '../boxes'
-
-/** Box labels are 4 × 6 in (OHRR, 2026-10-27). */
-const BOX_SIZE = LABEL_SIZES.find((s) => s.key === '4x6')!
+import { BOX_SIZE, boxByCode, boxLabel, deleteBox, markBoxesPrinted, packingListPdf, putInBox, saveBox, takeOutOfBox, type Box, type BoxPutResult } from '../boxes'
 
 type Mode = 'list' | 'scan' | 'type' | 'pick'
 
@@ -38,10 +35,6 @@ interface PickRow extends ListRow {
 
 const SELECT =
   'mt-1 block min-h-[48px] w-full rounded-xl border-2 border-slate-200 bg-white px-3 text-base font-semibold text-ink outline-none focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15'
-
-export function boxLabel(box: Box): LabelItem {
-  return { code: box.code, title: boxName(box.code), box: { items: box.items.map((i) => ({ code: i.code, title: i.title })), location: box.location } }
-}
 
 /** What happened to one scanned or ticked item, in a sentence. */
 function resultLines(res: BoxPutResult, codes: string[]): LogLine[] {

@@ -130,7 +130,7 @@ async function labelsPdfCopies(list: { item: LabelItem; copies: number }[], size
     for (let c = 0; c < copies; c++) {
       if (!first) doc.addPage([size.wIn, size.hIn], orientation)
       first = false
-      doc.addImage(png, 'PNG', 0, 0, size.wIn, size.hIn, `label-${item.code}`)
+      doc.addImage(png, 'PNG', 0, 0, size.wIn, size.hIn, `label-${item.code}`, 'FAST')
     }
   }
   return doc.output('blob')
