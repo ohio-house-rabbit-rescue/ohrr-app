@@ -7,6 +7,10 @@
 // Written for someone who finds ordinary forms hard: nothing to remember,
 // nothing hidden in menus, Back always top-left, the one button that matters
 // always at the bottom. The draft survives an accidental refresh.
+//
+// Editing a found item: every edit screen has Save. Once saved, an item
+// opened from the Items list (?back=items) goes back to that list with
+// "Saved: …"; otherwise the item shows again with "Saved".
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
@@ -33,7 +37,21 @@ import {
   uploadItemPhoto,
 } from '../api'
 import { BigButton, BigInput, Busy, ErrorBox, ItemCard, KindTile, MoneyInput, StepShell, Stepper } from '../ScanUI'
-import { HeadedForChips, MoreDetailsFields, QuantityField, ValueFields, emptyExtras, useCatalogSuggestions, type Extras } from '../DetailsFields'
+import {
+  CostFields,
+  HeadedForChips,
+  LocationField,
+  MoreDetailsFields,
+  PurposeField,
+  QuantityField,
+  ReceivedAsField,
+  ValueFields,
+  costCents,
+  emptyExtras,
+  useCatalogSuggestions,
+  useItemPurposes,
+  type Extras,
+} from '../DetailsFields'
 import {
   ITEM_KINDS,
   KIND_META,
@@ -57,6 +75,8 @@ interface Saved {
   step: Step
   draft: ItemDraft
   editing: boolean
+  /** Opened from the Items list: a saved edit goes back there. */
+  fromList?: boolean
 }
 
 function loadSaved(): Saved | null {
@@ -84,12 +104,14 @@ export default function ScanFlow() {
   const orgId = membership?.orgId ?? ''
   const navigate = useNavigate()
   const suggestions = useCatalogSuggestions(orgId)
+  const purposes = useItemPurposes(orgId)
   const [params, setParams] = useSearchParams()
 
   const [step, setStep] = useState<Step>('scan')
   const [draft, setDraft] = useState<ItemDraft>(() => emptyDraft(''))
   const [item, setItem] = useState<TaggedItem | null>(null)
   const [editing, setEditing] = useState(false)
+  const [fromList, setFromList] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [typed, setTyped] = useState('')
   const [guess, setGuess] = useState<ProductGuess | null>(null)
@@ -168,6 +190,7 @@ export default function ScanFlow() {
   useEffect(() => {
     const code = params.get('code')
     if (code && orgId) {
+      setFromList(params.get('back') === 'items')
       setParams({}, { replace: true })
       void lookup(code)
       return
@@ -176,6 +199,7 @@ export default function ScanFlow() {
     if (saved && !code) {
       setDraft(saved.draft)
       setEditing(saved.editing)
+      setFromList(Boolean(saved.fromList))
       setStep(saved.step)
       setResumed(true)
     }
@@ -184,15 +208,16 @@ export default function ScanFlow() {
 
   // Keep the wizard's progress across a refresh; clear it once done.
   useEffect(() => {
-    if (WIZARD.includes(step)) persist({ step, draft, editing })
+    if (WIZARD.includes(step)) persist({ step, draft, editing, fromList })
     else if (step === 'done' || step === 'scan') persist(null)
-  }, [step, draft, editing])
+  }, [step, draft, editing, fromList])
 
   const startOver = () => {
     persist(null)
     setDraft(emptyDraft(''))
     setItem(null)
     setEditing(false)
+    setFromList(false)
     setGuess(null)
     setError(null)
     setResumed(false)
@@ -242,7 +267,10 @@ export default function ScanFlow() {
   /* ------------------------------------------------ save */
   const save = async () => {
     setError(null)
+    setNote(null)
     setStep('saving')
+    // A part that didn't save keeps the person here to read why.
+    let warned = false
     try {
       // If a photo is still uploading, wait for it rather than saving without.
       let d = draft
@@ -262,12 +290,23 @@ export default function ScanFlow() {
           try {
             saved = (await setItemExtras(orgId, saved.code, d)) ?? saved
           } catch (err) {
+            warned = true
             setError(`Saved, but not the condition, category or place: ${errMessage(err)}`)
           }
         }
       }
       if (saved.kind === 'donation') {
+        // How it came in, its cost and store, and its use (update 47) go only when changed,
+        // so an edit before update 47 has run only warns when one of them was touched.
+        const cost = d.source === 'purchase' ? costCents(d) : null
+        const boughtFrom = d.source === 'purchase' ? d.boughtFrom.trim() : ''
+        const receivingChanged =
+          d.purpose !== (saved.purpose ?? '') ||
+          d.source !== (saved.source ?? 'donation') ||
+          cost !== (saved.cost_cents ?? null) ||
+          boughtFrom !== (saved.bought_from ?? '')
         const planChanged =
+          receivingChanged ||
           d.headedFor !== (saved.headed_for ?? '') ||
           d.valueBasis !== (saved.value_basis ?? 'each') ||
           d.size.trim() !== (saved.size ?? '') ||
@@ -280,7 +319,12 @@ export default function ScanFlow() {
                 value_basis: d.valueBasis,
                 size: d.size.trim() || null,
                 use_by: d.useBy || null,
+                ...(receivingChanged ? { purpose: d.purpose || null, source: d.source, cost_cents: cost, bought_from: boughtFrom || null } : {}),
               })) ?? saved
+            if (saved.receiving_skipped) {
+              warned = true
+              setError('Saved. Donation or bought, what we paid, where it was bought and what it’s for need database update 47.')
+            }
           } catch (err) {
             // Without update 40 a value is always "for one": save the lot's value as one piece's.
             const cents = dollarsToCents(d.value)
@@ -291,6 +335,7 @@ export default function ScanFlow() {
                 /* the first save stands */
               }
             }
+            warned = true
             setError(isNeeds40(err) ? 'Saved. Where it’s headed, value for the lot, size and use-by need database update 40.' : `Saved, but not where it’s headed: ${errMessage(err)}`)
           }
         }
@@ -298,6 +343,11 @@ export default function ScanFlow() {
       setItem(saved)
       setDraft(draftFromItem(saved))
       persist(null)
+      if (editing && fromList && !warned) {
+        navigate('/staff/items', { state: { saved: `${saved.title} (${saved.code})` } })
+        return
+      }
+      if (editing) setNote({ text: `Saved: ${saved.title}` })
       setStep(editing ? 'found' : 'done')
       setEditing(false)
     } catch (err) {
@@ -310,8 +360,10 @@ export default function ScanFlow() {
   const act = async (fn: () => Promise<TaggedItem>) => {
     setBusy(true)
     setError(null)
+    setNote(null)
     try {
       setItem(await fn())
+      setNote({ text: 'Saved.' })
     } catch (err) {
       setError(errMessage(err))
     } finally {
@@ -443,7 +495,12 @@ export default function ScanFlow() {
     const canThis = m.caps.some((c) => can(c))
     const isDone = item.kind === 'stock' ? item.status === 'inactive' : item.status === m.doneStatus
     return (
-      <StepShell title="Found it" help="This tag is already on an item." onBack={startOver} backLabel="Scan">
+      <StepShell
+        title="Found it"
+        help="This tag is already on an item."
+        onBack={fromList ? () => navigate('/staff/items') : startOver}
+        backLabel={fromList ? 'List' : 'Scan'}
+      >
         <div className="space-y-4">
           <ItemCard item={item} big />
           <ErrorBox>{error}</ErrorBox>
@@ -585,7 +642,7 @@ export default function ScanFlow() {
           {canThis && item.kind === 'donation' && !item.outcome && (
             <div className="grid grid-cols-2 gap-3">
               <BigButton tone="plain" disabled={busy} onClick={() => void act(async () => (await setDonationOutcome(orgId, item.code, 'rabbits')) ?? item)}>
-                Used for the rabbits
+                In use by OHRR
               </BigButton>
               <BigButton tone="plain" disabled={busy} onClick={() => void act(async () => (await setDonationOutcome(orgId, item.code, 'passed_on')) ?? item)}>
                 Passed on / not usable
@@ -612,7 +669,7 @@ export default function ScanFlow() {
               <BigButton
                 tone="outline"
                 icon="camera"
-                onClick={() => navigate(`/staff/items/photos?code=${encodeURIComponent(item.code)}`)}
+                onClick={() => navigate(`/staff/items/photos?code=${encodeURIComponent(item.code)}${fromList ? '&back=items' : ''}`)}
               >
                 Photos
               </BigButton>
@@ -646,6 +703,11 @@ export default function ScanFlow() {
               }}
             >
               It’s something else
+            </BigButton>
+          )}
+          {fromList && (
+            <BigButton tone="outline" onClick={() => navigate('/staff/items')}>
+              Back to the list
             </BigButton>
           )}
           <BigButton tone="blue" icon="scan" onClick={startOver}>
@@ -782,9 +844,20 @@ export default function ScanFlow() {
         of={editing ? undefined : of}
         onBack={() => backTo('name')}
         footer={
-          <BigButton onClick={() => setStep('details')} disabled={!canNext}>
-            Next
-          </BigButton>
+          editing ? (
+            <div className="space-y-2">
+              <BigButton onClick={() => void save()} disabled={!canNext} icon="check">
+                Save
+              </BigButton>
+              <BigButton tone="outline" onClick={() => setStep('details')} disabled={!canNext}>
+                More details
+              </BigButton>
+            </div>
+          ) : (
+            <BigButton onClick={() => setStep('details')} disabled={!canNext}>
+              Next
+            </BigButton>
+          )
         }
       >
         <div className="space-y-4">
@@ -808,7 +881,7 @@ export default function ScanFlow() {
             placeholder={draft.kind === 'stock' ? 'Timothy hay, 40 oz' : 'Plush bunny basket'}
             ariaLabel="Name of the item"
             autoFocus
-            onEnter={() => canNext && setStep('details')}
+            onEnter={() => canNext && (editing ? void save() : setStep('details'))}
           />
           <p className="text-[15px] text-slate-500">Tip: the microphone key on your keyboard lets you say it instead of typing.</p>
           <label className="block">
@@ -843,6 +916,11 @@ export default function ScanFlow() {
       category: draft.category ?? '',
       location: draft.location ?? '',
       notes: draft.description,
+      source: draft.source,
+      cost: draft.cost,
+      costBasis: draft.costBasis,
+      boughtFrom: draft.boughtFrom,
+      purpose: draft.purpose,
     }
     const setEx = (p: Partial<Extras>) => {
       const { notes, ...rest } = p
@@ -865,18 +943,23 @@ export default function ScanFlow() {
           <ErrorBox>{error}</ErrorBox>
           {donation ? (
             <>
-              <div>
-                <p className="mb-2 text-base font-bold text-ink">Who gave it?</p>
-                <BigInput value={draft.donatedBy} onChange={(v) => update({ donatedBy: v })} placeholder="A friend of OHRR" ariaLabel="Who donated it" />
-              </div>
+              {/* Receiving, then what it's for — the same order as Receive items. */}
+              <ReceivedAsField v={ex} set={setEx} />
+              {ex.source === 'purchase' ? null : (
+                <div>
+                  <p className="mb-2 text-base font-bold text-ink">Who gave it?</p>
+                  <BigInput value={draft.donatedBy} onChange={(v) => update({ donatedBy: v })} placeholder="A friend of OHRR" ariaLabel="Who donated it" />
+                </div>
+              )}
               <QuantityField v={ex} set={setEx} />
-              <ValueFields v={ex} set={setEx} />
-              <HeadedForChips v={ex} set={setEx} />
+              {ex.source === 'purchase' ? <CostFields v={ex} set={setEx} stores={suggestions.stores} /> : <ValueFields v={ex} set={setEx} />}
+              <LocationField v={ex} set={setEx} places={suggestions.locations} />
+              <PurposeField v={ex} set={setEx} list={purposes} />
               <MoreDetailsFields
                 v={ex}
                 set={setEx}
                 suggestions={suggestions}
-                show={{ size: true, condition: true, category: true, location: true, useBy: true, price: true, notes: true }}
+                show={{ size: true, condition: true, category: true, useBy: true, price: true, notes: true }}
               />
             </>
           ) : stock ? (

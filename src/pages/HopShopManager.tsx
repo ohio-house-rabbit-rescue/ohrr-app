@@ -40,6 +40,7 @@ import {
   packOf,
   packsFor,
   packsReady,
+  purchaseTotals,
   reorderList,
   saveProduct,
   setOrder,
@@ -55,10 +56,12 @@ import {
   type PackChoice,
   type ProductInput,
   type ProductType,
+  type PurchaseTotal,
   type StockCard,
   type Supplier,
 } from '../features/hopshop/api'
 import { giftTotals, withScheme, type GiftTotals } from '../features/hopshop/companies'
+import { usDate } from '../features/scan/types'
 import { CompanyForm, CompanySummary, CompanyThumb, useVendorRecordsReady } from '../features/hopshop/CompanyForm'
 import { PackEditor, packRowsFrom, packRowsToInput, type PackRow } from '../features/hopshop/PackEditor'
 import { NewTypeForm, TypesPanel } from '../features/hopshop/TypesPanel'
@@ -145,7 +148,7 @@ type Tab = 'items' | 'reorder' | 'suppliers' | 'types'
 const TABS: [Tab, string][] = [
   ['items', 'Items'],
   ['reorder', 'Reorder'],
-  ['suppliers', 'Suppliers'],
+  ['suppliers', 'Vendors'],
   ['types', 'Types'],
 ]
 
@@ -346,7 +349,7 @@ function Items({
         <Card>
           <div ref={formTop} tabIndex={-1} className="outline-none">
             <h2 className="mb-1 font-display text-[15px] font-extrabold text-ink">New item the shop carries</h2>
-            <p className="mb-3 text-sm text-slate-500">Something bought from a supplier to sell. Donations are added under “Add a donation”.</p>
+            <p className="mb-3 text-sm text-slate-500">Something bought from a supplier to sell. Donations and one-off buys are added under “Receive items”.</p>
           </div>
           <ProductForm
             orgId={orgId}
@@ -1460,6 +1463,17 @@ function Suppliers({
   const [filter, setFilter] = useState<'all' | 'supplier' | 'vendor'>('all')
   const shown = (suppliers ?? []).filter((s) => (filter === 'supplier' ? s.is_supplier : filter === 'vendor' ? s.is_vendor : true))
 
+  // What we bought from each one (update 47; empty before it).
+  const [bought, setBought] = useState<Map<string, PurchaseTotal>>(new Map())
+  useEffect(() => {
+    if (!orgId) return
+    let alive = true
+    purchaseTotals(orgId).then((m) => alive && setBought(m))
+    return () => {
+      alive = false
+    }
+  }, [orgId])
+
   // Gift counts and totals for the summary on each row (update 27).
   const ready = useVendorRecordsReady()
   const [gifts, setGifts] = useState<Map<string, GiftTotals> | null>(null)
@@ -1483,15 +1497,16 @@ function Suppliers({
   return (
     <div className="space-y-3">
       <p className="text-sm text-slate-600">
-        One list for the companies OHRR deals with. Tick <strong>Supplier</strong> for anyone we buy from and <strong>Vendor</strong> for anyone
-        who sells at Midwest BunFest — some are both. Everything on a company’s card is for the team only.
+        One list for every company OHRR deals with. Tick <strong>We buy from them</strong> for anyone we buy from and{' '}
+        <strong>Sells at our events</strong> for anyone with a table at BunFest or another event — some are both. Everything on a company’s
+        card is for the team only.
       </p>
       <div className="flex gap-2">
         {(
           [
             ['all', 'All'],
-            ['supplier', 'Suppliers'],
-            ['vendor', 'BunFest vendors'],
+            ['supplier', 'We buy from them'],
+            ['vendor', 'At our events'],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -1515,8 +1530,8 @@ function Suppliers({
             <span className="min-w-0 flex-1">
               <span className="flex flex-wrap items-center gap-1.5">
                 <span className="font-display text-[15px] font-extrabold text-ink">{s.name}</span>
-                {s.is_supplier && <Badge tone="blue">Supplier</Badge>}
-                {s.is_vendor && <Badge tone="orange">Vendor</Badge>}
+                {s.is_supplier && <Badge tone="blue">We buy from them</Badge>}
+                {s.is_vendor && <Badge tone="orange">Sells at our events</Badge>}
                 {!s.is_active && <Badge tone="slate">Inactive</Badge>}
               </span>
               <span className="block text-xs text-slate-500">
@@ -1542,6 +1557,21 @@ function Suppliers({
                 </span>
               )}
               <CompanySummary c={s} gifts={gifts?.get(s.id)} />
+              {(() => {
+                const b = bought.get(s.id)
+                if (!b || b.items === 0) return null
+                return (
+                  <span className="mt-1 block text-xs font-semibold text-slate-600">
+                    {[
+                      `Bought from them: ${b.items} ${b.items === 1 ? 'item' : 'items'}`,
+                      b.cost_cents != null ? money(b.cost_cents) : null,
+                      b.last_on ? `last ${usDate(b.last_on)}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                )
+              })()}
               {s.is_supplier && (
                 <Link to={`/staff/hopshop/deliveries?supplier=${s.id}`} className="mt-1 inline-flex min-h-[44px] items-center text-xs font-bold text-brand-blue">
                   Deliveries from {s.name} →
@@ -1581,7 +1611,7 @@ function Suppliers({
           </Card>
         ) : (
           <button type="button" onClick={() => setEditing('new')} className={`${btn.outline} min-h-[44px] w-full`}>
-            <Icon name="plus" size={16} /> Add a supplier or vendor
+            <Icon name="plus" size={16} /> Add a vendor
           </button>
         ))}
     </div>

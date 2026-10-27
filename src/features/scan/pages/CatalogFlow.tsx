@@ -1,11 +1,19 @@
-// Add a donation, fast: who it's from (once per drop-off) → photos (up to
-// four) → say (or type) the name, how many, what it's worth (each or for the
-// lot), where it's headed → Save → "Next item" (the camera opens again) or
-// "Print this label". Everything else waits under "More details".
+// Receive items, fast, in the order they arrive (sponsor 2026-10-27: "items
+// come in as a donation or a purchase … then identify where it goes. we need
+// to label it and then put the location"; "lets reorganize the screen into
+// the flow of the receiving and then the purpose"):
+//   Receiving: a donation (who it's from, once per drop-off) or bought (where,
+//   and what we paid) → photos (up to four) → say (or type) the name → how
+//   many → what it's worth, or what we paid → where it's kept (a drop-down of
+//   places used before; a new one is added by typing it).
+//   Then what it's for: one of OHRR's uses (Midwest BunFest, Guardians Event,
+//   Special Event, Hop Shop, Bunny Care …; Admin 1 and up add more), and for
+//   an event, how it's used there.
+// Save → "Next item" (the camera opens again) or "Print this label".
+// Everything else waits under "More details".
 //
-// Only donations come in here. Things the Hop Shop buys from a supplier to
-// sell are added in Hop Shop inventory (supplier, cost, price, reorder), the
-// one place for shop items; old ?kind=stock links go there.
+// Hop Shop stock bought from a vendor to sell (vendor, cost, price, reorder)
+// is still added in Hop Shop inventory; old ?kind=stock links go there.
 //
 // The app gives each item its own OHRR code; nothing has to be printed or
 // scanned first. The label prints from here or from Print labels.
@@ -22,8 +30,10 @@
 // Boxes, to stick over the number written on each box. It's for sorting a
 // pile nobody wrote down ("its just a mess of items … no know donor"), so it
 // never asks who it's from and makes no drop-off; a known donor's bag goes
-// through plain Add a donation. A box left open is picked up again from the
-// Receive into boxes tile, never from plain Add a donation.
+// through plain Receive items. A box is started with where it will be kept
+// ("when we build a box we need to say the location of the box"), and every
+// item in it is kept there too. A box left open is picked up again from the
+// Receive into boxes tile, never from plain Receive items.
 //
 // The two hidden file inputs are rendered ONCE, outside the screens: the
 // camera's answer arrives on the element that opened it, and if that element
@@ -50,7 +60,21 @@ import {
 } from '../api'
 import { BigButton, BigInput, ErrorBox, MoneyInput, StepShell } from '../ScanUI'
 import { KIND_META, dollarsToCents, extrasSummary, usDate, type TaggedItem } from '../types'
-import { HeadedForChips, MoreDetailsFields, QuantityField, ValueFields, emptyExtras, useCatalogSuggestions, type Extras } from '../DetailsFields'
+import {
+  ComboField,
+  CostFields,
+  LocationField,
+  MoreDetailsFields,
+  PurposeField,
+  QuantityField,
+  ReceivedAsField,
+  ValueFields,
+  costCents,
+  emptyExtras,
+  useCatalogSuggestions,
+  useItemPurposes,
+  type Extras,
+} from '../DetailsFields'
 import { boxByCode, loadPackingBox, newBox, putInBox, savePackingBox, type PackingBox } from '../boxes'
 import { tellOthersLabelsChanged } from '../labelSync'
 import { useLabelSize } from '../useLabelSize'
@@ -135,6 +159,8 @@ interface Saved {
   detailsSkipped?: boolean
   /** Where it's headed, size, use-by and the drop-off waited for database update 40. */
   planSkipped?: boolean
+  /** Donation or bought, its cost and store, and its use waited for database update 47. */
+  receivingSkipped?: boolean
   /** Moved straight into the Silent Auction, with these prices. */
   auction?: { start: number | null; buyNow: number | null }
   /** It stayed a donation headed for the auction, or its prices didn't save: why. */
@@ -150,6 +176,29 @@ interface Saved {
 
 /** A fresh item; where it's kept usually stays the same for a whole box. */
 const emptyDraft = (location = ''): Draft => ({ title: '', startBid: '', buyNow: '', ...emptyExtras(location) })
+
+/**
+ * The next item of the same bag or box: how it came in, where it was bought,
+ * where it's kept and what it's for carry over; the rest starts empty.
+ */
+const nextDraft = (d: Draft): Draft => ({
+  ...emptyDraft(d.location),
+  source: d.source,
+  boughtFrom: d.boughtFrom,
+  purpose: d.purpose,
+  headedFor: d.headedFor,
+})
+
+/** The Silent Auction is BunFest's: an item for another event's auction stays a donation. */
+const forSilentAuction = (d: Pick<Draft, 'headedFor' | 'purpose'>) => d.headedFor === 'auction' && (!d.purpose || /bunfest/i.test(d.purpose))
+
+/** A small heading over each part of the form. */
+const Part = ({ n, children }: { n: number; children: string }) => (
+  <p className="flex items-center gap-2 border-b border-slate-200 pb-1 font-display text-base font-black uppercase tracking-wide text-slate-500">
+    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-blue text-sm text-white">{n}</span>
+    {children}
+  </p>
+)
 
 const MORE_KEY = 'ohrr.catalog.more'
 
@@ -184,6 +233,7 @@ export default function CatalogFlow() {
   const [donors, setDonors] = useState<string[]>([])
   const [listening, setListening] = useState(false)
   const suggestions = useCatalogSuggestions(orgId)
+  const purposes = useItemPurposes(orgId)
   // Receive into boxes: the box being filled, how many are in it, and the one just closed.
   const wantsBoxes = params.get('box') === '1'
   const [packingBox, setBoxState] = useState<PackingBox | null>(loadPackingBox)
@@ -191,6 +241,8 @@ export default function CatalogFlow() {
   const [boxCount, setBoxCount] = useState<number | null>(null)
   const [boxBusy, setBoxBusy] = useState(false)
   const [fullBox, setFullBox] = useState<{ box: PackingBox; count: number | null } | null>(null)
+  // Where the box being filled is kept (asked when it's started; its items are kept there too).
+  const [boxPlace, setBoxPlace] = useState('')
   const setBox = (b: PackingBox | null) => {
     setBoxState(b)
     savePackingBox(b)
@@ -255,8 +307,11 @@ export default function CatalogFlow() {
     boxByCode(orgId, box.code)
       .then((b) => {
         if (!alive) return
-        if (b) setBoxCount(b.items.length)
-        else setBox(null)
+        if (b) {
+          setBoxCount(b.items.length)
+          setBoxPlace(b.location ?? '')
+          if (b.location) setDraft((d) => ({ ...d, location: b.location ?? '' }))
+        } else setBox(null)
       })
       .catch(() => {})
     return () => {
@@ -271,9 +326,12 @@ export default function CatalogFlow() {
     setBoxBusy(true)
     setError(null)
     try {
-      const b = await newBox(orgId)
+      const place = boxPlace.trim()
+      const b = await newBox(orgId, place || null)
       setBox({ code: b.code, box_no: b.box_no })
       setBoxCount(0)
+      setBoxPlace(b.location ?? place)
+      update({ location: b.location ?? place })
       setFullBox(null)
       setStep('start')
     } catch (err) {
@@ -367,7 +425,7 @@ export default function CatalogFlow() {
 
   /** Start (or keep adding to) a drop-off, then the first item. */
   const begin = () => {
-    if (!current && !wantsBoxes) {
+    if (!current && !wantsBoxes && draft.source === 'donation') {
       if (!looksLikeEmail(who.email)) {
         setError('That email doesn’t look right. Fix it, or leave it empty.')
         return
@@ -408,7 +466,7 @@ export default function CatalogFlow() {
 
   /** A fresh item: empty form, then the camera. */
   const startItem = () => {
-    setDraft((d) => emptyDraft(d.location))
+    setDraft(nextDraft)
     filesRef.current = new Map()
     setShots([])
     setSaved(null)
@@ -478,8 +536,9 @@ export default function CatalogFlow() {
   const save = () => {
     const title = draft.title.trim()
     if (!title) return
-    const donatedBy = wantsBoxes ? '' : (current?.donor ?? '')
     const snap = draft
+    const bought = snap.source === 'purchase'
+    const donatedBy = wantsBoxes || bought ? '' : (current?.donor ?? '')
     const list = shots
     const packing = box
     recogRef.current?.stop?.()
@@ -493,14 +552,14 @@ export default function CatalogFlow() {
       const photosFailed = settled.length - urls.length
       setSaved((s) => (s ? { ...s, phase: 'saving' } : s))
       try {
-        const dropoffId = !wantsBoxes && dropoffPromise.current ? await dropoffPromise.current.catch(() => null) : null
+        const dropoffId = !wantsBoxes && !bought && dropoffPromise.current ? await dropoffPromise.current.catch(() => null) : null
         let item = await catalogNewItem(orgId, {
           title,
           kind: 'donation',
           donatedBy,
           photoUrl: urls[0] ?? null,
           description: snap.notes,
-          valueCents: dollarsToCents(snap.value),
+          valueCents: bought ? null : dollarsToCents(snap.value),
           quantity: snap.quantity,
           priceCents: dollarsToCents(snap.price),
           condition: snap.condition,
@@ -512,10 +571,15 @@ export default function CatalogFlow() {
             size: snap.size.trim() || null,
             use_by: snap.useBy || null,
             dropoff_id: dropoffId,
+            source: snap.source,
+            purpose: snap.purpose || null,
+            cost_cents: bought ? costCents(snap) : null,
+            bought_from: bought ? snap.boughtFrom.trim() || null : null,
           },
         })
         const detailsSkipped = Boolean(item.details_skipped)
         const planSkipped = Boolean(item.plan_skipped)
+        const receivingSkipped = Boolean(item.receiving_skipped)
         let photosNote: string | undefined
         if (urls.length > 1) {
           try {
@@ -527,7 +591,7 @@ export default function CatalogFlow() {
         // Headed for the Silent Auction and they run it: straight in, with its prices.
         let auction: Saved['auction']
         let auctionNote: string | undefined
-        if (snap.headedFor === 'auction' && canAuction) {
+        if (forSilentAuction(snap) && canAuction) {
           const prices = { starting_bid_cents: dollarsToCents(snap.startBid), buy_now_cents: dollarsToCents(snap.buyNow) }
           try {
             item = await catalogToAuction(orgId, item.code, title, donatedBy, prices)
@@ -552,7 +616,9 @@ export default function CatalogFlow() {
             boxNote = `It’s saved, but it didn’t go in Box ${packing.box_no}: ${errMessage(err)} Put it in from the box’s page.`
           }
         }
-        setSaved((s) => (s ? { ...s, phase: 'saved', item, photosFailed, photosNote, detailsSkipped, planSkipped, auction, auctionNote, inBox, boxNote } : s))
+        setSaved((s) =>
+          s ? { ...s, phase: 'saved', item, photosFailed, photosNote, detailsSkipped, planSkipped, receivingSkipped, auction, auctionNote, inBox, boxNote } : s,
+        )
         setToday((n) => (n ?? 0) + 1)
         setUnprinted((n) => (n ?? 0) + 1)
         if (donatedBy) setDonors((d) => [donatedBy, ...d.filter((x) => x.toLowerCase() !== donatedBy.toLowerCase())].slice(0, 12))
@@ -608,7 +674,7 @@ export default function CatalogFlow() {
   if (!orgId) return null
   if (!allowed) {
     return (
-      <StepShell title="Add a donation" onBack={() => navigate('/staff')} backLabel="Dashboard">
+      <StepShell title="Receive items" onBack={() => navigate('/staff')} backLabel="Dashboard">
         <ErrorBox>Your account can’t add donations yet. Ask an admin to grant Silent Auction or Hop Shop access.</ErrorBox>
       </StepShell>
     )
@@ -620,11 +686,11 @@ export default function CatalogFlow() {
   if (step === 'start') {
     screen = (
       <StepShell
-        title={wantsBoxes ? 'Receive into boxes' : 'Add a donation'}
+        title={wantsBoxes ? 'Receive into boxes' : 'Receive items'}
         help={
           wantsBoxes
-            ? 'For sorting items nobody wrote down — no donor needed. Start a box and write its number on it. Add each item, print its label, put it in the box. Tap Box is full, then start the next one.'
-            : 'Something given to OHRR: photo, name, how many, what it’s worth. Sort it later, or tick where it’s headed.'
+            ? 'For sorting items nobody wrote down — no donor needed. Start a box, say where it will be kept and write its number on it. Add each item, print its label, put it in the box. Tap Box is full, then start the next one.'
+            : 'First how it came in — a donation or something we bought — then each item: photo, name, how many, where it’s kept, and what it’s for.'
         }
         onBack={() => navigate('/staff')}
         backLabel="Dashboard"
@@ -647,6 +713,7 @@ export default function CatalogFlow() {
               <p className="text-sm font-bold uppercase tracking-wide text-slate-600">Filling</p>
               <p className="font-display text-5xl font-black leading-tight text-ink">Box {box.box_no}</p>
               <p className="mt-1 text-lg font-bold text-ink">Write {box.box_no} on the box.</p>
+              <p className="text-[15px] text-slate-600">{boxPlace ? `Kept: ${boxPlace}` : 'No place yet — add it from the box.'}</p>
               <p className="text-[15px] text-slate-600">
                 {boxCount == null ? '' : `${boxCount} item${boxCount === 1 ? '' : 's'} in it so far · `}
                 <Link to={`/staff/boxes/${box.code}`} className="font-bold text-brand-blue">
@@ -660,6 +727,11 @@ export default function CatalogFlow() {
               </div>
             </div>
           ) : wantsBoxes ? (
+            <>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <LocationField v={{ location: boxPlace }} set={(p) => setBoxPlace(p.location ?? '')} places={suggestions.locations} label="Where will this box be kept?" />
+                <p className="mt-1.5 text-sm text-slate-500">Everything put in the box is kept there too. It can be changed later from the box.</p>
+              </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 text-[15px] text-slate-600">
               <p className="text-base font-bold text-ink">How it works</p>
               <ol className="mt-1 list-decimal space-y-1 pl-5">
@@ -669,8 +741,24 @@ export default function CatalogFlow() {
                 <li>When the sorting is done, put the 4 × 6 roll in the printer and print all the box labels from Boxes. Stick each one over the number.</li>
               </ol>
             </div>
+            </>
           ) : null}
-          {wantsBoxes ? null : current ? (
+          {!wantsBoxes && <ReceivedAsField v={draft} set={update} />}
+          {wantsBoxes ? null : draft.source === 'purchase' ? (
+            <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-base font-bold text-ink">
+                Where was it bought? <span className="font-normal text-slate-500">(once for the whole bag)</span>
+              </p>
+              <ComboField
+                value={draft.boughtFrom}
+                onChange={(b) => update({ boughtFrom: b })}
+                options={suggestions.stores}
+                placeholder="Tractor Supply"
+                ariaLabel="Where it was bought"
+              />
+              <p className="text-sm text-slate-500">What we paid goes on each item. A store on the Hop Shop vendor list shows what we bought on its card.</p>
+            </div>
+          ) : current ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Adding to the drop-off from</p>
               <p className="font-display text-xl font-black text-ink">{current.donor || 'Someone not named'}</p>
@@ -758,7 +846,7 @@ export default function CatalogFlow() {
           )}
           {!wantsBoxes && can('hopshop.products.create') && (
             <p className="text-center text-[15px] text-slate-500">
-              Something the shop carries, bought from a supplier?{' '}
+              Stock the shop sells, bought from a vendor?{' '}
               <Link to="/staff/hopshop?add=1" className="font-bold text-brand-blue">
                 Add it in Hop Shop inventory
               </Link>
@@ -799,6 +887,9 @@ export default function CatalogFlow() {
             <Link to={`/staff/boxes/${fullBox.box.code}`} className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue">
               See what’s in it
             </Link>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <LocationField v={{ location: boxPlace }} set={(p) => setBoxPlace(p.location ?? '')} places={suggestions.locations} label="Where will the next box be kept?" />
           </div>
           <p className="text-base text-slate-600">
             When every box is done, put the 4 × 6 roll in the printer, open <span className="font-bold">Boxes</span> and print all the waiting box labels at
@@ -869,7 +960,7 @@ export default function CatalogFlow() {
               {s.donatedBy && <p className="text-[15px] text-slate-600">Gift of {s.donatedBy}</p>}
               {s.item && extrasSummary(s.item) && <p className="text-[15px] text-slate-600">{extrasSummary(s.item)}</p>}
               <p className="text-sm text-slate-500">
-                {s.auction ? 'In the Silent Auction' : 'Donation'}
+                {s.auction ? 'In the Silent Auction' : s.item?.source === 'purchase' ? 'Bought' : 'Donation'}
                 {s.auction?.start != null && ` · starts ${usd(s.auction.start)}`}
                 {s.auction?.buyNow != null && ` · Buy it now ${usd(s.auction.buyNow)}`}
                 {s.previews.length > 1 && ` · ${s.previews.length} photos`}
@@ -939,6 +1030,12 @@ export default function CatalogFlow() {
               The item is saved. Where it’s headed, size, use-by and the drop-off need database update 40.
             </div>
           )}
+          {done && s.receivingSkipped && (
+            <div role="status" className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
+              The item is saved. Donation or bought, what we paid, where it was bought and what it’s for need database update 47; add them from the item
+              once it has run.
+            </div>
+          )}
           {done && s.detailsSkipped && (
             <div role="status" className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
               The item is saved. How many, the price and the other details need database update 39; add them from the item once it has run.
@@ -974,14 +1071,22 @@ export default function CatalogFlow() {
     )
   } else {
     /* ================================================= name */
-    const canSave = draft.title.trim().length > 0
+    // Sponsor: "we need a location also" — every item says where it's kept (a box's items are kept with the box).
+    const needsPlace = !box && !draft.location.trim()
+    const canSave = draft.title.trim().length > 0 && !needsPlace
+    const bought = draft.source === 'purchase'
+    const directAuction = canAuction && forSilentAuction(draft)
     const uploading = shots.filter((s) => s.state === 'uploading').length
     const failed = shots.filter((s) => s.state === 'failed').length
     const full = shots.length >= MAX_ITEM_PHOTOS
     screen = (
       <StepShell
         title="What is it?"
-        help={[current?.donor && !wantsBoxes ? `Gift of ${current.donor}.` : null, box ? `Going in Box ${box.box_no}.` : null, 'Say or type the name, then Save.']
+        help={[
+          bought ? (draft.boughtFrom.trim() ? `Bought at ${draft.boughtFrom.trim()}.` : 'Bought.') : current?.donor && !wantsBoxes ? `Gift of ${current.donor}.` : null,
+          box ? `Going in Box ${box.box_no}.` : null,
+          'First how it came in and where it’s kept, then what it’s for.',
+        ]
           .filter(Boolean)
           .join(' ')}
         onBack={() => setStep('start')}
@@ -991,6 +1096,7 @@ export default function CatalogFlow() {
             <BigButton onClick={save} disabled={!canSave} icon="check">
               Save
             </BigButton>
+            {draft.title.trim() && needsPlace && <p className="text-center text-[15px] font-bold text-amber-800">Say where it’s kept, then Save.</p>}
             <button type="button" onClick={finish} className="block w-full py-1 text-center text-base font-bold text-brand-blue">
               I’m done
             </button>
@@ -999,6 +1105,9 @@ export default function CatalogFlow() {
       >
         <div className="space-y-4">
           <ErrorBox>{error}</ErrorBox>
+
+          <Part n={1}>Receiving</Part>
+          <ReceivedAsField v={draft} set={update} />
 
           {/* The photos: main first, a × on each, + for another (up to four). */}
           <div>
@@ -1097,10 +1206,23 @@ export default function CatalogFlow() {
             </div>
           )}
           <QuantityField v={draft} set={update} />
-          <ValueFields v={draft} set={update} />
-          <HeadedForChips v={draft} set={update} />
+          {bought ? <CostFields v={draft} set={update} stores={suggestions.stores} /> : <ValueFields v={draft} set={update} />}
+          {box ? (
+            <div className="rounded-2xl border-2 border-brand-orange/40 bg-brand-orange-50 px-4 py-3">
+              <p className="text-[15px] font-bold text-slate-600">Where is it kept?</p>
+              <p className="text-lg font-bold text-ink">
+                In Box {box.box_no}
+                {boxPlace ? ` · ${boxPlace}` : ''}
+              </p>
+            </div>
+          ) : (
+            <LocationField v={draft} set={update} places={suggestions.locations} />
+          )}
+
+          <Part n={2}>What it’s for</Part>
+          <PurposeField v={draft} set={update} list={purposes} />
           {draft.headedFor === 'auction' &&
-            (canAuction ? (
+            (directAuction ? (
               <div className="space-y-2 rounded-2xl border-2 border-brand-blue/20 bg-brand-blue-50/50 p-3">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -1117,7 +1239,11 @@ export default function CatalogFlow() {
                 </p>
               </div>
             ) : (
-              <p className="text-sm text-slate-500">It’s saved as a donation headed for the Silent Auction; someone who runs the auction moves it in and sets its prices.</p>
+              <p className="text-sm text-slate-500">
+                {forSilentAuction(draft)
+                  ? 'It’s saved headed for the Silent Auction; someone who runs the auction moves it in and sets its prices.'
+                  : `It’s saved for the ${draft.purpose} auction.`}
+              </p>
             ))}
           {draft.headedFor === 'shop' && <MoreDetailsFields v={draft} set={update} suggestions={suggestions} show={{ price: true }} />}
           <button
@@ -1129,8 +1255,7 @@ export default function CatalogFlow() {
             <span className="min-w-0">
               <span className="block text-base font-bold text-brand-blue">More details</span>
               <span className="block truncate text-sm text-slate-500">
-                {!more && draft.location ? `Kept: ${draft.location} · ` : ''}
-                Size, condition, sort of thing, where it’s kept, use-by, notes
+                Size, condition, sort of thing, use-by, notes
               </span>
             </span>
             <Icon name="chevron" size={20} className={`shrink-0 text-slate-400 transition ${more ? 'rotate-90' : ''}`} />
@@ -1140,10 +1265,12 @@ export default function CatalogFlow() {
               v={draft}
               set={update}
               suggestions={suggestions}
-              show={{ size: true, condition: true, category: true, location: true, useBy: true, price: draft.headedFor !== 'shop', notes: true }}
+              show={{ size: true, condition: true, category: true, useBy: true, price: draft.headedFor !== 'shop', notes: true }}
             />
           )}
-          <p className="text-sm text-slate-500">Only the name is needed. Everything else can be added or changed later from the items list.</p>
+          <p className="text-sm text-slate-500">
+            The name and where it’s kept are needed. Everything else can be added or changed later from the items list.
+          </p>
         </div>
       </StepShell>
     )

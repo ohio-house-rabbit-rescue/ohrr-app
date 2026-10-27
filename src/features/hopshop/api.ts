@@ -286,6 +286,28 @@ export async function deleteSupplier(id: string): Promise<void> {
   if (error) throw error
 }
 
+/** What we bought from one vendor (update 47: purchases whose store is on the list). */
+export interface PurchaseTotal {
+  items: number
+  cost_cents: number | null
+  last_on: string | null
+}
+
+/** Each vendor's purchases, by supplier id; empty until update 47 is run. */
+export async function purchaseTotals(orgId: string): Promise<Map<string, PurchaseTotal>> {
+  const call = supabase.rpc.bind(supabase) as unknown as (
+    fn: 'supplier_purchase_totals',
+    args: { p_org: string },
+  ) => Promise<{ data: unknown; error: { message?: string } | null }>
+  const { data, error } = await call('supplier_purchase_totals', { p_org: orgId })
+  const out = new Map<string, PurchaseTotal>()
+  if (error || !Array.isArray(data)) return out
+  for (const r of data as { supplier_id: string; items: number | null; cost_cents: number | null; last_on: string | null }[]) {
+    if (r.supplier_id) out.set(r.supplier_id, { items: r.items ?? 0, cost_cents: r.cost_cents, last_on: r.last_on })
+  }
+  return out
+}
+
 /** Reorder list grouped by supplier (unassigned items last). */
 export function groupBySupplier(items: StockCard[]): { key: string; name: string; supplierId: string | null; items: StockCard[] }[] {
   const groups = new Map<string, { key: string; name: string; supplierId: string | null; items: StockCard[] }>()

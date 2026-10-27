@@ -18,7 +18,7 @@ import { boxName, isBoxCode, normalizeCode } from '../codes'
 import { labelDataUrl, labelsPdf } from '../labels'
 import { PAGE_SIZE, filterRows, groupByDay, type ListRow } from '../labelList'
 import BluetoothPrint from '../printer/BluetoothPrint'
-import { KIND_META, type TaggedItem } from '../types'
+import { KIND_META, kindLabel, type TaggedItem } from '../types'
 import { BOX_SIZE, boxByCode, boxLabel, deleteBox, markBoxesPrinted, packingListPdf, putInBox, saveBox, takeOutOfBox, type Box, type BoxPutResult } from '../boxes'
 
 type Mode = 'list' | 'scan' | 'type' | 'pick'
@@ -39,7 +39,7 @@ const SELECT =
 /** What happened to one scanned or ticked item, in a sentence. */
 function resultLines(res: BoxPutResult, codes: string[]): LogLine[] {
   const out: LogLine[] = []
-  for (const c of res.not_found) out.push({ ok: false, text: `No item has the code ${c}. Add it first (Add a donation), then scan it again.` })
+  for (const c of res.not_found) out.push({ ok: false, text: `No item has the code ${c}. Add it first (Receive items), then scan it again.` })
   for (const m of res.moved) out.push({ ok: true, text: `${m.title} — moved here from ${boxName(m.from)}.` })
   const fresh = res.added - res.moved.length
   if (fresh > 0 && codes.length === 1) {
@@ -161,8 +161,9 @@ export default function BoxDetail() {
     setBusy('Saving…')
     setError(null)
     try {
-      setBox(await saveBox(orgId, box.code, place, memo))
-      setEditing(false)
+      const b = await saveBox(orgId, box.code, place, memo)
+      // Saved: back to the boxes, which say so.
+      navigate('/staff/boxes', { state: { saved: `${boxName(b.code)}${b.location ? ` · ${b.location}` : ''}` } })
     } catch (e) {
       setError(errMessage(e))
     } finally {
@@ -536,7 +537,7 @@ function Picker({ orgId, box, onPut, onCancel }: { orgId: string; box: Box; onPu
           items.map((i) => ({
             code: i.code,
             title: i.title,
-            sub: [KIND_META[i.kind].label, i.donated_by ? `Gift of ${i.donated_by}` : null].filter(Boolean).join(' · '),
+            sub: [kindLabel(i), i.donated_by ? `Gift of ${i.donated_by}` : null].filter(Boolean).join(' · '),
             label_printed_at: i.label_printed_at ?? null,
             added: i.created_at ?? null,
             kind: i.kind,

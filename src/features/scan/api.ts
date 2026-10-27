@@ -4,7 +4,7 @@
 import { errMessage, supabase } from '../../lib/supabase'
 import type { Json } from '../../lib/database.types'
 import { downscaleToJpeg } from '../raffle/photoUpload'
-import { dollarsToCents, type HeadedFor, type ItemDraft, type ItemKind, type TaggedItem } from './types'
+import { DEFAULT_PURPOSES, dollarsToCents, type HeadedFor, type ItemDraft, type ItemKind, type ItemPurpose, type PurposeUse, type TaggedItem } from './types'
 
 export const ITEM_PHOTO_BUCKET = 'item-photos'
 
@@ -56,7 +56,24 @@ export interface DonationPlan {
   size?: string | null
   use_by?: string | null
   dropoff_id?: string | null
+  /** Update 47: its use from OHRR's list, how it came in, and what was paid where. */
+  purpose?: string | null
+  source?: 'donation' | 'purchase'
+  cost_cents?: number | null
+  bought_from?: string | null
 }
+
+/** The update 47 keys of a plan, to drop when the database doesn't have it yet. */
+const RECEIVING_KEYS = ['purpose', 'source', 'cost_cents', 'bought_from'] as const
+
+/** Sent receiving details (update 47) but the item came back without them: not run yet. */
+function receivingSkipped(plan: DonationPlan | null, item: TaggedItem): boolean {
+  if (!plan || 'source' in item) return false
+  return RECEIVING_KEYS.some((k) => plan[k] != null && plan[k] !== '' && plan[k] !== 'donation')
+}
+
+/** Before update 47 'event' is not a place: keep the rest of the plan. */
+const isUnknownPlace = (e: { message?: string } | null) => /unknown place|headed_for_check/i.test(e?.message ?? '')
 
 const isMissingRpc = (e: { code?: string; message?: string } | null) =>
   e?.code === 'PGRST202' || /could not find the function/i.test(e?.message ?? '')
@@ -85,11 +102,14 @@ export async function catalogNewItem(orgId: string, input: CatalogInput): Promis
   const plan = input.plan && Object.values(input.plan).some((v) => v != null && v !== '' && v !== 'each') ? input.plan : null
   // Newest first: with the plan (update 40), then without it (39), then the bare call (36).
   if (plan) {
-    const withPlan = await supabase.rpc('catalog_new_item', { ...base, ...extras, p_plan: plan as unknown as Json })
+    let withPlan = await supabase.rpc('catalog_new_item', { ...base, ...extras, p_plan: plan as unknown as Json })
+    if (withPlan.error && plan.headed_for === 'event' && isUnknownPlace(withPlan.error)) {
+      withPlan = await supabase.rpc('catalog_new_item', { ...base, ...extras, p_plan: { ...plan, headed_for: null } as unknown as Json })
+    }
     if (!withPlan.error) {
       const item = asItem(withPlan.data)
       if (!item) throw new Error('Saved, but the item could not be read back.')
-      return item
+      return receivingSkipped(plan, item) ? { ...item, receiving_skipped: true } : item
     }
     if (!isMissingRpc(withPlan.error)) throw withPlan.error
   }
@@ -144,7 +164,14 @@ async function rpc40<T>(fn: Fn40, args: Record<string, unknown>): Promise<T> {
 
 /** Headed for, value each/all, size, use-by, drop-off — only the keys given. */
 export async function setDonationPlan(orgId: string, code: string, plan: DonationPlan): Promise<TaggedItem | null> {
-  return asItem(await rpc40('set_donation_plan', { p_org: orgId, p_code: code, p_plan: plan }))
+  let item: TaggedItem | null
+  try {
+    item = asItem(await rpc40('set_donation_plan', { p_org: orgId, p_code: code, p_plan: plan }))
+  } catch (err) {
+    if (plan.headed_for !== 'event' || !isUnknownPlace(err as { message?: string })) throw err
+    item = asItem(await rpc40('set_donation_plan', { p_org: orgId, p_code: code, p_plan: { ...plan, headed_for: null } }))
+  }
+  return item && receivingSkipped(plan, item) ? { ...item, receiving_skipped: true } : item
 }
 
 /** Used for the rabbits, passed on / not usable, or null to undo (also takes it out of a basket). */
@@ -270,13 +297,61 @@ export async function setItemExtras(orgId: string, code: string, x: { condition?
   return asItem(data)
 }
 
-/** Places and categories typed lately, for one-tap chips (empty before update 39). */
-export async function catalogSuggestions(orgId: string): Promise<{ locations: string[]; categories: string[] }> {
+export interface CatalogSuggestions {
+  locations: string[]
+  categories: string[]
+  /** Update 47: stores typed before, and Hop Shop suppliers. */
+  stores: string[]
+}
+
+/** Places, categories and stores used lately, for the drop-downs (empty before update 39). */
+export async function catalogSuggestions(orgId: string): Promise<CatalogSuggestions> {
   const { data, error } = await supabase.rpc('catalog_suggestions', { p_org: orgId })
-  if (error || !data || typeof data !== 'object') return { locations: [], categories: [] }
-  const d = data as { locations?: unknown; categories?: unknown }
+  if (error || !data || typeof data !== 'object') return { locations: [], categories: [], stores: [] }
+  const d = data as { locations?: unknown; categories?: unknown; stores?: unknown }
   const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
-  return { locations: strings(d.locations), categories: strings(d.categories) }
+  return { locations: strings(d.locations), categories: strings(d.categories), stores: strings(d.stores) }
+}
+
+/* ------------------------------------------------------------- update 47 */
+
+type Fn47 = 'list_item_purposes' | 'save_item_purpose' | 'can_edit_item_purposes'
+
+async function rpc47(fn: Fn47, args: Record<string, unknown>) {
+  const call = supabase.rpc.bind(supabase) as unknown as (
+    fn: Fn47,
+    args: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>
+  return call(fn, args)
+}
+
+/** OHRR's list of uses; the five it started with until update 47 is run. */
+export async function listItemPurposes(orgId: string): Promise<{ purposes: ItemPurpose[]; ready: boolean }> {
+  const { data, error } = await rpc47('list_item_purposes', { p_org: orgId })
+  if (error || !Array.isArray(data)) return { purposes: DEFAULT_PURPOSES, ready: false }
+  return { purposes: data as ItemPurpose[], ready: true }
+}
+
+/** Admin 1 and up add to the list of uses (false before update 47). */
+export async function canEditItemPurposes(orgId: string): Promise<boolean> {
+  const { data, error } = await rpc47('can_edit_item_purposes', { p_org: orgId })
+  return !error && data === true
+}
+
+/** Add a use (id null), or rename one, change its kind, or hide it. */
+export async function saveItemPurpose(orgId: string, p: { id?: string | null; name: string; use: PurposeUse; is_active?: boolean }): Promise<ItemPurpose> {
+  const { data, error } = await rpc47('save_item_purpose', {
+    p_org: orgId,
+    p_id: p.id ?? null,
+    p_name: p.name.trim(),
+    p_use: p.use,
+    p_is_active: p.is_active ?? true,
+  })
+  if (error) {
+    if (isMissingRpc(error)) throw new Error('Adding to the list needs database update 47.')
+    throw new Error(error.message ?? 'Could not save the use')
+  }
+  return data as ItemPurpose
 }
 
 /** After printing labels: remember which are done (or undo with printed=false). */

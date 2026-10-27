@@ -6,7 +6,7 @@ import { Icon, type IconName } from '../../components/icons'
 import { itemPhotos } from './api'
 import PhotoGallery from '../../components/PhotoGallery'
 import { boxName } from './codes'
-import { KIND_META, extrasSummary, formatMoney, statusLabel, type TaggedItem } from './types'
+import { KIND_META, extrasSummary, formatMoney, kindLabel, statusLabel, type TaggedItem } from './types'
 
 type BigTone = 'orange' | 'blue' | 'outline' | 'plain' | 'danger'
 
@@ -167,7 +167,7 @@ export function ItemCard({ item, big = false }: { item: TaggedItem; big?: boolea
         <p className="font-display text-[22px] font-black leading-tight text-ink">{item.title}</p>
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px] text-slate-600">
           <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-bold ${tile}`}>
-            <Icon name={m.icon} size={15} /> {m.label}
+            <Icon name={m.icon} size={15} /> {kindLabel(item)}
           </span>
           <span className="font-semibold">{statusLabel(item)}</span>
         </p>

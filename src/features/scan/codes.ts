@@ -10,12 +10,15 @@
 // Boxes of items (update 46) carry BOX-00012, shown as "Box 12"; "box 12" reads
 // the same. Box numbers have 1–5 digits, so a SKU of a type called BOX
 // (BOX-101-001) still reads as a SKU.
+// Items OHRR bought (update 47) carry PUR-00001; they're kept with the
+// donations, so isDonationCode() is true for them too.
 import { APP_URL } from '../mybunny/ics'
 
 export const DON_PREFIX = 'DON-'
 export const BOX_PREFIX = 'BOX-'
+export const PUR_PREFIX = 'PUR-'
 
-const DON_RE = /^DON-[0-9]+$/
+const DON_RE = /^(DON|PUR)-[0-9]+$/
 const SKU_RE = /^[A-Z]{3}-[0-9]{3}-[0-9]{3,}$/
 const BOX_RE = /^BOX-[0-9]+$/
 
@@ -32,6 +35,8 @@ export function normalizeCode(raw: string): string {
   if (link) s = link[1]
   let m = s.match(/^\s*don[\s_-]*([0-9]{1,9})\s*$/i)
   if (m) return DON_PREFIX + pad(m[1], 5)
+  m = s.match(/^\s*pur[\s_-]*([0-9]{1,9})\s*$/i)
+  if (m) return PUR_PREFIX + pad(m[1], 5)
   m = s.match(/^\s*box[\s_-]*([0-9]{1,5})\s*$/i)
   if (m) return BOX_PREFIX + pad(m[1], 5)
   m = s.match(/^\s*([A-Za-z]{3})[\s_-]+([0-9]{1,3})[\s_-]+([0-9]{1,6})\s*$/)
@@ -42,7 +47,7 @@ export function normalizeCode(raw: string): string {
   return s
 }
 
-/** DON-00042: a donation, or the auction or raffle item it became. */
+/** DON-00042: a donation, or the auction or raffle item it became; PUR-00007: an item OHRR bought. */
 export function isDonationCode(code: string): boolean {
   return DON_RE.test(code)
 }

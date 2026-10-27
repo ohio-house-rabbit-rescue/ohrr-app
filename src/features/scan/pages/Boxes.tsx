@@ -3,7 +3,7 @@
 // labels not printed yet wait at the top, to print all at once when the
 // 4 × 6 roll is in (Receive into boxes leaves them for the end of the sort).
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
@@ -20,6 +20,9 @@ export default function Boxes() {
   const { membership } = useAuth()
   const orgId = membership?.orgId ?? ''
   const navigate = useNavigate()
+  const location = useLocation()
+  // "Saved: Box 12 · Storage shed" after a box's details were saved.
+  const [saved] = useState<string | null>(() => (location.state as { saved?: string } | null)?.saved ?? null)
   const [boxes, setBoxes] = useState<Box[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -81,6 +84,12 @@ export default function Boxes() {
             Numbered boxes and what’s in them. Receive into boxes adds new items straight into a box; an empty box is for items that already have labels — scan them in. Scanning a box label opens the full list.
           </p>
         </div>
+
+        {saved && (
+          <div role="status" className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-base font-bold text-green-900">
+            <Icon name="check" size={20} /> Saved: {saved}
+          </div>
+        )}
 
         {waiting.length > 0 && <WaitingLabels orgId={orgId} boxes={waiting} setPrintImgs={setPrintImgs} onPrinted={() => setReload((n) => n + 1)} />}
 

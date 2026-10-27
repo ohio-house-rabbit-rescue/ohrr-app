@@ -2,6 +2,9 @@
 // remove one, or make another one the main photo (the one on labels, lists
 // and the public pages). Reached from Scan an item → Photo, the items list
 // and the Saved screen of Catalog donations (?code=DON-00042).
+// Each change saves straight away and says so; Done goes back to the item,
+// or to the Items list with "Saved: …" when it was opened from there
+// (?back=items).
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
@@ -19,9 +22,11 @@ export default function ItemPhotos() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const code = (params.get('code') ?? '').trim().toUpperCase()
+  const fromList = params.get('back') === 'items'
   const [item, setItem] = useState<TaggedItem | null | 'loading'>('loading')
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState<string | null>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
   const libraryRef = useRef<HTMLInputElement>(null)
 
@@ -47,8 +52,10 @@ export default function ItemPhotos() {
     if (!item || item === 'loading') return
     setBusy(doing)
     setError(null)
+    setSaved(null)
     try {
       setItem(await setItemPhotos(orgId, item.code, urls))
+      setSaved(doing === 'Removing the photo…' ? 'Photo removed. Saved.' : doing === 'Saving the order…' ? 'New order saved.' : 'Photo saved.')
     } catch (e) {
       setError(errMessage(e))
     } finally {
@@ -92,7 +99,12 @@ export default function ItemPhotos() {
     })()
   }
 
-  const back = () => navigate(code ? `/staff/scan?code=${encodeURIComponent(code)}` : '/staff/items')
+  const back = () => navigate(code ? `/staff/scan?code=${encodeURIComponent(code)}${fromList ? '&back=items' : ''}` : '/staff/items')
+  const done = () => {
+    if (!fromList) return back()
+    const it = item && item !== 'loading' ? item : null
+    navigate('/staff/items', { state: saved && it ? { saved: `photos of ${it.title} (${it.code})` } : null })
+  }
 
   if (!orgId) return null
 
@@ -114,8 +126,8 @@ export default function ItemPhotos() {
               <BigButton onClick={() => open('library')} disabled={full || !!busy || !item || item === 'loading'} tone="outline">
                 From my photos
               </BigButton>
-              <BigButton onClick={back} tone="plain" icon="check">
-                Done
+              <BigButton onClick={done} tone="plain" icon="check" disabled={!!busy}>
+                {fromList ? 'Done — back to the list' : 'Done'}
               </BigButton>
             </div>
           </div>
@@ -123,6 +135,11 @@ export default function ItemPhotos() {
       >
         <div className="space-y-4">
           <ErrorBox>{error}</ErrorBox>
+          {saved && !busy && (
+            <div role="status" className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-base font-bold text-green-900">
+              <Icon name="check" size={20} /> {saved}
+            </div>
+          )}
           {item === 'loading' ? (
             <Busy label="Finding the item…" />
           ) : !item ? (

@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase, errMessage } from '../../lib/supabase'
 import type { Json } from '../../lib/database.types'
-import { normalizeCode } from '../scan/codes'
+import { normalizeCode, skuParts } from '../scan/codes'
 import { readLocal, writeLocal } from './local'
 
 export interface CounterProduct {
@@ -25,8 +25,11 @@ export type PayMethod = 'cash' | 'card' | 'other'
 export interface SaleLine {
   product_id: string | null
   name: string
+  /** The label price for one. */
   price_cents: number
   qty: number
+  /** Update 47: what was charged for the whole line when the price was changed ("3 for $30"). */
+  line_cents?: number
 }
 
 export interface Sale {
@@ -38,7 +41,25 @@ export interface Sale {
   lines: SaleLine[]
 }
 
-export const saleTotal = (lines: SaleLine[]) => lines.reduce((n, l) => n + l.price_cents * l.qty, 0)
+/** What a line comes to: the changed price if there is one, else the label price times how many. */
+export const lineTotal = (l: SaleLine) => (typeof l.line_cents === 'number' ? l.line_cents : l.price_cents * l.qty)
+
+export const saleTotal = (lines: SaleLine[]) => lines.reduce((n, l) => n + lineTotal(l), 0)
+
+/**
+ * May this line's price be changed at the counter? OHRR (2026-10-27): "on
+ * items that we sell that are not a vendor item we need to be able to adjust
+ * the price". Anything typed in ("Something else"), an item with no SKU, or
+ * one from vendor 000 (donated, or OHRR's own) may; a vendor's item keeps its
+ * label price.
+ */
+export function canChangePrice(productId: string | null, products: CounterProduct[]): boolean {
+  if (!productId) return true
+  const sku = products.find((p) => p.id === productId)?.sku
+  if (!sku) return true
+  const parts = skuParts(sku)
+  return !parts || parts.vendor === '000'
+}
 
 const PRODUCTS_KEY = 'ohrr.counter.products.v1'
 const QUEUE_KEY = 'ohrr.counter.sales.v1'

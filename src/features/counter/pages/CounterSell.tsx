@@ -2,32 +2,53 @@
 // basket adds up; "Paid cash" or "Paid by card" records the sale and lowers
 // the stock. The money goes through the cash box or the card reader as it
 // always has. Works with no signal: the sale waits on the phone.
+// A line that isn't a vendor's item can have its price changed ("3 towels for
+// $30", update 47): for one, or for all of them.
 import { Suspense, lazy, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../../../components/icons'
 import { BigButton, BigInput, ErrorBox, MoneyInput, StepShell } from '../../scan/ScanUI'
 import { getDevice, money, newId, toCents } from '../local'
-import { findByCode, saleTotal, useTill, type CounterProduct, type PayMethod, type SaleLine } from '../sales'
+import { canChangePrice, findByCode, saleTotal, useTill, type CounterProduct, type PayMethod, type SaleLine } from '../sales'
 import { SyncPill, useCounterOrg } from '../CounterShell'
 
 const Scanner = lazy(() => import('../../scan/Scanner'))
 
 type Step = 'basket' | 'scan' | 'other' | 'pay' | 'done'
 
+/** A changed price: for one ('each', kept as the count changes) or for the whole line ('all'). */
+interface Adjust {
+  mode: 'each' | 'all'
+  cents: number
+}
+
+/** A basket line; the changed price stays on the screen and goes out as line_cents. */
+type BasketLine = SaleLine & { adjust?: Adjust }
+
+/** The line as it is sold: the changed price becomes line_cents. */
+function priced({ adjust, ...l }: BasketLine): SaleLine {
+  if (!adjust) return l
+  return { ...l, line_cents: adjust.mode === 'all' ? adjust.cents : adjust.cents * l.qty }
+}
+
+const dollars = (cents: number) => (cents / 100).toFixed(2)
+
 export default function CounterSell() {
   const navigate = useNavigate()
   const { orgId } = useCounterOrg()
   const till = useTill(orgId)
   const [step, setStep] = useState<Step>('basket')
-  const [lines, setLines] = useState<SaleLine[]>([])
+  const [lines, setLines] = useState<BasketLine[]>([])
   const [q, setQ] = useState('')
   const [note, setNote] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [other, setOther] = useState({ name: '', price: '' })
   const [given, setGiven] = useState('')
   const [last, setLast] = useState<{ total: number; method: PayMethod; change: number | null } | null>(null)
+  // The line whose price is being changed, and what's typed.
+  const [pricing, setPricing] = useState<{ i: number; price: string; mode: 'each' | 'all' } | null>(null)
 
-  const total = saleTotal(lines)
+  const total = saleTotal(lines.map(priced))
   const count = lines.reduce((n, l) => n + l.qty, 0)
 
   const shown = useMemo(() => {
@@ -41,18 +62,61 @@ export default function CounterSell() {
     return list.slice(0, 60)
   }, [q, till.products])
 
-  const add = (p: CounterProduct) => {
-    setLines((ls) => {
-      const i = ls.findIndex((l) => l.product_id === p.id)
-      if (i >= 0) return ls.map((l, j) => (j === i ? { ...l, qty: l.qty + 1 } : l))
-      return [...ls, { product_id: p.id, name: p.name, price_cents: p.price_cents, qty: 1 }]
-    })
-    setNote(`Added ${p.name}`)
-    setTimeout(() => setNote(null), 1500)
+  const flash = (text: string, ms = 1500) => {
+    setNote(text)
+    setTimeout(() => setNote(null), ms)
   }
 
-  const setQty = (i: number, qty: number) =>
-    setLines((ls) => (qty <= 0 ? ls.filter((_, j) => j !== i) : ls.map((l, j) => (j === i ? { ...l, qty } : l))))
+  /** A new count for a line. A price "for all" was for the old count, so it goes back to the label price. */
+  const recount = (l: BasketLine, qty: number): BasketLine => {
+    if (l.adjust?.mode !== 'all' || qty === l.qty) return { ...l, qty }
+    flash(`Price back to ${money(l.price_cents)} each — ${qty} now`, 3500)
+    return { ...l, qty, adjust: undefined }
+  }
+
+  const add = (p: CounterProduct) => {
+    const i = lines.findIndex((l) => l.product_id === p.id)
+    if (i >= 0) {
+      if (pricing?.i === i) setPricing(null)
+      setLines(lines.map((l, j) => (j === i ? recount(l, l.qty + 1) : l)))
+      if (lines[i].adjust?.mode === 'all') return
+    } else {
+      setLines([...lines, { product_id: p.id, name: p.name, price_cents: p.price_cents, qty: 1 }])
+    }
+    flash(`Added ${p.name}`)
+  }
+
+  const setQty = (i: number, qty: number) => {
+    if (pricing) setPricing(null)
+    if (qty <= 0) setLines(lines.filter((_, j) => j !== i))
+    else setLines(lines.map((l, j) => (j === i ? recount(l, qty) : l)))
+  }
+
+  const openPricing = (i: number) => {
+    const l = lines[i]
+    setPricing({ i, price: l.adjust ? dollars(l.adjust.cents) : '', mode: l.adjust?.mode ?? (l.qty > 1 ? 'all' : 'each') })
+  }
+
+  const usePrice = () => {
+    if (!pricing) return
+    const cents = toCents(pricing.price)
+    if (cents === null) return
+    setLines(lines.map((l, j) => (j === pricing.i ? { ...l, adjust: { mode: l.qty > 1 ? pricing.mode : 'each', cents } } : l)))
+    setPricing(null)
+  }
+
+  const labelPrice = (i: number) => {
+    setLines(lines.map((l, j) => (j === i ? { ...l, adjust: undefined } : l)))
+    setPricing(null)
+  }
+
+  /** "3 for $30.00 (was $45.00)", "$12.00 each (was $15.00) · $36.00", or "$15.00 each · $45.00". */
+  const lineText = (l: BasketLine) => {
+    const was = l.price_cents * l.qty
+    if (l.adjust?.mode === 'all') return `${l.qty} for ${money(l.adjust.cents)} (was ${money(was)})`
+    if (l.adjust) return `${money(l.adjust.cents)} each (was ${money(l.price_cents)}) · ${money(l.adjust.cents * l.qty)}`
+    return `${money(l.price_cents)} each · ${money(was)}`
+  }
 
   const onScan = (raw: string) => {
     const p = findByCode(raw, till.products)
@@ -66,11 +130,12 @@ export default function CounterSell() {
   }
 
   const pay = (method: PayMethod) => {
-    const sale = { id: newId(), sold_at: new Date().toISOString(), method, device: getDevice().name || 'Counter', lines }
+    const sale = { id: newId(), sold_at: new Date().toISOString(), method, device: getDevice().name || 'Counter', lines: lines.map(priced) }
     till.recordSale(sale)
     const g = toCents(given)
     setLast({ total, method, change: method === 'cash' && g !== null && g >= total ? g - total : null })
     setLines([])
+    setPricing(null)
     setGiven('')
     setStep('done')
   }
@@ -189,23 +254,76 @@ export default function CounterSell() {
 
         {lines.length > 0 && (
           <div className="divide-y divide-slate-100 rounded-2xl border-2 border-brand-orange/40 bg-white">
-            {lines.map((l, i) => (
-              <div key={`${l.product_id ?? 'x'}-${i}`} className="flex items-center gap-2 px-3 py-2">
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-bold text-ink">{l.name}</span>
-                  <span className="text-sm text-slate-500">
-                    {money(l.price_cents)} each · {money(l.price_cents * l.qty)}
-                  </span>
-                </span>
-                <button type="button" aria-label={`One fewer ${l.name}`} onClick={() => setQty(i, l.qty - 1)} className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
-                  <Icon name={l.qty === 1 ? 'trash' : 'minus'} size={20} />
-                </button>
-                <span className="w-7 text-center font-display text-lg font-black">{l.qty}</span>
-                <button type="button" aria-label={`One more ${l.name}`} onClick={() => setQty(i, l.qty + 1)} className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-blue text-white">
-                  <Icon name="plus" size={20} />
-                </button>
-              </div>
-            ))}
+            {lines.map((l, i) => {
+              const editing = pricing?.i === i ? pricing : null
+              const typed = editing ? toCents(editing.price) : null
+              return (
+                <div key={`${l.product_id ?? 'x'}-${i}`} className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-bold text-ink">{l.name}</span>
+                      <span className={`text-sm ${l.adjust ? 'font-bold text-brand-blue' : 'text-slate-500'}`}>{lineText(l)}</span>
+                    </span>
+                    <button type="button" aria-label={`One fewer ${l.name}`} onClick={() => setQty(i, l.qty - 1)} className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
+                      <Icon name={l.qty === 1 ? 'trash' : 'minus'} size={20} />
+                    </button>
+                    <span className="w-7 text-center font-display text-lg font-black">{l.qty}</span>
+                    <button type="button" aria-label={`One more ${l.name}`} onClick={() => setQty(i, l.qty + 1)} className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-blue text-white">
+                      <Icon name="plus" size={20} />
+                    </button>
+                  </div>
+                  {!editing && canChangePrice(l.product_id, till.products) && (
+                    <button type="button" onClick={() => openPricing(i)} className="min-h-[44px] text-[15px] font-bold text-brand-blue">
+                      Change price
+                    </button>
+                  )}
+                  {editing && (
+                    <div className="mt-2 space-y-3 rounded-2xl bg-slate-50 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="min-w-[9rem] flex-1">
+                          <MoneyInput value={editing.price} onChange={(v) => setPricing({ ...editing, price: v })} ariaLabel={`New price for ${l.name}`} autoFocus />
+                        </div>
+                        {l.qty > 1 && (
+                          <div className="inline-flex rounded-2xl border-2 border-slate-200 bg-white p-1" role="group" aria-label="The new price is for">
+                            {(['all', 'each'] as const).map((m) => (
+                              <button
+                                key={m}
+                                type="button"
+                                onClick={() => setPricing({ ...editing, mode: m })}
+                                aria-pressed={editing.mode === m}
+                                className={`min-h-[44px] rounded-xl px-4 text-[15px] font-bold transition ${editing.mode === m ? 'bg-brand-blue text-white' : 'text-slate-600'}`}
+                              >
+                                {m === 'all' ? `For all ${l.qty}` : 'Each'}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {typed !== null && (
+                        <p className="text-[15px] font-bold text-slate-600">
+                          {l.qty > 1 && editing.mode === 'all'
+                            ? `${l.qty} for ${money(typed)} (was ${money(l.price_cents * l.qty)})`
+                            : `${money(typed)} each${l.qty > 1 ? ` · ${money(typed * l.qty)}` : ''} (was ${money(l.price_cents)})`}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={usePrice}
+                          disabled={typed === null}
+                          className="min-h-[44px] rounded-xl bg-brand-blue px-4 text-[15px] font-bold text-white disabled:opacity-40"
+                        >
+                          Use this price
+                        </button>
+                        <button type="button" onClick={() => labelPrice(i)} className="min-h-[44px] rounded-xl border-2 border-slate-200 bg-white px-4 text-[15px] font-bold text-slate-600">
+                          Back to {money(l.price_cents)} each
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
 

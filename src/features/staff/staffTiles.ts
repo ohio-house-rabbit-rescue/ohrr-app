@@ -94,7 +94,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       { to: '/staff/inbox', title: 'Inbox', hint: newCount > 0 ? `${newCount} new waiting` : 'Appointments, sign-ups, messages', icon: 'mail', today: true, badge: newCount, show: can('inbox.manage') },
 
       // Items and Hop Shop
-      { to: '/staff/catalog', title: 'Add a donation', hint: 'Photo, name, how many, value', icon: 'camera', group: 'items', show: canItems },
+      { to: '/staff/catalog', title: 'Receive items', hint: 'Donated or bought: photo, name, where kept, its use', icon: 'camera', group: 'items', show: canItems },
       { to: '/staff/catalog?box=1', title: 'Receive into boxes', hint: 'Add each item, its label, into a numbered box', icon: 'box', group: 'items', show: canItems },
       { to: '/staff/items', title: 'Items', hint: 'Donations to sort, baskets, auction and raffle', icon: 'box', group: 'items', show: canItems },
       { to: '/staff/hopshop', title: 'Hop Shop inventory', hint: 'What the shop carries, stock, reorder', icon: 'store', group: 'items', show: canSeeHopShop },

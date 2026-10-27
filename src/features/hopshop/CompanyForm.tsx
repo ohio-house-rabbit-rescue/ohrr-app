@@ -260,7 +260,7 @@ export function CompanyForm({
     setBusy(true)
     setError(null)
     try {
-      if (!d.is_supplier && !d.is_vendor) throw new Error('Tick Supplier, Vendor, or both.')
+      if (!d.is_supplier && !d.is_vendor) throw new Error('Tick “We buy from them”, “Sells at our events”, or both.')
       const extras: CompanyExtras | null = ready
         ? {
             photo_url: d.photo_url,
@@ -358,11 +358,11 @@ export function CompanyForm({
           <div className="grid grid-cols-2 gap-2">
             <label className="flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700">
               <input type="checkbox" className="h-5 w-5 rounded border-slate-300 text-brand-blue" checked={d.is_supplier} onChange={(e) => setD({ ...d, is_supplier: e.target.checked })} />
-              Supplier — we buy from them
+              We buy from them
             </label>
             <label className="flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700">
               <input type="checkbox" className="h-5 w-5 rounded border-slate-300 text-brand-orange" checked={d.is_vendor} onChange={(e) => setD({ ...d, is_vendor: e.target.checked })} />
-              Vendor — sells at BunFest
+              Sells at our events
             </label>
           </div>
         )}

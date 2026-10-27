@@ -8,9 +8,14 @@
 //
 // "Spreadsheet with photos" (2026-10-24): what the list shows, as an Excel file
 // with a picture in each row, to email from the phone or save; or a CSV.
+//
+// An item opened from here carries ?back=items: once its edit is saved the
+// scan flow comes back here with "Saved: …" at the top, and the list opens
+// on the same tab, filter and search it was left on (kept for this visit).
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
+import { PERMISSION_CATALOG } from '../../../lib/capabilities'
 import { errMessage } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
 import { Screen } from '../../../components/ui'
@@ -54,7 +59,40 @@ const subMatch = (i: TaggedItem, sub: Sub): boolean => {
   return i.headed_for === sub
 }
 
-const PLACE: Record<HeadedFor, string> = { raffle: 'the raffle', auction: 'the Silent Auction', shop: 'the Hop Shop', rabbits: 'the rabbits' }
+// The tab, sub tab and search this visit was on, so coming back from an item
+// opens the same list.
+const VIEW_KEY = 'ohrr.items.view.v1'
+interface View {
+  filter: Filter
+  sub: Sub
+  q: string
+}
+
+function loadView(): View {
+  const fallback: View = { filter: 'donation', sub: 'waiting', q: '' }
+  try {
+    const v = JSON.parse(sessionStorage.getItem(VIEW_KEY) ?? 'null') as Partial<View> | null
+    if (!v) return fallback
+    const filters: Filter[] = ['donation', 'event', ...ITEM_KINDS, 'all']
+    return {
+      filter: filters.includes(v.filter as Filter) ? (v.filter as Filter) : fallback.filter,
+      sub: SUBS.some((x) => x.key === v.sub) ? (v.sub as Sub) : fallback.sub,
+      q: typeof v.q === 'string' ? v.q : '',
+    }
+  } catch {
+    return fallback
+  }
+}
+
+function saveView(v: View) {
+  try {
+    sessionStorage.setItem(VIEW_KEY, JSON.stringify(v))
+  } catch {
+    /* private mode */
+  }
+}
+
+const PLACE: Record<HeadedFor, string> = { raffle: 'the raffle', auction: 'the Silent Auction', shop: 'the Hop Shop', rabbits: 'our own use', event: 'the event' }
 
 // The spreadsheet's columns, the same as the website's Items download.
 const SHEET_COLUMNS: SheetColumn[] = [
@@ -65,6 +103,10 @@ const SHEET_COLUMNS: SheetColumn[] = [
   { header: 'Donated by', width: 22 },
   { header: 'Received', width: 13, kind: 'date' },
   { header: 'Headed for', width: 15 },
+  { header: 'What it’s for', width: 18 },
+  { header: 'Came in as', width: 12 },
+  { header: 'What we paid', width: 12, kind: 'money' },
+  { header: 'Bought from', width: 18 },
   { header: 'How many', width: 10, kind: 'number' },
   { header: 'Size', width: 12 },
   { header: 'Value each', width: 12, kind: 'money' },
@@ -91,6 +133,10 @@ function sheetRow(i: TaggedItem): SheetRow {
       i.donated_by,
       i.received_on,
       headedLabel(i.headed_for),
+      i.purpose ?? null,
+      i.kind === 'donation' ? (i.source === 'purchase' ? 'Bought' : 'Donation') : null,
+      i.cost_cents ?? null,
+      i.bought_from ?? null,
       i.quantity,
       i.size,
       v.each,
@@ -109,15 +155,20 @@ function sheetRow(i: TaggedItem): SheetRow {
 
 export default function ItemsList() {
   const { membership, can } = useAuth()
+  const canSeeVendors = PERMISSION_CATALOG.some((p) => p.area === 'Hop Shop' && can(p.key))
   const orgId = membership?.orgId ?? ''
   const navigate = useNavigate()
+  const location = useLocation()
+  // "Saved: Stuffed bunny (DON-00012)" after an edit opened from this list.
+  const [saved] = useState<string | null>(() => (location.state as { saved?: string } | null)?.saved ?? null)
+  const [view] = useState(loadView)
   const [items, setItems] = useState<TaggedItem[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
   // Opens on the donations waiting to be sorted; stock is Hop Shop inventory's screen.
-  const [filter, setFilter] = useState<Filter>('donation')
-  const [sub, setSub] = useState<Sub>('waiting')
-  const [q, setQ] = useState('')
+  const [filter, setFilter] = useState<Filter>(view.filter)
+  const [sub, setSub] = useState<Sub>(view.sub)
+  const [q, setQ] = useState(view.q)
   const [busy, setBusy] = useState(false)
   // Basket mode: tick donations, name it, raffle or Silent Auction.
   const [picking, setPicking] = useState(false)
@@ -136,6 +187,14 @@ export default function ItemsList() {
   useEffect(() => {
     void load()
   }, [load])
+  useEffect(() => saveView({ filter, sub, q }), [filter, sub, q])
+  // Show the "Saved" line once: clear it from history so Back doesn't repeat it.
+  useEffect(() => {
+    if (!saved) return
+    window.scrollTo(0, 0)
+    navigate('.', { replace: true, state: null })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase()
@@ -149,7 +208,7 @@ export default function ItemsList() {
 
   const counts = useMemo(() => {
     const c: Record<Filter, number> = { all: 0, event: 0, auction: 0, raffle: 0, stock: 0, donation: 0 }
-    const s: Record<Sub, number> = { waiting: 0, unsure: 0, raffle: 0, auction: 0, shop: 0, rabbits: 0, done: 0 }
+    const s: Record<Sub, number> = { waiting: 0, unsure: 0, raffle: 0, auction: 0, event: 0, shop: 0, rabbits: 0, done: 0 }
     for (const i of items ?? []) {
       c.all++
       if (i.kind === 'donation') {
@@ -169,7 +228,7 @@ export default function ItemsList() {
     const n = counts.s[h]
     const ask =
       h === 'rabbits'
-        ? `Mark all ${n} as used for the rabbits?`
+        ? `Mark all ${n} as in use by OHRR?`
         : `Move all ${n} to ${PLACE[h]}?${h === 'shop' ? ' Ones without a price stay hidden from the shop until they’re priced in Hop Shop inventory.' : ''}`
     if (!window.confirm(ask)) return
     setBusy(true)
@@ -177,7 +236,7 @@ export default function ItemsList() {
     setNote(null)
     try {
       const moved = await sortHeadedDonations(orgId, h)
-      setNote(h === 'rabbits' ? `${moved} marked as used for the rabbits.` : `${moved} moved to ${PLACE[h]}.`)
+      setNote(h === 'rabbits' ? `${moved} marked as in use by OHRR.` : `${moved} moved to ${PLACE[h]}.`)
       await load()
     } catch (e) {
       setError(errMessage(e))
@@ -246,9 +305,15 @@ export default function ItemsList() {
         </p>
       </div>
 
+      {saved && (
+        <div role="status" className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-base font-bold text-green-900">
+          <Icon name="check" size={20} /> Saved: {saved}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <Link to="/staff/catalog" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-brand-orange font-display text-base font-extrabold text-ink shadow-sm">
-          <Icon name="camera" size={20} /> Add a donation
+          <Icon name="camera" size={20} /> Receive items
         </Link>
         <Link to="/staff/scan" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-brand-blue font-display text-base font-extrabold text-white shadow-sm">
           <Icon name="scan" size={20} /> Scan
@@ -265,6 +330,15 @@ export default function ItemsList() {
         <Link to="/staff/boxes" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white font-display text-base font-extrabold text-slate-600">
           <Icon name="box" size={20} /> Boxes
         </Link>
+        {/* Sponsor (2026-10-27): "where is the vendor potion for things tht we buy … i dont see it on the page of items and hop shop". */}
+        {canSeeVendors && (
+        <Link
+          to="/staff/hopshop/suppliers"
+          className="col-span-2 inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-2 text-center font-display text-base font-extrabold text-slate-600"
+        >
+          <Icon name="bag" size={20} /> Vendors — who we buy from, who sells at our events
+        </Link>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -312,7 +386,7 @@ export default function ItemsList() {
           {movable && (
             <div className="mt-3">
               <BigButton tone="orange" icon="check" disabled={busy} onClick={() => void moveAll(sub as HeadedFor)}>
-                {sub === 'rabbits' ? `Mark all ${counts.s.rabbits} as used for the rabbits` : `Move all ${counts.s[sub]} to ${PLACE[sub as HeadedFor]}`}
+                {sub === 'rabbits' ? `Mark all ${counts.s.rabbits} as in use by OHRR` : `Move all ${counts.s[sub]} to ${PLACE[sub as HeadedFor]}`}
               </BigButton>
             </div>
           )}
@@ -441,7 +515,7 @@ export default function ItemsList() {
                   {body}
                 </button>
               ) : (
-                <Link to={`/staff/scan?code=${encodeURIComponent(i.code)}`} className={`${row} border-slate-200 hover:border-slate-300`}>
+                <Link to={`/staff/scan?code=${encodeURIComponent(i.code)}&back=items`} className={`${row} border-slate-200 hover:border-slate-300`}>
                   {body}
                 </Link>
               )}
