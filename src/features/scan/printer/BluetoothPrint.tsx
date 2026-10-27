@@ -21,10 +21,12 @@ const OPTS_KEY = 'ohrr.labels.btOptions'
 interface BtOptions {
   darkness: Darkness
   plain: boolean
-  flip: boolean
+  /** Named "swap" since 2026-10-27, when 0 = black became the default: a phone
+   *  that ticked the old "flip" to fix its first print mustn't flip it back. */
+  swap: boolean
   anyName: boolean
 }
-const DEFAULTS: BtOptions = { darkness: 'normal', plain: false, flip: false, anyName: false }
+const DEFAULTS: BtOptions = { darkness: 'normal', plain: false, swap: false, anyName: false }
 
 function loadOpts(): BtOptions {
   try {
@@ -117,7 +119,7 @@ export default function BluetoothPrint({
         const canvas = document.createElement('canvas')
         await renderLabel(canvas, l.item, size, PRINTER_DPI)
         const dither = size.hIn >= 3 && !!l.item.photo_url
-        const job = buildJob(toRaster(canvas, { flip: opts.flip, dither }), { copies: l.copies, darkness: opts.darkness, plain: opts.plain, flip: opts.flip, dither })
+        const job = buildJob(toRaster(canvas, { flip: opts.swap, dither }), { copies: l.copies, darkness: opts.darkness, plain: opts.plain, flip: opts.swap, dither })
         await sendJob(job, (f) => setBusy(`${at}: sending ${Math.round(f * 100)}%`))
         sent += l.copies
       }
@@ -166,7 +168,7 @@ export default function BluetoothPrint({
             <span>Nothing prints, or it prints noise — send the picture in plain mode</span>
           </label>
           <label className={check}>
-            <input type="checkbox" checked={opts.flip} onChange={(e) => save({ flip: e.target.checked })} className="mt-0.5 h-6 w-6 shrink-0 accent-brand-blue" />
+            <input type="checkbox" checked={opts.swap} onChange={(e) => save({ swap: e.target.checked })} className="mt-0.5 h-6 w-6 shrink-0 accent-brand-blue" />
             <span>Black and white come out swapped — flip them</span>
           </label>
           <label className={check}>
