@@ -53,7 +53,7 @@ interface Row {
   key: string
   code: string
   title: string
-  /** The grey line under the name. */
+  /** The gray line under the name. */
   sub: string
   photo_url: string | null
   icon: IconName

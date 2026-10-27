@@ -362,7 +362,7 @@ async function renderAuctionLabel(canvas: HTMLCanvasElement, item: LabelItem, a:
   }
 
   // QR on the left with what it offers under it — or, on a tall label, the QR
-  // centred on top and the words full width below it.
+  // centered on top and the words full width below it.
   const stack = H >= W * 0.9
   const bodyH = H - top - m
   // A label under about 1 in of body has no room for the words; the QR still works.
