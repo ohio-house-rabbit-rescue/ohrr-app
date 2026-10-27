@@ -197,9 +197,47 @@ const forSilentAuction = (d: Pick<Draft, 'headedFor' | 'purpose'>) => d.headedFo
  * they are the parts of step 1 (OHRR 2026-10-27: "under number one being
  * received, then it would be subset ABCDE so that we can tell the difference").
  */
+const PartBadge = ({ n }: { n: string }) => (
+  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 border-brand-blue font-display text-sm font-black text-brand-blue">
+    {n}
+  </span>
+)
+
+/**
+ * "How it works" for receiving, with the same letter badges as the parts on
+ * the screen (OHRR 2026-10-27: "so that people can correlate the two").
+ */
+function ReceiveParts({ firstScreen = false }: { firstScreen?: boolean }) {
+  const rows: [string, string, string][] = [
+    ['A', 'How it came in', firstScreen ? 'on this screen, once for the whole bag: a donation (who it’s from) or something we bought (where).' : 'answered on the first screen, once for the bag. Back to change it.'],
+    ['B', 'Photos', ''],
+    ['C', 'What it is', 'the name, how many, and its value or what we paid.'],
+    ['D', 'Where it’s kept', 'needed before Save.'],
+    ['E', 'More details', 'only if you know them.'],
+    ['F', 'What it’s for', 'only if you know it. Otherwise it’s sorted later from Items.'],
+  ]
+  return (
+    <>
+      <p>Receiving is step 1 of 5. A is answered once for the whole bag; B to F are for each item.</p>
+      <ul className="space-y-1.5">
+        {rows.map(([n, name, line]) => (
+          <li key={n} className="flex items-start gap-2">
+            <PartBadge n={n} />
+            <span className="pt-0.5">
+              <span className="font-bold text-ink">{name}</span>
+              {line ? ` — ${line}` : ''}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p>Save, and printing its label is step 2.</p>
+    </>
+  )
+}
+
 const Part = ({ n, children, hint }: { n: string; children: string; hint?: string }) => (
   <p className="flex items-center gap-2 border-b border-slate-200 pb-1 font-display text-base font-black uppercase tracking-wide text-slate-500">
-    <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border-2 border-brand-blue text-sm text-brand-blue">{n}</span>
+    <PartBadge n={n} />
     {children}
     {hint && <span className="font-sans text-sm font-bold normal-case tracking-normal text-slate-400">{hint}</span>}
   </p>
@@ -748,7 +786,7 @@ export default function CatalogFlow() {
         explain={
           wantsBoxes
             ? 'For sorting items nobody wrote down — no donor needed. Start a box, say where it will be kept and write its number on it. Add each item, print its label, put it in the box. Tap Box is full, then start the next one.'
-            : 'Receiving is step 1 of 5. A, on this screen, once for the whole bag: a donation (who it’s from) or something we bought (where). Then for each item: B photos, C what it is, D where it’s kept, E more details and F what it’s for — E and F only if you know them. Save, and printing its label is step 2.'
+            : <ReceiveParts firstScreen />
         }
         // OHRR 2026-10-27: the A–F line isn't needed here; the lettered parts down the screens show the order.
         flow={wantsBoxes ? BOX_PARTS : undefined}
@@ -1164,7 +1202,7 @@ export default function CatalogFlow() {
             .filter(Boolean)
             .join(' ') || undefined
         }
-        explain="How it came in (A) was answered on the first screen, once for the bag — Back to change it. For this item: B photos, C what it is, D where it’s kept, then Save. E more details and F what it’s for only if you know them; both can be added later from Items."
+        explain={<ReceiveParts />}
         explainLabel="How this goes"
         onBack={() => setStep('start')}
         backLabel="Back"
