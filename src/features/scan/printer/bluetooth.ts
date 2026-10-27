@@ -1,4 +1,5 @@
-// Printing labels straight to OHRR's Bluetooth label printer (PM-344-WF).
+// Printing labels straight to OHRR's Bluetooth label printer (Phomemo PM-249-WF;
+// first reported as a PM-344-WF, which speaks exactly the same way).
 //
 // One code path everywhere, through @capacitor-community/bluetooth-le:
 //   Android and iPhone apps   the phone's own Bluetooth (the printer is picked

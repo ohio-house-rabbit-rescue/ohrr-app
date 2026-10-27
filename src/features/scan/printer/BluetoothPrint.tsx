@@ -1,5 +1,5 @@
 // "Print by Bluetooth" on the labels pages (2026-10-23, sponsor: "I think we
-// need a Bluetooth connection not wifi" — OHRR's Omezizy PM-344-WF). Each label
+// need a Bluetooth connection not wifi" — OHRR's Phomemo PM-249-WF). Each label
 // is painted at the printer's 203 dpi and sent straight to it; no printer app
 // in between. The first tap asks which printer to use; the apps remember it.
 //

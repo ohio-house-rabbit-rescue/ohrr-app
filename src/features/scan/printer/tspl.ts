@@ -1,10 +1,11 @@
-// The print job for OHRR's Bluetooth label printer (Omezizy / Phomemo PM-344-WF,
-// 4 in shipping-label printer, 203 dpi). It speaks a TSPL dialect: a few text
+// The print job for OHRR's Bluetooth label printer (Phomemo PM-249-WF, 4 in
+// shipping-label printer, 203 dpi; the driver puts it in the same "tspl-l3"
+// group as the PM-344-WF it was first taken for — same commands, same bytes). It speaks a TSPL dialect: a few text
 // commands, then the label as a 1-bit picture.
 //
 // What the printer expects (from the open-source "labelife" driver,
 // github.com/thermal-label/labelife, MIT licence, (c) 2026 Mannes Brak — its
-// PM-344-WF profile is marked untested, so the plain mode and the flip below
+// PM-249-WF and PM-344-WF profiles are marked untested, so the plain mode and the flip below
 // are there in case the first try comes out blank or reversed):
 //
 //   \r\n DENSITY n \r\n REFERENCE 0,0 \r\n OFFSET 0 mm \r\n

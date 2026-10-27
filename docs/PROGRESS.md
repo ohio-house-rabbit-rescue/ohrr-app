@@ -100,6 +100,10 @@
   - Checked: the job round-trips through the driver's own LZO decoder; in the browser against a stand-in printer
     (chooser filter PM-, two jobs PRINT 1,2 / 1,1, 180-byte pieces, cancel quiet, 20-byte fallback + plain mode).
   - Android 0.4.1 vc8 builds in Drive `03 Mobile Builds/android`; 0.4.0 moved to `99 Archive/Android builds 0.4`.
+  - **Correction 2026-10-27:** the sponsor's printer is the **Phomemo PM-249-WF** (Labelife), not a PM-344-WF. The
+    driver puts both in the same `tspl-l3` group (BLE service FF00, write FF02, BITMAP mode 4, `PRINT ...
+`),
+    so the job is byte-for-byte the same; it names itself `PM-249-WF`, which the PM- filter already finds. Comments fixed.
   - Commits: app `ebc8da5` (+ merge `f6fa6dc`, cap sync `a94a27b`).
 
 - **Bunny bonding + installing on a phone, 2026-10-20 (v0.4.0 · rev 7).**
