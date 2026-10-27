@@ -6,14 +6,15 @@
 // staff. Any other code — or a code that isn't a published auction item, or a
 // database without update 35 yet — hands to the staff scan flow; the staff
 // route guard sends people to sign in first if needed and they land back here
-// afterwards via the ?code= query.
+// afterwards via the ?code= query. A box label (BOX-00012, update 46) opens
+// the box's page for staff.
 import { useEffect, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase'
 import { useAuth } from '../../../lib/auth'
 import { fetchItemByCode } from '../../auction/client'
 import { auctionEventFor } from '../../auction/event'
-import { isSku, normalizeCode } from '../codes'
+import { isBoxCode, isSku, normalizeCode } from '../codes'
 
 export default function TagLanding() {
   const { code = '' } = useParams()
@@ -23,6 +24,10 @@ export default function TagLanding() {
   useEffect(() => {
     let alive = true
     const staff = `/staff/scan?code=${encodeURIComponent(code)}`
+    if (isBoxCode(normalizeCode(code))) {
+      setTo(`/staff/boxes/${normalizeCode(code)}`)
+      return
+    }
     if (isSku(normalizeCode(code))) {
       // Wait to know who's looking: staff get the item, shoppers the shop.
       if (!loading) setTo(membership ? staff : '/hop-shop')

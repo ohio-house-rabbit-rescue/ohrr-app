@@ -141,7 +141,7 @@ function itemRow(i: TaggedItem, auction?: AuctionLabel): Row {
     key: i.tag_id,
     code: i.code,
     title: i.title,
-    sub: `${i.donated_by ? `From ${i.donated_by} · ` : ''}${KIND_META[i.kind].label}`,
+    sub: `${i.donated_by ? `Gift of ${i.donated_by} · ` : ''}${KIND_META[i.kind].label}`,
     photo_url: i.photo_url,
     icon: KIND_META[i.kind].icon,
     quantity: i.quantity,
@@ -250,6 +250,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
           setPicked((p) => {
             const gone = done.filter((c) => p.has(c))
             if (gone.length === 0) return p
+            setLastMarked([])
             setNote(`${plural(gone.length)} you had ticked ${gone.length === 1 ? 'was' : 'were'} printed by someone else, so ${gone.length === 1 ? 'it is' : 'they are'} unticked.`)
             return new Set([...p].filter((c) => !gone.includes(c)))
           })

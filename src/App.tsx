@@ -114,6 +114,8 @@ const DropoffDetail = lazy(() => import('./features/scan/pages/DropoffDetail'))
 const DonationsReport = lazy(() => import('./features/scan/pages/DonationsReport'))
 const CatalogFlow = lazy(() => import('./features/scan/pages/CatalogFlow'))
 const PrintLabels = lazy(() => import('./features/scan/pages/PrintLabels'))
+const Boxes = lazy(() => import('./features/scan/pages/Boxes'))
+const BoxDetail = lazy(() => import('./features/scan/pages/BoxDetail'))
 const ReceiveDelivery = lazy(() => import('./features/hopshop/ReceiveDelivery'))
 const Deliveries = lazy(() => import('./features/hopshop/DeliveriesPage'))
 const ItemPhotos = lazy(() => import('./features/scan/pages/ItemPhotos'))
@@ -369,6 +371,8 @@ export default function App() {
           <Route path="items/photos" element={<Suspense fallback={null}><ItemPhotos /></Suspense>} />
           <Route path="catalog" element={<Suspense fallback={null}><CatalogFlow /></Suspense>} />
           <Route path="labels" element={<Suspense fallback={null}><PrintLabels key="items" /></Suspense>} />
+          <Route path="boxes" element={<Suspense fallback={null}><Boxes /></Suspense>} />
+          <Route path="boxes/:code" element={<Suspense fallback={null}><BoxDetail /></Suspense>} />
         </Route>
       </Route>
 

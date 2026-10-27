@@ -15,7 +15,7 @@ import { Icon } from '../../../components/icons'
 import { isNative } from '../../../native/platform'
 import { pickPhoto, type PhotoSource } from '../../../native/camera'
 import Scanner from '../Scanner'
-import { normalizeCode, isRetailBarcode, isOhrrCode } from '../codes'
+import { normalizeCode, isRetailBarcode, isOhrrCode, isBoxCode } from '../codes'
 import { guessProduct, guessTitle, type ProductGuess } from '../lookup'
 import {
   adjustStock,
@@ -124,6 +124,11 @@ export default function ScanFlow() {
         setStep('scan')
         return
       }
+      // A box label opens the box (update 46).
+      if (isBoxCode(code)) {
+        navigate(`/staff/boxes/${code}`)
+        return
+      }
       setError(null)
       setStep('lookup')
       try {
@@ -156,7 +161,7 @@ export default function ScanFlow() {
         setStep('scan')
       }
     },
-    [orgId, askNewKind],
+    [orgId, askNewKind, navigate],
   )
 
   // Arrived from a tag URL (/t/XXXXX) or the items list (?code=).

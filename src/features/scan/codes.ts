@@ -7,12 +7,17 @@
 // opens the item too. The database reads codes the same way
 // (normalize_item_code), so any spelling matches: "don 42" is DON-00042 and
 // "hay-101-1" is HAY-101-001.
+// Boxes of items (update 46) carry BOX-00012, shown as "Box 12"; "box 12" reads
+// the same. Box numbers have 1–5 digits, so a SKU of a type called BOX
+// (BOX-101-001) still reads as a SKU.
 import { APP_URL } from '../mybunny/ics'
 
 export const DON_PREFIX = 'DON-'
+export const BOX_PREFIX = 'BOX-'
 
 const DON_RE = /^DON-[0-9]+$/
 const SKU_RE = /^[A-Z]{3}-[0-9]{3}-[0-9]{3,}$/
+const BOX_RE = /^BOX-[0-9]+$/
 
 /** "42" → "00042" (never cuts a longer number). */
 function pad(digits: string, width: number): string {
@@ -27,6 +32,8 @@ export function normalizeCode(raw: string): string {
   if (link) s = link[1]
   let m = s.match(/^\s*don[\s_-]*([0-9]{1,9})\s*$/i)
   if (m) return DON_PREFIX + pad(m[1], 5)
+  m = s.match(/^\s*box[\s_-]*([0-9]{1,5})\s*$/i)
+  if (m) return BOX_PREFIX + pad(m[1], 5)
   m = s.match(/^\s*([A-Za-z]{3})[\s_-]+([0-9]{1,3})[\s_-]+([0-9]{1,6})\s*$/)
   if (m) return `${m[1].toUpperCase()}-${pad(m[2], 3)}-${pad(m[3], 3)}`
   s = s.toUpperCase().replace(/[^A-Z0-9]/g, '')
@@ -38,6 +45,16 @@ export function normalizeCode(raw: string): string {
 /** DON-00042: a donation, or the auction or raffle item it became. */
 export function isDonationCode(code: string): boolean {
   return DON_RE.test(code)
+}
+
+/** BOX-00012: a box of items (update 46). */
+export function isBoxCode(code: string): boolean {
+  return BOX_RE.test(code)
+}
+
+/** BOX-00012 → "Box 12". */
+export function boxName(code: string): string {
+  return isBoxCode(code) ? `Box ${parseInt(code.slice(BOX_PREFIX.length), 10)}` : code
 }
 
 /** HAY-101-001: a Hop Shop product. */
