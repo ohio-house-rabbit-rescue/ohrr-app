@@ -14,7 +14,7 @@
 // Everything from update 27 (photo, socials, paperwork, the two lists) hides
 // until that SQL has been run; the older fields keep working either way.
 import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
-import { pill } from '../../components/StaffJob'
+import { EditorForm, Part, pill } from '../../components/StaffJob'
 import { errMessage } from '../../lib/supabase'
 import { btn } from '../../components/ui'
 import { Icon } from '../../components/icons'
@@ -59,8 +59,6 @@ const label = 'block text-sm font-semibold text-slate-700'
 const linkRow = 'mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm font-bold text-brand-blue'
 const smallBtn =
   'inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-slate-200 px-4 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-60'
-const dangerBtn =
-  'inline-flex min-h-[44px] items-center justify-center rounded-full border border-red-200 px-4 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-60'
 
 /** Is update 27 in? `null` while asking. */
 export function useVendorRecordsReady(): boolean | null {
@@ -75,17 +73,24 @@ export function useVendorRecordsReady(): boolean | null {
   return ready
 }
 
-function Section({ title, hint, children }: { title: string; hint?: ReactNode; children: ReactNode }) {
+/** One lettered part of the card (A, B, C … in the order they show, since some parts only apply to vendors or suppliers). */
+function Section({ n, title, needed = false, hint, children }: { n?: string; title: string; needed?: boolean; hint?: ReactNode; children: ReactNode }) {
   return (
     <section className="space-y-3 border-t border-slate-100 pt-3">
-      <div>
+      {n ? (
+        <Part n={n} hint={needed ? 'needed' : 'optional'}>
+          {title}
+        </Part>
+      ) : (
         <h4 className="font-display text-[15px] font-extrabold text-ink">{title}</h4>
-        {hint && <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{hint}</p>}
-      </div>
+      )}
+      {hint && <p className="text-xs leading-relaxed text-slate-500">{hint}</p>}
       {children}
     </section>
   )
 }
+
+const PART_LETTERS = 'ABCDEFGHIJKLM'
 
 /* ================================================================ list row */
 
@@ -232,7 +237,6 @@ export function CompanyForm({
   const [d, setD] = useState<Draft>(() => draftFrom(initial, mode))
   const [busy, setBusy] = useState(false)
   const [photoBusy, setPhotoBusy] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const txt = (k: keyof Draft) => (e: { target: { value: string } }) => setD((x) => ({ ...x, [k]: e.target.value }))
   const nul = (s: string) => s.trim() || null
@@ -256,8 +260,7 @@ export function CompanyForm({
     }
   }
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
+  const submit = async () => {
     setBusy(true)
     setError(null)
     try {
@@ -348,29 +351,48 @@ export function CompanyForm({
     ['Facebook', ready ? facebookUrl(d.facebook) : null],
   ].filter((l): l is [string, string] => !!l[1])
 
+  // Parts are lettered in the order they show; some only apply to vendors or suppliers.
+  let li = 0
+  const L = () => PART_LETTERS[li++]
+  const what = bunfest ? 'vendor' : 'supplier'
+
   return (
     <div className="space-y-3">
-      <form onSubmit={submit} className="space-y-3">
-        <label className={label}>
-          Company
-          <input className={staffInput} required value={d.name} onChange={txt('name')} placeholder={bunfest ? 'Bunny Brook Designs' : 'Small Pet Select'} />
-        </label>
-        {!bunfest && (
-          <div className="grid grid-cols-2 gap-2">
-            <label className="flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700">
-              <input type="checkbox" className="h-5 w-5 rounded border-slate-300 text-brand-blue" checked={d.is_supplier} onChange={(e) => setD({ ...d, is_supplier: e.target.checked })} />
-              We buy from them
-            </label>
-            <label className="flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700">
-              <input type="checkbox" className="h-5 w-5 rounded border-slate-300 text-brand-orange" checked={d.is_vendor} onChange={(e) => setD({ ...d, is_vendor: e.target.checked })} />
-              Sells at our events
-            </label>
-          </div>
-        )}
+      <EditorForm
+        title={initial ? initial.name : bunfest ? 'New vendor' : 'New supplier'}
+        hint={`Fill in A; the rest can come later. One Save keeps all of it.`}
+        onSubmit={submit}
+        onCancel={onCancel}
+        busy={busy || photoBusy}
+        canSave={d.name.trim().length > 0}
+        error={error}
+        remove={initial && canDelete && onDelete ? { label: 'Delete', confirm: `Delete ${initial.name}? This takes the ${what} off the list.`, onRemove: doDelete } : undefined}
+      >
+        <div className="space-y-3">
+          <Part n={L()} hint="needed">
+            Who they are
+          </Part>
+          <label className={label}>
+            Company
+            <input className={staffInput} required value={d.name} onChange={txt('name')} placeholder={bunfest ? 'Bunny Brook Designs' : 'Small Pet Select'} />
+          </label>
+          {!bunfest && (
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700">
+                <input type="checkbox" className="h-5 w-5 rounded border-slate-300 text-brand-blue" checked={d.is_supplier} onChange={(e) => setD({ ...d, is_supplier: e.target.checked })} />
+                We buy from them
+              </label>
+              <label className="flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm font-semibold text-slate-700">
+                <input type="checkbox" className="h-5 w-5 rounded border-slate-300 text-brand-orange" checked={d.is_vendor} onChange={(e) => setD({ ...d, is_vendor: e.target.checked })} />
+                Sells at our events
+              </label>
+            </div>
+          )}
+        </div>
 
         {/* Photo */}
         {ready && (
-          <Section title="Photo" hint="Their booth, their products or their logo — for the team, not the website.">
+          <Section n={L()} title="Photo" hint="Their booth, their products or their logo — for the team, not the website.">
             <div className="flex items-center gap-3">
               <span className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-300">
                 {d.photo_url ? <img src={d.photo_url} alt="" className="h-full w-full object-cover" /> : <Icon name="camera" size={28} />}
@@ -392,7 +414,7 @@ export function CompanyForm({
         )}
 
         {/* Contact */}
-        <Section title="Contact">
+        <Section n={L()} title="Contact">
           <label className={label}>
             Contact person
             <input className={staffInput} value={d.contact_name} onChange={txt('contact_name')} autoComplete="off" />
@@ -416,7 +438,7 @@ export function CompanyForm({
         </Section>
 
         {/* Where */}
-        <Section title="Where">
+        <Section n={L()} title="Where">
           <label className={label}>
             Address
             <textarea className={staffInput} rows={2} value={d.address} onChange={txt('address')} />
@@ -430,7 +452,7 @@ export function CompanyForm({
         </Section>
 
         {/* Online */}
-        <Section title="Online">
+        <Section n={L()} title="Online">
           <label className={label}>
             {bunfest ? 'Website (visitors see this link)' : 'Website (ordering page if there is one)'}
             <input className={staffInput} inputMode="url" value={d.website} onChange={txt('website')} placeholder="bunnybrookdesigns.com" />
@@ -466,7 +488,7 @@ export function CompanyForm({
 
         {/* Paperwork */}
         {ready && (
-          <Section title="Paperwork">
+          <Section n={L()} title="Paperwork">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className={label}>
                 Vendor agreement signed on
@@ -497,6 +519,7 @@ export function CompanyForm({
         {/* At BunFest */}
         {d.is_vendor && (
           <Section
+            n={L()}
             title="At BunFest"
             hint={
               bunfest
@@ -542,7 +565,7 @@ export function CompanyForm({
 
         {/* How we order */}
         {d.is_supplier && !bunfest && (
-          <Section title="How we order">
+          <Section n={L()} title="How we order">
             <p className="text-sm text-slate-600">
               {initial?.vendor_no != null ? (
                 <>
@@ -589,7 +612,7 @@ export function CompanyForm({
 
         {/* Shipping: what it adds to an order, and when it's free */}
         {d.is_supplier && !bunfest && (
-          <Section title="Shipping" hint="Reorder adds it to each order’s total and says how much more makes shipping free.">
+          <Section n={L()} title="Shipping" hint="Reorder adds it to each order’s total and says how much more makes shipping free.">
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="How they charge for shipping">
               {(Object.keys(SHIP_HOW_LABEL) as ShipHow[]).map((k) => (
                 <button
@@ -643,7 +666,7 @@ export function CompanyForm({
         )}
 
         {/* Notes and invite again */}
-        <Section title={ready && d.is_vendor ? 'Notes and “Invite again?”' : 'Notes'}>
+        <Section n={L()} title={ready && d.is_vendor ? 'Notes and “Invite again?”' : 'Notes'}>
           <label className={label}>
             Notes <span className="font-normal text-slate-500">(team only)</span>
             <textarea className={staffInput} rows={3} value={d.notes} onChange={txt('notes')} />
@@ -683,30 +706,7 @@ export function CompanyForm({
           )}
         </Section>
 
-        <FormError>{error}</FormError>
-        <div className="flex flex-wrap gap-2">
-          <button type="submit" disabled={busy || photoBusy || !d.name.trim()} className={`${btn.primary} min-h-[44px] flex-1 disabled:opacity-60`}>
-            {busy ? 'Saving…' : 'Save'}
-          </button>
-          {onCancel && (
-            <button type="button" onClick={onCancel} disabled={busy} className={smallBtn}>
-              Cancel
-            </button>
-          )}
-          {initial &&
-            canDelete &&
-            onDelete &&
-            (confirmDelete ? (
-              <button type="button" onClick={doDelete} disabled={busy} className="min-h-[44px] rounded-full bg-red-600 px-4 text-sm font-bold text-white disabled:opacity-60">
-                Confirm delete
-              </button>
-            ) : (
-              <button type="button" onClick={() => setConfirmDelete(true)} className={dangerBtn}>
-                Delete
-              </button>
-            ))}
-        </div>
-      </form>
+      </EditorForm>
 
       {ready && !initial && (
         <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
@@ -926,7 +926,7 @@ function YearForm({
               Confirm
             </button>
           ) : (
-            <button type="button" onClick={() => setConfirmDelete(true)} className={dangerBtn}>
+            <button type="button" onClick={() => setConfirmDelete(true)} className={pill.red}>
               Delete
             </button>
           ))}
@@ -1191,7 +1191,7 @@ function GiftForm({
               Confirm
             </button>
           ) : (
-            <button type="button" onClick={() => setConfirmDelete(true)} className={dangerBtn}>
+            <button type="button" onClick={() => setConfirmDelete(true)} className={pill.red}>
               Delete
             </button>
           ))}

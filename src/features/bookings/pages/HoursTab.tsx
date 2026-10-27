@@ -1,12 +1,13 @@
 // Staff → Bookings → Hours: who volunteered how much (checked-in shifts plus
 // hours added by hand), and a service-hours letter per person.
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
 import { Card, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
+import { EditorForm, Field, Part, pill } from '../../../components/StaffJob'
 import { addHours, deleteHours, hoursHistory, hoursSummary, type HoursLine, type HoursSummaryRow } from '../api'
 
 export type Period = 'ytd' | '12m' | 'lastyear'
@@ -67,7 +68,7 @@ export default function HoursTab() {
             ['lastyear', 'Last year'],
           ] as [Period, string][]
         ).map(([p, label]) => (
-          <button key={p} type="button" onClick={() => setPeriod(p)} className={`min-h-[40px] rounded-full px-3.5 text-sm font-bold ${period === p ? 'bg-brand-orange text-ink' : 'border border-slate-200 bg-white text-slate-600'}`}>
+          <button key={p} type="button" onClick={() => setPeriod(p)} className={`min-h-[44px] rounded-full px-4 text-[15px] font-bold ${period === p ? 'bg-brand-orange text-ink' : 'border border-slate-200 bg-white text-slate-600'}`}>
             {label}
           </button>
         ))}
@@ -78,7 +79,7 @@ export default function HoursTab() {
           <p className="font-display text-3xl font-black text-ink">{fmtHours(total)}</p>
           <p className="text-xs text-slate-500">{(rows ?? []).length} people · checked-in shifts + hours added by hand</p>
         </div>
-        <button type="button" onClick={() => setAdding(true)} className={`${btn.blue} px-4 py-2`}>
+        <button type="button" onClick={() => setAdding(true)} className={`${btn.blue} min-h-[44px] px-4`}>
           <Icon name="plus" size={14} /> Add hours
         </button>
       </Card>
@@ -179,10 +180,9 @@ function Person({ row, orgId, userId, range, onBack, onChanged }: { row: HoursSu
               <button
                 type="button"
                 onClick={() => window.confirm('Remove these hours?') && deleteHours(l.ref_id).then(load).then(onChanged).catch((e) => setError(errMessage(e)))}
-                className="text-red-600"
-                aria-label="Remove"
+                className={pill.red}
               >
-                <Icon name="trash" size={15} />
+                <Icon name="trash" size={15} /> Remove
               </button>
             )}
           </li>
@@ -196,8 +196,7 @@ function AddHours({ orgId, userId, preset, onDone, onCancel }: { orgId: string; 
   const [f, setF] = useState({ email: preset?.email ?? '', name: preset?.name ?? '', on_date: new Date().toISOString().slice(0, 10), hours: '2', activity: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
+  const submit = async () => {
     setBusy(true)
     setError(null)
     try {
@@ -208,47 +207,48 @@ function AddHours({ orgId, userId, preset, onDone, onCancel }: { orgId: string; 
       setBusy(false)
     }
   }
+  const partB = preset ? 'A' : 'B'
+  const partC = preset ? 'B' : 'C'
   return (
-    <form onSubmit={submit}>
-      <Card className="space-y-3">
-        <p className="font-display text-[15px] font-extrabold text-ink">Add hours by hand</p>
-        <p className="text-xs text-slate-500">For anything that wasn’t booked as a shift — transport runs, events, orientation.</p>
-        {!preset && (
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block text-sm font-semibold text-slate-700">
-              Name
-              <input className={staffInput} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
-            </label>
-            <label className="block text-sm font-semibold text-slate-700">
-              Email
-              <input className={staffInput} type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} required />
-            </label>
-          </div>
-        )}
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm font-semibold text-slate-700">
-            Date
-            <input className={staffInput} type="date" value={f.on_date} onChange={(e) => setF({ ...f, on_date: e.target.value })} required />
-          </label>
-          <label className="block text-sm font-semibold text-slate-700">
-            Hours
-            <input className={staffInput} inputMode="decimal" value={f.hours} onChange={(e) => setF({ ...f, hours: e.target.value.replace(/[^0-9.]/g, '') })} required />
-          </label>
-        </div>
-        <label className="block text-sm font-semibold text-slate-700">
-          What they did
-          <input className={staffInput} value={f.activity} onChange={(e) => setF({ ...f, activity: e.target.value })} placeholder="Vet transport · BunFest set-up · Buncare orientation" />
-        </label>
-        <FormError>{error}</FormError>
-        <div className="flex gap-2">
-          <button type="submit" disabled={busy || !f.email || !Number(f.hours)} className={`${btn.primary} px-5 disabled:opacity-60`}>
-            Save
-          </button>
-          <button type="button" onClick={onCancel} className="rounded-full border border-slate-200 px-4 text-sm font-bold text-slate-600">
-            Cancel
-          </button>
-        </div>
-      </Card>
-    </form>
+    <EditorForm
+      title={preset ? `Add hours for ${preset.name || preset.email}` : 'Add hours by hand'}
+      hint="For anything that wasn’t booked as a shift — transport runs, events, orientation."
+      onSubmit={submit}
+      onCancel={onCancel}
+      busy={busy}
+      canSave={Boolean(f.email) && Number(f.hours) > 0}
+      error={error}
+    >
+      {!preset && (
+        <>
+          <Part n="A" hint="needed">
+            Who
+          </Part>
+          <Field label="Their name" needed>
+            <input className={staffInput} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} autoComplete="off" />
+          </Field>
+          <Field label="Their email" needed hint="The hours go on the volunteer with this email.">
+            <input className={staffInput} type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} autoComplete="off" />
+          </Field>
+        </>
+      )}
+      <Part n={partB} hint="needed">
+        When, and how long
+      </Part>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Date" needed>
+          <input className={staffInput} type="date" value={f.on_date} onChange={(e) => setF({ ...f, on_date: e.target.value })} />
+        </Field>
+        <Field label="Hours" needed>
+          <input className={staffInput} inputMode="decimal" value={f.hours} onChange={(e) => setF({ ...f, hours: e.target.value.replace(/[^0-9.]/g, '') })} />
+        </Field>
+      </div>
+      <Part n={partC} hint="optional">
+        What they did
+      </Part>
+      <Field label="What they did" hint="Left blank, it reads “Volunteering”.">
+        <input className={staffInput} value={f.activity} onChange={(e) => setF({ ...f, activity: e.target.value })} placeholder="Vet transport · BunFest set-up · Buncare orientation" />
+      </Field>
+    </EditorForm>
   )
 }
