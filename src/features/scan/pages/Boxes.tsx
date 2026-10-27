@@ -77,12 +77,12 @@ export default function Boxes() {
     <>
       <Screen className="space-y-4 print:hidden">
         <div className="pt-1">
-          <Link to="/staff/items" className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
+          <Link to="/staff/items" className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-base font-bold text-brand-blue hover:bg-brand-blue-50">
             <Icon name="arrowLeft" size={20} /> Items
           </Link>
           <StaffTitle title="Boxes">
             <p>
-              Numbered boxes and what’s in them. Receive into boxes adds new items straight into a box; an empty box is for items that already have labels — scan them in. Scanning a box label opens the full list.
+              Numbered boxes and what’s in them. “Pack a box” adds new items straight into a box. “Start an empty box” is for items that already have labels — scan them in. Scanning a box label opens its full list.
             </p>
           </StaffTitle>
         </div>
@@ -97,10 +97,10 @@ export default function Boxes() {
 
         <div className="grid grid-cols-2 gap-2">
           <BigButton onClick={() => navigate('/staff/catalog?box=1')} icon="camera">
-            Receive into boxes
+            Pack a box
           </BigButton>
           <BigButton tone="outline" onClick={() => void start()} disabled={busy || !orgId} icon="plus">
-            {busy ? 'Starting…' : 'Empty box'}
+            {busy ? 'Starting…' : 'Start an empty box'}
           </BigButton>
         </div>
 
@@ -123,17 +123,17 @@ export default function Boxes() {
         <ErrorBox>{error}</ErrorBox>
         {boxes === null && !error && <Spinner />}
         {boxes && boxes.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-base text-slate-500">No boxes yet. Start one, then scan the items that go in it.</div>
+          <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-base text-slate-600">No boxes yet. Tap “Pack a box” to start one, then add the items that go in it.</div>
         )}
         {boxes && boxes.length > 0 && shown.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-base text-slate-500">No box matches that.</div>
+          <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-base text-slate-600">No box matches that.</div>
         )}
         <ul className="space-y-2">
           {shown.map((b) => (
             <li key={b.id}>
               <Link to={`/staff/boxes/${b.code}`} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3 transition hover:border-brand-blue">
                 <span className="inline-flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-blue-50 text-brand-blue">
-                  <span className="text-[11px] font-extrabold uppercase leading-none">Box</span>
+                  <span className="text-xs font-extrabold uppercase leading-none">Box</span>
                   <span className="font-display text-xl font-black leading-tight">{b.box_no}</span>
                 </span>
                 <span className="min-w-0 flex-1">
@@ -145,7 +145,7 @@ export default function Boxes() {
                     {b.items.length} item{b.items.length === 1 ? '' : 's'} · {b.label_printed_at ? 'label printed' : 'label not printed yet'}
                   </span>
                   {b.items.length > 0 && (
-                    <span className="block truncate text-sm text-slate-500">
+                    <span className="block truncate text-sm text-slate-600">
                       {b.items
                         .slice(0, 4)
                         .map((i) => i.title)
@@ -256,7 +256,7 @@ function WaitingLabels({
     <section className="space-y-3 rounded-2xl border-2 border-brand-orange bg-brand-orange-50 p-4">
       <h2 className="font-display text-lg font-extrabold text-ink">{plural} to print</h2>
       <p className="text-base text-slate-700">
-        Box {boxes.map((b) => b.box_no).join(', ')}. Put the 4 × 6 roll in the printer, print them, and stick each one over the number written on its box.
+        Box {boxes.map((b) => b.box_no).join(', ')}. Put the 4 × 6 roll in the printer, print them, and stick each one over the number written on its box. These are boxes that are full and not labeled yet.
       </p>
       <ErrorBox>{error}</ErrorBox>
       <div className="grid grid-cols-2 gap-2">
@@ -283,7 +283,7 @@ function WaitingLabels({
         onError={setError}
         onPrinted={(_codes, msg) => void marked(msg)}
       />
-      {note && <p className="rounded-xl bg-white px-3 py-2 text-sm text-slate-600">{note}</p>}
+      {note && <p className="rounded-xl bg-white px-3 py-2 text-[15px] text-slate-600">{note}</p>}
     </section>
   )
 }

@@ -3,8 +3,11 @@
 // list, and the product types whose letters start every SKU (HAY-101-001).
 // One screen, four tabs, phone first. Price labels print from Labels. Everything here goes live on the public
 // Hop Shop shelf (name, photo, price, in stock) the moment it is saved.
+// The page is where the Hop Shop's job starts, so it lists the job's steps with
+// their buttons: 1 Order → 2 Add the delivery → 3 Price labels → 4 On the shelf
+// (this list) → 5 Sell. The item form is an EditorForm in lettered parts.
 // The Items tab downloads as a spreadsheet with photos, to email or save (2026-10-24).
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
@@ -12,6 +15,7 @@ import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { Explain, StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
+import { EditorForm, Field, Optional, Part, StepButton, StepRow, StepRows, pill } from '../components/StaffJob'
 import { isNative } from '../native/platform'
 import { pickPhoto, type PhotoSource } from '../native/camera'
 import { dataUrlToBlob, itemPhotos, uploadItemPhoto } from '../features/scan/api'
@@ -71,6 +75,9 @@ import { openMail } from '../lib/emailWith'
 import { clearNewItemDraft, readNewItemDraft, writeNewItemDraft } from '../features/hopshop/newItemDraft'
 
 const Scanner = lazy(() => import('../features/scan/Scanner'))
+
+/** Pills here are 44px tall, like every other button in the staff section. */
+const tall = '!min-h-[44px]'
 
 // The spreadsheet's columns, the same as the website's Hop Shop download.
 const SHEET_COLUMNS: SheetColumn[] = [
@@ -147,11 +154,79 @@ function usePacksReady(): boolean | null {
 type Tab = 'items' | 'reorder' | 'suppliers' | 'types'
 
 const TABS: [Tab, string][] = [
-  ['items', 'Items'],
+  ['items', 'Inventory'],
   ['reorder', 'Reorder'],
-  ['suppliers', 'Vendors'],
+  ['suppliers', 'Suppliers'],
   ['types', 'Types'],
 ]
+
+/**
+ * The Hop Shop's job, where it starts: Order → Add the delivery → Price labels →
+ * On the shelf → Sell, each with its own buttons (the Receive items rule: step
+ * numbers where the job starts).
+ */
+function JobSteps({
+  canOrder,
+  canAdd,
+  onAdd,
+  low,
+  unprinted,
+  onList,
+}: {
+  /** May add deliveries and print labels. */
+  canOrder: boolean
+  canAdd?: boolean
+  /** Opens the new-item form (the inventory tab). */
+  onAdd?: () => void
+  low?: number
+  unprinted?: number
+  /** On the Reorder tab, step 4 goes back to the list. */
+  onList?: boolean
+}) {
+  return (
+    <StepRows label="The Hop Shop job, step by step">
+      <StepRow n={1} name="Order" hint={low ? `${low} running low` : undefined}>
+        <StepButton to="/staff/hopshop/reorder" icon="file" tone={low ? 'orange' : 'outline'}>
+          Reorder list
+        </StepButton>
+      </StepRow>
+      <StepRow n={2} name="Add the delivery">
+        {canOrder && (
+          <StepButton to="/staff/hopshop/deliveries/new" icon="box">
+            Add a delivery
+          </StepButton>
+        )}
+        <StepButton to="/staff/hopshop/deliveries" icon="clock">
+          Past deliveries
+        </StepButton>
+      </StepRow>
+      <StepRow n={3} name="Price labels">
+        {canOrder && (
+          <StepButton to="/staff/hopshop/labels" icon="printer" count={unprinted}>
+            Print price labels
+          </StepButton>
+        )}
+      </StepRow>
+      <StepRow n={4} name="On the shelf" hint={onList ? undefined : 'this list'}>
+        {onAdd && canAdd && (
+          <StepButton onClick={onAdd} icon="plus">
+            Add an item
+          </StepButton>
+        )}
+        {onList && (
+          <StepButton to="/staff/hopshop" icon="bag">
+            See the list
+          </StepButton>
+        )}
+      </StepRow>
+      <StepRow n={5} name="Sell">
+        <StepButton to="/staff/counter" icon="store">
+          Open the Counter
+        </StepButton>
+      </StepRow>
+    </StepRows>
+  )
+}
 
 export default function HopShopManager() {
   const { user, membership, can } = useAuth()
@@ -198,17 +273,24 @@ export default function HopShopManager() {
 
   return (
     <Screen className="space-y-4">
-      <StaffTitle title="Hop Shop">
-        {!readOnly && <p>Stock, prices and photos go live on the shelf as you save. Set a reorder point and the Reorder tab tells you what to buy.</p>}
-      </StaffTitle>
-      {readOnly && <p className="text-sm text-slate-600">View-only — ask an owner or admin for edit access.</p>}
-      <div className="flex gap-2">
+      <div>
+        <Link to="/staff/items" className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-base font-bold text-brand-blue hover:bg-brand-blue-50">
+          <Icon name="arrowLeft" size={20} /> Items
+        </Link>
+        <StaffTitle title="Hop Shop">
+          {!readOnly && <p>Stock, prices and photos go live on the shelf as you save. Set a reorder point on an item and the Reorder tab tells you what to buy.</p>}
+        </StaffTitle>
+      </div>
+      {readOnly && <p className="text-[15px] text-slate-600">View-only — ask an owner or admin for edit access.</p>}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist" aria-label="Hop Shop">
         {TABS.map(([t, label]) => (
           <button
             key={t}
             type="button"
+            role="tab"
+            aria-selected={tab === t}
             onClick={() => setTab(t)}
-            className={`min-h-[44px] flex-1 rounded-full px-2 text-[13px] font-bold ${tab === t ? 'bg-brand-blue text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600'}`}
+            className={`inline-flex min-h-[48px] items-center justify-center rounded-full px-2 text-sm font-bold ${tab === t ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
           >
             {label}
           </button>
@@ -310,44 +392,15 @@ function Items({
   }, [rows, q])
 
   const low = (rows ?? []).filter(isLow).length
+  const unprinted = (rows ?? []).filter((p) => (p.code || p.sku) && !p.label_printed_at).length
+  const canLabel = perms.canCreate || perms.canEdit || perms.canInventory
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Icon name="search" size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Name or SKU"
-            className="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-[15px] text-ink outline-none focus:border-brand-blue"
-          />
-        </div>
-        {(perms.canCreate || perms.canEdit || perms.canInventory) && (
-          <Link to="/staff/hopshop/labels" className="inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white px-3.5 text-sm font-bold text-slate-600">
-            <Icon name="printer" size={16} /> Labels
-          </Link>
-        )}
-        {perms.canCreate && !creating && (
-          <button type="button" onClick={() => setCreating(true)} className={`${btn.primary} shrink-0 !px-4 !py-2.5`}>
-            <Icon name="plus" size={16} /> Add
-          </button>
-        )}
-      </div>
-      {shown.length > 0 && <ExportButtons spec={() => sheetSpec(shown, q)} label={`Spreadsheet of ${shown.length} with photos`} />}
-      {low > 0 && (
-        <p className="text-xs font-bold text-brand-orange-dark">
-          {low} item{low === 1 ? ' is' : 's are'} at or below the reorder point — see the Reorder tab.
-        </p>
-      )}
+    <div className="space-y-4">
+      <JobSteps canOrder={canLabel} canAdd={perms.canCreate && !creating} onAdd={() => setCreating(true)} low={low} unprinted={unprinted} />
 
       {creating && (
-        <Card>
-          <div ref={formTop} tabIndex={-1} className="outline-none">
-            <h2 className="mb-1 font-display text-[15px] font-extrabold text-ink">New item the shop carries</h2>
-            <p className="mb-3 text-sm text-slate-500">Something bought from a supplier to sell. Donations and one-off buys are added under “Receive items”.</p>
-          </div>
+        <div ref={formTop} tabIndex={-1} className="outline-none">
           <ProductForm
             orgId={orgId}
             initial={null}
@@ -364,32 +417,50 @@ function Items({
             }}
             onCancel={() => setCreating(false)}
           />
-        </Card>
+        </div>
       )}
       {justAdded?.code && !creating && (
-        <div className="flex flex-wrap items-center gap-x-3 rounded-2xl border border-green-200 bg-green-50 px-4 py-2 text-sm text-slate-700">
-          <span className="min-w-0 flex-1 py-2">
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-[15px] text-slate-700">
+          <span className="min-w-0 flex-1">
             Added <strong>{justAdded.name}</strong> as <span className="font-mono font-bold text-ink">{justAdded.code}</span>.
           </span>
           <Link
             to={`/staff/hopshop/labels?code=${encodeURIComponent(justAdded.code)}${(justAdded.quantity ?? 0) > 1 ? `&copies=${justAdded.quantity}` : ''}`}
-            className="inline-flex min-h-[44px] items-center font-bold text-brand-blue"
+            className={`${pill.blue} ${tall}`}
           >
-            Print its labels →
+            <Icon name="printer" size={16} /> Print its labels
           </Link>
         </div>
+      )}
+
+      <div className="relative">
+        <Icon name="search" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search by name or SKU"
+          aria-label="Search the inventory"
+          className="min-h-[48px] w-full rounded-full border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-base text-ink outline-none focus:border-brand-blue"
+        />
+      </div>
+      {shown.length > 0 && <ExportButtons spec={() => sheetSpec(shown, q)} label={`Spreadsheet of ${shown.length} with photos`} />}
+      {low > 0 && (
+        <p className="text-[15px] font-bold text-brand-orange-dark">
+          {low} item{low === 1 ? ' is' : 's are'} at or below the reorder point — see step 1, Order.
+        </p>
       )}
 
       <FormError>{error}</FormError>
       {rows === null && !error && <Spinner label="Loading items…" />}
       {rows && rows.length === 0 && !creating && (
         <Card className="border-slate-200 bg-slate-50/80 text-center">
-          <p className="text-sm leading-relaxed text-slate-600">
-            No items yet.{perms.canCreate ? ' Tap “Add” — take a photo, pick its type, set the price. It gets a SKU when you save.' : ''}
+          <p className="text-base leading-relaxed text-slate-600">
+            No items yet.{perms.canCreate ? ' Tap “Add an item” in step 4 — take a photo, pick its type, set the price. It gets a SKU when you save.' : ''}
           </p>
         </Card>
       )}
-      {rows && rows.length > 0 && shown.length === 0 && <p className="text-sm text-slate-500">Nothing matches “{q}”.</p>}
+      {rows && rows.length > 0 && shown.length === 0 && <p className="text-base text-slate-600">Nothing matches “{q}”.</p>}
       {shown.map((p) => (
         <ProductCard key={p.id} p={p} orgId={orgId} userId={userId} suppliers={suppliers} types={types} perms={perms} onSuppliersChanged={onSuppliersChanged} onTypesChanged={onTypesChanged} onChanged={load} />
       ))}
@@ -438,22 +509,20 @@ function ProductCard({
 
   if (editing) {
     return (
-      <Card>
-        <ProductForm
-          orgId={orgId}
-          initial={p}
-          suppliers={suppliers}
-          types={types}
-          canCount={perms.canInventory}
-          onSuppliersChanged={onSuppliersChanged}
-          onTypesChanged={onTypesChanged}
-          onSaved={async () => {
-            setEditing(false)
-            await onChanged()
-          }}
-          onCancel={() => setEditing(false)}
-        />
-      </Card>
+      <ProductForm
+        orgId={orgId}
+        initial={p}
+        suppliers={suppliers}
+        types={types}
+        canCount={perms.canInventory}
+        onSuppliersChanged={onSuppliersChanged}
+        onTypesChanged={onTypesChanged}
+        onSaved={async () => {
+          setEditing(false)
+          await onChanged()
+        }}
+        onCancel={() => setEditing(false)}
+      />
     )
   }
 
@@ -466,30 +535,30 @@ function ProductCard({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <h3 className="font-display text-[15px] font-extrabold text-ink">{p.name}</h3>
+            <h3 className="font-display text-base font-extrabold text-ink">{p.name}</h3>
             {!p.is_active && <Badge tone="slate">Hidden</Badge>}
             {low && <Badge tone="orange">Low</Badge>}
             {p.on_order_qty > 0 && <Badge tone="blue">{p.on_order_qty} on order</Badge>}
           </div>
-          <p className="mt-0.5 text-xs text-slate-500">
-            {p.code ? <span className="font-mono font-bold text-slate-600">{p.code}</span> : 'No SKU yet'}
+          <p className="mt-0.5 text-sm text-slate-600">
+            {p.code ? <span className="font-mono font-bold text-slate-700">{p.code}</span> : 'No SKU yet'}
             {(p.type_name ?? p.category) ? ` · ${p.type_name ?? p.category}` : ''}
             {p.shelf ? ` · ${p.shelf}` : ''}
           </p>
           {(p.barcode || p.donation_code) && (
-            <p className="text-xs text-slate-500">
+            <p className="text-sm text-slate-600">
               {[p.barcode ? `Barcode ${p.barcode}` : null, p.donation_code ? `Came in as ${p.donation_code}` : null].filter(Boolean).join(' · ')}
             </p>
           )}
           {p.supplier_name && (
-            <p className="text-xs text-slate-500">
+            <p className="text-sm text-slate-600">
               From {p.supplier_name}
               {p.supplier_sku ? ` · item ${p.supplier_sku}` : ''}
               {p.cost_cents != null ? ` · cost ${money(p.cost_cents)}` : ''}
             </p>
           )}
           {p.packs && p.packs.length > 0 && (
-            <p className="text-xs text-slate-500">
+            <p className="text-sm text-slate-600">
               Comes in{' '}
               {p.packs
                 .map((k) => `${k.label.toLowerCase()}${k.units > 1 ? ` of ${k.units}` : ''}${k.cost_cents != null ? ` (${money(k.cost_cents)})` : ''}`)
@@ -505,30 +574,27 @@ function ProductCard({
       {(perms.canEdit || perms.canDelete || perms.canCreate || perms.canInventory) && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {p.code && (
-            <Link
-              to={`/staff/hopshop/labels?code=${encodeURIComponent(p.code)}`}
-              className="inline-flex min-h-[44px] items-center gap-1 rounded-full border border-slate-200 px-4 text-xs font-bold text-slate-600 hover:bg-slate-50"
-            >
-              <Icon name="printer" size={14} /> Labels
+            <Link to={`/staff/hopshop/labels?code=${encodeURIComponent(p.code)}`} className={`${pill.outline} ${tall}`}>
+              <Icon name="printer" size={16} /> Labels
             </Link>
           )}
           {perms.canEdit && (
-            <button type="button" onClick={() => setEditing(true)} className="min-h-[44px] rounded-full border border-slate-200 px-4 text-xs font-bold text-slate-600 hover:bg-slate-50">
+            <button type="button" onClick={() => setEditing(true)} className={`${pill.blue} ${tall}`}>
               Edit
             </button>
           )}
           {perms.canDelete &&
             (confirmDelete ? (
               <>
-                <button type="button" onClick={doDelete} disabled={busy} className="min-h-[44px] rounded-full bg-red-600 px-4 text-xs font-bold text-white disabled:opacity-60">
+                <button type="button" onClick={doDelete} disabled={busy} className={`inline-flex min-h-[44px] items-center rounded-full bg-red-600 px-4 text-[15px] font-bold text-white disabled:opacity-60`}>
                   {busy ? 'Deleting…' : 'Confirm delete'}
                 </button>
-                <button type="button" onClick={() => setConfirmDelete(false)} className="min-h-[44px] rounded-full border border-slate-200 px-4 text-xs font-bold text-slate-500">
+                <button type="button" onClick={() => setConfirmDelete(false)} className={`${pill.outline} ${tall}`}>
                   Cancel
                 </button>
               </>
             ) : (
-              <button type="button" onClick={() => setConfirmDelete(true)} className="min-h-[44px] rounded-full border border-red-200 px-4 text-xs font-bold text-red-600 hover:bg-red-50">
+              <button type="button" onClick={() => setConfirmDelete(true)} className={`${pill.red} ${tall}`}>
                 Delete
               </button>
             ))}
@@ -576,7 +642,7 @@ function StockRow({
   return (
     <div className="mt-2.5 border-t border-slate-100 pt-2.5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Stock</span>
+        <span className="text-sm font-bold uppercase tracking-wide text-slate-500">Stock</span>
         {canCount ? (
           <div className="flex items-center gap-1.5">
             <button type="button" onClick={() => setVal((v) => clamp(v - 1))} className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-600" aria-label="One fewer">
@@ -587,19 +653,20 @@ function StockRow({
               min="0"
               value={val}
               onChange={(e) => setVal(clamp(parseInt(e.target.value || '0', 10)))}
-              className="h-11 w-16 rounded-lg border border-slate-200 px-2 text-center text-sm text-ink outline-none focus:border-brand-blue"
+              aria-label={`Stock of ${p.name}`}
+              className="h-11 w-16 rounded-lg border border-slate-200 px-2 text-center text-base text-ink outline-none focus:border-brand-blue"
             />
             <button type="button" onClick={() => setVal((v) => clamp(v + 1))} className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-600" aria-label="One more">
               <Icon name="plus" size={16} />
             </button>
           </div>
         ) : (
-          <span className="text-sm font-bold text-ink">{p.quantity ?? '—'}</span>
+          <span className="text-base font-bold text-ink">{p.quantity ?? '—'}</span>
         )}
-        {p.unit && <span className="text-xs text-slate-500">{p.unit}</span>}
-        {p.reorder_point != null && <span className="text-xs text-slate-500">· reorder at {p.reorder_point}</span>}
+        {p.unit && <span className="text-sm text-slate-600">{p.unit}</span>}
+        {p.reorder_point != null && <span className="text-sm text-slate-600">· reorder at {p.reorder_point}</span>}
         {dirty && (
-          <button type="button" onClick={save} disabled={busy} className="min-h-[44px] rounded-full bg-brand-blue px-4 text-xs font-bold text-white disabled:opacity-60">
+          <button type="button" onClick={save} disabled={busy} className={`${pill.blue} ${tall}`}>
             {busy ? 'Saving…' : 'Save'}
           </button>
         )}
@@ -766,8 +833,7 @@ function ProductForm({
       ? `${bc} is an OHRR number, not the barcode on the packet.`
       : `Scanning the packet (${bc}) opens this item.`
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
+  const submit = async () => {
     setError(null)
     setBusy(true)
     try {
@@ -821,263 +887,260 @@ function ProductForm({
   })()
 
   return (
-    <form onSubmit={submit} className="space-y-3">
+    <EditorForm
+      title={initial ? `Change ${initial.name}` : 'New item the shop carries'}
+      hint={initial ? undefined : 'Something bought from a supplier to sell. Donations and one-off buys are added under “Receive items”.'}
+      onSubmit={submit}
+      onCancel={() => {
+        if (!initial) clearNewItemDraft(orgId)
+        onCancel()
+      }}
+      busy={busy}
+      canSave={!photoBusy && !!d.name.trim()}
+      saveLabel={initial ? 'Save changes' : 'Add item'}
+      error={error}
+    >
       {kept && !savedId && (
-        <p className="flex flex-wrap items-center gap-x-3 rounded-xl bg-brand-blue-50 px-3 py-1 text-sm text-slate-700">
-          <span className="py-1.5">Picked up where you left off — this item is kept on this device until you add it.</span>
-          <button type="button" onClick={startOver} className="min-h-[44px] font-bold text-brand-blue">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-brand-blue-50 px-3 py-2 text-[15px] text-slate-700">
+          <span className="min-w-0 flex-1">Picked up where you left off — this item is kept on this device until you add it.</span>
+          <button type="button" onClick={startOver} className={`${pill.outline} ${tall}`}>
             Start over
           </button>
-        </p>
+        </div>
       )}
-      {/* Photo */}
-      <div className="flex items-center gap-3">
-        <span className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-300">
-          {preview ? <img src={preview} alt="" className="h-full w-full object-cover" /> : <Icon name="camera" size={34} />}
-        </span>
-        <div className="flex flex-1 flex-col gap-2">
-          <button type="button" onClick={() => void pick('camera')} disabled={photoBusy} className={`${btn.blue} !py-2.5 disabled:opacity-60`}>
-            <Icon name="camera" size={18} /> {photoBusy ? 'Saving photo…' : preview ? 'Retake photo' : 'Take a photo'}
-          </button>
-          <button type="button" onClick={() => void pick('library')} disabled={photoBusy} className="text-sm font-bold text-brand-blue">
-            Choose from photos
-          </button>
-          <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} />
-          <input ref={libraryRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
-        </div>
-      </div>
 
-      <label className="block text-sm font-semibold text-slate-700">
-        Name
-        <input className={staffInput} required value={d.name} onChange={set('name')} placeholder="Oxbow Timothy Hay, 40 oz" />
-      </label>
-
-      {/* Type → SKU */}
-      <div>
-        <p className="text-sm font-semibold text-slate-700">Type</p>
-        <div className="mt-1.5 flex flex-wrap gap-2" role="radiogroup" aria-label="Type">
-          {shownTypes.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              role="radio"
-              aria-checked={d.type_id === t.id}
-              onClick={() => setD((x) => ({ ...x, type_id: x.type_id === t.id ? '' : t.id }))}
-              className={`min-h-[44px] rounded-full px-3.5 text-sm font-bold ${d.type_id === t.id ? 'bg-brand-blue text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600'}`}
-            >
-              {t.name}
+      {/* A · what it is */}
+      <div className="space-y-3">
+        <Part n="A" hint="needed">
+          What it is
+        </Part>
+        <div className="flex items-center gap-3">
+          <span className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-300">
+            {preview ? <img src={preview} alt="" className="h-full w-full object-cover" /> : <Icon name="camera" size={34} />}
+          </span>
+          <div className="flex flex-1 flex-col items-start gap-2">
+            <button type="button" onClick={() => void pick('camera')} disabled={photoBusy} className={`${pill.blue} ${tall}`}>
+              <Icon name="camera" size={18} /> {photoBusy ? 'Saving photo…' : preview ? 'Retake photo' : 'Take a photo'}
             </button>
-          ))}
-          {!addingType && (
-            <button type="button" onClick={() => setAddingType(true)} className="min-h-[44px] px-2 text-sm font-bold text-brand-blue">
-              + New type
+            <button type="button" onClick={() => void pick('library')} disabled={photoBusy} className={`${pill.outline} ${tall}`}>
+              Choose from photos
             </button>
-          )}
+            <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} />
+            <input ref={libraryRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+          </div>
         </div>
-        {addingType && (
-          <div className="mt-2 rounded-2xl border border-slate-200 p-3">
-            <NewTypeForm
-              orgId={orgId}
-              types={types}
-              onAdded={async (t) => {
-                setAddingType(false)
-                await onTypesChanged()
-                setD((x) => ({ ...x, type_id: t.id }))
-              }}
-              onCancel={() => setAddingType(false)}
-            />
-          </div>
-        )}
-        <div className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-sm">
-          {current ? (
-            <>
-              <p className="text-slate-600">
-                SKU <span className="font-mono text-base font-black text-ink">{current}</span>
-              </p>
-              {!follows && !printed && <p className="mt-0.5 text-xs text-slate-600">Saving gives it a new SKU starting {prefix}- (its label hasn’t been printed yet).</p>}
-              {!follows && printed && (
-                <>
-                  <p className="mt-0.5 text-xs text-slate-600">It keeps {current}, so the labels already printed still scan.</p>
-                  <label className="mt-1 flex min-h-[44px] items-center gap-2 text-xs font-bold text-slate-700">
-                    <input type="checkbox" className="h-5 w-5 rounded border-slate-300" checked={newSku} onChange={(e) => setNewSku(e.target.checked)} />
-                    Give it a new {prefix}- SKU anyway, and print new labels
-                  </label>
-                </>
-              )}
-            </>
-          ) : (
-            <p className="text-slate-600">
-              SKU when you save: <span className="font-mono font-black text-ink">{prefix}-###</span>
-            </p>
-          )}
-          <p className="mt-0.5 text-xs text-slate-500">Type, then the supplier’s vendor number (000 = no supplier), then the item’s number.</p>
-        </div>
+        <Field label="Name" needed>
+          <input className={staffInput} required value={d.name} onChange={set('name')} placeholder="Oxbow Timothy Hay, 40 oz" />
+        </Field>
+        <Field label="Description" hint="Shown on the shelf.">
+          <textarea className={staffInput} rows={2} value={d.description} onChange={set('description')} />
+        </Field>
       </div>
 
-      {/* The packet's own barcode: a second code */}
-      <div>
-        <label className="block text-sm font-semibold text-slate-700">
-          Barcode on the packet
-          <input className={`${staffInput} font-mono`} value={d.barcode} onChange={set('barcode')} placeholder="012345678905" autoCapitalize="characters" />
-        </label>
-        <button type="button" onClick={() => setScanning((v) => !v)} className="mt-1 inline-flex min-h-[44px] items-center gap-1.5 text-sm font-bold text-brand-blue">
-          <Icon name="scan" size={16} /> {scanning ? 'Stop scanning' : 'Scan the barcode on the packet'}
-        </button>
-        {scanning && (
-          <div className="mt-2 overflow-hidden rounded-2xl">
-            <Suspense fallback={<Spinner label="Starting the camera…" />}>
-              <Scanner
-                onResult={(raw) => {
-                  setD((x) => ({ ...x, barcode: normalizeCode(raw) }))
-                  setScanning(false)
-                }}
-                onTypeInstead={() => setScanning(false)}
-              />
-            </Suspense>
-          </div>
-        )}
-        <p className="mt-1 text-xs text-slate-500">{barcodeInfo}</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Price (USD)
-          <input className={staffInput} type="number" min="0" step="0.01" inputMode="decimal" value={d.price} onChange={set('price')} placeholder="0.00" required />
-        </label>
-        {canCount ? (
-          <label className="block text-sm font-semibold text-slate-700">
-            {initial ? 'Set stock to' : 'How many now'}
-            <input className={staffInput} inputMode="numeric" value={d.quantity} onChange={digits('quantity')} placeholder={initial ? `${initial.quantity ?? 0} (leave as is)` : '1'} />
-          </label>
-        ) : (
-          <label className="block text-sm font-semibold text-slate-700">
-            Sold as
-            <input className={staffInput} value={d.unit} onChange={set('unit')} placeholder="bag · each · bundle" />
-          </label>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Where it sits
-          <input className={staffInput} value={d.shelf} onChange={set('shelf')} placeholder="Shelf B · counter" />
-        </label>
-        {canCount && (
-          <label className="block text-sm font-semibold text-slate-700">
-            Sold as
-            <input className={staffInput} value={d.unit} onChange={set('unit')} placeholder="bag · each · bundle" />
-          </label>
-        )}
-      </div>
-
-      <label className="block text-sm font-semibold text-slate-700">
-        Description (shown on the shelf)
-        <textarea className={staffInput} rows={2} value={d.description} onChange={set('description')} />
-      </label>
-
-      {/* Reorder */}
-      <div className="space-y-3 rounded-2xl border border-brand-blue/20 bg-brand-blue-50/40 p-3">
-        <p className="text-sm font-bold text-ink">Reordering</p>
-        <label className="block text-sm font-semibold text-slate-700">
-          Supplier
-          <select className={staffInput} value={d.supplier_id} onChange={set('supplier_id')}>
-            <option value="">— none yet —</option>
-            {supplierList.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        {addingSupplier ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-3">
-            <NewSupplierForm
-              orgId={orgId}
-              suppliers={suppliers}
-              onAdded={async (s) => {
-                await onSuppliersChanged()
-                setD((x) => ({ ...x, supplier_id: s.id }))
-                setAddingSupplier(false)
-              }}
-              onCancel={() => setAddingSupplier(false)}
-            />
-          </div>
-        ) : (
-          <button type="button" onClick={() => setAddingSupplier(true)} className="-mt-1 min-h-[44px] text-sm font-bold text-brand-blue">
-            + New supplier
-          </button>
-        )}
+      {/* B · price and stock */}
+      <div className="space-y-3">
+        <Part n="B" hint="needed">
+          Price and stock
+        </Part>
         <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm font-semibold text-slate-700">
-            Their item #
-            <input className={staffInput} value={d.supplier_sku} onChange={set('supplier_sku')} placeholder="OX-448" />
-          </label>
-          <label className="block text-sm font-semibold text-slate-700">
-            {packsOn ? 'Our cost each (USD)' : 'Our cost (USD)'}
-            <input className={staffInput} type="number" min="0" step="0.01" inputMode="decimal" value={d.cost} onChange={set('cost')} placeholder="0.00" />
-          </label>
+          <Field label="Price (USD)" needed>
+            <input className={staffInput} type="number" min="0" step="0.01" inputMode="decimal" value={d.price} onChange={set('price')} placeholder="0.00" required />
+          </Field>
+          {canCount ? (
+            <Field label={initial ? 'Set stock to' : 'How many now'}>
+              <input className={staffInput} inputMode="numeric" value={d.quantity} onChange={digits('quantity')} placeholder={initial ? `${initial.quantity ?? 0} (leave as is)` : '1'} />
+            </Field>
+          ) : (
+            <Field label="Sold as">
+              <input className={staffInput} value={d.unit} onChange={set('unit')} placeholder="bag · each · bundle" />
+            </Field>
+          )}
         </div>
-        {packsOn && defaultEach && (
-          <p className="-mt-1 flex flex-wrap items-center gap-x-2 text-xs text-slate-600">
-            The default pack works out at {defaultEach}.
-            {`$${d.cost || '0.00'} each` !== defaultEach && (
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Where it sits">
+            <input className={staffInput} value={d.shelf} onChange={set('shelf')} placeholder="Shelf B · counter" />
+          </Field>
+          {canCount && (
+            <Field label="Sold as">
+              <input className={staffInput} value={d.unit} onChange={set('unit')} placeholder="bag · each · bundle" />
+            </Field>
+          )}
+        </div>
+        <label className="flex min-h-[44px] items-center gap-2 text-[15px] font-semibold text-slate-700">
+          <input type="checkbox" className="h-6 w-6 rounded border-slate-300 accent-brand-blue" checked={d.is_active} onChange={(e) => setD((x) => ({ ...x, is_active: e.target.checked }))} />
+          Show on the shelf
+        </label>
+      </div>
+
+      {/* C · supplier, type, item number */}
+      <div className="space-y-3">
+        <Part n="C" hint="optional">
+          Supplier, type, item number
+        </Part>
+
+        {/* Type → SKU */}
+        <div>
+          <p className="text-sm font-semibold text-slate-700">
+            Type <Optional />
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-2" role="radiogroup" aria-label="Type">
+            {shownTypes.map((t) => (
               <button
+                key={t.id}
                 type="button"
-                onClick={() => setD((x) => ({ ...x, cost: defaultEach.replace(/[^0-9.]/g, '') }))}
-                className="min-h-[44px] font-bold text-brand-blue"
+                role="radio"
+                aria-checked={d.type_id === t.id}
+                onClick={() => setD((x) => ({ ...x, type_id: x.type_id === t.id ? '' : t.id }))}
+                className={`min-h-[44px] rounded-full px-4 text-[15px] font-bold ${d.type_id === t.id ? 'bg-brand-blue text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600'}`}
               >
-                Use it as our cost
+                {t.name}
+              </button>
+            ))}
+            {!addingType && (
+              <button type="button" onClick={() => setAddingType(true)} className={`${pill.outline} ${tall}`}>
+                <Icon name="plus" size={16} /> New type
               </button>
             )}
-          </p>
-        )}
-        {packsOn && (
-          <label className="block text-sm font-semibold text-slate-700">
-            Order link <span className="font-normal text-slate-500">(their page for this item)</span>
-            <input className={staffInput} inputMode="url" value={d.order_url} onChange={set('order_url')} placeholder="smallpetselect.com/products/timothy-hay" />
-          </label>
-        )}
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm font-semibold text-slate-700">
-            Reorder when stock is at
-            <input className={staffInput} inputMode="numeric" value={d.reorder_point} onChange={digits('reorder_point')} placeholder="2" />
-          </label>
-          <label className="block text-sm font-semibold text-slate-700">
-            How many to order
-            <input className={staffInput} inputMode="numeric" value={d.reorder_qty} onChange={digits('reorder_qty')} placeholder="6" />
-          </label>
-        </div>
-        <p className="text-xs text-slate-600">Leave “reorder when” blank for things you don’t restock (donated items, one-offs).</p>
-        {packsOn && (
-          <div className="border-t border-brand-blue/15 pt-3">
-            <PackEditor rows={packs} onChange={setPacks} />
           </div>
-        )}
-      </div>
+          {addingType && (
+            <div className="mt-2 rounded-2xl border border-slate-200 p-3">
+              <NewTypeForm
+                orgId={orgId}
+                types={types}
+                onAdded={async (t) => {
+                  setAddingType(false)
+                  await onTypesChanged()
+                  setD((x) => ({ ...x, type_id: t.id }))
+                }}
+                onCancel={() => setAddingType(false)}
+              />
+            </div>
+          )}
+          <div className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-[15px]">
+            {current ? (
+              <>
+                <p className="text-slate-600">
+                  SKU <span className="font-mono text-base font-black text-ink">{current}</span>
+                </p>
+                {!follows && !printed && <p className="mt-0.5 text-sm text-slate-600">Saving gives it a new SKU starting {prefix}- (its label hasn’t been printed yet).</p>}
+                {!follows && printed && (
+                  <>
+                    <p className="mt-0.5 text-sm text-slate-600">It keeps {current}, so the labels already printed still scan.</p>
+                    <label className="mt-1 flex min-h-[44px] items-center gap-2 text-sm font-bold text-slate-700">
+                      <input type="checkbox" className="h-6 w-6 rounded border-slate-300 accent-brand-blue" checked={newSku} onChange={(e) => setNewSku(e.target.checked)} />
+                      Give it a new {prefix}- SKU anyway, and print new labels
+                    </label>
+                  </>
+                )}
+              </>
+            ) : (
+              <p className="text-slate-600">
+                SKU when you save: <span className="font-mono font-black text-ink">{prefix}-###</span>
+              </p>
+            )}
+            <p className="mt-0.5 text-sm text-slate-600">Type, then the supplier’s number (000 = no supplier), then the item’s number.</p>
+          </div>
+        </div>
 
-      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <input type="checkbox" className="h-5 w-5 rounded border-slate-300 text-brand-blue" checked={d.is_active} onChange={(e) => setD((x) => ({ ...x, is_active: e.target.checked }))} />
-        Show on the shelf
-      </label>
+        {/* The packet's own barcode: a second code */}
+        <div>
+          <Field label="Barcode on the packet">
+            <input className={`${staffInput} font-mono`} value={d.barcode} onChange={set('barcode')} placeholder="012345678905" autoCapitalize="characters" />
+          </Field>
+          <button type="button" onClick={() => setScanning((v) => !v)} className={`${pill.outline} ${tall} mt-2`}>
+            <Icon name="scan" size={16} /> {scanning ? 'Stop scanning' : 'Scan the barcode on the packet'}
+          </button>
+          {scanning && (
+            <div className="mt-2 overflow-hidden rounded-2xl">
+              <Suspense fallback={<Spinner label="Starting the camera…" />}>
+                <Scanner
+                  onResult={(raw) => {
+                    setD((x) => ({ ...x, barcode: normalizeCode(raw) }))
+                    setScanning(false)
+                  }}
+                  onTypeInstead={() => setScanning(false)}
+                />
+              </Suspense>
+            </div>
+          )}
+          <p className="mt-1 text-sm text-slate-600">{barcodeInfo}</p>
+        </div>
 
-      <FormError>{error}</FormError>
-      <div className="flex gap-2">
-        <button type="submit" disabled={busy || photoBusy || !d.name.trim()} className={`${btn.primary} flex-1 disabled:opacity-60`}>
-          {busy ? 'Saving…' : initial ? 'Save changes' : 'Add item'}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (!initial) clearNewItemDraft(orgId)
-            onCancel()
-          }}
-          disabled={busy}
-          className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50"
-        >
-          Cancel
-        </button>
+        {/* Supplier and reordering */}
+        <div className="space-y-3 rounded-2xl border border-brand-blue/20 bg-brand-blue-50/40 p-3">
+          <p className="text-base font-bold text-ink">Supplier and reordering</p>
+          <Field label="Supplier">
+            <select className={staffInput} value={d.supplier_id} onChange={set('supplier_id')}>
+              <option value="">— none yet —</option>
+              {supplierList.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {addingSupplier ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-3">
+              <NewSupplierForm
+                orgId={orgId}
+                suppliers={suppliers}
+                onAdded={async (s) => {
+                  await onSuppliersChanged()
+                  setD((x) => ({ ...x, supplier_id: s.id }))
+                  setAddingSupplier(false)
+                }}
+                onCancel={() => setAddingSupplier(false)}
+              />
+            </div>
+          ) : (
+            <button type="button" onClick={() => setAddingSupplier(true)} className={`${pill.outline} ${tall}`}>
+              <Icon name="plus" size={16} /> New supplier
+            </button>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Their item #">
+              <input className={staffInput} value={d.supplier_sku} onChange={set('supplier_sku')} placeholder="OX-448" />
+            </Field>
+            <Field label={packsOn ? 'Our cost each (USD)' : 'Our cost (USD)'}>
+              <input className={staffInput} type="number" min="0" step="0.01" inputMode="decimal" value={d.cost} onChange={set('cost')} placeholder="0.00" />
+            </Field>
+          </div>
+          {packsOn && defaultEach && (
+            <div className="flex flex-wrap items-center gap-2 text-[15px] text-slate-700">
+              <span>The default pack works out at {defaultEach}.</span>
+              {`$${d.cost || '0.00'} each` !== defaultEach && (
+                <button
+                  type="button"
+                  onClick={() => setD((x) => ({ ...x, cost: defaultEach.replace(/[^0-9.]/g, '') }))}
+                  className={`${pill.soft} ${tall}`}
+                >
+                  Use it as our cost
+                </button>
+              )}
+            </div>
+          )}
+          {packsOn && (
+            <Field label="Order link" hint="Their page for this item.">
+              <input className={staffInput} inputMode="url" value={d.order_url} onChange={set('order_url')} placeholder="smallpetselect.com/products/timothy-hay" />
+            </Field>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Reorder when stock is at">
+              <input className={staffInput} inputMode="numeric" value={d.reorder_point} onChange={digits('reorder_point')} placeholder="2" />
+            </Field>
+            <Field label="How many to order">
+              <input className={staffInput} inputMode="numeric" value={d.reorder_qty} onChange={digits('reorder_qty')} placeholder="6" />
+            </Field>
+          </div>
+          <p className="text-sm text-slate-600">Leave “reorder when” blank for things you don’t restock (donated items, one-offs).</p>
+          {packsOn && (
+            <div className="border-t border-brand-blue/15 pt-3">
+              <PackEditor rows={packs} onChange={setPacks} />
+            </div>
+          )}
+        </div>
       </div>
-    </form>
+    </EditorForm>
   )
 }
 
@@ -1147,38 +1210,23 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      <JobSteps canOrder={canAct} low={(items ?? []).filter((p) => p.on_order_qty === 0).length} onList />
       <FormError>{error}</FormError>
-      {canAct && (
-        <Link
-          to="/staff/hopshop/deliveries/new"
-          className="flex min-h-[56px] items-center gap-3 rounded-2xl border-2 border-brand-blue/40 bg-brand-blue-50/60 px-4 py-2 text-left"
-        >
-          <Icon name="box" size={22} />
-          <span className="min-w-0 flex-1">
-            <span className="block font-display text-[15px] font-extrabold text-ink">Something arrived? Add it from the invoice</span>
-            <span className="block text-xs text-slate-600">PDF or a photo — it fills in the items and how many</span>
-          </span>
-          <Icon name="chevron" size={18} />
-        </Link>
-      )}
-      {canAct && (
-        <Link to="/staff/hopshop/deliveries" className="inline-flex min-h-[44px] items-center text-sm font-bold text-brand-blue">
-          Past deliveries →
-        </Link>
-      )}
-      {note && <p className="text-sm font-bold text-green-700">{note}</p>}
+      {note && <p className="text-[15px] font-bold text-green-700">{note}</p>}
       {arrived && (
-        <p className="rounded-xl bg-green-50 px-3 py-2 text-sm text-slate-700">
-          {arrived.qty} × {arrived.name} added to stock.{' '}
-          <Link to={`/staff/hopshop/labels?code=${encodeURIComponent(arrived.code)}&copies=${arrived.qty}`} className="inline-flex min-h-[44px] items-center font-bold text-brand-blue">
-            Print {arrived.qty} label{arrived.qty === 1 ? '' : 's'} →
+        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-green-50 px-3 py-2 text-[15px] text-slate-700">
+          <span className="min-w-0 flex-1">
+            {arrived.qty} × {arrived.name} added to stock.
+          </span>
+          <Link to={`/staff/hopshop/labels?code=${encodeURIComponent(arrived.code)}&copies=${arrived.qty}`} className={`${pill.blue} ${tall}`}>
+            <Icon name="printer" size={16} /> Print {arrived.qty} label{arrived.qty === 1 ? '' : 's'}
           </Link>
-        </p>
+        </div>
       )}
       {items === null && !error && <Spinner label="Checking stock…" />}
       {items && items.length === 0 && (
-        <Card className="space-y-2 text-sm text-slate-600">
+        <Card className="space-y-2 text-base text-slate-600">
           <p className="font-bold text-ink">Nothing to reorder.</p>
           <p>Items appear here when their stock is at or below the reorder point you set on the item, and stay while they are on order.</p>
         </Card>
@@ -1195,9 +1243,9 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
         return (
           <Card key={g.key} className="space-y-3">
             <div>
-              <p className="font-display text-[15px] font-extrabold text-ink">{g.name}</p>
+              <p className="font-display text-base font-extrabold text-ink">{g.name}</p>
               {s && (
-                <p className="text-xs text-slate-500">
+                <p className="text-sm text-slate-600">
                   {[
                     s.order_how ? ORDER_HOW_LABEL[s.order_how] : null,
                     s.account_number ? `account ${s.account_number}` : null,
@@ -1228,7 +1276,7 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
                   )}
                 </p>
               )}
-              {s?.order_notes && <p className="mt-1 rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">{s.order_notes}</p>}
+              {s?.order_notes && <p className="mt-1 rounded-xl bg-slate-50 px-3 py-2 text-sm leading-relaxed text-slate-600">{s.order_notes}</p>}
             </div>
 
             {toOrder.length > 0 && (
@@ -1247,7 +1295,7 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
               </ul>
             )}
             {toOrder.length > 0 && (subtotal > 0 || min != null || ship) && (
-              <div className="rounded-xl bg-brand-blue-50/60 px-3 py-2 text-sm">
+              <div className="rounded-xl bg-brand-blue-50/60 px-3 py-2 text-[15px]">
                 <p className="font-bold text-ink">
                   Subtotal {money(subtotal)}
                   {missing > 0 && (
@@ -1260,16 +1308,16 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
                 {ship && <p className={ship.cents === 0 ? 'font-semibold text-green-700' : 'text-slate-700'}>{ship.label}</p>}
                 {ship && ship.cents != null && <p className="font-bold text-ink">Total {money(subtotal + ship.cents)}</p>}
                 {ship?.toFree != null && ship.toFree > 0 && (
-                  <p className="text-xs font-semibold text-brand-orange-dark">Add {money(ship.toFree)} more for free shipping.</p>
+                  <p className="text-sm font-semibold text-brand-orange-dark">Add {money(ship.toFree)} more for free shipping.</p>
                 )}
                 {min != null && subtotal < min && (
-                  <p className="text-xs font-semibold text-brand-orange-dark">Under their {money(min)} minimum — {money(min - subtotal)} to go.</p>
+                  <p className="text-sm font-semibold text-brand-orange-dark">Under their {money(min)} minimum — {money(min - subtotal)} to go.</p>
                 )}
               </div>
             )}
             {toOrder.length > 0 && (
               <div className="flex gap-2">
-                <button type="button" onClick={() => void sendList(g.name, toOrder, s)} className={`${btn.outline} min-h-[44px] flex-1 !py-2`}>
+                <button type="button" onClick={() => void sendList(g.name, toOrder, s)} className={`${btn.outline} min-h-[44px] flex-1 !py-2 !text-[15px]`}>
                   <Icon name="mail" size={16} /> {s?.email ? 'Email the order' : 'Send the list'}
                 </button>
                 <button
@@ -1279,7 +1327,7 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
                       setNote(ok ? `${g.name} order copied — paste it into an email, or read it out on the phone.` : null),
                     )
                   }
-                  className="min-h-[44px] rounded-full border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600"
+                  className={`${pill.outline} ${tall}`}
                 >
                   Copy order
                 </button>
@@ -1288,23 +1336,23 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
 
             {onOrder.length > 0 && (
               <div className="space-y-1.5 border-t border-slate-100 pt-2">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">On order</p>
+                <p className="text-sm font-bold uppercase tracking-wide text-slate-500">On order</p>
                 <ul className="divide-y divide-slate-100">
                   {onOrder.map((p) => (
                     <li key={p.id} className="flex items-center gap-2 py-2">
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-bold text-ink">{p.name}</span>
-                        <span className="block text-xs text-slate-500">
+                        <span className="block truncate text-[15px] font-bold text-ink">{p.name}</span>
+                        <span className="block text-sm text-slate-600">
                           {onOrderText(p)}
                           {p.ordered_at ? ` ${new Date(p.ordered_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''} · {p.quantity ?? 0} left
                         </span>
                       </span>
                       {canAct && (
                         <>
-                          <button type="button" onClick={() => act(p, 'received')} className="min-h-[44px] rounded-full bg-green-600 px-3 text-xs font-bold text-white">
+                          <button type="button" onClick={() => act(p, 'received')} className={`${pill.green} ${tall}`}>
                             Arrived
                           </button>
-                          <button type="button" onClick={() => act(p, 'clear')} className="min-h-[44px] rounded-full border border-slate-200 px-3 text-xs font-bold text-slate-500">
+                          <button type="button" onClick={() => act(p, 'clear')} className={`${pill.outline} ${tall}`}>
                             Undo
                           </button>
                         </>
@@ -1349,8 +1397,8 @@ function ReorderLine({
     }
   }
   const orderLink = p.order_url ? (
-    <a href={p.order_url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center gap-1 text-sm font-bold text-brand-blue">
-      Order page <Icon name="external" size={13} />
+    <a href={p.order_url} target="_blank" rel="noopener noreferrer" className={`${pill.outline} ${tall}`}>
+      Order page <Icon name="external" size={14} />
     </a>
   ) : null
 
@@ -1359,8 +1407,8 @@ function ReorderLine({
       <li className="py-2">
         <div className="flex items-center gap-3">
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-bold text-ink">{p.name}</span>
-            <span className="block text-xs text-slate-500">
+            <span className="block truncate text-[15px] font-bold text-ink">{p.name}</span>
+            <span className="block text-sm text-slate-600">
               {p.quantity ?? 0} left · reorder at {p.reorder_point}
               {p.reorder_qty ? ` · order ${p.reorder_qty}${p.unit ? ` ${p.unit}` : ''}` : ''}
               {p.supplier_sku ? ` · item ${p.supplier_sku}` : ''}
@@ -1368,7 +1416,7 @@ function ReorderLine({
             </span>
           </span>
           {canAct && (
-            <button type="button" onClick={() => void run(onOrdered)} disabled={busy} className="min-h-[44px] rounded-full bg-brand-blue px-4 text-xs font-bold text-white disabled:opacity-60">
+            <button type="button" onClick={() => void run(onOrdered)} disabled={busy} className={`${pill.blue} ${tall}`}>
               Ordered
             </button>
           )}
@@ -1384,13 +1432,13 @@ function ReorderLine({
   return (
     <li className="space-y-2 py-2.5">
       <div>
-        <span className="block text-sm font-bold text-ink">{p.name}</span>
-        <span className="block text-xs text-slate-500">
+        <span className="block text-[15px] font-bold text-ink">{p.name}</span>
+        <span className="block text-sm text-slate-600">
           {p.quantity ?? 0} left · reorder at {p.reorder_point} · aiming for {unitsWanted(p)} more
           {sku ? ` · item ${sku}` : ''}
         </span>
-        <span className="mt-0.5 block text-sm font-bold text-brand-blue">Order {packLine(k, choice.count)}</span>
-        {k.min_packs > 1 && <span className="block text-xs text-slate-500">Their minimum is {packName(k, k.min_packs)}.</span>}
+        <span className="mt-0.5 block text-[15px] font-bold text-brand-blue">Order {packLine(k, choice.count)}</span>
+        {k.min_packs > 1 && <span className="block text-sm text-slate-600">Their minimum is {packName(k, k.min_packs)}.</span>}
       </div>
       {canAct && (
         <div className="flex flex-wrap items-center gap-2">
@@ -1402,7 +1450,7 @@ function ReorderLine({
                 const next = packs.find((x) => x.id === e.target.value)
                 if (next) onChoose({ packId: next.id, count: packsFor(p, next) })
               }}
-              className="min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-sm text-ink outline-none focus:border-brand-blue"
+              className="min-h-[44px] rounded-xl border border-slate-200 bg-white px-3 text-base text-ink outline-none focus:border-brand-blue"
             >
               {packs.map((x) => (
                 <option key={x.id} value={x.id}>
@@ -1424,13 +1472,13 @@ function ReorderLine({
               aria-label="How many packs"
               value={choice.count}
               onChange={(e) => setCount(parseInt(e.target.value || '0', 10) || min)}
-              className="h-11 w-14 rounded-lg border border-slate-200 px-1 text-center text-sm text-ink outline-none focus:border-brand-blue"
+              className="h-11 w-14 rounded-lg border border-slate-200 px-1 text-center text-base text-ink outline-none focus:border-brand-blue"
             />
             <button type="button" onClick={() => setCount(choice.count + 1)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-600" aria-label="One pack more">
               <Icon name="plus" size={16} />
             </button>
           </div>
-          <button type="button" onClick={() => void run(() => onOrderPacks(choice))} disabled={busy} className="min-h-[44px] rounded-full bg-brand-blue px-4 text-xs font-bold text-white disabled:opacity-60">
+          <button type="button" onClick={() => void run(() => onOrderPacks(choice))} disabled={busy} className={`${pill.blue} ${tall}`}>
             {busy ? 'Saving…' : 'Ordered'}
           </button>
           {orderLink}
@@ -1512,7 +1560,7 @@ function Suppliers({
             key={k}
             type="button"
             onClick={() => setFilter(k)}
-            className={`min-h-[44px] rounded-full px-3.5 text-sm font-bold ${filter === k ? 'bg-brand-orange text-ink' : 'border border-slate-200 bg-white text-slate-600'}`}
+            className={`min-h-[48px] flex-1 rounded-full px-3 text-sm font-bold ${filter === k ? 'bg-brand-orange text-ink' : 'border border-slate-200 bg-white text-slate-600'}`}
           >
             {label}
           </button>
@@ -1520,7 +1568,7 @@ function Suppliers({
       </div>
       {suppliers === null && <Spinner />}
       {suppliers && shown.length === 0 && editing !== 'new' && (
-        <Card className="text-sm text-slate-600">No one here yet{canWrite ? ' — add the first below.' : '.'}</Card>
+        <Card className="text-base text-slate-600">No one here yet{canWrite ? ' — add the first below.' : '.'}</Card>
       )}
       {shown.map((s) => (
         <Card key={s.id} className="space-y-2">
@@ -1528,14 +1576,14 @@ function Suppliers({
             <CompanyThumb c={s} />
             <span className="min-w-0 flex-1">
               <span className="flex flex-wrap items-center gap-1.5">
-                <span className="font-display text-[15px] font-extrabold text-ink">{s.name}</span>
+                <span className="font-display text-base font-extrabold text-ink">{s.name}</span>
                 {s.is_supplier && <Badge tone="blue">We buy from them</Badge>}
                 {s.is_vendor && <Badge tone="orange">Sells at our events</Badge>}
                 {!s.is_active && <Badge tone="slate">Inactive</Badge>}
               </span>
-              <span className="block text-xs text-slate-500">
+              <span className="block text-sm text-slate-600">
                 {[
-                  s.vendor_no != null ? `Vendor ${vendorText(s.vendor_no)}` : null,
+                  s.vendor_no != null ? `Supplier no. ${vendorText(s.vendor_no)}` : null,
                   s.contact_name,
                   s.order_how ? ORDER_HOW_LABEL[s.order_how] : null,
                   s.account_number ? `account ${s.account_number}` : null,
@@ -1545,14 +1593,22 @@ function Suppliers({
                   .join(' · ')}
               </span>
               {(s.email || s.phone || s.website) && (
-                <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs font-bold text-brand-blue">
+                <span className="mt-1 flex flex-wrap gap-x-4 text-sm font-bold text-brand-blue">
                   {s.website && (
-                    <a href={s.website} target="_blank" rel="noopener noreferrer">
+                    <a href={s.website} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center">
                       Website
                     </a>
                   )}
-                  {s.email && <a href={`mailto:${s.email}`}>{s.email}</a>}
-                  {s.phone && <a href={`tel:${s.phone}`}>{s.phone}</a>}
+                  {s.email && (
+                    <a href={`mailto:${s.email}`} className="inline-flex min-h-[44px] items-center">
+                      {s.email}
+                    </a>
+                  )}
+                  {s.phone && (
+                    <a href={`tel:${s.phone}`} className="inline-flex min-h-[44px] items-center">
+                      {s.phone}
+                    </a>
+                  )}
                 </span>
               )}
               <CompanySummary c={s} gifts={gifts?.get(s.id)} />
@@ -1560,7 +1616,7 @@ function Suppliers({
                 const b = bought.get(s.id)
                 if (!b || b.items === 0) return null
                 return (
-                  <span className="mt-1 block text-xs font-semibold text-slate-600">
+                  <span className="mt-1 block text-sm font-semibold text-slate-600">
                     {[
                       `Bought from them: ${b.items} ${b.items === 1 ? 'item' : 'items'}`,
                       b.cost_cents != null ? money(b.cost_cents) : null,
@@ -1572,13 +1628,13 @@ function Suppliers({
                 )
               })()}
               {s.is_supplier && (
-                <Link to={`/staff/hopshop/deliveries?supplier=${s.id}`} className="mt-1 inline-flex min-h-[44px] items-center text-xs font-bold text-brand-blue">
-                  Deliveries from {s.name} →
+                <Link to={`/staff/hopshop/deliveries?supplier=${s.id}`} className={`${pill.soft} ${tall} mt-2`}>
+                  Deliveries from {s.name}
                 </Link>
               )}
             </span>
             {canWrite && (
-              <button type="button" onClick={() => setEditing(editing === s.id ? null : s.id)} className="min-h-[44px] shrink-0 px-2 text-sm font-bold text-brand-blue">
+              <button type="button" onClick={() => setEditing(editing === s.id ? null : s.id)} className={`${pill.outline} ${tall} shrink-0`}>
                 {editing === s.id ? 'Close' : 'Open'}
               </button>
             )}
@@ -1605,12 +1661,12 @@ function Suppliers({
       {canWrite &&
         (editing === 'new' ? (
           <Card>
-            <p className="mb-3 font-display text-[15px] font-extrabold text-ink">New company</p>
+            <p className="mb-3 font-display text-base font-extrabold text-ink">New company</p>
             <CompanyForm orgId={orgId} initial={null} mode="shop" onSaved={done} onCancel={() => setEditing(null)} />
           </Card>
         ) : (
           <button type="button" onClick={() => setEditing('new')} className={`${btn.outline} min-h-[44px] w-full`}>
-            <Icon name="plus" size={16} /> Add a vendor
+            <Icon name="plus" size={16} /> Add a company
           </button>
         ))}
     </div>

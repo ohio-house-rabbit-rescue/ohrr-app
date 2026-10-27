@@ -1,7 +1,7 @@
 // Drop-offs (update 40): each visit someone brought donations — who, when,
 // how much, and whether they've been thanked. Tap one for its items and the
 // thank-you letter.
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
@@ -13,6 +13,20 @@ import { ErrorBox } from '../ScanUI'
 import { KIND_META, formatMoney, usDate } from '../types'
 import { plural } from '../letters'
 import { StaffTitle } from '../../../components/StaffTitle'
+import { StepButton } from '../../../components/StaffJob'
+
+type Show = 'all' | 'week' | 'month' | 'unthanked'
+const SHOWS: [Show, string][] = [
+  ['all', 'All'],
+  ['week', 'This week'],
+  ['month', 'This month'],
+  ['unthanked', 'Without a thank-you'],
+]
+
+/** The day (yyyy-mm-dd) a drop-off came in, as a local date. */
+const dayOf = (iso: string | null) => (iso ? iso.slice(0, 10) : '')
+const pad = (n: number) => String(n).padStart(2, '0')
+const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
 export default function Dropoffs() {
   const { membership, can } = useAuth()
@@ -37,12 +51,26 @@ export default function Dropoffs() {
     }
   }, [orgId, allowed])
 
+  const [show, setShow] = useState<Show>('all')
   const toThank = (rows ?? []).filter((r) => !r.thanked_at).length
+
+  // Weeks run Sunday to Saturday; the month is the calendar month.
+  const shown = useMemo(() => {
+    const now = new Date()
+    const weekStart = ymd(new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()))
+    const monthStart = ymd(new Date(now.getFullYear(), now.getMonth(), 1))
+    return (rows ?? []).filter((r) => {
+      if (show === 'week') return dayOf(r.received_on) >= weekStart
+      if (show === 'month') return dayOf(r.received_on) >= monthStart
+      if (show === 'unthanked') return !r.thanked_at
+      return true
+    })
+  }, [rows, show])
 
   return (
     <Screen className="space-y-4">
       <div className="pt-1">
-        <Link to="/staff/items" className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
+        <Link to="/staff/items" className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-base font-bold text-brand-blue hover:bg-brand-blue-50">
           <Icon name="arrowLeft" size={20} /> Items
         </Link>
         <StaffTitle title="Drop-offs">
@@ -56,12 +84,11 @@ export default function Dropoffs() {
         <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-base text-slate-600">This isn’t switched on yet — ask an admin.</p>
       ) : (
         <>
-          <Link
-            to="/staff/donations/report"
-            className="inline-flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-brand-blue/50 bg-white font-display text-base font-extrabold text-brand-blue"
-          >
-            <Icon name="calendar" size={20} /> Donations this month
-          </Link>
+          <div>
+            <StepButton to="/staff/donations/report" icon="calendar">
+              Donations this month
+            </StepButton>
+          </div>
 
           <ErrorBox>{error}</ErrorBox>
           {rows === null && !error && <Spinner />}
@@ -69,13 +96,30 @@ export default function Dropoffs() {
             <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-base text-slate-500">No drop-offs yet.</div>
           )}
           {rows && rows.length > 0 && (
-            <p className="px-1 text-sm font-semibold text-slate-500">
-              {toThank === 0 ? 'Everyone has been thanked.' : `${plural(toThank, 'thank-you')} to send.`}
-            </p>
+            <>
+              <div className="grid grid-cols-2 gap-2" role="group" aria-label="Show these drop-offs">
+                {SHOWS.map(([k, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    aria-pressed={show === k}
+                    onClick={() => setShow(k)}
+                    className={`inline-flex min-h-[48px] items-center justify-center rounded-full px-2 text-[15px] font-bold ${show === k ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="px-1 text-[15px] font-semibold text-slate-600">
+                {shown.length === rows.length ? `${plural(rows.length, 'drop-off')}. ` : `${shown.length} of ${plural(rows.length, 'drop-off')}. `}
+                {toThank === 0 ? 'Everyone has been thanked.' : `${plural(toThank, 'thank-you')} to send.`}
+              </p>
+              {shown.length === 0 && <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-center text-base text-slate-600">Nothing here for that choice.</div>}
+            </>
           )}
 
           <ul className="space-y-2.5">
-            {(rows ?? []).map((d) => {
+            {shown.map((d) => {
               const name = (d.donor_name ?? '').trim()
               return (
                 <li key={d.id}>

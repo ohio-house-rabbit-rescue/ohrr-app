@@ -1,12 +1,12 @@
 // Staff → Impact: the yearly numbers. Pick a year, type the counts, add a
 // few highlight lines, publish. Volunteer hours can be pulled from the Hours
 // tab with one tap.
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
-import { Screen, Card, Badge, btn } from '../../../components/ui'
-import { Icon } from '../../../components/icons'
-import { Spinner, FormError, staffInput } from '../../../components/staffui'
+import { Screen, Badge } from '../../../components/ui'
+import { Spinner, staffInput } from '../../../components/staffui'
+import { EditorForm, Field, Part, pill } from '../../../components/StaffJob'
 import { hoursTotalForYear } from '../../bookings/api'
 import { IMPACT_FIELDS, deleteImpact, listImpact, saveImpact, type ImpactYear } from '../api'
 import { StaffTitle } from '../../../components/StaffTitle'
@@ -49,10 +49,9 @@ export default function StaffImpact() {
     if (rows) setD(toDraft(rows.find((r) => r.year === year) ?? null))
   }, [rows, year])
 
-  if (!can('announcements.post')) return <Screen><p className="text-sm text-slate-600">You don’t have access to the impact page.</p></Screen>
+  if (!can('announcements.post')) return <Screen><p className="text-base text-slate-600">You don’t have access to the impact page.</p></Screen>
 
-  const save = async (e: FormEvent) => {
-    e.preventDefault()
+  const save = async () => {
     if (!d) return
     setBusy(true)
     setError(null)
@@ -91,17 +90,29 @@ export default function StaffImpact() {
   }
 
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i)
+  const saved = rows?.find((r) => r.year === year)
 
   return (
     <Screen className="space-y-4">
       <StaffTitle title="Impact">
         <p>The year in numbers, for donors, sponsors and volunteers. Shown at /impact on the app and the website once published.</p>
+        <p>A filled dot on a year means it is published; an empty dot means a draft.</p>
       </StaffTitle>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Year">
         {years.map((y) => {
           const has = rows?.find((r) => r.year === y)
           return (
-            <button key={y} type="button" onClick={() => setYear(y)} className={`min-h-[40px] rounded-full px-4 text-sm font-bold ${year === y ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}>
+            <button
+              key={y}
+              type="button"
+              aria-pressed={year === y}
+              onClick={() => {
+                setYear(y)
+                setMsg(null)
+                setError(null)
+              }}
+              className={`min-h-[44px] rounded-full px-4 text-[15px] font-bold ${year === y ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-700'}`}
+            >
               {y}
               {has ? (has.is_published ? ' ●' : ' ○') : ''}
             </button>
@@ -110,54 +121,63 @@ export default function StaffImpact() {
       </div>
       {rows === null && !error && <Spinner />}
       {d && (
-        <form onSubmit={save} className="space-y-4">
-          <Card className="space-y-3">
-            <div className="flex items-center gap-2">
-              <p className="font-display text-lg font-extrabold text-ink">{year}</p>
-              {rows?.find((r) => r.year === year)?.is_published ? <Badge tone="blue">Published</Badge> : <Badge tone="slate">Draft</Badge>}
-            </div>
+        <EditorForm
+          title={`${year} in numbers`}
+          hint={saved?.is_published ? <Badge tone="blue">Shown</Badge> : <Badge tone="slate">Hidden</Badge>}
+          onSubmit={save}
+          busy={busy}
+          error={error}
+          remove={
+            saved
+              ? {
+                  label: `Remove ${year}`,
+                  confirm: `Delete the ${year} numbers?`,
+                  onRemove: () => deleteImpact(orgId, year).then(load).then(() => undefined).catch((e) => setError(errMessage(e))),
+                }
+              : undefined
+          }
+        >
+          <div className="space-y-3">
+            <Part n="A" hint="optional">
+              The numbers
+            </Part>
             {IMPACT_FIELDS.map((f) => (
-              <label key={f.key} className="block text-sm font-semibold text-slate-700">
-                {f.label}
-                <span className="block text-xs font-normal text-slate-500">{f.hint}</span>
-                <div className="flex gap-2">
+              <div key={f.key} className="space-y-2">
+                <Field label={f.label} hint={f.hint}>
                   <input className={staffInput} inputMode="decimal" value={d.fields[f.key]} onChange={(e) => setD({ ...d, fields: { ...d.fields, [f.key]: e.target.value } })} placeholder={f.money ? '12500' : ''} />
-                  {f.key === 'volunteer_hours' && (
-                    <button type="button" onClick={() => void pullHours()} className="mt-1 shrink-0 rounded-xl bg-brand-blue-50 px-3 text-xs font-bold text-brand-blue">
-                      Use Hours tab
-                    </button>
-                  )}
-                </div>
-              </label>
+                </Field>
+                {f.key === 'volunteer_hours' && (
+                  <button type="button" onClick={() => void pullHours()} className={pill.soft}>
+                    Use the Hours tab
+                  </button>
+                )}
+              </div>
             ))}
-            <label className="block text-sm font-semibold text-slate-700">
-              Highlights — one per line (optional)
+          </div>
+
+          <div className="space-y-3">
+            <Part n="B" hint="optional">
+              In words
+            </Part>
+            <Field label="Highlights — one per line">
               <textarea className={staffInput} rows={4} value={d.highlights} onChange={(e) => setD({ ...d, highlights: e.target.value })} placeholder={'First mobile vet clinic\nNew adoption pens\nRecord Midwest BunFest'} />
-            </label>
-            <label className="block text-sm font-semibold text-slate-700">
-              One line under the numbers (optional)
+            </Field>
+            <Field label="One line under the numbers">
               <input className={staffInput} value={d.note} onChange={(e) => setD({ ...d, note: e.target.value })} placeholder="Every number here was made possible by volunteers and donors." />
-            </label>
-            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-brand-blue" checked={d.is_published} onChange={(e) => setD({ ...d, is_published: e.target.checked })} />
+            </Field>
+          </div>
+
+          <div className="space-y-3">
+            <Part n="C" hint="optional">
+              Showing
+            </Part>
+            <label className="flex min-h-[44px] items-center gap-3 text-base font-semibold text-slate-700">
+              <input type="checkbox" className="h-6 w-6 rounded border-slate-300 text-brand-blue" checked={d.is_published} onChange={(e) => setD({ ...d, is_published: e.target.checked })} />
               Show this year publicly
             </label>
-          </Card>
-          <FormError>{error}</FormError>
+          </div>
           {msg && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{msg}</p>}
-          <button type="submit" disabled={busy} className={`${btn.primary} w-full disabled:opacity-60`}>
-            <Icon name="check" size={16} /> {busy ? 'Saving…' : 'Save'}
-          </button>
-          {rows?.find((r) => r.year === year) && (
-            <button
-              type="button"
-              onClick={() => window.confirm(`Delete the ${year} numbers?`) && deleteImpact(orgId, year).then(load).catch((e) => setError(errMessage(e)))}
-              className="block w-full py-2 text-center text-sm font-bold text-red-600"
-            >
-              Delete {year}
-            </button>
-          )}
-        </form>
+        </EditorForm>
       )}
     </Screen>
   )

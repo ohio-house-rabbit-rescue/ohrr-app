@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
-import { btn, Badge, Card, Screen } from '../components/ui'
+import { Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { StaffTitle } from '../components/StaffTitle'
+import { CardActions, EditorForm, Field, Needed, Optional, StepButton, pill } from '../components/StaffJob'
+import { CheckRow, PartBox, byName, confirmRemove, useCardAction, useSaving } from '../components/ContentEditorBits'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { isNative } from '../native/platform'
 import { pickPhoto } from '../native/camera'
@@ -203,36 +205,31 @@ function RescueGroupsCheck({ orgId, canRefresh, onRefreshed }: { orgId: string; 
   if (check === 'loading') return null
   if (check === 'missing')
     return (
-      <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-500">
+      <p className="rounded-xl bg-slate-50 px-3 py-2 text-[15px] leading-relaxed text-slate-600">
         Keeping this list up to date from RescueGroups every morning isn’t switched on yet — ask an admin.
       </p>
     )
 
   return (
     <Card className="space-y-2 !py-3">
-      <p className="text-sm leading-relaxed text-slate-700">
+      <p className="text-[15px] leading-relaxed text-slate-700">
         {check ? checkSummary(check) : 'RescueGroups hasn’t been checked yet.'}{' '}
         <span className="text-slate-500">It’s checked every morning.</span>
       </p>
       {phase === 'waiting' && (
-        <p className="text-sm font-semibold text-brand-blue">Checking RescueGroups — this takes about 20 seconds…</p>
+        <p className="text-[15px] font-semibold text-brand-blue">Checking RescueGroups — this takes about 20 seconds…</p>
       )}
       {phase === 'late' && (
-        <p className="text-sm text-slate-600">
-          Not finished yet.{' '}
-          <button type="button" onClick={() => void lookAgain()} className="min-h-[40px] font-bold text-brand-blue underline underline-offset-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[15px] text-slate-600">Not finished yet.</p>
+          <button type="button" onClick={() => void lookAgain()} className={pill.outline}>
             Check again
           </button>
-        </p>
+        </div>
       )}
       <FormError>{error}</FormError>
       {canRefresh && phase !== 'waiting' && (
-        <button
-          type="button"
-          disabled={phase === 'asking'}
-          onClick={() => void ask()}
-          className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-slate-200 px-4 text-sm font-bold text-brand-blue hover:bg-slate-50 disabled:opacity-60"
-        >
+        <button type="button" disabled={phase === 'asking'} onClick={() => void ask()} className={pill.outline}>
           {phase === 'asking' ? 'Asking…' : 'Check RescueGroups now'}
         </button>
       )}
@@ -250,14 +247,18 @@ async function uploadPhoto(file: File, userId: string): Promise<string> {
   return supabase.storage.from('rabbit-photos').getPublicUrl(path).data.publicUrl
 }
 
+
 function PhotoUploader({
   photos,
   userId,
   onChange,
+  needed,
 }: {
   photos: string[]
   userId: string
   onChange: (next: string[]) => void
+  /** A new rabbit needs at least one photo; an existing one may not have any. */
+  needed: boolean
 }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -298,67 +299,42 @@ function PhotoUploader({
 
   return (
     <div>
-      <span className="text-sm font-semibold text-slate-700">Photos</span>
+      <p className="text-sm font-semibold text-slate-700">
+        Photos
+        {needed ? <Needed /> : <Optional />}
+      </p>
+      <p className="text-sm text-slate-500">The first photo is the one on the card.</p>
       {photos.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap gap-2">
+        <ul className="mt-2 space-y-2">
           {photos.map((p, i) => (
-            <div key={p} className="relative">
-              <img
-                src={p}
-                alt={`Photo ${i + 1}`}
-                className="h-20 w-20 rounded-xl object-cover ring-1 ring-slate-200"
-              />
-              {i === 0 ? (
-                <span className="absolute left-1 top-1 rounded bg-brand-blue px-1.5 py-0.5 text-[10px] font-bold text-white">
-                  Cover
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => onChange([p, ...photos.filter((x) => x !== p)])}
-                  className="absolute left-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-brand-blue shadow"
-                >
-                  Make cover
+            <li key={p} className="flex items-center gap-3 rounded-xl border border-slate-200 p-2">
+              <img src={p} alt={`Photo ${i + 1}`} className="h-20 w-20 shrink-0 rounded-xl object-cover ring-1 ring-slate-200" />
+              <div className="flex flex-wrap items-center gap-2">
+                {i === 0 ? (
+                  <Badge tone="blue">Cover photo</Badge>
+                ) : (
+                  <button type="button" onClick={() => onChange([p, ...photos.filter((x) => x !== p)])} className={pill.soft}>
+                    Make cover
+                  </button>
+                )}
+                <button type="button" onClick={() => onChange(photos.filter((x) => x !== p))} className={pill.red}>
+                  <Icon name="trash" size={16} /> Remove
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => onChange(photos.filter((x) => x !== p))}
-                aria-label="Remove photo"
-                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow"
-              >
-                <Icon name="x" size={12} />
-              </button>
-            </div>
+              </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {isNative && (
-          <button
-            type="button"
-            onClick={() => void takePhoto()}
-            disabled={busy}
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-brand-blue px-4 text-sm font-bold text-white disabled:opacity-60"
-          >
+          <button type="button" onClick={() => void takePhoto()} disabled={busy} className={pill.blue}>
             <Icon name="camera" size={17} /> {busy ? 'Uploading…' : 'Take a photo'}
           </button>
         )}
-        <label
-          className={`inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-4 text-sm font-bold text-brand-blue hover:bg-slate-50 ${
-            busy ? 'opacity-60' : ''
-          }`}
-        >
+        <label className={`${pill.outline} cursor-pointer ${busy ? 'opacity-60' : ''}`}>
           <Icon name="camera" size={17} />
           {busy && !isNative ? 'Uploading…' : photos.length ? 'Add from photos' : isNative ? 'Choose from photos' : 'Upload photos'}
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            disabled={busy}
-            className="hidden"
-            onChange={(e) => onFiles(e.target.files)}
-          />
+          <input type="file" accept="image/*" multiple disabled={busy} className="hidden" onChange={(e) => onFiles(e.target.files)} />
         </label>
       </div>
       <FormError>{error}</FormError>
@@ -369,49 +345,102 @@ function PhotoUploader({
 function RabbitForm({
   initial,
   userId,
-  submitLabel,
+  title,
+  saveLabel,
+  isNew,
   onSubmit,
   onCancel,
+  onRemove,
 }: {
   initial: Draft
   userId: string
-  submitLabel: string
+  title: string
+  saveLabel: string
+  isNew: boolean
   onSubmit: (d: Draft) => Promise<void>
   onCancel: () => void
+  onRemove?: () => Promise<void>
 }) {
   const [draft, setDraft] = useState<Draft>(initial)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { busy, error, submit, guard } = useSaving(() => onSubmit(draft))
   const set =
     (k: keyof Draft) =>
     (e: { target: { value: string } }) =>
       setDraft((d) => ({ ...d, [k]: e.target.value }))
-  const check =
-    (k: keyof Draft) =>
-    (e: { target: { checked: boolean } }) =>
-      setDraft((d) => ({ ...d, [k]: e.target.checked }))
-
-  const submit = async (e: { preventDefault(): void }) => {
-    e.preventDefault()
-    setError(null)
-    setBusy(true)
-    try {
-      await onSubmit(draft)
-    } catch (err) {
-      setError(errMessage(err))
-      setBusy(false)
-    }
-  }
+  const check = (k: keyof Draft) => (v: boolean) => setDraft((d) => ({ ...d, [k]: v }))
 
   return (
-    <form onSubmit={submit} className="space-y-3">
-      <div className="flex gap-3">
-        <label className="block flex-1 text-sm font-semibold text-slate-700">
-          Name
+    <EditorForm
+      title={title}
+      hint="Needed parts are marked. Save puts the rabbit on the Adopt page right away if it is shown."
+      onSubmit={submit}
+      onCancel={onCancel}
+      busy={busy}
+      saveLabel={saveLabel}
+      canSave={draft.name.trim().length > 0}
+      error={error}
+      remove={
+        onRemove
+          ? { label: 'Remove this rabbit', confirm: 'Remove this rabbit? This can’t be undone.', onRemove: guard(onRemove) }
+          : undefined
+      }
+    >
+      <PartBox n="A" title="Who" hint="needed">
+        <Field label="Name" needed>
           <input className={staffInput} required value={draft.name} onChange={set('name')} />
-        </label>
-        <label className="block w-32 text-sm font-semibold text-slate-700">
-          Status
+        </Field>
+        {/* A photo can come later (the card shows a placeholder until then), so it never blocks Save. */}
+        <PhotoUploader photos={draft.photos} userId={userId} needed={false} onChange={(photos) => setDraft((d) => ({ ...d, photos }))} />
+      </PartBox>
+
+      <PartBox n="B" title="About them" hint="optional">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Field label="Age">
+            <select className={staffInput} value={draft.age} onChange={set('age')}>
+              {AGES.map((a) => (
+                <option key={a} value={a}>
+                  {a || '—'}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Sex">
+            <select className={staffInput} value={draft.sex} onChange={set('sex')}>
+              {SEXES.map((s) => (
+                <option key={s} value={s}>
+                  {s || '—'}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Size">
+            <select className={staffInput} value={draft.size} onChange={set('size')}>
+              {SIZES.map((s) => (
+                <option key={s} value={s}>
+                  {s || '—'}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <Field label="Breed">
+          <BreedInput className={staffInput} value={draft.breed} onChange={(v) => setDraft((d) => ({ ...d, breed: v }))} />
+        </Field>
+        <Field label="About this rabbit">
+          <textarea className={staffInput} rows={4} value={draft.description} onChange={set('description')} />
+        </Field>
+        <Field label="Traits (separate with commas)">
+          <input className={staffInput} value={draft.tags} onChange={set('tags')} placeholder="Friendly, Litter-trained, Bonded pair" />
+        </Field>
+        <div>
+          <CheckRow label="Spayed or neutered" checked={draft.spayed_neutered} onChange={check('spayed_neutered')} />
+          <CheckRow label="Litter-trained" checked={draft.house_trained} onChange={check('house_trained')} />
+          <CheckRow label="Part of a bonded pair" checked={draft.bonded} onChange={check('bonded')} />
+        </div>
+      </PartBox>
+
+      <PartBox n="C" title="Status and showing" hint="needed">
+        <Field label="Status" needed>
           <select className={staffInput} value={draft.status} onChange={set('status')}>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
@@ -419,113 +448,14 @@ function RabbitForm({
               </option>
             ))}
           </select>
-        </label>
-      </div>
-
-      <div className="flex gap-3">
-        <label className="block flex-1 text-sm font-semibold text-slate-700">
-          Age
-          <select className={staffInput} value={draft.age} onChange={set('age')}>
-            {AGES.map((a) => (
-              <option key={a} value={a}>
-                {a || '—'}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block flex-1 text-sm font-semibold text-slate-700">
-          Sex
-          <select className={staffInput} value={draft.sex} onChange={set('sex')}>
-            {SEXES.map((s) => (
-              <option key={s} value={s}>
-                {s || '—'}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block flex-1 text-sm font-semibold text-slate-700">
-          Size
-          <select className={staffInput} value={draft.size} onChange={set('size')}>
-            {SIZES.map((s) => (
-              <option key={s} value={s}>
-                {s || '—'}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <label className="block text-sm font-semibold text-slate-700">
-        Breed
-        <BreedInput className={staffInput} value={draft.breed} onChange={(v) => setDraft((d) => ({ ...d, breed: v }))} />
-      </label>
-
-      <PhotoUploader
-        photos={draft.photos}
-        userId={userId}
-        onChange={(photos) => setDraft((d) => ({ ...d, photos }))}
-      />
-
-      <label className="block text-sm font-semibold text-slate-700">
-        About this rabbit
-        <textarea
-          className={staffInput}
-          rows={4}
-          value={draft.description}
-          onChange={set('description')}
-        />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        Traits (comma-separated)
-        <input
-          className={staffInput}
-          value={draft.tags}
-          onChange={set('tags')}
-          placeholder="Friendly, Litter-trained, Bonded pair"
-        />
-      </label>
-
-      <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
-        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <input type="checkbox" checked={draft.spayed_neutered} onChange={check('spayed_neutered')} className="h-4 w-4 rounded border-slate-300 text-brand-blue" />
-          Spayed / neutered
-        </label>
-        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <input type="checkbox" checked={draft.house_trained} onChange={check('house_trained')} className="h-4 w-4 rounded border-slate-300 text-brand-blue" />
-          Litter-trained
-        </label>
-        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <input type="checkbox" checked={draft.bonded} onChange={check('bonded')} className="h-4 w-4 rounded border-slate-300 text-brand-blue" />
-          Bonded pair
-        </label>
-        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <input type="checkbox" checked={draft.is_published} onChange={check('is_published')} className="h-4 w-4 rounded border-slate-300 text-brand-blue" />
-          Show in the app
-        </label>
-      </div>
-
-      <FormError>{error}</FormError>
-
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={busy || draft.name.trim().length === 0}
-          className={`${btn.primary} flex-1 disabled:opacity-60`}
-        >
-          {busy ? 'Saving…' : submitLabel}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={busy}
-          className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50"
-        >
-          Cancel
-        </button>
-      </div>
-    </form>
+        </Field>
+        <CheckRow label="Show on the Adopt page (leave unchecked to keep it hidden)" checked={draft.is_published} onChange={check('is_published')} />
+      </PartBox>
+    </EditorForm>
   )
 }
+
+const statusTone = (s: string): 'blue' | 'orange' | 'slate' => (s === 'Available' ? 'blue' : s === 'Pending' ? 'orange' : 'slate')
 
 function RabbitCard({
   item,
@@ -541,9 +471,7 @@ function RabbitCard({
   onChanged: () => void
 }) {
   const [editing, setEditing] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { busy, error, run } = useCardAction()
 
   const toDraftPatch = (d: Draft) => ({
     name: d.name.trim(),
@@ -568,49 +496,47 @@ function RabbitCard({
     onChanged()
   }
 
-  const changeStatus = async (status: string) => {
-    setBusy(true)
-    setError(null)
-    const { error } = await supabase.rpc('set_rabbit_status', { p_id: item.id, p_status: status })
-    if (error) setError(errMessage(error))
-    setBusy(false)
-    if (!error) onChanged()
-  }
+  const changeStatus = (status: string) =>
+    run(async () => {
+      const { error } = await supabase.rpc('set_rabbit_status', { p_id: item.id, p_status: status })
+      if (error) throw error
+      onChanged()
+    })
 
   // Hidden by the RescueGroups check: show it until tomorrow's check (which
   // hides it again if it still isn't listed).
-  const showAgain = async () => {
-    setBusy(true)
-    setError(null)
-    const { error } = await supabase.from('rabbits').update({ is_published: true, auto_hidden: false }).eq('id', item.id)
-    if (error) setError(errMessage(error))
-    setBusy(false)
-    if (!error) onChanged()
-  }
+  const showAgain = () =>
+    run(async () => {
+      const { error } = await supabase.from('rabbits').update({ is_published: true, auto_hidden: false }).eq('id', item.id)
+      if (error) throw error
+      onChanged()
+    })
+
+  const hide = () =>
+    run(async () => {
+      const { error } = await supabase.from('rabbits').update({ is_published: false }).eq('id', item.id)
+      if (error) throw error
+      onChanged()
+    })
 
   const doDelete = async () => {
-    setBusy(true)
     const { error } = await supabase.from('rabbits').delete().eq('id', item.id)
-    if (error) {
-      setError(errMessage(error))
-      setBusy(false)
-      setConfirmDelete(false)
-      return
-    }
+    if (error) throw error
     onChanged()
   }
 
   if (editing) {
     return (
-      <Card>
-        <RabbitForm
-          initial={draftFrom(item)}
-          userId={userId}
-          submitLabel="Save changes"
-          onSubmit={saveEdit}
-          onCancel={() => setEditing(false)}
-        />
-      </Card>
+      <RabbitForm
+        initial={draftFrom(item)}
+        userId={userId}
+        title={`Edit ${item.name}`}
+        saveLabel="Save changes"
+        isNew={false}
+        onSubmit={saveEdit}
+        onCancel={() => setEditing(false)}
+        onRemove={canEdit ? doDelete : undefined}
+      />
     )
   }
 
@@ -627,8 +553,9 @@ function RabbitCard({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="min-w-0 font-display text-[15px] font-extrabold text-ink">{item.name}</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="min-w-0 font-display text-base font-extrabold text-ink">{item.name}</h3>
+            <Badge tone={statusTone(item.status)}>{item.status}</Badge>
             {!item.is_published && <Badge tone="slate">Hidden</Badge>}
           </div>
           <div className="mt-1 flex flex-wrap gap-1.5">
@@ -642,98 +569,66 @@ function RabbitCard({
       {/* Update 32: no longer on RescueGroups — adopted, or listed again? Staff decide. */}
       {item.auto_hidden && item.status !== 'Adopted' && (
         <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
-          <p className="text-sm font-bold text-amber-900">
+          <p className="text-[15px] font-bold text-amber-900">
             Hidden — no longer on RescueGroups{item.source_missing_since ? ` since ${usDate(item.source_missing_since)}` : ''}
           </p>
-          <p className="text-xs leading-relaxed text-amber-900/80">
+          <p className="text-sm leading-relaxed text-amber-900/80">
             Adopted? Mark it so. Still here? Show it again — until tomorrow’s check, which hides it again if RescueGroups
             still doesn’t list it.
           </p>
           {(canStatus || canEdit) && (
-            <div className="flex flex-wrap gap-2">
+            <CardActions>
               {canStatus && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void changeStatus('Adopted')}
-                  className="min-h-[40px] rounded-full bg-brand-blue px-4 text-sm font-bold text-white disabled:opacity-60"
-                >
+                <button type="button" disabled={busy} onClick={() => void changeStatus('Adopted')} className={pill.blue}>
                   Mark adopted
                 </button>
               )}
               {canEdit && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void showAgain()}
-                  className="min-h-[40px] rounded-full border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 disabled:opacity-60"
-                >
+                <button type="button" disabled={busy} onClick={() => void showAgain()} className={pill.outline}>
                   Show it again
                 </button>
               )}
-            </div>
+            </CardActions>
           )}
         </div>
       )}
 
-      {canStatus && (
-        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-400">
-          Status
-          <select
-            value={item.status}
-            disabled={busy}
-            onChange={(e) => changeStatus(e.target.value)}
-            className="rounded-lg border border-slate-200 px-2 py-1 text-sm font-semibold text-ink"
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-
       {(canEdit || canStatus) && (
-        <div className="flex flex-wrap items-center gap-2">
+        <CardActions className="pt-1">
           {canEdit && (
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
-            >
+            <button type="button" onClick={() => setEditing(true)} className={pill.blue}>
               Edit
             </button>
           )}
           {canEdit &&
-            (confirmDelete ? (
-              <>
-                <button
-                  type="button"
-                  onClick={doDelete}
-                  disabled={busy}
-                  className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
-                >
-                  {busy ? 'Deleting…' : 'Confirm delete'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(false)}
-                  className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-              </>
+            (item.is_published ? (
+              <button type="button" disabled={busy} onClick={() => void hide()} className={pill.outline}>
+                <Icon name="eyeOff" size={16} /> Hide
+              </button>
             ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(true)}
-                className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50"
-              >
-                Delete
+              <button type="button" disabled={busy} onClick={() => void showAgain()} className={pill.outline}>
+                <Icon name="eye" size={16} /> Show
               </button>
             ))}
-        </div>
+          {canStatus &&
+            STATUSES.filter((s) => s !== item.status).map((s) => (
+              <button key={s} type="button" disabled={busy} onClick={() => void changeStatus(s)} className={pill.soft}>
+                Mark {s.toLowerCase()}
+              </button>
+            ))}
+          {canEdit && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                if (confirmRemove(item.name)) void run(doDelete)
+              }}
+              className={pill.red}
+            >
+              <Icon name="trash" size={16} /> Remove
+            </button>
+          )}
+        </CardActions>
       )}
       <FormError>{error}</FormError>
     </Card>
@@ -781,6 +676,8 @@ export default function StaffAdopt() {
   // Stable, so the RescueGroups line's timer isn't reset by every render.
   const reload = useCallback(() => void load(), [load])
 
+  const sorted = useMemo(() => [...items].sort(byName((r: Rabbit) => r.name)), [items])
+
   const create = async (d: Draft) => {
     const { error } = await supabase.from('rabbits').insert({
       org_id: orgId,
@@ -810,7 +707,7 @@ export default function StaffAdopt() {
       <Screen className="space-y-3 pt-2">
         <h1 className="font-display text-2xl font-black text-ink">Adoptable rabbits</h1>
         <Card className="border-slate-200 bg-slate-50/80">
-          <p className="text-sm leading-relaxed text-slate-600">
+          <p className="text-base leading-relaxed text-slate-600">
             You don’t have access to manage adoptable rabbits. An owner or admin can grant the
             Adoptions capabilities.
           </p>
@@ -821,37 +718,34 @@ export default function StaffAdopt() {
 
   return (
     <Screen className="space-y-4">
-      <StaffTitle
-        title="Adoptable rabbits"
-        actions={
-          canCreate && !creating ? (
-            <button
-              type="button"
-              onClick={() => setCreating(true)}
-              className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
-            >
-              <Icon name="heart" size={15} /> Add
-            </button>
-          ) : undefined
-        }
-      >
-        <p>These appear on the public Adopt page. Upload photos and set each rabbit’s status.</p>
+      <StaffTitle title="Adoptable rabbits">
+        <p>
+          These appear on the public Adopt page, listed A to Z. Add photos, set each rabbit’s status, and hide one you
+          don’t want people to see yet. Rabbits from RescueGroups are added by themselves every morning.
+        </p>
       </StaffTitle>
 
-      {orgId && <RescueGroupsCheck orgId={orgId} canRefresh={canCreate || canEdit} onRefreshed={reload} />}
+      {canCreate && !creating && (
+        <div>
+          <StepButton tone="orange" icon="plus" onClick={() => setCreating(true)}>
+            Add a rabbit
+          </StepButton>
+        </div>
+      )}
 
       {creating && (
-        <Card>
-          <p className="mb-3 font-display text-[15px] font-extrabold text-ink">New rabbit</p>
-          <RabbitForm
-            initial={emptyDraft}
-            userId={userId}
-            submitLabel="Add rabbit"
-            onSubmit={create}
-            onCancel={() => setCreating(false)}
-          />
-        </Card>
+        <RabbitForm
+          initial={emptyDraft}
+          userId={userId}
+          title="New rabbit"
+          saveLabel="Add rabbit"
+          isNew
+          onSubmit={create}
+          onCancel={() => setCreating(false)}
+        />
       )}
+
+      {orgId && <RescueGroupsCheck orgId={orgId} canRefresh={canCreate || canEdit} onRefreshed={reload} />}
 
       <FormError>{error}</FormError>
 
@@ -859,22 +753,15 @@ export default function StaffAdopt() {
         <Spinner label="Loading rabbits…" />
       ) : items.length === 0 ? (
         <Card className="border-slate-200 bg-slate-50/80 text-center">
-          <p className="text-sm leading-relaxed text-slate-600">
-            No rabbits yet.{canCreate ? ' Tap “Add” to post the first adoptable rabbit.' : ''} Until
-            you add one, the Adopt page shows the built-in samples.
+          <p className="text-base leading-relaxed text-slate-600">
+            No rabbits yet.{canCreate ? ' Tap “Add a rabbit” to post the first adoptable rabbit.' : ''} Until you add
+            one, the Adopt page shows the built-in samples.
           </p>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-3">
-          {items.map((item) => (
-            <RabbitCard
-              key={item.id}
-              item={item}
-              userId={userId}
-              canEdit={canEdit}
-              canStatus={canStatus}
-              onChanged={load}
-            />
+          {sorted.map((item) => (
+            <RabbitCard key={item.id} item={item} userId={userId} canEdit={canEdit} canStatus={canStatus} onChanged={load} />
           ))}
         </div>
       )}

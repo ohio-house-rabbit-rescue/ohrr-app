@@ -10,6 +10,7 @@ import { errMessage } from '../../lib/supabase'
 import { btn, Card, Screen } from '../../components/ui'
 import { Icon } from '../../components/icons'
 import { StaffTitle } from '../../components/StaffTitle'
+import { StepButton, pill } from '../../components/StaffJob'
 import { FormError, Spinner, staffInput } from '../../components/staffui'
 import { listSuppliers, money, type Supplier } from './api'
 import { dayText, deliveryDetail, invoiceFileUrl, listDeliveries, undoDelivery, type Delivery } from './deliveries'
@@ -21,8 +22,8 @@ export default function Deliveries() {
 
 function Back() {
   return (
-    <Link to="/staff/hopshop/reorder" className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
-      <Icon name="arrowLeft" size={20} /> Hop Shop inventory
+    <Link to="/staff/hopshop" className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
+      <Icon name="arrowLeft" size={20} /> Hop Shop
     </Link>
   )
 }
@@ -51,6 +52,12 @@ function DeliveryList() {
     if (orgId) void listSuppliers(orgId).then((s) => setSuppliers(s.filter((x) => x.is_supplier)), () => undefined)
   }, [orgId])
 
+  // Newest first: by the invoice's day, then the day it was added.
+  const newest = useMemo(
+    () =>
+      [...(rows ?? [])].sort((a, b) => (b.invoice_date ?? b.received_on).localeCompare(a.invoice_date ?? a.received_on) || b.created_at.localeCompare(a.created_at)),
+    [rows],
+  )
   const year = String(new Date().getFullYear())
   const thisYear = useMemo(() => (rows ?? []).filter((d) => (d.invoice_date ?? d.received_on).startsWith(year)), [rows, year])
   const spent = thisYear.reduce((n, d) => n + (d.total_cents ?? 0), 0)
@@ -64,9 +71,11 @@ function DeliveryList() {
           <p>Every invoice added to stock, with what it cost and what the shipping was.</p>
         </StaffTitle>
       </div>
-      <Link to={`/staff/hopshop/deliveries/new${supplier ? `?supplier=${supplier}` : ''}`} className={`${btn.primary} min-h-[52px] w-full`}>
-        <Icon name="plus" size={18} /> Add a delivery
-      </Link>
+      <div>
+        <StepButton tone="orange" icon="plus" to={`/staff/hopshop/deliveries/new${supplier ? `?supplier=${supplier}` : ''}`}>
+          Add a delivery
+        </StepButton>
+      </div>
       <label className="block text-sm font-semibold text-slate-700">
         Supplier
         <select
@@ -85,7 +94,7 @@ function DeliveryList() {
       <FormError>{error}</FormError>
       {rows === null && !error && <Spinner />}
       {rows && thisYear.length > 0 && (
-        <Card className="text-sm text-slate-700">
+        <Card className="text-[15px] text-slate-700">
           <p className="font-bold text-ink">
             {year}: {thisYear.length} deliver{thisYear.length === 1 ? 'y' : 'ies'}, {money(spent)}
           </p>
@@ -95,21 +104,21 @@ function DeliveryList() {
           </p>
         </Card>
       )}
-      {rows && rows.length === 0 && <Card className="text-sm text-slate-600">No deliveries yet. Add one from its invoice.</Card>}
+      {rows && rows.length === 0 && <Card className="text-base text-slate-600">No deliveries yet. Add one from its invoice.</Card>}
       <ul className="space-y-2">
-        {(rows ?? []).map((d) => (
-          <li key={d.id}>
-            <Link to={`/staff/hopshop/deliveries/${d.id}`} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3">
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-display text-[15px] font-extrabold text-ink">{d.supplier_name ?? 'No supplier set'}</span>
-                <span className="block text-sm text-slate-600">
-                  {[dayText(d.invoice_date ?? d.received_on), d.invoice_no ? `invoice ${d.invoice_no}` : null, `${d.units} item${d.units === 1 ? '' : 's'}`]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </span>
+        {newest.map((d) => (
+          <li key={d.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-display text-base font-extrabold text-ink">{d.supplier_name ?? 'No supplier set'}</span>
+              <span className="block text-[15px] text-slate-600">
+                {[dayText(d.invoice_date ?? d.received_on), d.invoice_no ? `invoice ${d.invoice_no}` : null, `${d.units} item${d.units === 1 ? '' : 's'}`]
+                  .filter(Boolean)
+                  .join(' · ')}
               </span>
-              <span className="shrink-0 font-display text-base font-black text-brand-blue">{d.total_cents != null ? money(d.total_cents) : ''}</span>
-              <Icon name="chevron" size={18} />
+              {d.total_cents != null && <span className="block font-display text-base font-black text-brand-blue">{money(d.total_cents)}</span>}
+            </span>
+            <Link to={`/staff/hopshop/deliveries/${d.id}`} className={`${pill.blue} !min-h-[44px] shrink-0`} aria-label={`Open the delivery from ${d.supplier_name ?? 'no supplier'}`}>
+              Open
             </Link>
           </li>
         ))}
@@ -246,9 +255,11 @@ function DeliveryPage({ id }: { id: string }) {
               </div>
             </Card>
           ) : (
-            <button type="button" onClick={() => setConfirm(true)} className="block w-full py-2 text-center text-sm font-bold text-red-600">
-              Undo this delivery
-            </button>
+            <div>
+              <button type="button" onClick={() => setConfirm(true)} className={`${pill.red} !min-h-[44px]`}>
+                Undo this delivery
+              </button>
+            </div>
           )}
         </>
       )}

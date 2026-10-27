@@ -10,6 +10,7 @@ import { Screen, SectionLabel } from '../../../components/ui'
 import { Spinner, staffInput } from '../../../components/staffui'
 import { isNative } from '../../../native/platform'
 import { dropoffDetail, isNeeds40, setDropoffThanked, updateDropoff, type DonationLine, type Dropoff } from '../api'
+import { StepButton, pill } from '../../../components/StaffJob'
 import { BigButton, ErrorBox } from '../ScanUI'
 import { KIND_META, usDate } from '../types'
 import { inGivenOrder, lineCode, lineLabel, plural, thankYouLetter, thankYouMailto, toggleLetterValues, whereNow, worthLine, THANK_YOU_SUBJECT } from '../letters'
@@ -140,6 +141,8 @@ export default function DropoffDetail() {
   }
 
   const name = (data?.donor_name ?? '').trim()
+  // The catalog reads ?donor= and ?email= and skips "who is it from".
+  const moreFromDonor = `/staff/catalog${name || email ? '?' : ''}${[name ? `donor=${encodeURIComponent(name)}` : '', email ? `email=${encodeURIComponent(email)}` : ''].filter(Boolean).join('&')}`
 
   return (
     <>
@@ -209,7 +212,7 @@ export default function DropoffDetail() {
                   <div className="min-w-0 flex-1">
                     <h1 className={`font-display text-2xl font-black leading-tight ${name ? 'text-ink' : 'text-slate-500'}`}>{name || 'Not named'}</h1>
                     {email ? (
-                      <a href={`mailto:${email}`} className="mt-1 block break-all text-base font-semibold text-brand-blue">
+                      <a href={`mailto:${email}`} className="mt-1 flex min-h-[44px] items-center break-all text-base font-semibold text-brand-blue">
                         {email}
                       </a>
                     ) : (
@@ -220,11 +223,18 @@ export default function DropoffDetail() {
                     </p>
                     {data.note && <p className="mt-2 whitespace-pre-wrap text-base text-slate-600">{data.note}</p>}
                   </div>
-                  <button type="button" onClick={startEdit} className="inline-flex min-h-[44px] shrink-0 items-center rounded-xl border-2 border-brand-blue/50 px-4 text-[15px] font-bold text-brand-blue">
+                  <button type="button" onClick={startEdit} className={`${pill.outline} !min-h-[44px] shrink-0`}>
                     Edit
                   </button>
                 </div>
               </div>
+            )}
+
+            {/* More from the same donor: the catalog opens with them already filled in. */}
+            {!editing && (
+              <StepButton to={moreFromDonor} icon="gift" tone="orange">
+                Receive more from this donor
+              </StepButton>
             )}
 
             {/* What they gave */}
@@ -247,10 +257,10 @@ export default function DropoffDetail() {
                     )}
                     <span className="min-w-0 flex-1">
                       <span className="block font-display text-[17px] font-extrabold leading-snug text-ink">{lineLabel(l)}</span>
-                      {l.split_from && <span className="block text-sm text-slate-500">Split off from the line above</span>}
+                      {l.split_from && <span className="block text-sm text-slate-600">Split off from the line above</span>}
                       {worth && <span className="mt-0.5 block text-sm text-slate-600">Worth {worth}</span>}
                       <span className="mt-0.5 block text-sm font-semibold text-slate-700">{whereNow(l, true)}</span>
-                      {code && <span className="mt-0.5 block font-mono text-xs font-bold tracking-widest text-slate-400">{code}</span>}
+                      {code && <span className="mt-0.5 block font-mono text-sm font-bold tracking-widest text-slate-500">{code}</span>}
                     </span>
                   </>
                 )
@@ -296,7 +306,7 @@ export default function DropoffDetail() {
                 className="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-3 text-base leading-relaxed text-ink outline-none focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15"
               />
               {edited !== null && edited !== made && (
-                <button type="button" onClick={() => setEdited(null)} className="min-h-[44px] text-[15px] font-bold text-brand-blue">
+                <button type="button" onClick={() => setEdited(null)} className={`${pill.outline} !min-h-[44px]`}>
                   Start the letter over
                 </button>
               )}

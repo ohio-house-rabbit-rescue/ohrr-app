@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { telHref } from '../lib/orgProfile'
-import { exportCsv, toCsv } from '../lib/exportFile'
+import type { SheetSpec } from '../lib/inventoryExport'
 import { copyText } from '../features/share/share'
-import { isNative } from '../native/platform'
 import { btn, Badge, Card, QuietNote, Screen, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
 import { StaffTitle } from '../components/StaffTitle'
+import ExportButtons from '../components/ExportButtons'
+import { useOrgBits } from '../features/volunteers/orgBits'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { SponsorLogo } from '../features/sponsors/SponsorLogo'
 import {
@@ -250,6 +251,93 @@ function csvRows(items: Item[]): unknown[][] {
     i.renewal?.note ?? '',
     i.sponsor.website ? hrefFor(i.sponsor.website) : '',
   ])
+}
+
+/** The renewals list as a spreadsheet: the same columns the CSV always had. */
+function renewalsSheet(items: Item[], windowLabel: WindowLabel, today: string): SheetSpec {
+  return {
+    filename: `ohrr-sponsor-renewals-${today}`,
+    sheetName: 'Renewals',
+    title: `Sponsor renewals, ${windowLabel === 'All' ? 'all upcoming' : windowLabel.toLowerCase()} - as of ${fmtDate(today)}`,
+    columns: CSV_HEADERS.map((header, k) => ({
+      header,
+      width: k === 0 ? 28 : k === 5 || k === 11 ? 30 : 16,
+      kind: k === 4 ? ('number' as const) : undefined,
+    })),
+    rows: csvRows(items).map((cells) => ({ photos: [], cells })),
+  }
+}
+
+const pdfPlain = (v: string | null | undefined) =>
+  (v ?? '')
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[–—]/g, '-')
+    .replace(/·/g, '-')
+    .replace(/…/g, '...')
+
+/**
+ * The renewals list as a PDF: every sponsor with when it ends, who to ask, where
+ * the ask stands and any note. Made in the browser and handed to ExportButtons,
+ * so on a phone it goes to the share sheet instead of the print dialog.
+ */
+async function renewalsPdf(items: Item[], windowLabel: WindowLabel, today: string, orgName: string): Promise<Blob> {
+  const { jsPDF } = await import('jspdf')
+  const doc = new jsPDF({ unit: 'in', format: 'letter', orientation: 'portrait' })
+  const left = 0.7
+  const right = 8.5 - 0.7
+  const bottom = 10.3
+  let y = 0.85
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.setTextColor(6, 105, 172)
+  doc.text(pdfPlain(orgName || 'Ohio House Rabbit Rescue').toUpperCase(), left, y)
+  doc.setTextColor(20, 20, 20)
+  y += 0.42
+  doc.setFontSize(22)
+  doc.text('Sponsor renewals', left, y)
+  y += 0.3
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(12)
+  doc.text(pdfPlain(`${windowLabel === 'All' ? 'All upcoming' : windowLabel}, as of ${fmtDate(today)} - ${items.length} sponsor${items.length === 1 ? '' : 's'}`), left, y)
+  y += 0.45
+
+  for (const i of items) {
+    const contact = contactParts(i.renewal)
+    const note = (i.renewal?.note ?? '').trim().replace(/\s*\n\s*/g, ' ')
+    const lines: string[] = [
+      `${i.ended ? 'Ended' : 'Ends'} ${fmtDate(i.termEnd)} - ${tierLabel(i.sponsor.tier)} - ${statusText(i)}`,
+      contact.length > 0 ? contact.join(', ') : 'No contact yet',
+      ...(note ? [`Note: ${note}`] : []),
+    ].flatMap((l) => doc.splitTextToSize(pdfPlain(l), right - left - 0.2) as string[])
+    const height = 0.3 + lines.length * 0.2 + 0.18
+    if (y + height > bottom) {
+      doc.addPage('letter', 'portrait')
+      y = 0.85
+    }
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(13)
+    doc.text(doc.splitTextToSize(pdfPlain(i.sponsor.name), right - left)[0], left, y)
+    y += 0.24
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(11)
+    for (const l of lines) {
+      doc.text(l, left + 0.2, y)
+      y += 0.2
+    }
+    y += 0.18
+  }
+
+  const pages = doc.getNumberOfPages()
+  for (let p = 1; p <= pages; p++) {
+    doc.setPage(p)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(120, 120, 120)
+    doc.text(pdfPlain(`${orgName || 'Ohio House Rabbit Rescue'} - sponsor renewals, ${fmtDate(today)}`), left, 10.65)
+    doc.text(`Page ${p} of ${pages}`, right, 10.65, { align: 'right' })
+  }
+  return doc.output('blob')
 }
 
 /** The update-24 table isn't there yet (PostgREST: not in the schema cache / relation missing). */
@@ -623,6 +711,7 @@ export default function StaffSponsorRenewals() {
   const [flash, setFlash] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [toolNote, setToolNote] = useState<string | null>(null)
+  const org = useOrgBits()
 
   const load = useCallback(async () => {
     if (!orgId || !allowed) {
@@ -720,16 +809,8 @@ export default function StaffSponsorRenewals() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } else {
-      setToolNote('Could not copy here. Try “Download spreadsheet” instead.')
+      setToolNote('Could not copy here. Try the spreadsheet instead.')
     }
-  }
-
-  const download = async () => {
-    setToolNote(null)
-    const filename = `ohrr-sponsor-renewals-${today}.csv`
-    const out = await exportCsv(filename, toCsv(CSV_HEADERS, csvRows(items)))
-    if (out === 'saved') setToolNote(`Saved ${filename}. It opens in Excel, Numbers or Google Sheets.`)
-    else if (out === 'failed') setToolNote('Could not make the spreadsheet. Try “Copy list” instead.')
   }
 
   if (!allowed) {
@@ -836,15 +917,17 @@ export default function StaffSponsorRenewals() {
               {copied && <Icon name="check" size={16} />}
               {copied ? 'Copied' : 'Copy list'}
             </button>
-            <button type="button" onClick={download} className={toolBtn}>
-              Download spreadsheet (.csv)
-            </button>
-            {!isNative && (
-              <button type="button" onClick={() => window.print()} className={toolBtn}>
-                <Icon name="printer" size={16} /> Print
-              </button>
-            )}
           </div>
+          <ExportButtons
+            spec={() => renewalsSheet(items, windowLabel, today)}
+            label="Spreadsheet"
+            pdf={{
+              label: 'List (PDF)',
+              title: 'Sponsor renewals',
+              filename: `ohrr-sponsor-renewals-${today}`,
+              build: () => renewalsPdf(items, windowLabel, today, org.name),
+            }}
+          />
           <p className="sr-only" aria-live="polite">
             {copied ? 'Copied the list' : ''}
           </p>

@@ -1,39 +1,47 @@
-// Staff → Raffle tickets: the raffle table on a phone.
-//   Desk  — who reserved in the app; scan their QR or search; Mark paid when
-//           the cash changes hands (then write the numbers on stubs if the
-//           draw is from the bucket); Void mistakes.
-//   Sell  — tickets sold at the table (paid at once), so paper buyers are in
-//           the same draw as app buyers.
-//   Draw  — pick a prize, Draw a winner (random among paid tickets), or type
-//           the number pulled from the bucket; winners list with Undo.
+// Staff → Raffle tickets: the raffle table on a phone. The job starts here with
+// its three steps listed in order, each with its buttons:
+//   1 Sell tickets          — Reservations (who reserved in the app; scan their QR
+//                             or search; Mark paid when the cash changes hands;
+//                             Void mistakes) and Sell (tickets sold at the table,
+//                             paid at once, so paper buyers are in the same draw)
+//   2 Draw the winners      — pick a prize, Draw a winner (random among paid
+//                             tickets), or type the number pulled from the
+//                             bucket; winners list with Undo
+//   3 Hand over the prizes  — the winners with a Call/Text button each, and the
+//                             "I'm done" summary with its spreadsheet and PDF
 // Built to be modified during the test phase.
 import { Suspense, lazy, useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../lib/auth'
 import { errMessage, supabase } from '../../../../lib/supabase'
-import { Screen, Card, Badge, btn } from '../../../../components/ui'
+import { eventDate, useBunfestEvent } from '../../../../lib/events'
+import { Screen, Card, Badge, SectionLabel, btn } from '../../../../components/ui'
 import { Icon } from '../../../../components/icons'
 import { Explain, StaffTitle } from '../../../../components/StaffTitle'
 import { Spinner, staffInput } from '../../../../components/staffui'
-import { AUCTION_EVENT_SLUG, formatValue } from '../../types'
+import { StepButton, StepRow, StepRows, WorkingOn, pill } from '../../../../components/StaffJob'
+import ExportButtons from '../../../../components/ExportButtons'
+import { useOrgBits } from '../../../volunteers/orgBits'
+import { AUCTION_EVENT_SLUG, formatValue, rafflePriceLine, type AuctionSettings } from '../../types'
 import { deskOrders, deskSummary, drawTicket, money, orderByToken, recordBucketDraw, sellAtTable, setOrderStatus, ticketLabel, ticketRange, tokenFromScan, undoDraw, winners, type DeskSummary, type RaffleOrder, type RaffleWinner } from '../api'
+import { raffleSheet, raffleSummaryPdf, raffleTotals, type RafflePrize } from '../raffleSummary'
 
 const Scanner = lazy(() => import('../../../scan/Scanner'))
 
-type Tab = 'desk' | 'sell' | 'draw'
-interface Prize {
-  id: string
-  title: string
-  status: 'available' | 'drawn'
-}
+type Tab = 'desk' | 'sell' | 'draw' | 'winners'
+const TABS: readonly Tab[] = ['desk', 'sell', 'draw', 'winners']
+type Prize = RafflePrize
 
-const pill = (active: boolean) => `min-h-[44px] flex-1 rounded-full text-sm font-bold ${active ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`
+// Card buttons are 40px by default; on a table phone they are 44px.
+const act = (p: string) => `${p} !min-h-[44px]`
 
 export default function RaffleDesk() {
   const { membership, can } = useAuth()
+  const bunfest = useBunfestEvent()
   const orgId = membership?.orgId ?? ''
-  const [tab, setTab] = useState<Tab>('desk')
+  const [params, setParams] = useSearchParams()
   const [summary, setSummary] = useState<DeskSummary | null>(null)
+  const [settings, setSettings] = useState<Pick<AuctionSettings, 'raffle_ticket_price_cents' | 'raffle_bundle_qty' | 'raffle_bundle_price_cents'> | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const refreshSummary = useCallback(async () => {
@@ -48,8 +56,40 @@ export default function RaffleDesk() {
     void refreshSummary()
   }, [refreshSummary])
 
+  // The ticket price, from the auction setup, for the Working on bar.
+  useEffect(() => {
+    if (!orgId) return
+    let alive = true
+    supabase
+      .from('auction_settings')
+      .select('raffle_ticket_price_cents, raffle_bundle_qty, raffle_bundle_price_cents')
+      .eq('org_id', orgId)
+      .eq('event_slug', AUCTION_EVENT_SLUG)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (alive) setSettings(data ?? null)
+      })
+    return () => {
+      alive = false
+    }
+  }, [orgId])
+
   const isManager = can('events.bunfest.manage')
+  const wanted = params.get('tab')
+  // Drawing winners and the summary stay with BunFest managers.
+  const tab: Tab = TABS.includes(wanted as Tab) && (isManager || (wanted !== 'draw' && wanted !== 'winners')) ? (wanted as Tab) : 'desk'
+  const setTab = (t: Tab) => {
+    const next = new URLSearchParams(params)
+    if (t === 'desk') next.delete('tab')
+    else next.set('tab', t)
+    setParams(next, { replace: true })
+  }
+
   if (!isManager && !can('counter.use')) return <Screen><p className="text-sm text-slate-600">You don’t have access to the raffle desk.</p></Screen>
+
+  const tone = (t: Tab) => (tab === t ? ('blue' as const) : ('outline' as const))
+  const priceLine = rafflePriceLine(settings)
+  const when = bunfest.startsAt ? eventDate(bunfest) : ''
 
   return (
     <Screen className="space-y-4">
@@ -62,6 +102,40 @@ export default function RaffleDesk() {
           ; prizes come from Scan an item.
         </p>
       </StaffTitle>
+
+      <WorkingOn
+        icon="ticket"
+        tone="blue"
+        label="Working on"
+        name={`Raffle · ${bunfest.title}`}
+        line={[when, priceLine].filter(Boolean).join(' · ') || undefined}
+      />
+
+      <StepRows label="How the raffle runs">
+        <StepRow n={1} name="Sell tickets">
+          <StepButton icon="ticket" tone={tone('sell')} onClick={() => setTab('sell')}>
+            Sell at the table
+          </StepButton>
+          <StepButton icon="check" tone={tone('desk')} count={summary?.reserved} onClick={() => setTab('desk')}>
+            Reservations to pay
+          </StepButton>
+        </StepRow>
+        <StepRow n={2} name="Draw the winners" hint={isManager ? undefined : 'a BunFest manager does this'}>
+          {isManager && (
+            <StepButton icon="sparkles" tone={tone('draw')} onClick={() => setTab('draw')}>
+              Draw winners
+            </StepButton>
+          )}
+        </StepRow>
+        <StepRow n={3} name="Hand over the prizes" hint={isManager ? undefined : 'a BunFest manager does this'}>
+          {isManager && (
+            <StepButton icon="phone" tone={tone('winners')} onClick={() => setTab('winners')}>
+              Reach the winners · I’m done
+            </StepButton>
+          )}
+        </StepRow>
+      </StepRows>
+
       {summary && (
         <div className="grid grid-cols-3 gap-2 text-center">
           <Card className="!p-2">
@@ -78,24 +152,11 @@ export default function RaffleDesk() {
           </Card>
         </div>
       )}
-      <div className="flex gap-2">
-        <button type="button" className={pill(tab === 'desk')} onClick={() => setTab('desk')}>
-          Desk
-        </button>
-        <button type="button" className={pill(tab === 'sell')} onClick={() => setTab('sell')}>
-          Sell
-        </button>
-        {/* Drawing winners stays with BunFest managers. */}
-        {isManager && (
-          <button type="button" className={pill(tab === 'draw')} onClick={() => setTab('draw')}>
-            Draw
-          </button>
-        )}
-      </div>
       {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
       {tab === 'desk' && <DeskTab orgId={orgId} onChange={refreshSummary} />}
       {tab === 'sell' && <SellTab orgId={orgId} onChange={refreshSummary} />}
       {tab === 'draw' && isManager && <DrawTab orgId={orgId} onChange={refreshSummary} />}
+      {tab === 'winners' && isManager && <WinnersTab orgId={orgId} summary={summary} eventName={bunfest.title} />}
     </Screen>
   )
 }
@@ -157,6 +218,7 @@ function DeskTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
 
   return (
     <div className="space-y-3">
+      <SectionLabel>Step 1 · Reservations</SectionLabel>
       {scanning ? (
         <Card className="!p-2">
           <Suspense fallback={<Spinner />}>
@@ -169,14 +231,14 @@ function DeskTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
       ) : (
         <div className="flex gap-2">
           <input className={`${staffInput} !mt-0 flex-1`} placeholder="Name, phone or ticket number" value={q} onChange={(e) => { setQ(e.target.value); setFocus(null) }} inputMode="search" />
-          <button type="button" onClick={() => setScanning(true)} className={`${btn.blue} shrink-0 px-4`} aria-label="Scan a ticket QR">
+          <button type="button" onClick={() => setScanning(true)} className={`${btn.blue} min-h-[44px] shrink-0 px-4`} aria-label="Scan a ticket QR">
             <Icon name="scan" size={18} /> Scan
           </button>
         </div>
       )}
       {focus && (
-        <button type="button" onClick={() => setFocus(null)} className="text-sm font-bold text-brand-blue">
-          ← All reservations
+        <button type="button" onClick={() => setFocus(null)} className={act(pill.outline)}>
+          <Icon name="arrowLeft" size={16} /> All reservations
         </button>
       )}
       {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
@@ -207,29 +269,29 @@ function OrderCard({ order: o, busy, onStatus }: { order: RaffleOrder; busy: boo
           </p>
           <p className="mt-1 font-mono text-sm font-bold text-ink">{ticketRange(o.tickets)}</p>
           {o.tickets.some((t) => t.drawn_at) && (
-            <p className="mt-1 text-sm font-bold text-brand-blue">🎉 Winner: {o.tickets.filter((t) => t.drawn_at).map((t) => `${ticketLabel(t.no)}${t.prize ? ` — ${t.prize}` : ''}`).join(', ')}</p>
+            <p className="mt-1 text-sm font-bold text-brand-blue">Winner: {o.tickets.filter((t) => t.drawn_at).map((t) => `${ticketLabel(t.no)}${t.prize ? ` — ${t.prize}` : ''}`).join(', ')}</p>
           )}
         </div>
         <Badge tone={tone}>{o.status === 'paid' ? 'Paid' : o.status === 'void' ? 'Void' : 'To pay'}</Badge>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         {o.status === 'reserved' && (
           <button type="button" disabled={busy} onClick={() => onStatus('paid')} className={`${btn.primary} min-h-[48px] flex-1 disabled:opacity-60`}>
             <Icon name="check" size={16} /> Mark paid{amount ? ` (${amount})` : ''}
           </button>
         )}
         {o.status === 'paid' && (
-          <button type="button" disabled={busy} onClick={() => onStatus('reserved')} className={`${btn.outline} disabled:opacity-60`}>
+          <button type="button" disabled={busy} onClick={() => onStatus('reserved')} className={act(pill.outline)}>
             Undo paid
           </button>
         )}
         {o.status !== 'void' && isManager && (
-          <button type="button" disabled={busy} onClick={() => window.confirm(`Void ${o.name}’s ${o.qty} ticket${o.qty === 1 ? '' : 's'}?`) && onStatus('void')} className="min-h-[44px] rounded-full px-4 text-sm font-bold text-red-600">
-            Void
+          <button type="button" disabled={busy} onClick={() => window.confirm(`Void ${o.name}’s ${o.qty} ticket${o.qty === 1 ? '' : 's'}?`) && onStatus('void')} className={act(pill.red)}>
+            <Icon name="trash" size={16} /> Void
           </button>
         )}
         {o.status === 'void' && isManager && (
-          <button type="button" disabled={busy} onClick={() => onStatus('reserved')} className={`${btn.outline} disabled:opacity-60`}>
+          <button type="button" disabled={busy} onClick={() => onStatus('reserved')} className={act(pill.outline)}>
             Restore
           </button>
         )}
@@ -270,6 +332,7 @@ function SellTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
 
   return (
     <form onSubmit={sell} className="space-y-3">
+      <SectionLabel>Step 1 · Sell at the table</SectionLabel>
       <Card className="space-y-3">
         <Explain label="About table sales">
           <p>Cash in hand at the table. The numbers are paid straight away and go into the same draw as app tickets — write them on stubs if you draw from the bucket.</p>
@@ -395,6 +458,7 @@ function DrawTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
 
   return (
     <div className="space-y-3">
+      <SectionLabel>Step 2 · Draw the winners</SectionLabel>
       <Card className="space-y-3">
         <label className="block text-sm font-semibold text-slate-700">
           Prize (optional)
@@ -417,7 +481,7 @@ function DrawTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
           <p className="text-sm font-semibold text-slate-700">Or: the number pulled from the bucket</p>
           <div className="flex gap-2">
             <input className={`${staffInput} !mt-0 flex-1 font-mono`} inputMode="numeric" placeholder="A-0042" value={bucketNo} onChange={(e) => setBucketNo(e.target.value)} />
-            <button type="submit" disabled={busy || !bucketNo} className={`${btn.blue} shrink-0 disabled:opacity-60`}>
+            <button type="submit" disabled={busy || !bucketNo} className={`${btn.blue} min-h-[48px] shrink-0 disabled:opacity-60`}>
               Record
             </button>
           </div>
@@ -439,20 +503,120 @@ function DrawTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
         <div className="space-y-2">
           <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Drawn so far</p>
           {list.map((w) => (
-            <Card key={w.ticket_id} className="flex items-center justify-between gap-2 !py-3">
-              <div className="min-w-0">
-                <p className="font-mono text-sm font-black text-ink">
-                  {ticketLabel(w.no)} <span className="font-sans font-bold">{w.name}</span>
-                </p>
-                <p className="text-xs text-slate-500">{w.prize ?? 'No prize recorded'}</p>
-              </div>
-              <button type="button" onClick={() => void undo(w)} className="text-xs font-bold text-red-600">
-                Undo
-              </button>
-            </Card>
+            <WinnerCard key={w.ticket_id} w={w} onUndo={() => void undo(w)} />
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+/** A drawn ticket: its number, the winner, the prize, and buttons to reach them or undo the draw. */
+function WinnerCard({ w, onUndo, reach = false }: { w: RaffleWinner; onUndo?: () => void; reach?: boolean }) {
+  const phone = (w.phone ?? '').trim()
+  return (
+    <Card className="space-y-2 !py-3">
+      <div className="min-w-0">
+        <p className="font-mono text-sm font-black text-ink">
+          {ticketLabel(w.no)} <span className="font-sans font-bold">{w.name}</span>
+        </p>
+        <p className="text-sm text-slate-600">{w.prize ?? 'No prize recorded'}</p>
+        {phone ? <p className="text-sm font-semibold text-slate-700">{phone}</p> : reach ? <p className="text-sm text-slate-500">No phone number — ask at the table.</p> : null}
+      </div>
+      {((reach && phone) || onUndo) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {reach && phone && (
+            <>
+              <a href={`tel:${phone}`} className={act(pill.blue)}>
+                <Icon name="phone" size={16} /> Call
+              </a>
+              <a href={`sms:${phone}`} className={act(pill.soft)}>
+                Text
+              </a>
+            </>
+          )}
+          {onUndo && (
+            <button type="button" onClick={onUndo} className={act(pill.red)}>
+              Undo this draw
+            </button>
+          )}
+        </div>
+      )}
+    </Card>
+  )
+}
+
+/* --------------------------------------------------- winners, I'm done */
+function WinnersTab({ orgId, summary, eventName }: { orgId: string; summary: DeskSummary | null; eventName: string }) {
+  const org = useOrgBits()
+  const [list, setList] = useState<RaffleWinner[] | null>(null)
+  const [prizes, setPrizes] = useState<Prize[]>([])
+  const [orders, setOrders] = useState<RaffleOrder[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    Promise.all([
+      winners(orgId, AUCTION_EVENT_SLUG),
+      supabase.from('raffle_prizes').select('id, title, status').eq('org_id', orgId).eq('event_slug', AUCTION_EVENT_SLUG).order('sort_order').order('title'),
+      deskOrders(orgId, AUCTION_EVENT_SLUG),
+    ])
+      .then(([w, p, o]) => {
+        if (!alive) return
+        setList(w)
+        setPrizes((p.data ?? []) as Prize[])
+        setOrders(o)
+      })
+      .catch((e) => {
+        if (alive) {
+          setError(errMessage(e))
+          setList([])
+        }
+      })
+    return () => {
+      alive = false
+    }
+  }, [orgId])
+
+  const t = raffleTotals(summary, list ?? [], prizes)
+  const cells: { v: string | number; label: string; tone: string }[] = [
+    { v: t.ticketsSold, label: 'tickets sold', tone: 'text-brand-blue' },
+    { v: money(t.moneyCents) ?? '$0', label: 'money taken', tone: 'text-emerald-700' },
+    { v: t.toPay, label: 'still to pay', tone: t.toPay ? 'text-brand-orange' : 'text-ink' },
+    { v: t.winners, label: 'winners drawn', tone: 'text-ink' },
+    { v: `${t.prizesDrawn} of ${t.prizes}`, label: 'prizes drawn', tone: 'text-ink' },
+  ]
+
+  return (
+    <div className="space-y-3">
+      <SectionLabel>Step 3 · Hand over the prizes</SectionLabel>
+      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+      {list === null && <Spinner />}
+      {list && list.length === 0 && <p className="text-sm text-slate-500">No winners drawn yet. Draw them in step 2.</p>}
+      {list?.map((w) => (
+        <WinnerCard key={w.ticket_id} w={w} reach />
+      ))}
+
+      <SectionLabel>I’m done</SectionLabel>
+      <div className="grid grid-cols-3 gap-2 text-center">
+        {cells.map((c) => (
+          <Card key={c.label} className="!p-2">
+            <p className={`font-display text-xl font-black ${c.tone}`}>{c.v}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{c.label}</p>
+          </Card>
+        ))}
+      </div>
+      <p className="text-sm text-slate-600">The PDF has a box beside every winner to tick when their prize is handed over.</p>
+      <ExportButtons
+        spec={() => raffleSheet(orders, eventName)}
+        label="Spreadsheet"
+        pdf={{
+          label: 'Summary (PDF)',
+          title: `Raffle tickets — ${eventName}`,
+          filename: `ohrr-raffle-${new Date().toLocaleDateString('en-CA')}`,
+          build: () => raffleSummaryPdf(t, list ?? [], prizes, { orgName: org.name, eventName }),
+        }}
+      />
     </div>
   )
 }

@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage, supabase } from '../../../lib/supabase'
+import { useBunfestEvent } from '../../../lib/events'
 import { Screen, Card, Badge, btn, QuietNote } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, staffInput } from '../../../components/staffui'
@@ -30,41 +31,36 @@ import {
   sessionLabel,
   FULFIL_LABEL,
   PAYMENT_LABEL,
-  type AuctionItem,
   type AuctionSettings,
-  type Bidder,
   type ChargeResult,
   type Fulfil,
   type PaymentStatus,
-  type Sale,
 } from '../client'
 import TableHolds from '../TableHolds'
 import { Explain, StaffTitle } from '../../../components/StaffTitle'
+import { WorkingOn } from '../../../components/StaffJob'
+import ExportButtons from '../../../components/ExportButtons'
+import { useOrgBits } from '../../volunteers/orgBits'
+import {
+  DONE_FILTERS,
+  doneRows,
+  doneSheet,
+  doneSummaryPdf,
+  doneTotals,
+  type DeskBidder,
+  type DeskData,
+  type DeskItem,
+  type DoneFilter,
+} from '../deskSummary'
 
 const DESK_POLL_MS = 20_000
 
-interface DeskItem extends AuctionItem {
-  is_published: boolean
-  high_bidder: { id: string; name: string; email: string; phone: string | null; bidder_no: number; fulfil: Fulfil } | null
-  bids: { amount_cents: number; kind: string; at: string; is_high: boolean; bidder_no: number | null; name: string | null }[]
-  sale: Sale | null
-}
-interface DeskBidder extends Omit<Bidder, 'access_token'> {
-  bids: number
-  won: number
-}
-interface DeskData {
-  now: string
-  settings: AuctionSettings | null
-  items: DeskItem[]
-  bidders: DeskBidder[]
-  totals: { paid_cents: number; pending_cents: number; failed: number; sold: number; to_ship: number; to_pick_up: number }
-}
-
-type Tab = 'items' | 'bidders'
-const pill = (active: boolean) => `min-h-[44px] flex-1 rounded-full text-sm font-bold ${active ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`
-const small = 'inline-flex min-h-[44px] items-center justify-center rounded-full border border-slate-200 px-4 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60'
-const danger = 'inline-flex min-h-[44px] items-center justify-center rounded-full border border-red-200 px-4 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-60'
+type Tab = 'items' | 'bidders' | 'done'
+const TABS: readonly Tab[] = ['items', 'bidders', 'done']
+const tabPill = (active: boolean) => `min-h-[44px] flex-1 rounded-full px-2 text-[15px] font-bold ${active ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`
+const small = 'inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 text-[15px] font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60'
+const danger = 'inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-red-200 bg-white px-4 text-[15px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-60'
+const mainBtn = `${btn.primary} min-h-[44px] !py-2 disabled:opacity-60`
 
 async function staffJwt(): Promise<string> {
   const jwt = (await supabase.auth.getSession()).data.session?.access_token
@@ -89,10 +85,20 @@ export default function AuctionDesk() {
 
 function Desk() {
   const ev = useAuctionEvent()
+  const [params, setParams] = useSearchParams()
   const { membership, can } = useAuth()
+  // The event's own name and date come from its record, not from this page.
+  const bunfest = useBunfestEvent()
   const orgId = membership?.orgId ?? ''
   const allowed = can('events.bunfest.manage')
-  const [tab, setTab] = useState<Tab>('items')
+  const wanted = params.get('tab')
+  const tab: Tab = TABS.includes(wanted as Tab) ? (wanted as Tab) : 'items'
+  const setTab = (t: Tab) => {
+    const next = new URLSearchParams(params)
+    if (t === 'items') next.delete('tab')
+    else next.set('tab', t)
+    setParams(next, { replace: true })
+  }
   const [data, setData] = useState<DeskData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [q, setQ] = useState('')
@@ -137,7 +143,7 @@ function Desk() {
               aria-selected={a.slug === ev.slug}
               className={`flex min-h-[40px] items-center justify-center rounded-full px-3 text-sm font-bold ${a.slug === ev.slug ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-500'}`}
             >
-              {a.online ? 'Online Auction' : 'BunFest'}
+              {a.name}
             </Link>
           ))}
         </div>
@@ -152,6 +158,18 @@ function Desk() {
           </p>
         </StaffTitle>
       </div>
+
+      <WorkingOn
+        icon="gavel"
+        tone="blue"
+        label="Working on"
+        name={ev.online ? data?.settings?.title || ev.name : `${ev.name} · ${bunfest.title}`}
+        line={
+          data
+            ? `${data.items.length} item${data.items.length === 1 ? '' : 's'} · ${money(data.totals.paid_cents) || '$0'} paid so far`
+            : undefined
+        }
+      />
 
       {orgId && !ev.online && <TableHolds orgId={orgId} onChange={refresh} />}
 
@@ -182,23 +200,29 @@ function Desk() {
             <p className="text-sm text-slate-600">Winners are charged automatically within about 5 minutes of an item closing. Use Close &amp; charge only if you don’t want to wait.</p>
           )}
           {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
-          <div className="flex gap-2">
-            <button type="button" className={pill(tab === 'items')} onClick={() => setTab('items')}>
+          <div className="flex gap-2" role="tablist" aria-label="Desk views">
+            <button type="button" role="tab" aria-selected={tab === 'items'} className={tabPill(tab === 'items')} onClick={() => setTab('items')}>
               Items · {data.items.length}
             </button>
-            <button type="button" className={pill(tab === 'bidders')} onClick={() => setTab('bidders')}>
+            <button type="button" role="tab" aria-selected={tab === 'bidders'} className={tabPill(tab === 'bidders')} onClick={() => setTab('bidders')}>
               Bidders · {data.bidders.length}
             </button>
+            <button type="button" role="tab" aria-selected={tab === 'done'} className={tabPill(tab === 'done')} onClick={() => setTab('done')}>
+              I’m done
+            </button>
           </div>
-          <input
-            className={`${staffInput} !mt-0`}
-            placeholder={tab === 'items' ? 'Search items or bidders' : 'Search bidders'}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            inputMode="search"
-          />
+          {tab !== 'done' && (
+            <input
+              className={`${staffInput} !mt-0`}
+              placeholder={tab === 'items' ? 'Search items or bidders' : 'Search bidders'}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              inputMode="search"
+            />
+          )}
           {tab === 'items' && <ItemsTab data={data} q={q} onChange={refresh} />}
-          {tab === 'bidders' && <BiddersTab bidders={data.bidders} q={q} onChange={refresh} />}
+          {tab === 'bidders' && <BiddersTab bidders={data.bidders} q={q} onChange={refresh} eventName={ev.online ? '' : bunfest.title} />}
+          {tab === 'done' && <DoneTab data={data} eventName={ev.online ? ev.subtitle : bunfest.title} />}
         </>
       )}
     </Screen>
@@ -480,7 +504,7 @@ function ItemCard({ item, now, settings, onChange }: { item: DeskItem; now: stri
         {sale && (sale.payment_status === 'pending' || sale.payment_status === 'failed') && (
           <>
             {sale.bidder_id && (
-              <button type="button" disabled={busy} onClick={() => void chargeAgain()} className={`${btn.primary} min-h-[44px] !py-2 disabled:opacity-60`}>
+              <button type="button" disabled={busy} onClick={() => void chargeAgain()} className={mainBtn}>
                 Charge card again
               </button>
             )}
@@ -490,7 +514,7 @@ function ItemCard({ item, now, settings, onChange }: { item: DeskItem; now: stri
               </button>
             )}
             {sale.at_table && (
-              <button type="button" disabled={busy} onClick={() => void updateSale({ p_payment_status: 'cash', p_fulfil_status: 'picked_up' })} className={`${btn.primary} min-h-[44px] !py-2 disabled:opacity-60`}>
+              <button type="button" disabled={busy} onClick={() => void updateSale({ p_payment_status: 'cash', p_fulfil_status: 'picked_up' })} className={mainBtn}>
                 <Icon name="check" size={16} /> Paid and taken
               </button>
             )}
@@ -505,14 +529,14 @@ function ItemCard({ item, now, settings, onChange }: { item: DeskItem; now: stri
         {sale && (sale.payment_status === 'paid' || sale.payment_status === 'cash') && (
           <>
             {sale.fulfil === 'pickup' && sale.fulfil_status !== 'picked_up' && (
-              <button type="button" disabled={busy} onClick={() => void updateSale({ p_fulfil_status: 'picked_up' })} className={`${btn.primary} min-h-[44px] !py-2 disabled:opacity-60`}>
+              <button type="button" disabled={busy} onClick={() => void updateSale({ p_fulfil_status: 'picked_up' })} className={mainBtn}>
                 <Icon name="check" size={16} /> Picked up
               </button>
             )}
             {sale.fulfil === 'ship' && sale.fulfil_status !== 'shipped' && (
               <div className="flex w-full gap-2">
                 <input className={`${staffInput} !mt-0 flex-1`} placeholder="Tracking number (optional)" value={tracking} onChange={(e) => setTracking(e.target.value)} />
-                <button type="button" disabled={busy} onClick={() => void updateSale({ p_fulfil_status: 'shipped', p_tracking: tracking })} className={`${btn.primary} min-h-[44px] shrink-0 !py-2 disabled:opacity-60`}>
+                <button type="button" disabled={busy} onClick={() => void updateSale({ p_fulfil_status: 'shipped', p_tracking: tracking })} className={`${mainBtn} shrink-0`}>
                   Shipped
                 </button>
               </div>
@@ -555,8 +579,8 @@ function ItemCard({ item, now, settings, onChange }: { item: DeskItem; now: stri
           </button>
         )}
         {item.bids.length > 0 && (
-          <button type="button" onClick={() => setShowBids((v) => !v)} className="inline-flex min-h-[44px] items-center px-2 text-sm font-bold text-brand-blue">
-            {showBids ? 'Hide bids' : `Bids (${item.bids.length})`}
+          <button type="button" onClick={() => setShowBids((v) => !v)} className={small} aria-expanded={showBids}>
+            {showBids ? 'Hide the bids' : `See the bids (${item.bids.length})`}
           </button>
         )}
       </div>
@@ -690,8 +714,99 @@ function TableSaleForm({ item, settings, onDone, onCancel }: { item: DeskItem; s
   )
 }
 
+/* -------------------------------------------------------------- I'm done */
+function DoneTab({ data, eventName }: { data: DeskData; eventName: string }) {
+  const ev = useAuctionEvent()
+  const org = useOrgBits()
+  const [filter, setFilter] = useState<DoneFilter>('all')
+  const t = useMemo(() => doneTotals(data.items), [data.items])
+  const rows = useMemo(() => doneRows(data.items, filter), [data.items, filter])
+  const counts = useMemo(
+    () => Object.fromEntries(DONE_FILTERS.map((f) => [f.id, doneRows(data.items, f.id).length])) as Record<DoneFilter, number>,
+    [data.items],
+  )
+  const cells: { v: string | number; label: string; tone: string }[] = [
+    { v: t.items, label: 'items', tone: 'text-ink' },
+    { v: t.sold, label: 'sold', tone: 'text-brand-blue' },
+    { v: t.notSold, label: 'not sold', tone: 'text-ink' },
+    { v: t.paid, label: 'paid', tone: 'text-emerald-700' },
+    { v: t.taken, label: 'taken', tone: 'text-ink' },
+    { v: t.toPickUp, label: 'to pick up', tone: 'text-ink' },
+    { v: t.toShip, label: 'to ship', tone: 'text-ink' },
+    { v: t.unpaid, label: 'still unpaid', tone: t.unpaid ? 'text-brand-orange' : 'text-ink' },
+    { v: money(t.moneyInCents) || '$0', label: 'money in', tone: 'text-emerald-700' },
+  ]
+  const auctionName = ev.online ? (data.settings?.title || ev.name) : ev.name
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-2 text-center">
+        {cells.map((c) => (
+          <Card key={c.label} className="!p-2">
+            <p className={`font-display text-xl font-black ${c.tone}`}>{c.v}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{c.label}</p>
+          </Card>
+        ))}
+      </div>
+      {t.unpaid > 0 && (
+        <Card className="space-y-2 border-brand-orange/50 bg-brand-orange-50">
+          <p className="text-[15px] font-bold text-ink">
+            {t.unpaid} item{t.unpaid === 1 ? ' is' : 's are'} still unpaid — {money(t.unpaidCents)} owed.
+          </p>
+          <button type="button" onClick={() => setFilter('unpaid')} className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-brand-orange px-4 text-[15px] font-extrabold text-ink">
+            Show the unpaid
+          </button>
+        </Card>
+      )}
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Show">
+        {DONE_FILTERS.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            aria-pressed={filter === f.id}
+            onClick={() => setFilter(f.id)}
+            className={`inline-flex min-h-[44px] items-center rounded-full px-4 text-[15px] font-bold ${filter === f.id ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
+          >
+            {f.label} · {counts[f.id]}
+          </button>
+        ))}
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="text-sm text-slate-500">Nothing in this list.</p>
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((r) => (
+            <li key={r.item.id}>
+              <Card className="flex items-start justify-between gap-3 !p-3">
+                <span className="min-w-0">
+                  <span className="block font-display text-base font-extrabold leading-tight text-ink">{r.item.title}</span>
+                  <span className="block text-sm text-slate-600">{r.buyer || 'No buyer'}</span>
+                  <span className="block text-sm font-semibold text-slate-500">{r.status}</span>
+                </span>
+                <span className="shrink-0 font-display text-lg font-black text-ink">{r.totalCents != null ? money(r.totalCents) : ''}</span>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <ExportButtons
+        spec={() => doneSheet(rows, { slug: ev.slug, auctionName, eventName, filter, online: ev.online })}
+        label="Spreadsheet"
+        pdf={{
+          label: 'Summary (PDF)',
+          title: `${auctionName} — summary`,
+          filename: `ohrr-auction-desk-${ev.slug}-${new Date().toLocaleDateString('en-CA')}`,
+          build: () => doneSummaryPdf(data, rows, { orgName: org.name, auctionName, eventName, filter }),
+        }}
+      />
+    </div>
+  )
+}
+
 /* --------------------------------------------------------------- bidders */
-function BiddersTab({ bidders, q, onChange }: { bidders: DeskBidder[]; q: string; onChange: () => Promise<void> }) {
+function BiddersTab({ bidders, q, onChange, eventName }: { bidders: DeskBidder[]; q: string; onChange: () => Promise<void>; eventName: string }) {
   const list = useMemo(() => {
     const needle = q.trim().toLowerCase()
     if (!needle) return bidders
@@ -702,13 +817,13 @@ function BiddersTab({ bidders, q, onChange }: { bidders: DeskBidder[]; q: string
   return (
     <div className="space-y-3">
       {list.map((b) => (
-        <BidderCard key={b.id} b={b} onChange={onChange} />
+        <BidderCard key={b.id} b={b} onChange={onChange} eventName={eventName} />
       ))}
     </div>
   )
 }
 
-function BidderCard({ b, onChange }: { b: DeskBidder; onChange: () => Promise<void> }) {
+function BidderCard({ b, onChange, eventName }: { b: DeskBidder; onChange: () => Promise<void>; eventName: string }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const a = b.address
@@ -733,7 +848,7 @@ function BidderCard({ b, onChange }: { b: DeskBidder; onChange: () => Promise<vo
             {b.phone && <> · {b.phone}</>}
           </p>
           <p className="text-sm text-slate-600">
-            {b.fulfil === 'ship' ? `Ships to ${[a?.line1, a?.city, a?.state, a?.zip].filter(Boolean).join(', ')}` : 'Pickup at BunFest'}
+            {b.fulfil === 'ship' ? `Ships to ${[a?.line1, a?.city, a?.state, a?.zip].filter(Boolean).join(', ')}` : `Pickup${eventName ? ` at ${eventName}` : ''}`}
           </p>
           <p className="text-xs font-semibold text-slate-500">
             {b.card_ready ? `Card ready · ${(b.card_brand ?? 'card').replace(/^\w/, (c) => c.toUpperCase())} ${b.card_last4 ?? ''}` : 'No card yet'} · {b.bids} bid{b.bids === 1 ? '' : 's'} · {b.won} won

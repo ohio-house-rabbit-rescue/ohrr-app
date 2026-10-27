@@ -15,7 +15,8 @@
 // tables are given out.
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { errMessage } from '../../../lib/supabase'
-import { Card, Badge, btn } from '../../../components/ui'
+import { Card, Badge } from '../../../components/ui'
+import { pill } from '../../../components/StaffJob'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
 import { listSuppliers, type Supplier } from '../../hopshop/api'
@@ -39,9 +40,7 @@ import { Explain } from '../../../components/StaffTitle'
 
 const clone = (v: Venue): Venue => JSON.parse(JSON.stringify(v))
 
-export default function StaffFloor({ orgId }: { orgId: string }) {
-  const thisYear = new Date().getFullYear()
-  const [year, setYear] = useState(thisYear)
+export default function StaffFloor({ orgId, year }: { orgId: string; year: number }) {
   const [view, setView] = useState<'assign' | 'design'>('assign')
   const [saved, setSaved] = useState<Venue | null>(null)
   const [editing, setEditing] = useState<Venue | null>(null)
@@ -156,16 +155,6 @@ export default function StaffFloor({ orgId }: { orgId: string }) {
   return (
     <div className="space-y-3">
       <Card className="space-y-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Which year
-          <select className={staffInput} value={year} onChange={(e) => setYear(Number(e.target.value))}>
-            {[thisYear + 1, thisYear, thisYear - 1].map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-        </label>
         <div className="grid grid-cols-2 gap-2">
           {(
             [
@@ -177,14 +166,15 @@ export default function StaffFloor({ orgId }: { orgId: string }) {
               key={v}
               type="button"
               onClick={() => setView(v)}
-              className={`min-h-[44px] rounded-full text-sm font-bold ${view === v ? 'bg-ink text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
+              aria-pressed={view === v}
+              className={`min-h-[48px] rounded-full text-[15px] font-bold ${view === v ? 'bg-ink text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
             >
               {text}
             </button>
           ))}
         </div>
         {saved && view === 'assign' && (
-          <p className="text-sm text-slate-600">
+          <p className="text-[15px] text-slate-600">
             <strong className="text-ink">{used}</strong> of {total} tables given out ·{' '}
             <strong className="text-ink">{Math.max(0, total - used)}</strong> free
           </p>
@@ -210,11 +200,11 @@ export default function StaffFloor({ orgId }: { orgId: string }) {
       {view === 'assign' && !saved && (
         <Card className="space-y-3 text-center">
           <p className="font-display text-base font-extrabold text-ink">Design the {year} venue first</p>
-          <p className="text-sm leading-relaxed text-slate-600">
+          <p className="text-[15px] leading-relaxed text-slate-600">
             Table numbers come from the saved design — once it’s saved, give out the tables here.
             {year === 2026 && ' This year’s starting design is ready to check and save.'}
           </p>
-          <button type="button" onClick={() => setView('design')} className={`${btn.primary} mx-auto`}>
+          <button type="button" onClick={() => setView('design')} className={`${pill.orange} mx-auto`}>
             Design the venue
           </button>
         </Card>
@@ -235,7 +225,7 @@ export default function StaffFloor({ orgId }: { orgId: string }) {
             </div>
             <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
               <Icon name="search" size={16} className="shrink-0 text-slate-400" />
-              <input className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Find a vendor or rescue" value={filter} onChange={(e) => setFilter(e.target.value)} />
+              <input className="min-h-[32px] min-w-0 flex-1 bg-transparent text-base outline-none" placeholder="Find a vendor or rescue" value={filter} onChange={(e) => setFilter(e.target.value)} />
             </label>
 
             <Section title={`Vendors · ${roster.vendors.length}`}>
@@ -271,7 +261,7 @@ export default function StaffFloor({ orgId }: { orgId: string }) {
             </Section>
 
             <Section title="Anything else">
-              <p className="px-3 pt-2.5 text-xs leading-relaxed text-slate-500">
+              <p className="px-3 pt-2.5 text-sm leading-relaxed text-slate-600">
                 A sponsor’s table, the OHRR info table — anything that isn’t a vendor or a rescue.
               </p>
               {labels.filter(match).map((label) => (
@@ -294,7 +284,7 @@ export default function StaffFloor({ orgId }: { orgId: string }) {
               const r = ranges.get(room.id)
               return (
                 <div key={room.id} className="space-y-1">
-                  <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
+                  <p className="text-sm font-extrabold uppercase tracking-wider text-slate-500">
                     {room.name}
                     {r ? ` · tables ${r[0]}–${r[1]}` : ''}
                   </p>
@@ -314,14 +304,14 @@ export default function StaffFloor({ orgId }: { orgId: string }) {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">{title}</p>
+      <p className="text-sm font-extrabold uppercase tracking-wider text-slate-500">{title}</p>
       <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">{children}</div>
     </div>
   )
 }
 
 function Empty({ children }: { children: ReactNode }) {
-  return <p className="px-3 py-3 text-sm text-slate-500">{children}</p>
+  return <p className="px-3 py-3 text-[15px] text-slate-600">{children}</p>
 }
 
 /** One stand: its name, its table numbers, and Save. */
@@ -378,10 +368,10 @@ function AssignRow({
       <div className="flex items-center gap-2">
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-1.5">
-            <span className="truncate text-sm font-bold text-ink">{name}</span>
+            <span className="truncate text-base font-bold text-ink">{name}</span>
             {hidden && <Badge tone="orange">Hidden</Badge>}
           </span>
-          {hint && <span className="block truncate text-xs text-slate-500">{hint}</span>}
+          {hint && <span className="block truncate text-sm text-slate-500">{hint}</span>}
         </span>
         <input
           className="h-11 w-24 shrink-0 rounded-xl border border-slate-200 bg-white px-2 text-center font-display text-base font-extrabold text-ink outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
@@ -402,7 +392,7 @@ function AssignRow({
           }}
         />
         {dirty ? (
-          <button type="button" onClick={save} disabled={busy} className={`${btn.primary} h-11 shrink-0 !px-4 disabled:opacity-60`}>
+          <button type="button" onClick={save} disabled={busy} className={`${pill.blue} !min-h-[44px] shrink-0`}>
             {busy ? '…' : 'Save'}
           </button>
         ) : done ? (
@@ -413,7 +403,7 @@ function AssignRow({
           <span className="w-[4.25rem] shrink-0" />
         )}
       </div>
-      {error && <p className="mt-1.5 text-sm font-semibold text-red-600">{error}</p>}
+      {error && <p className="mt-1.5 text-[15px] font-semibold text-red-700">{error}</p>}
     </div>
   )
 }
@@ -454,9 +444,9 @@ function NewOther({ orgId, year, onSaved }: { orgId: string; year: number; onSav
           onChange={(e) => setText(e.target.value)}
         />
       </div>
-      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
-      <button type="button" onClick={save} disabled={busy} className={`${btn.outline} w-full disabled:opacity-60`}>
-        <Icon name="plus" size={15} /> {busy ? 'Adding…' : 'Add'}
+      {error && <p className="text-[15px] font-semibold text-red-700">{error}</p>}
+      <button type="button" onClick={save} disabled={busy} className={`${pill.soft} !min-h-[44px]`}>
+        <Icon name="plus" size={16} /> {busy ? 'Adding…' : 'Add this table'}
       </button>
     </div>
   )

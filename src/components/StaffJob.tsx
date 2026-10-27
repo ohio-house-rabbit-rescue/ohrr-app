@@ -198,6 +198,97 @@ export function CardActions({ children, className = '' }: { children: ReactNode;
   return <div className={`flex flex-wrap items-center gap-2 ${className}`}>{children}</div>
 }
 
+/* ------------------------------------------------------------ the editor */
+
+/**
+ * The form every content page shares (a rabbit, a guide, a vet, a sponsor, a
+ * notice …): a short title, the lettered parts as children, and Save / Cancel
+ * always at the bottom in the same place. `remove` adds a red "Remove" that
+ * asks first.
+ */
+export function EditorForm({
+  title,
+  hint,
+  onSubmit,
+  onCancel,
+  busy = false,
+  saveLabel = 'Save',
+  cancelLabel = 'Cancel',
+  canSave = true,
+  error,
+  remove,
+  children,
+}: {
+  title: string
+  /** One line under the title: what saving does, or what's needed. */
+  hint?: ReactNode
+  onSubmit: () => void | Promise<void>
+  onCancel?: () => void
+  busy?: boolean
+  saveLabel?: string
+  cancelLabel?: string
+  canSave?: boolean
+  error?: ReactNode
+  /** "Remove this rabbit" — shown as a red pill that asks first. */
+  remove?: { label: string; confirm: string; onRemove: () => void | Promise<void> }
+  children: ReactNode
+}) {
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        void onSubmit()
+      }}
+      className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4"
+    >
+      <div>
+        <p className="font-display text-xl font-black leading-tight text-ink">{title}</p>
+        {hint && <p className="mt-1 text-sm text-slate-600">{hint}</p>}
+      </div>
+      {children}
+      {error ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</p> : null}
+      <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+        <button
+          type="submit"
+          disabled={busy || !canSave}
+          className="inline-flex min-h-[52px] flex-1 items-center justify-center rounded-2xl bg-brand-orange px-5 font-display text-base font-extrabold text-ink shadow-sm transition hover:bg-brand-orange-dark active:scale-[.98] disabled:opacity-50"
+        >
+          {busy ? 'Saving…' : saveLabel}
+        </button>
+        {onCancel && (
+          <button type="button" onClick={onCancel} disabled={busy} className="inline-flex min-h-[52px] items-center justify-center rounded-2xl border-2 border-slate-200 bg-white px-5 text-base font-bold text-slate-700 disabled:opacity-50">
+            {cancelLabel}
+          </button>
+        )}
+        {remove && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              if (window.confirm(remove.confirm)) void remove.onRemove()
+            }}
+            className={`${pill.red} ml-auto`}
+          >
+            <Icon name="trash" size={16} /> {remove.label}
+          </button>
+        )}
+      </div>
+    </form>
+  )
+}
+
+/** A short field label with its needed/optional mark, for inside an EditorForm part. */
+export function Field({ label, needed = false, hint, children }: { label: string; needed?: boolean; hint?: ReactNode; children: ReactNode }) {
+  return (
+    <label className="block text-sm font-semibold text-slate-700">
+      {label}
+      {needed ? <Needed /> : <Optional />}
+      {children}
+      {hint && <span className="mt-1 block text-xs font-normal text-slate-500">{hint}</span>}
+    </label>
+  )
+}
+
 /* ------------------------------------------------------------- not yet */
 
 /**

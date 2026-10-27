@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
-import { btn, Badge, Card, Screen } from '../components/ui'
+import { Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
-import { StaffTitle } from '../components/StaffTitle'
+import { StaffTitle, Explain } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
+import { CardActions, EditorForm, Field, Part, StepButton, pill } from '../components/StaffJob'
 import { SponsorLogo } from '../features/sponsors/SponsorLogo'
 import {
   SURFACES,
@@ -213,16 +213,14 @@ function LogoUploader({
 
   return (
     <div>
-      <span className="text-sm font-semibold text-slate-700">Logo</span>
+      <span className="text-sm font-semibold text-slate-700">
+        Logo <span className="ml-1.5 text-xs font-semibold text-slate-400">optional</span>
+      </span>
       <div className="mt-1.5 flex items-center gap-3">
         <SponsorLogo name={name || 'Sponsor'} logoUrl={logoUrl || undefined} size="md" />
         <div className="flex flex-wrap items-center gap-2">
-          <label
-            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-2 text-sm font-bold text-brand-blue hover:bg-slate-50 ${
-              busy ? 'opacity-60' : ''
-            }`}
-          >
-            <Icon name="award" size={15} />
+          <label className={`${pill.soft} cursor-pointer ${busy ? 'opacity-60' : ''}`}>
+            <Icon name="award" size={16} />
             {busy ? 'Uploading…' : logoUrl ? 'Replace logo' : 'Upload logo'}
             <input
               type="file"
@@ -233,18 +231,13 @@ function LogoUploader({
             />
           </label>
           {logoUrl && (
-            <button
-              type="button"
-              onClick={remove}
-              disabled={busy}
-              className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-50"
-            >
-              Remove
+            <button type="button" onClick={remove} disabled={busy} className={pill.red}>
+              Remove logo
             </button>
           )}
         </div>
       </div>
-      <p className="mt-1 text-xs text-slate-400">
+      <p className="mt-1 text-sm text-slate-500">
         The real brand logo (PNG or JPG). It’s resized to 800px max.
       </p>
       <FormError>{error}</FormError>
@@ -255,17 +248,21 @@ function LogoUploader({
 /* ---- sponsor form ---- */
 
 function SponsorForm({
+  heading,
   initial,
   orgId,
-  submitLabel,
+  saveLabel,
   onSubmit,
   onCancel,
+  onRemove,
 }: {
+  heading: string
   initial: Draft
   orgId: string
-  submitLabel: string
+  saveLabel: string
   onSubmit: (d: Draft) => Promise<void>
   onCancel: () => void
+  onRemove?: () => Promise<void>
 }) {
   const [draft, setDraft] = useState<Draft>(initial)
   const [busy, setBusy] = useState(false)
@@ -275,12 +272,11 @@ function SponsorForm({
     (e: { target: { value: string } }) =>
       setDraft((d) => ({ ...d, [k]: e.target.value }))
 
-  const submit = async (e: { preventDefault(): void }) => {
-    e.preventDefault()
+  const run = async (fn: () => Promise<void>) => {
     setError(null)
     setBusy(true)
     try {
-      await onSubmit(draft)
+      await fn()
     } catch (err) {
       setError(errMessage(err))
       setBusy(false)
@@ -288,10 +284,26 @@ function SponsorForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3">
-      <div className="flex gap-3">
-        <label className="block flex-1 text-sm font-semibold text-slate-700">
-          Name
+    <EditorForm
+      title={heading}
+      hint="Only the name is needed. Everything else can be filled in later."
+      onSubmit={() => run(() => onSubmit(draft))}
+      onCancel={onCancel}
+      busy={busy}
+      saveLabel={saveLabel}
+      canSave={draft.name.trim().length > 0}
+      error={error}
+      remove={
+        onRemove
+          ? { label: 'Remove', confirm: `Remove ${initial.name || 'this partner'}? This can’t be undone.`, onRemove: () => run(onRemove) }
+          : undefined
+      }
+    >
+      <div className="space-y-3">
+        <Part n="A" hint="needed">
+          Who
+        </Part>
+        <Field label="Name" needed>
           <input
             className={staffInput}
             required
@@ -299,9 +311,8 @@ function SponsorForm({
             onChange={set('name')}
             placeholder="Business or organization"
           />
-        </label>
-        <label className="block w-40 text-sm font-semibold text-slate-700">
-          Tier
+        </Field>
+        <Field label="Tier" needed>
           <select
             className={staffInput}
             value={draft.tier}
@@ -313,53 +324,53 @@ function SponsorForm({
               </option>
             ))}
           </select>
-        </label>
+        </Field>
       </div>
 
-      <LogoUploader
-        name={draft.name}
-        logoUrl={draft.logo_url}
-        orgId={orgId}
-        onChange={(logo_url) => setDraft((d) => ({ ...d, logo_url }))}
-      />
-
-      <label className="block text-sm font-semibold text-slate-700">
-        Blurb
-        <textarea
-          className={staffInput}
-          rows={2}
-          value={draft.blurb}
-          onChange={set('blurb')}
-          placeholder="One or two sentences about this partner"
+      <div className="space-y-3">
+        <Part n="B" hint="optional">
+          Logo and words
+        </Part>
+        <LogoUploader
+          name={draft.name}
+          logoUrl={draft.logo_url}
+          orgId={orgId}
+          onChange={(logo_url) => setDraft((d) => ({ ...d, logo_url }))}
         />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        Website
-        <input
-          className={staffInput}
-          type="url"
-          inputMode="url"
-          value={draft.website}
-          onChange={set('website')}
-          placeholder="https://"
-        />
-      </label>
+        <Field label="Blurb">
+          <textarea
+            className={staffInput}
+            rows={2}
+            value={draft.blurb}
+            onChange={set('blurb')}
+            placeholder="One or two sentences about this partner"
+          />
+        </Field>
+        <Field label="Website">
+          <input
+            className={staffInput}
+            type="url"
+            inputMode="url"
+            value={draft.website}
+            onChange={set('website')}
+            placeholder="https://"
+          />
+        </Field>
+      </div>
 
-      <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-        <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
-          Partner perk <span className="font-semibold normal-case text-slate-300">(optional)</span>
-        </p>
-        <label className="mt-2 block text-sm font-semibold text-slate-700">
-          Perk title
+      <div className="space-y-3">
+        <Part n="C" hint="optional">
+          Partner perk
+        </Part>
+        <Field label="Perk title">
           <input
             className={staffInput}
             value={draft.perk_title}
             onChange={set('perk_title')}
             placeholder="e.g. 10% off for OHRR adopters"
           />
-        </label>
-        <label className="mt-2 block text-sm font-semibold text-slate-700">
-          Perk details
+        </Field>
+        <Field label="Perk details">
           <textarea
             className={staffInput}
             rows={2}
@@ -367,9 +378,8 @@ function SponsorForm({
             onChange={set('perk_detail')}
             placeholder="How to redeem, any limits or dates"
           />
-        </label>
-        <label className="mt-2 block text-sm font-semibold text-slate-700">
-          Code <span className="font-normal text-slate-400">(revealed with a “Show code” tap)</span>
+        </Field>
+        <Field label="Code" hint="Revealed when someone taps “Show code.”">
           <input
             className={staffInput}
             value={draft.perk_code}
@@ -377,39 +387,54 @@ function SponsorForm({
             placeholder="e.g. OHRR2026"
             autoCapitalize="characters"
           />
-        </label>
+        </Field>
       </div>
 
-      <div className="flex gap-3">
-        <label className="block flex-1 text-sm font-semibold text-slate-700">
-          Term start
-          <input className={staffInput} type="date" value={draft.term_start} onChange={set('term_start')} />
-        </label>
-        <label className="block flex-1 text-sm font-semibold text-slate-700">
-          Term end
-          <input className={staffInput} type="date" value={draft.term_end} onChange={set('term_end')} />
-        </label>
+      <div className="space-y-3">
+        <Part n="D" hint="optional">
+          How long
+        </Part>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Term start">
+            <input className={staffInput} type="date" value={draft.term_start} onChange={set('term_start')} />
+          </Field>
+          <Field label="Term end">
+            <input className={staffInput} type="date" value={draft.term_end} onChange={set('term_end')} />
+          </Field>
+        </div>
+        {draft.term_end && (
+          <Field label="Remind us this many days before it ends">
+            <input
+              className={staffInput}
+              inputMode="numeric"
+              value={draft.remind_days}
+              onChange={(e) => setDraft((d) => ({ ...d, remind_days: e.target.value.replace(/[^0-9]/g, '') }))}
+              placeholder="21"
+            />
+          </Field>
+        )}
+        <Explain label="What the term does">
+          <p>
+            After the term end date the partner is hidden from the public automatically — and the staff dashboard
+            warns you before that happens, so a renewal can be asked for in time.
+          </p>
+        </Explain>
       </div>
-      {draft.term_end && (
-        <label className="block text-sm font-semibold text-slate-700">
-          Remind us this many days before it ends
+
+      <div className="space-y-3">
+        <Part n="E" hint="optional">
+          Showing
+        </Part>
+        <label className="flex min-h-[44px] items-center gap-3 text-base font-semibold text-slate-700">
           <input
-            className={staffInput}
-            inputMode="numeric"
-            value={draft.remind_days}
-            onChange={(e) => setDraft((d) => ({ ...d, remind_days: e.target.value.replace(/[^0-9]/g, '') }))}
-            placeholder="21"
+            type="checkbox"
+            className="h-6 w-6 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30"
+            checked={draft.is_active}
+            onChange={(e) => setDraft((d) => ({ ...d, is_active: e.target.checked }))}
           />
+          Show in the app
         </label>
-      )}
-      <p className="-mt-1 text-xs text-slate-400">
-        Optional. After the term end date the partner is hidden from the public automatically — and the staff dashboard
-        warns you before that happens, so a renewal can be asked for in time.
-      </p>
-
-      <div className="flex items-end gap-4">
-        <label className="block w-32 text-sm font-semibold text-slate-700">
-          Sort order
+        <Field label="Sort order" hint="Or leave it blank and use Move up and Move down on the list.">
           <input
             className={staffInput}
             type="number"
@@ -418,38 +443,9 @@ function SponsorForm({
             onChange={set('sort_order')}
             placeholder="auto"
           />
-        </label>
-        <label className="flex items-center gap-2 pb-3 text-sm font-semibold text-slate-700">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30"
-            checked={draft.is_active}
-            onChange={(e) => setDraft((d) => ({ ...d, is_active: e.target.checked }))}
-          />
-          Show in the app
-        </label>
+        </Field>
       </div>
-
-      <FormError>{error}</FormError>
-
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={busy || draft.name.trim().length === 0}
-          className={`${btn.primary} flex-1 disabled:opacity-60`}
-        >
-          {busy ? 'Saving…' : submitLabel}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={busy}
-          className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500 transition hover:bg-slate-50"
-        >
-          Cancel
-        </button>
-      </div>
-    </form>
+    </EditorForm>
   )
 }
 
@@ -563,6 +559,7 @@ function PlacementsEditor({ sponsor, orgId }: { sponsor: SponsorRow; orgId: stri
   }
 
   const remove = async (p: PlacementRow) => {
+    if (!window.confirm(`Remove the ${surfaceLabel(p.surface)} placement?`)) return
     setBusy(true)
     setError(null)
     const { error } = await supabase.from('sponsor_placements').delete().eq('id', p.id)
@@ -572,55 +569,46 @@ function PlacementsEditor({ sponsor, orgId }: { sponsor: SponsorRow; orgId: stri
   }
 
   return (
-    <div className="mt-1 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-      <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
-        “Presented by” placements
-      </p>
-      <p className="mt-1 text-xs leading-relaxed text-slate-500">
+    <div className="mt-1 space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+      <p className="font-display text-base font-black text-ink">“Presented by” placements</p>
+      <p className="text-sm leading-relaxed text-slate-600">
         Each placement shows a small “Presented by {sponsor.name}” strip on that screen — always,
         or only inside a date window.
       </p>
 
       {items === null ? (
-        <p className="mt-2 text-xs font-semibold text-slate-400">Loading…</p>
+        <p className="text-sm font-semibold text-slate-500">Loading…</p>
       ) : items.length === 0 ? (
-        <p className="mt-2 text-xs text-slate-500">No placements yet.</p>
+        <p className="text-sm text-slate-600">No placements yet.</p>
       ) : (
-        <ul className="mt-2 divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+        <div className="space-y-2">
           {items.map((p) => (
-            <li key={p.id} className="flex items-center gap-2 px-3 py-2">
-              <div className="min-w-0 flex-1">
+            <div key={p.id} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+              <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="truncate text-sm font-bold text-ink">{surfaceLabel(p.surface)}</span>
+                  <span className="truncate text-base font-bold text-ink">{surfaceLabel(p.surface)}</span>
                   {p.is_active ? <Badge tone="blue">On</Badge> : <Badge tone="slate">Off</Badge>}
                 </div>
-                <p className="text-xs text-slate-500">{windowText(p)}</p>
+                <p className="text-sm text-slate-600">{windowText(p)}</p>
               </div>
-              <button
-                type="button"
-                onClick={() => toggle(p)}
-                disabled={busy}
-                className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
-              >
-                {p.is_active ? 'Turn off' : 'Turn on'}
-              </button>
-              <button
-                type="button"
-                onClick={() => remove(p)}
-                disabled={busy}
-                aria-label={`Remove ${surfaceLabel(p.surface)} placement`}
-                className="flex h-7 w-7 items-center justify-center rounded-full border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-60"
-              >
-                <Icon name="x" size={13} />
-              </button>
-            </li>
+              <CardActions>
+                <button type="button" onClick={() => toggle(p)} disabled={busy} className={pill.outline}>
+                  {p.is_active ? 'Turn off' : 'Turn on'}
+                </button>
+                <button type="button" onClick={() => remove(p)} disabled={busy} className={pill.red}>
+                  Remove
+                </button>
+              </CardActions>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
 
-      <form onSubmit={add} className="mt-3 space-y-2">
-        <label className="block text-xs font-semibold text-slate-700">
-          Add to screen
+      <form onSubmit={add} className="space-y-3 border-t border-slate-200 pt-3">
+        <Part n="A" hint="needed">
+          Add a placement
+        </Part>
+        <Field label="Add to screen" needed>
           <select
             className={staffInput}
             value={surface}
@@ -632,32 +620,26 @@ function PlacementsEditor({ sponsor, orgId }: { sponsor: SponsorRow; orgId: stri
               </option>
             ))}
           </select>
-        </label>
-        <div className="flex gap-2">
-          <label className="block flex-1 text-xs font-semibold text-slate-700">
-            Starts <span className="font-normal text-slate-400">(optional)</span>
+        </Field>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Starts">
             <input
               className={staffInput}
               type="datetime-local"
               value={startsAt}
               onChange={(e) => setStartsAt(e.target.value)}
             />
-          </label>
-          <label className="block flex-1 text-xs font-semibold text-slate-700">
-            Ends <span className="font-normal text-slate-400">(optional)</span>
+          </Field>
+          <Field label="Ends">
             <input
               className={staffInput}
               type="datetime-local"
               value={endsAt}
               onChange={(e) => setEndsAt(e.target.value)}
             />
-          </label>
+          </Field>
         </div>
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded-full border border-brand-blue/40 px-3.5 py-1.5 text-xs font-bold text-brand-blue hover:bg-brand-blue-50 disabled:opacity-60"
-        >
+        <button type="submit" disabled={busy} className={pill.blue}>
           {busy ? 'Saving…' : 'Add placement'}
         </button>
       </form>
@@ -685,7 +667,6 @@ function SponsorCard({
 }) {
   const [editing, setEditing] = useState(false)
   const [placementsOpen, setPlacementsOpen] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -723,30 +704,35 @@ function SponsorCard({
   }
 
   const doDelete = async () => {
-    setBusy(true)
-    setError(null)
     const { error } = await supabase.from('sponsors').delete().eq('id', item.id)
-    if (error) {
-      setError(errMessage(error))
-      setBusy(false)
-      setConfirmDelete(false)
-      return
-    }
+    if (error) throw error
     if (item.logo_url) await removeLogoObject(item.logo_url)
     onChanged()
   }
 
+  const confirmDelete = async () => {
+    if (!window.confirm(`Remove ${item.name}? This can’t be undone.`)) return
+    setBusy(true)
+    setError(null)
+    try {
+      await doDelete()
+    } catch (e) {
+      setError(errMessage(e))
+      setBusy(false)
+    }
+  }
+
   if (editing) {
     return (
-      <Card>
-        <SponsorForm
-          initial={draftFrom(item)}
-          orgId={orgId}
-          submitLabel="Save changes"
-          onSubmit={saveEdit}
-          onCancel={() => setEditing(false)}
-        />
-      </Card>
+      <SponsorForm
+        heading="Edit this partner"
+        initial={draftFrom(item)}
+        orgId={orgId}
+        saveLabel="Save"
+        onSubmit={saveEdit}
+        onCancel={() => setEditing(false)}
+        onRemove={doDelete}
+      />
     )
   }
 
@@ -760,97 +746,47 @@ function SponsorCard({
           : null
 
   return (
-    <Card className="space-y-2">
+    <Card className="space-y-3">
       <div className="flex gap-3">
         <SponsorLogo name={item.name} logoUrl={item.logo_url ?? undefined} size="md" />
         <div className="min-w-0 flex-1">
-          <h3 className="font-display text-[15px] font-extrabold text-ink">{item.name}</h3>
+          <h3 className="font-display text-base font-extrabold text-ink">{item.name}</h3>
           <div className="mt-1 flex flex-wrap gap-1.5">
             <Badge tone={item.tier === 'presenting' ? 'orange' : 'blue'}>{tierLabel(item.tier)}</Badge>
             {!item.is_active && <Badge tone="slate">Hidden</Badge>}
             {expired && <Badge tone="slate">Term ended</Badge>}
             {item.perk_title && <Badge tone="orange">Perk</Badge>}
           </div>
-          {term && <p className="mt-1 text-xs text-slate-500">{term}</p>}
-          {item.website && <p className="mt-0.5 truncate text-xs text-slate-400">{item.website}</p>}
+          {term && <p className="mt-1 text-sm text-slate-600">{term}</p>}
+          {item.website && <p className="mt-0.5 truncate text-sm text-slate-500">{item.website}</p>}
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
-        >
+      <CardActions>
+        <button type="button" onClick={() => setEditing(true)} className={pill.blue}>
           Edit
         </button>
         <button
           type="button"
           onClick={() => setPlacementsOpen((o) => !o)}
-          className={`rounded-full border px-3 py-1.5 text-xs font-bold ${
-            placementsOpen
-              ? 'border-brand-blue bg-brand-blue-50 text-brand-blue'
-              : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-          }`}
+          aria-expanded={placementsOpen}
+          className={placementsOpen ? pill.soft : pill.outline}
         >
           Placements
         </button>
-        <button
-          type="button"
-          onClick={toggleActive}
-          disabled={busy}
-          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
-        >
+        <button type="button" onClick={toggleActive} disabled={busy} className={pill.outline}>
           {item.is_active ? 'Hide' : 'Show'}
         </button>
-        <span className="inline-flex overflow-hidden rounded-full border border-slate-200">
-          <button
-            type="button"
-            onClick={() => move(-1)}
-            disabled={busy || !canMoveUp}
-            aria-label="Move up"
-            className="flex h-7 w-8 items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-30"
-          >
-            <Icon name="chevron" size={14} className="-rotate-90" />
-          </button>
-          <button
-            type="button"
-            onClick={() => move(1)}
-            disabled={busy || !canMoveDown}
-            aria-label="Move down"
-            className="flex h-7 w-8 items-center justify-center border-l border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30"
-          >
-            <Icon name="chevron" size={14} className="rotate-90" />
-          </button>
-        </span>
-        {confirmDelete ? (
-          <>
-            <button
-              type="button"
-              onClick={doDelete}
-              disabled={busy}
-              className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
-            >
-              {busy ? 'Deleting…' : 'Confirm delete'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmDelete(false)}
-              className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setConfirmDelete(true)}
-            className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50"
-          >
-            Delete
-          </button>
-        )}
-      </div>
+        <button type="button" onClick={() => move(-1)} disabled={busy || !canMoveUp} className={pill.outline}>
+          Move up
+        </button>
+        <button type="button" onClick={() => move(1)} disabled={busy || !canMoveDown} className={pill.outline}>
+          Move down
+        </button>
+        <button type="button" onClick={confirmDelete} disabled={busy} className={pill.red}>
+          Remove
+        </button>
+      </CardActions>
 
       {placementsOpen && <PlacementsEditor sponsor={item} orgId={orgId} />}
       <FormError>{error}</FormError>
@@ -943,7 +879,7 @@ export default function StaffSponsors() {
       <Screen className="space-y-3 pt-2">
         <h1 className="font-display text-2xl font-black text-ink">Sponsors & partners</h1>
         <Card className="border-slate-200 bg-slate-50/80">
-          <p className="text-sm leading-relaxed text-slate-600">
+          <p className="text-base leading-relaxed text-slate-600">
             You don’t have access to manage sponsors. An owner or admin can grant the “Manage
             Midwest BunFest info” capability.
           </p>
@@ -954,40 +890,31 @@ export default function StaffSponsors() {
 
   return (
     <Screen className="space-y-4">
-      <StaffTitle
-        title="Sponsors & partners"
-        actions={
-          !creating ? (
-            <button
-              type="button"
-              onClick={() => setCreating(true)}
-              className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
-            >
-              <Icon name="award" size={15} /> Add
-            </button>
-          ) : undefined
-        }
-      >
+      <StaffTitle title="Sponsors & partners">
         <p>The roster on the public Our Partners page, partner perks, and “Presented by” strips.</p>
+        <p>Partners are listed by tier. Move up and Move down change the order inside a tier. To remove a partner for good, tap Remove.</p>
       </StaffTitle>
-      <Link
-        to="/staff/sponsors/renewals"
-        className="-mt-2 inline-flex min-h-[44px] w-fit items-center gap-1.5 rounded-full border border-brand-blue/40 px-4 text-sm font-bold text-brand-blue transition hover:bg-brand-blue-50"
-      >
-        <Icon name="calendar" size={15} /> Renewals list
-      </Link>
+
+      {!creating && (
+        <div className="flex flex-wrap items-center gap-2">
+          <StepButton tone="orange" icon="plus" onClick={() => setCreating(true)}>
+            New sponsor
+          </StepButton>
+          <StepButton to="/staff/sponsors/renewals" icon="calendar">
+            Renewals list
+          </StepButton>
+        </div>
+      )}
 
       {creating && (
-        <Card>
-          <p className="mb-3 font-display text-[15px] font-extrabold text-ink">New sponsor</p>
-          <SponsorForm
-            initial={emptyDraft}
-            orgId={orgId}
-            submitLabel="Add sponsor"
-            onSubmit={create}
-            onCancel={() => setCreating(false)}
-          />
-        </Card>
+        <SponsorForm
+          heading="New sponsor"
+          initial={emptyDraft}
+          orgId={orgId}
+          saveLabel="Add sponsor"
+          onSubmit={create}
+          onCancel={() => setCreating(false)}
+        />
       )}
 
       <FormError>{error}</FormError>
@@ -996,8 +923,8 @@ export default function StaffSponsors() {
         <Spinner label="Loading sponsors…" />
       ) : items.length === 0 ? (
         <Card className="border-slate-200 bg-slate-50/80 text-center">
-          <p className="text-sm leading-relaxed text-slate-600">
-            No sponsors yet. Tap “Add” to list the first partner — until then the public page says
+          <p className="text-base leading-relaxed text-slate-600">
+            No sponsors yet. Tap “New sponsor” to list the first partner — until then the public page says
             partners will be announced.
           </p>
         </Card>
@@ -1005,9 +932,7 @@ export default function StaffSponsors() {
         <div className="space-y-5">
           {groups.map((g) => (
             <div key={g.tier} className="space-y-2.5">
-              <p className="px-1 text-xs font-extrabold uppercase tracking-wider text-slate-400">
-                {tierLabel(g.tier)}s
-              </p>
+              <h2 className="font-display text-lg font-extrabold text-ink">{tierLabel(g.tier)}s</h2>
               <div className="grid grid-cols-1 gap-3">
                 {g.rows.map((item, idx) => (
                   <SponsorCard

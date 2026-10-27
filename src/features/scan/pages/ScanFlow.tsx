@@ -17,6 +17,7 @@ import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
 import { isNative } from '../../../native/platform'
+import { Explain } from '../../../components/StaffTitle'
 import { pickPhoto, type PhotoSource } from '../../../native/camera'
 import Scanner from '../Scanner'
 import { normalizeCode, isRetailBarcode, isOhrrCode, isBoxCode } from '../codes'
@@ -37,6 +38,7 @@ import {
   uploadItemPhoto,
 } from '../api'
 import { BigButton, BigInput, Busy, ErrorBox, ItemCard, KindTile, MoneyInput, StepShell, Stepper } from '../ScanUI'
+import { StepButton, pill } from '../../../components/StaffJob'
 import {
   CostFields,
   HeadedForChips,
@@ -66,7 +68,7 @@ import {
   type TaggedItem,
 } from '../types'
 
-type Step = 'scan' | 'type' | 'lookup' | 'found' | 'kind' | 'photo' | 'name' | 'details' | 'saving' | 'done'
+type Step = 'scan' | 'type' | 'lookup' | 'notfound' | 'found' | 'kind' | 'photo' | 'name' | 'details' | 'saving' | 'done'
 
 const DRAFT_KEY = 'ohrr.scan.draft.v1'
 const WIZARD: Step[] = ['kind', 'photo', 'name', 'details']
@@ -124,6 +126,8 @@ export default function ScanFlow() {
   const [splitQty, setSplitQty] = useState(1)
   const [splitHead, setSplitHead] = useState<HeadedFor | ''>('')
   const [note, setNote] = useState<{ text: string; code?: string } | null>(null)
+  // The rest of the choices on a found item sit behind "More".
+  const [moreOpen, setMoreOpen] = useState(false)
   const cameraRef = useRef<HTMLInputElement>(null)
   const libraryRef = useRef<HTMLInputElement>(null)
 
@@ -159,6 +163,7 @@ export default function ScanFlow() {
           setItem(found)
           setDraft(draftFromItem(found))
           setEditing(false)
+          setMoreOpen(false)
           setStep('found')
           return
         }
@@ -172,12 +177,8 @@ export default function ScanFlow() {
           // best-effort product name; it arrives while they answer "What is it?"
           guessProduct(code).then((g) => g && setGuess(g))
         }
-        if (!askNewKind) {
-          setDraft({ ...d, kind: 'donation' })
-          setStep('photo')
-        } else {
-          setStep('kind')
-        }
+        // Not on file: say so, with the ways forward, rather than starting a form.
+        setStep('notfound')
       } catch (err) {
         setError(errMessage(err))
         setStep('scan')
@@ -212,7 +213,18 @@ export default function ScanFlow() {
     else if (step === 'done' || step === 'scan') persist(null)
   }, [step, draft, editing, fromList])
 
+  /** "Add it with this code": the new-item questions, for the code that was scanned. */
+  const addWithCode = () => {
+    if (!askNewKind) {
+      setDraft((d) => ({ ...d, kind: 'donation' }))
+      setStep('photo')
+    } else {
+      setStep('kind')
+    }
+  }
+
   const startOver = () => {
+    setMoreOpen(false)
     persist(null)
     setDraft(emptyDraft(''))
     setItem(null)
@@ -423,7 +435,7 @@ export default function ScanFlow() {
           {resumed && (
             <div className="flex items-center justify-between gap-3 rounded-2xl bg-brand-blue-50 px-4 py-3 text-[15px]">
               <span className="font-semibold text-ink">You were in the middle of an item.</span>
-              <button type="button" onClick={() => setStep(loadSaved()?.step ?? 'kind')} className="font-extrabold text-brand-blue">
+              <button type="button" onClick={() => setStep(loadSaved()?.step ?? 'kind')} className={pill.blue}>
                 Continue
               </button>
             </div>
@@ -452,31 +464,26 @@ export default function ScanFlow() {
             </div>
           )}
           {(canDonation || canAddStock) && (
-            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-3 text-[15px] text-slate-600">
-              <p className="font-bold text-ink">No label on it yet?</p>
-              <p className="mt-0.5">
-                {canDonation && (
-                  <>
-                    <Link to="/staff/catalog" className="font-extrabold text-brand-blue underline-offset-2 hover:underline">
-                      Add it as a donation
-                    </Link>{' '}
-                    — it gets the next DON number.{canAddStock ? ' Something the shop carries? ' : ''}
-                  </>
-                )}
-                {canAddStock && (
-                  <>
-                    <Link to="/staff/hopshop?add=1" className="font-extrabold text-brand-blue underline-offset-2 hover:underline">
-                      Add it to Hop Shop inventory
-                    </Link>{' '}
-                    — it gets a SKU.
-                  </>
-                )}
-              </p>
+            <div className="space-y-3 rounded-2xl border border-dashed border-slate-300 p-4">
+              <p className="text-base font-bold text-ink">No label on it yet?</p>
+              <p className="text-[15px] text-slate-600">A donation gets the next DON number{canAddStock ? '; something the shop carries gets a SKU' : ''}.</p>
+              {canDonation && (
+                <BigButton tone="outline" icon="gift" onClick={() => navigate('/staff/catalog')}>
+                  No label yet — receive it
+                </BigButton>
+              )}
+              {canAddStock && (
+                <BigButton tone="plain" icon="bag" onClick={() => navigate('/staff/hopshop?add=1')}>
+                  Add it to Hop Shop inventory
+                </BigButton>
+              )}
             </div>
           )}
-          <Link to="/staff/items" className="block text-center text-base font-bold text-brand-blue">
-            See all scanned items
-          </Link>
+          <div className="flex justify-center">
+            <StepButton to="/staff/items" icon="file">
+              See all scanned items
+            </StepButton>
+          </div>
         </div>
       </StepShell>
     )
@@ -490,10 +497,53 @@ export default function ScanFlow() {
     )
   }
 
+  if (step === 'notfound') {
+    const mayReceive = canDonation
+    return (
+      <StepShell title="Nothing on file with that code" help="No item has this code yet." onBack={startOver} backLabel="Scan">
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center">
+            <p className="text-sm font-bold uppercase tracking-wide text-slate-500">The code</p>
+            <p className="break-all font-mono text-2xl font-black tracking-widest text-ink">{draft.code}</p>
+            {guess && <p className="mt-1 text-[15px] text-slate-600">Looks like: {guessTitle(guess)}</p>}
+          </div>
+          <div className="space-y-3">
+            {mayReceive && (
+              <BigButton tone="orange" icon="gift" onClick={() => navigate('/staff/catalog')}>
+                Receive it as a new item
+              </BigButton>
+            )}
+            {!mayReceive && canAddStock && (
+              <BigButton tone="orange" icon="bag" onClick={() => navigate(`/staff/hopshop?add=1&code=${encodeURIComponent(draft.code)}`)}>
+                Add it to Hop Shop inventory
+              </BigButton>
+            )}
+            {(mayReceive || canAddStock) && (
+              <BigButton tone="outline" icon="plus" onClick={addWithCode}>
+                Add it with this code
+              </BigButton>
+            )}
+            <BigButton tone="blue" icon="scan" onClick={startOver}>
+              Try again
+            </BigButton>
+          </div>
+          <Explain label="Which one?">
+            <p>
+              <span className="font-bold">Receive it as a new item</span> gives it the next DON number and a label of its own.{' '}
+              <span className="font-bold">Add it with this code</span> keeps the code that was scanned — for a barcode that came on the item.
+            </p>
+          </Explain>
+        </div>
+      </StepShell>
+    )
+  }
+
   if (step === 'found' && item) {
     const m = KIND_META[item.kind]
     const canThis = m.caps.some((c) => can(c))
     const isDone = item.kind === 'stock' ? item.status === 'inactive' : item.status === m.doneStatus
+    const toSort = canThis && item.kind === 'donation' && !item.outcome
+    const labelsAt = item.kind === 'stock' ? '/staff/hopshop/labels' : '/staff/labels'
     return (
       <StepShell
         title="Found it"
@@ -531,11 +581,11 @@ export default function ScanFlow() {
             </div>
           )}
           {note && (
-            <div role="status" className="rounded-2xl bg-green-50 px-4 py-3 text-[15px] text-green-900">
-              {note.text}{' '}
+            <div role="status" className="flex flex-wrap items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-[15px] text-green-900">
+              <span className="min-w-0 flex-1">{note.text}</span>
               {note.code && (
-                <Link to={`/staff/labels?code=${encodeURIComponent(note.code)}`} className="font-bold text-brand-blue">
-                  Print its label
+                <Link to={`/staff/labels?code=${encodeURIComponent(note.code)}`} className={pill.blue}>
+                  <Icon name="printer" size={16} /> Print its label
                 </Link>
               )}
             </div>
@@ -544,7 +594,7 @@ export default function ScanFlow() {
             <button
               type="button"
               onClick={() => void lookup(item.in_basket!.code)}
-              className="block w-full rounded-2xl bg-brand-blue-50 px-4 py-3 text-left text-[15px] text-brand-blue"
+              className="block min-h-[48px] w-full rounded-2xl bg-brand-blue-50 px-4 py-3 text-left text-[15px] text-brand-blue"
             >
               In the basket <span className="font-bold">“{item.in_basket.title}”</span> ({item.in_basket.code}) — open it
             </button>
@@ -572,7 +622,9 @@ export default function ScanFlow() {
               </ul>
             </div>
           )}
-          {canThis && item.kind === 'donation' && !item.outcome && (
+
+          {/* The first choices: what to do with it, change it, the next one. The rest is behind More. */}
+          {toSort && (
             <BigButton
               tone="orange"
               icon="gavel"
@@ -581,26 +633,103 @@ export default function ScanFlow() {
                 setStep('kind')
               }}
             >
-              Where does it go?
+              Sort it — where does it go?
             </BigButton>
           )}
-          {canThis && item.kind === 'donation' && !item.outcome && (item.quantity ?? 1) > 1 && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <button
-                type="button"
+          {canThis && item.kind === 'donation' && item.outcome && item.outcome !== 'sorted' && (
+            <BigButton tone="outline" disabled={busy} onClick={() => void act(async () => (await setDonationOutcome(orgId, item.code, null)) ?? item)}>
+              {item.outcome === 'basket' ? 'Take it out of the basket' : 'Undo — it’s still waiting to be sorted'}
+            </BigButton>
+          )}
+          {canThis && item.kind !== 'stock' && item.kind !== 'donation' && (
+            <BigButton
+              tone={isDone ? 'plain' : 'orange'}
+              icon={isDone ? 'x' : 'check'}
+              disabled={busy}
+              onClick={() => void act(() => setStatus(orgId, item.code, isDone ? m.openStatus : m.doneStatus))}
+            >
+              {isDone ? m.undoLabel : m.doneLabel}
+            </BigButton>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            {canThis && (
+              <BigButton
+                tone="outline"
+                icon="keyboard"
                 onClick={() => {
-                  setSplitOpen((o) => !o)
-                  setSplitQty(1)
-                  setSplitHead('')
+                  setEditing(true)
+                  setStep('name')
                 }}
-                aria-expanded={splitOpen}
-                className="flex min-h-[44px] w-full items-center justify-between text-left text-base font-bold text-brand-blue"
               >
-                Split this lot of {item.quantity}
-                <Icon name="chevron" size={18} className={`text-slate-400 transition ${splitOpen ? 'rotate-90' : ''}`} />
-              </button>
-              {splitOpen && (
-                <div className="mt-3 space-y-4">
+                Change it
+              </BigButton>
+            )}
+            <BigButton tone="blue" icon="scan" onClick={startOver} className={canThis ? '' : 'col-span-2'}>
+              Scan another
+            </BigButton>
+          </div>
+          {canThis && (
+            <button
+              type="button"
+              onClick={() => setMoreOpen((o) => !o)}
+              aria-expanded={moreOpen}
+              className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-slate-100 px-4 text-base font-bold text-ink transition hover:bg-slate-200 active:scale-[.99]"
+            >
+              {moreOpen ? 'Fewer choices' : 'More…'}
+              <Icon name="chevron" size={16} className={`transition ${moreOpen ? '-rotate-90' : 'rotate-90'}`} />
+            </button>
+          )}
+          {canThis && moreOpen && (
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="flex flex-wrap gap-2">
+                <StepButton icon="camera" onClick={() => navigate(`/staff/items/photos?code=${encodeURIComponent(item.code)}${fromList ? '&back=items' : ''}`)}>
+                  Photos
+                </StepButton>
+                {isOhrrCode(item.code) && (
+                  <StepButton icon="printer" to={`${labelsAt}?code=${encodeURIComponent(item.code)}`}>
+                    Print its label
+                  </StepButton>
+                )}
+                {toSort && (
+                  <>
+                    <StepButton onClick={() => void act(async () => (await setDonationOutcome(orgId, item.code, 'rabbits')) ?? item)} disabled={busy}>
+                      In use by OHRR
+                    </StepButton>
+                    <StepButton onClick={() => void act(async () => (await setDonationOutcome(orgId, item.code, 'passed_on')) ?? item)} disabled={busy}>
+                      Passed on / not usable
+                    </StepButton>
+                    {(item.quantity ?? 1) > 1 && (
+                      <StepButton
+                        onClick={() => {
+                          setSplitOpen((o) => !o)
+                          setSplitQty(1)
+                          setSplitHead('')
+                        }}
+                      >
+                        Split this lot of {item.quantity}
+                      </StepButton>
+                    )}
+                  </>
+                )}
+                {item.kind !== 'stock' && item.kind !== 'donation' && (
+                  <StepButton disabled={busy} onClick={() => void act(() => setPublished(orgId, item.code, !item.is_published))}>
+                    {item.is_published ? 'Hide from the public list' : 'Show on the public list'}
+                  </StepButton>
+                )}
+                {item.kind !== 'donation' && (allowedKinds.length > 1 || canDonation) && (
+                  <StepButton
+                    onClick={() => {
+                      setEditing(true)
+                      setStep('kind')
+                    }}
+                  >
+                    It’s something else
+                  </StepButton>
+                )}
+                {fromList && <StepButton to="/staff/items">Back to the list</StepButton>}
+              </div>
+              {toSort && (item.quantity ?? 1) > 1 && splitOpen && (
+                <div className="space-y-4 border-t border-slate-100 pt-3">
                   <p className="text-[15px] text-slate-600">Take some off as their own item, with a new code. The rest stay here.</p>
                   <div>
                     <p className="mb-2 text-base font-bold text-ink">How many to take off?</p>
@@ -637,86 +766,12 @@ export default function ScanFlow() {
                   </BigButton>
                 </div>
               )}
+              <div className="border-t border-slate-100 pt-3">
+                <button type="button" onClick={() => void remove()} disabled={busy} className={`${pill.red} !min-h-[44px]`}>
+                  <Icon name="trash" size={16} /> Remove this item
+                </button>
+              </div>
             </div>
-          )}
-          {canThis && item.kind === 'donation' && !item.outcome && (
-            <div className="grid grid-cols-2 gap-3">
-              <BigButton tone="plain" disabled={busy} onClick={() => void act(async () => (await setDonationOutcome(orgId, item.code, 'rabbits')) ?? item)}>
-                In use by OHRR
-              </BigButton>
-              <BigButton tone="plain" disabled={busy} onClick={() => void act(async () => (await setDonationOutcome(orgId, item.code, 'passed_on')) ?? item)}>
-                Passed on / not usable
-              </BigButton>
-            </div>
-          )}
-          {canThis && item.kind === 'donation' && item.outcome && item.outcome !== 'sorted' && (
-            <BigButton tone="outline" disabled={busy} onClick={() => void act(async () => (await setDonationOutcome(orgId, item.code, null)) ?? item)}>
-              {item.outcome === 'basket' ? 'Take it out of the basket' : 'Undo — it’s still waiting to be sorted'}
-            </BigButton>
-          )}
-          {canThis && item.kind !== 'stock' && item.kind !== 'donation' && (
-            <BigButton
-              tone={isDone ? 'plain' : 'orange'}
-              icon={isDone ? 'x' : 'check'}
-              disabled={busy}
-              onClick={() => void act(() => setStatus(orgId, item.code, isDone ? m.openStatus : m.doneStatus))}
-            >
-              {isDone ? m.undoLabel : m.doneLabel}
-            </BigButton>
-          )}
-          {canThis && (
-            <div className="grid grid-cols-2 gap-3">
-              <BigButton
-                tone="outline"
-                icon="camera"
-                onClick={() => navigate(`/staff/items/photos?code=${encodeURIComponent(item.code)}${fromList ? '&back=items' : ''}`)}
-              >
-                Photos
-              </BigButton>
-              <BigButton
-                tone="outline"
-                icon="keyboard"
-                onClick={() => {
-                  setEditing(true)
-                  setStep('name')
-                }}
-              >
-                Details
-              </BigButton>
-            </div>
-          )}
-          {canThis && item.kind !== 'stock' && item.kind !== 'donation' && (
-            <BigButton
-              tone="plain"
-              disabled={busy}
-              onClick={() => void act(() => setPublished(orgId, item.code, !item.is_published))}
-            >
-              {item.is_published ? 'Hide from the public list' : 'Show on the public list'}
-            </BigButton>
-          )}
-          {canThis && item.kind !== 'donation' && (allowedKinds.length > 1 || canDonation) && (
-            <BigButton
-              tone="plain"
-              onClick={() => {
-                setEditing(true)
-                setStep('kind')
-              }}
-            >
-              It’s something else
-            </BigButton>
-          )}
-          {fromList && (
-            <BigButton tone="outline" onClick={() => navigate('/staff/items')}>
-              Back to the list
-            </BigButton>
-          )}
-          <BigButton tone="blue" icon="scan" onClick={startOver}>
-            Scan another
-          </BigButton>
-          {canThis && (
-            <button type="button" onClick={() => void remove()} disabled={busy} className="block w-full py-2 text-center text-base font-bold text-red-600">
-              Remove this item
-            </button>
           )}
         </div>
       </StepShell>

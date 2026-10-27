@@ -1,13 +1,15 @@
 // Staff editor for Bunny Help topics (the "My bunny is…" search). Same shape
-// as StaffLearn: list / create / edit / publish / delete, gated on
+// as StaffLearn: list / create / edit / hide / remove, gated on
 // content.education.edit (RLS enforces it regardless of what the UI shows).
 import { useCallback, useEffect, useState } from 'react'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import type { Database } from '../lib/database.types'
-import { btn, Badge, Card, Screen } from '../components/ui'
+import { Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
-import { StaffTitle } from '../components/StaffTitle'
+import { Explain, StaffTitle } from '../components/StaffTitle'
+import { CardActions, EditorForm, Field, StepButton, pill } from '../components/StaffJob'
+import { CheckRow, PartBox, byName, confirmRemove, useCardAction, useSaving } from '../components/ContentEditorBits'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { slugify } from '../lib/careContent'
 import { SEED_TOPICS } from '../features/bunnyhelp/seedTopics'
@@ -92,144 +94,113 @@ function rowFromDraft(d: Draft) {
   }
 }
 
-const checkbox = 'h-4 w-4 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30'
-
 function TopicForm({
   initial,
-  submitLabel,
+  title,
+  saveLabel,
   onSubmit,
   onCancel,
+  onRemove,
 }: {
   initial: Draft
-  submitLabel: string
+  title: string
+  saveLabel: string
   onSubmit: (d: Draft) => Promise<void>
   onCancel: () => void
+  onRemove?: () => Promise<void>
 }) {
   const [draft, setDraft] = useState<Draft>(initial)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { busy, error, submit, guard } = useSaving(() => onSubmit(draft))
   const set =
     (k: keyof Draft) =>
     (e: { target: { value: string } }) =>
       setDraft((d) => ({ ...d, [k]: e.target.value }))
 
-  const submit = async (e: { preventDefault(): void }) => {
-    e.preventDefault()
-    setError(null)
-    setBusy(true)
-    try {
-      await onSubmit(draft)
-    } catch (err) {
-      setError(errMessage(err))
-      setBusy(false)
-    }
-  }
-
   return (
-    <form onSubmit={submit} className="space-y-3">
-      <label className="block text-sm font-semibold text-slate-700">
-        Title
-        <input className={staffInput} required value={draft.title} onChange={set('title')} placeholder="e.g. Stopped using the litter box" />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        Also matches (comma-separated)
-        <input
-          className={staffInput}
-          value={draft.aliases}
-          onChange={set('aliases')}
-          placeholder="peeing outside the box, accidents, marking"
-        />
-        <span className="mt-1 block text-xs font-normal text-slate-400">
-          The words people actually type. Search matches title, these, and the summary.
-        </span>
-      </label>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Category
-          <select className={staffInput} value={draft.category} onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value as TopicCategory }))}>
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {CATEGORY_LABEL[c]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm font-semibold text-slate-700">
-          Urgency
-          <select className={staffInput} value={draft.urgency} onChange={(e) => setDraft((d) => ({ ...d, urgency: e.target.value as TopicUrgency }))}>
-            {URGENCIES.map((u) => (
-              <option key={u} value={u}>
-                {URGENCY_LABEL[u]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <label className="block text-sm font-semibold text-slate-700">
-        Summary
-        <input className={staffInput} value={draft.summary} onChange={set('summary')} placeholder="One line shown in results" />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        What to do
-        <textarea className={`${staffInput} font-mono text-[13px]`} rows={10} value={draft.what_to_do} onChange={set('what_to_do')} />
-        <span className="mt-1 block text-xs font-normal text-slate-400">
-          Leave a blank line between paragraphs. Start a line with <code>##</code> for a heading, or <code>-</code> for a
-          bullet. Health topics: keep to “call a rabbit-savvy vet” — no diagnoses.
-        </span>
-      </label>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Learn article slug
-          <input className={staffInput} value={draft.article_slug} onChange={set('article_slug')} placeholder="e.g. litter" />
-        </label>
-        <label className="block text-sm font-semibold text-slate-700">
-          Hop Shop note
-          <input className={staffInput} value={draft.hopshop_note} onChange={set('hopshop_note')} placeholder="e.g. Litter and hay — see the shop" />
-        </label>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Reviewed by
-          <input className={staffInput} value={draft.reviewed_by} onChange={set('reviewed_by')} placeholder="Dr. … / clinic" />
-        </label>
-        <label className="block text-sm font-semibold text-slate-700">
-          Reviewed on
-          <input type="date" className={staffInput} value={draft.reviewed_at} onChange={set('reviewed_at')} />
-        </label>
-      </div>
-      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <input type="checkbox" className={checkbox} checked={draft.show_vets} onChange={(e) => setDraft((d) => ({ ...d, show_vets: e.target.checked }))} />
-        Show “Find a rabbit-savvy vet”
-      </label>
-      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <input type="checkbox" className={checkbox} checked={draft.is_published} onChange={(e) => setDraft((d) => ({ ...d, is_published: e.target.checked }))} />
-        Show in the app (uncheck for a draft)
-      </label>
+    <EditorForm
+      title={title}
+      hint="Needed parts are marked. Save puts it in the “My bunny is…” search right away if it is shown."
+      onSubmit={submit}
+      onCancel={onCancel}
+      busy={busy}
+      saveLabel={saveLabel}
+      canSave={draft.title.trim().length > 0}
+      error={error}
+      remove={
+        onRemove
+          ? { label: 'Remove this topic', confirm: 'Remove this topic? This can’t be undone.', onRemove: guard(onRemove) }
+          : undefined
+      }
+    >
+      <PartBox n="A" title="The topic" hint="needed">
+        <Field label="Title" needed>
+          <input className={staffInput} required value={draft.title} onChange={set('title')} placeholder="e.g. Stopped using the litter box" />
+        </Field>
+        <Field label="Also matches (separate with commas)" hint="The words people actually type. Search looks at the title, these, and the summary.">
+          <input className={staffInput} value={draft.aliases} onChange={set('aliases')} placeholder="peeing outside the box, accidents, marking" />
+        </Field>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Category" needed>
+            <select className={staffInput} value={draft.category} onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value as TopicCategory }))}>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {CATEGORY_LABEL[c]}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="How urgent" needed>
+            <select className={staffInput} value={draft.urgency} onChange={(e) => setDraft((d) => ({ ...d, urgency: e.target.value as TopicUrgency }))}>
+              {URGENCIES.map((u) => (
+                <option key={u} value={u}>
+                  {URGENCY_LABEL[u]}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+      </PartBox>
 
-      <FormError>{error}</FormError>
+      <PartBox n="B" title="What it says" hint="optional">
+        <Field label="Summary" hint="One line shown in results.">
+          <input className={staffInput} value={draft.summary} onChange={set('summary')} />
+        </Field>
+        <Field label="What to do">
+          <textarea className={`${staffInput} font-mono`} rows={10} value={draft.what_to_do} onChange={set('what_to_do')} />
+        </Field>
+        <Explain label="How to format the text">
+          <p>
+            Leave a blank line between paragraphs. Start a line with <code>##</code> for a heading, or <code>-</code> for a
+            bullet. Health topics: keep to “call a rabbit-savvy vet” — no diagnoses.
+          </p>
+        </Explain>
+      </PartBox>
 
-      <div className="flex gap-2">
-        <button type="submit" disabled={busy || draft.title.trim().length === 0} className={`${btn.primary} flex-1 disabled:opacity-60`}>
-          {busy ? 'Saving…' : submitLabel}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={busy}
-          className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500 transition hover:bg-slate-50"
-        >
-          Cancel
-        </button>
-      </div>
-    </form>
+      <PartBox n="C" title="Links and review" hint="optional">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Learn article" hint="The short name of the care guide to link, e.g. litter.">
+            <input className={staffInput} value={draft.article_slug} onChange={set('article_slug')} placeholder="e.g. litter" />
+          </Field>
+          <Field label="Hop Shop note">
+            <input className={staffInput} value={draft.hopshop_note} onChange={set('hopshop_note')} placeholder="e.g. Litter and hay — see the shop" />
+          </Field>
+          <Field label="Reviewed by">
+            <input className={staffInput} value={draft.reviewed_by} onChange={set('reviewed_by')} placeholder="Dr. … / clinic" />
+          </Field>
+          <Field label="Reviewed on">
+            <input type="date" className={staffInput} value={draft.reviewed_at} onChange={set('reviewed_at')} />
+          </Field>
+        </div>
+        <CheckRow label="Show “Find a rabbit-savvy vet”" checked={draft.show_vets} onChange={(v) => setDraft((d) => ({ ...d, show_vets: v }))} />
+        <CheckRow label="Show in the app (leave unchecked to keep it as a draft)" checked={draft.is_published} onChange={(v) => setDraft((d) => ({ ...d, is_published: v }))} />
+      </PartBox>
+    </EditorForm>
   )
 }
 
 function TopicCard({ item, onChanged }: { item: TopicRow; onChanged: () => void }) {
   const [editing, setEditing] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { busy, error, run } = useCardAction()
 
   const saveEdit = async (d: Draft) => {
     const { error } = await supabase.from('care_topics').update(rowFromDraft(d)).eq('id', item.id)
@@ -238,42 +209,40 @@ function TopicCard({ item, onChanged }: { item: TopicRow; onChanged: () => void 
     onChanged()
   }
 
-  const togglePublish = async () => {
-    setBusy(true)
-    const { error } = await supabase.from('care_topics').update({ is_published: !item.is_published }).eq('id', item.id)
-    if (error) setError(errMessage(error))
-    setBusy(false)
-    if (!error) onChanged()
-  }
+  const togglePublish = () =>
+    run(async () => {
+      const { error } = await supabase.from('care_topics').update({ is_published: !item.is_published }).eq('id', item.id)
+      if (error) throw error
+      onChanged()
+    })
 
   const doDelete = async () => {
-    setBusy(true)
     const { error } = await supabase.from('care_topics').delete().eq('id', item.id)
-    if (error) {
-      setError(errMessage(error))
-      setBusy(false)
-      setConfirmDelete(false)
-      return
-    }
+    if (error) throw error
     onChanged()
   }
 
   if (editing) {
     return (
-      <Card>
-        <TopicForm initial={draftFrom(item)} submitLabel="Save changes" onSubmit={saveEdit} onCancel={() => setEditing(false)} />
-      </Card>
+      <TopicForm
+        initial={draftFrom(item)}
+        title={`Edit ${item.title}`}
+        saveLabel="Save changes"
+        onSubmit={saveEdit}
+        onCancel={() => setEditing(false)}
+        onRemove={doDelete}
+      />
     )
   }
 
   const needsReview = item.category === 'health' && !item.reviewed_by
 
   return (
-    <Card className="space-y-1.5">
+    <Card className="space-y-2">
       <div className="flex items-start justify-between gap-2">
-        <h3 className="min-w-0 font-display text-[15px] font-extrabold text-ink">{item.title}</h3>
+        <h3 className="min-w-0 font-display text-base font-extrabold text-ink">{item.title}</h3>
         <div className="flex shrink-0 gap-1.5">
-          {item.is_published ? <Badge tone="blue">Live</Badge> : <Badge tone="slate">Draft</Badge>}
+          {item.is_published ? <Badge tone="blue">Shown</Badge> : <Badge tone="slate">Hidden</Badge>}
         </div>
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -284,33 +253,27 @@ function TopicCard({ item, onChanged }: { item: TopicRow; onChanged: () => void 
         {needsReview && <Badge tone="orange">Not yet vet-reviewed</Badge>}
         {item.reviewed_by && <Badge tone="blue">Reviewed · {item.reviewed_by}</Badge>}
       </div>
-      {item.summary && <p className="text-sm text-slate-600">{item.summary}</p>}
-      {item.aliases?.length > 0 && (
-        <p className="text-xs text-slate-400">Matches: {item.aliases.join(', ')}</p>
-      )}
+      {item.summary && <p className="text-[15px] text-slate-600">{item.summary}</p>}
+      {item.aliases?.length > 0 && <p className="text-sm text-slate-500">Matches: {item.aliases.join(', ')}</p>}
 
-      <div className="flex flex-wrap items-center gap-2 pt-1">
-        <button type="button" onClick={togglePublish} disabled={busy} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-60">
-          {item.is_published ? 'Unpublish' : 'Publish'}
-        </button>
-        <button type="button" onClick={() => setEditing(true)} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50">
+      <CardActions className="pt-1">
+        <button type="button" onClick={() => setEditing(true)} className={pill.blue}>
           Edit
         </button>
-        {confirmDelete ? (
-          <>
-            <button type="button" onClick={doDelete} disabled={busy} className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60">
-              {busy ? 'Deleting…' : 'Confirm delete'}
-            </button>
-            <button type="button" onClick={() => setConfirmDelete(false)} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-50">
-              Cancel
-            </button>
-          </>
-        ) : (
-          <button type="button" onClick={() => setConfirmDelete(true)} className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50">
-            Delete
-          </button>
-        )}
-      </div>
+        <button type="button" onClick={() => void togglePublish()} disabled={busy} className={pill.outline}>
+          <Icon name={item.is_published ? 'eyeOff' : 'eye'} size={16} /> {item.is_published ? 'Hide' : 'Show'}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            if (confirmRemove(`“${item.title}”`)) void run(doDelete)
+          }}
+          className={pill.red}
+        >
+          <Icon name="trash" size={16} /> Remove
+        </button>
+      </CardActions>
       <FormError>{error}</FormError>
     </Card>
   )
@@ -395,7 +358,7 @@ export default function StaffBunnyHelp() {
       <Screen className="space-y-3 pt-2">
         <h1 className="font-display text-2xl font-black text-ink">Bunny Help topics</h1>
         <Card className="border-slate-200 bg-slate-50/80">
-          <p className="text-sm leading-relaxed text-slate-600">
+          <p className="text-base leading-relaxed text-slate-600">
             You don’t have access to edit care content. An owner or admin can grant the “Edit education / care
             content” capability.
           </p>
@@ -405,40 +368,39 @@ export default function StaffBunnyHelp() {
   }
 
   const needsReview = items.filter((t) => t.category === 'health' && !t.reviewed_by).length
+  const sorted = [...items].sort(byName((t) => t.title))
 
   return (
     <Screen className="space-y-4">
-      <StaffTitle
-        title="Bunny Help topics"
-        actions={
-          !creating ? (
-            <button type="button" onClick={() => setCreating(true)} className={`${btn.primary} shrink-0 !px-4 !py-2.5`}>
-              <Icon name="help" size={15} /> New
-            </button>
-          ) : undefined
-        }
-      >
+      <StaffTitle title="Bunny Help topics">
         <p>
-          What the “My bunny is…” search in My Bunny answers with. Health topics should only say “call a
-          rabbit-savvy vet”.
+          What the “My bunny is…” search in My Bunny answers with. Health topics should only say “call a rabbit-savvy
+          vet”. Topics are listed A to Z.
         </p>
       </StaffTitle>
 
+      {!creating && (
+        <div>
+          <StepButton tone="orange" icon="plus" onClick={() => setCreating(true)}>
+            Add a topic
+          </StepButton>
+        </div>
+      )}
+
       {needsReview > 0 && (
         <Card className="border-amber-200 bg-amber-50">
-          <p className="text-[13px] leading-relaxed text-amber-900">
-            <strong className="font-bold">{needsReview} health topic{needsReview === 1 ? '' : 's'}</strong> show “Not yet
-            vet-reviewed” in the app. Fill in “Reviewed by” and “Reviewed on” once a rabbit-savvy vet has looked them
-            over.
+          <p className="text-[15px] leading-relaxed text-amber-900">
+            <strong className="font-bold">
+              {needsReview} health topic{needsReview === 1 ? '' : 's'}
+            </strong>{' '}
+            show “Not yet vet-reviewed” in the app. Fill in “Reviewed by” and “Reviewed on” once a rabbit-savvy vet has
+            looked them over.
           </p>
         </Card>
       )}
 
       {creating && (
-        <Card>
-          <p className="mb-3 font-display text-[15px] font-extrabold text-ink">New topic</p>
-          <TopicForm initial={emptyDraft} submitLabel="Add topic" onSubmit={create} onCancel={() => setCreating(false)} />
-        </Card>
+        <TopicForm initial={emptyDraft} title="New topic" saveLabel="Add topic" onSubmit={create} onCancel={() => setCreating(false)} />
       )}
 
       <FormError>{error}</FormError>
@@ -447,17 +409,17 @@ export default function StaffBunnyHelp() {
         <Spinner label="Loading…" />
       ) : items.length === 0 ? (
         <Card className="space-y-3 border-slate-200 bg-slate-50/80 text-center">
-          <p className="text-sm leading-relaxed text-slate-600">
-            No topics in the database yet — the app is showing the built-in set drawn from OHRR’s care resources.
-            Import them to edit from there, or write your own with “New”.
+          <p className="text-base leading-relaxed text-slate-600">
+            No topics in the database yet — the app is showing the built-in set drawn from OHRR’s care resources. Import
+            them to edit from there, or write your own with “Add a topic”.
           </p>
-          <button type="button" onClick={importSeed} disabled={importing} className={`${btn.blue} mx-auto disabled:opacity-60`}>
+          <StepButton tone="blue" onClick={() => void importSeed()} disabled={importing} className="mx-auto">
             {importing ? 'Importing…' : `Import the ${SEED_TOPICS.length} built-in topics`}
-          </button>
+          </StepButton>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-3">
-          {items.map((item) => (
+          {sorted.map((item) => (
             <TopicCard key={item.id} item={item} onChanged={load} />
           ))}
         </div>

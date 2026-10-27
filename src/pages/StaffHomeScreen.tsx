@@ -4,13 +4,14 @@
 // The website's staff area could already edit these; the phone couldn't, so a
 // volunteer with only a phone couldn't change what the app opens on. Same rows,
 // same rules, laid out for a thumb.
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
-import { btn, Badge, Card, Screen } from '../components/ui'
+import { Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
-import { StaffTitle } from '../components/StaffTitle'
+import { StaffTitle, Explain } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
+import { CardActions, EditorForm, Field, Part, StepButton, pill } from '../components/StaffJob'
 import StaffImageField from '../components/StaffImageField'
 import { slideVisual } from '../data/heroSlides'
 
@@ -111,6 +112,8 @@ function Preview({ r }: { r: Row }) {
   )
 }
 
+const newLabel: Record<Placement, string> = { hero: 'New big card', featured: 'New featured card', happening: 'New picture card' }
+
 export default function StaffHomeScreen() {
   const { membership, user, can } = useAuth()
   const orgId = membership?.orgId ?? ''
@@ -121,6 +124,7 @@ export default function StaffHomeScreen() {
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState<Placement | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!orgId || !allowed) return
@@ -139,7 +143,7 @@ export default function StaffHomeScreen() {
   if (!allowed) {
     return (
       <Screen>
-        <Card className="text-sm text-slate-600">Ask an owner or admin for access to post announcements.</Card>
+        <Card className="text-base text-slate-600">Ask an owner or admin for access to post announcements.</Card>
       </Screen>
     )
   }
@@ -154,22 +158,56 @@ export default function StaffHomeScreen() {
     await load()
   }
 
+  const toggle = async (r: Row) => {
+    setBusyId(r.id)
+    setError(null)
+    const { error } = await supabase.from('hero_slides').update({ is_published: !r.is_published }).eq('id', r.id)
+    if (error) setError(errMessage(error))
+    else await load()
+    setBusyId(null)
+  }
+
+  // The list is in order, highest number first. Moving a card swaps it with its
+  // neighbor and renumbers the group so no two share a number.
+  const move = async (rows: Row[], i: number, dir: -1 | 1) => {
+    const j = i + dir
+    if (j < 0 || j >= rows.length) return
+    const next = rows.slice()
+    ;[next[i], next[j]] = [next[j], next[i]]
+    setBusyId(rows[i].id)
+    setError(null)
+    try {
+      for (let k = 0; k < next.length; k++) {
+        const want = next.length - k
+        if (next[k].sort_order !== want) {
+          const { error } = await supabase.from('hero_slides').update({ sort_order: want }).eq('id', next[k].id)
+          if (error) throw error
+        }
+      }
+      await load()
+    } catch (err) {
+      setError(errMessage(err))
+    }
+    setBusyId(null)
+  }
+
   const groups: { key: Placement; title: string; hint: string }[] = [
-    { key: 'hero', title: 'Big cards', hint: 'The swipeable cards at the top of Home. Up to 3, highest number first.' },
-    { key: 'featured', title: 'Featured cards', hint: 'The row after them. Up to 4, highest number first.' },
+    { key: 'hero', title: 'Big cards', hint: 'The swipeable cards at the top of Home. Up to 3; the first in this list shows first.' },
+    { key: 'featured', title: 'Featured cards', hint: 'The row after them. Up to 4; the first in this list shows first.' },
     {
       key: 'happening',
       title: 'What’s happening (website)',
-      hint: 'Picture cards on the website’s home page: news, fundraisers, events. Up to 4, highest number first. Give each a picture; give an event an end date and its card hides itself afterwards.',
+      hint: 'Picture cards on the website’s home page: news, fundraisers, events. Up to 4. Give each a picture; give an event an end date and its card hides itself afterwards.',
     },
   ]
 
   return (
-    <Screen className="space-y-4">
+    <Screen className="space-y-5">
       <StaffTitle title="Home screen">
         <p>
           What the app opens on, and the picture cards on the website’s home page. Leave a group empty and it shows the built-in cards.
         </p>
+        <p>Use Move up and Move down to change which card shows first. Hide takes a card off without losing it. To remove one for good, tap Edit, then Remove.</p>
       </StaffTitle>
 
       <FormError>{error}</FormError>
@@ -181,66 +219,77 @@ export default function StaffHomeScreen() {
           return (
             <section key={g.key} className="space-y-2.5">
               <div>
-                <h2 className="font-display text-[15px] font-extrabold text-ink">{g.title}</h2>
-                <p className="text-xs text-slate-500">{g.hint}</p>
+                <h2 className="font-display text-lg font-extrabold text-ink">{g.title}</h2>
+                <Explain label="About this group" className="mt-1">
+                  <p>{g.hint}</p>
+                </Explain>
               </div>
 
-              {rows.map((r) =>
+              {creating === g.key ? (
+                <SlideForm
+                  heading={newLabel[g.key]}
+                  initial={empty(g.key)}
+                  userId={userId}
+                  saveLabel="Add"
+                  onSubmit={(d) => save(d)}
+                  onCancel={() => setCreating(null)}
+                />
+              ) : (
+                <StepButton tone="orange" icon="plus" onClick={() => setCreating(g.key)}>
+                  {newLabel[g.key]}
+                </StepButton>
+              )}
+
+              {rows.length === 0 && creating !== g.key && <p className="text-base text-slate-600">None yet — the built-in cards show.</p>}
+
+              {rows.map((r, i) =>
                 editingId === r.id ? (
-                  <Card key={r.id}>
-                    <SlideForm
-                      initial={fromRow(r)}
-                      userId={userId}
-                      submitLabel="Save"
-                      onSubmit={(d) => save(d, r.id)}
-                      onCancel={() => setEditingId(null)}
-                      onDelete={async () => {
-                        const { error } = await supabase.from('hero_slides').delete().eq('id', r.id)
-                        if (error) throw error
-                        setEditingId(null)
-                        await load()
-                      }}
-                    />
-                  </Card>
+                  <SlideForm
+                    key={r.id}
+                    heading="Edit this card"
+                    initial={fromRow(r)}
+                    userId={userId}
+                    saveLabel="Save"
+                    onSubmit={(d) => save(d, r.id)}
+                    onCancel={() => setEditingId(null)}
+                    onRemove={async () => {
+                      const { error } = await supabase.from('hero_slides').delete().eq('id', r.id)
+                      if (error) throw error
+                      setEditingId(null)
+                      await load()
+                    }}
+                  />
                 ) : (
-                  <Card key={r.id}>
+                  <Card key={r.id} className="space-y-3">
                     <div className="flex items-start gap-3">
                       <span className="h-16 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200">
                         <Preview r={r} />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-1.5">
-                          <span className="font-display text-[15px] font-extrabold text-ink">{r.headline}</span>
+                          <span className="font-display text-base font-extrabold text-ink">{r.headline}</span>
                           {!r.is_published && <Badge tone="orange">Hidden</Badge>}
                         </span>
-                        {r.subline && <span className="block text-xs text-slate-500">{r.subline}</span>}
-                        <span className="block text-xs text-slate-400">
-                          Order {r.sort_order}
-                          {r.cta_url ? ` · → ${r.cta_url}` : ''}
-                        </span>
+                        {r.subline && <span className="block text-sm text-slate-600">{r.subline}</span>}
+                        {r.cta_url && <span className="block text-sm text-slate-500">Opens {r.cta_url}</span>}
                       </span>
-                      <button type="button" onClick={() => setEditingId(r.id)} className="shrink-0 text-sm font-bold text-brand-blue">
+                    </div>
+                    <CardActions>
+                      <button type="button" onClick={() => setEditingId(r.id)} className={pill.blue}>
                         Edit
                       </button>
-                    </div>
+                      <button type="button" onClick={() => void toggle(r)} disabled={busyId === r.id} className={pill.outline}>
+                        {r.is_published ? 'Hide' : 'Show'}
+                      </button>
+                      <button type="button" onClick={() => void move(rows, i, -1)} disabled={busyId !== null || i === 0} className={pill.outline}>
+                        Move up
+                      </button>
+                      <button type="button" onClick={() => void move(rows, i, 1)} disabled={busyId !== null || i === rows.length - 1} className={pill.outline}>
+                        Move down
+                      </button>
+                    </CardActions>
                   </Card>
                 ),
-              )}
-
-              {creating === g.key ? (
-                <Card>
-                  <SlideForm
-                    initial={empty(g.key)}
-                    userId={userId}
-                    submitLabel="Add"
-                    onSubmit={(d) => save(d)}
-                    onCancel={() => setCreating(null)}
-                  />
-                </Card>
-              ) : (
-                <button type="button" onClick={() => setCreating(g.key)} className={`${btn.outline} w-full`}>
-                  <Icon name="plus" size={16} /> Add {g.key === 'hero' ? 'a big card' : g.key === 'featured' ? 'a featured card' : 'a picture card'}
-                </button>
               )}
             </section>
           )
@@ -250,33 +299,33 @@ export default function StaffHomeScreen() {
 }
 
 function SlideForm({
+  heading,
   initial,
   userId,
-  submitLabel,
+  saveLabel,
   onSubmit,
   onCancel,
-  onDelete,
+  onRemove,
 }: {
+  heading: string
   initial: Draft
   userId: string
-  submitLabel: string
+  saveLabel: string
   onSubmit: (d: Draft) => Promise<void>
   onCancel: () => void
-  onDelete?: () => Promise<void>
+  onRemove?: () => Promise<void>
 }) {
   const [d, setD] = useState<Draft>(initial)
   const [busy, setBusy] = useState(false)
   const [imageBusy, setImageBusy] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const txt = (k: keyof Draft) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value })
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
+  const run = async (fn: () => Promise<void>) => {
     setBusy(true)
     setError(null)
     try {
-      await onSubmit(d)
+      await fn()
     } catch (err) {
       setError(errMessage(err))
       setBusy(false)
@@ -284,72 +333,77 @@ function SlideForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3">
-      <label className="block text-sm font-semibold text-slate-700">
-        Headline
-        <input className={staffInput} required value={d.headline} onChange={txt('headline')} placeholder="Midwest BunFest 2026 — Binky On!" />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        One line under it
-        <textarea className={staffInput} rows={2} value={d.subline} onChange={txt('subline')} />
-      </label>
-      <StaffImageField
-        label="Picture"
-        hint="Leave it empty and the card shows its fixed icon — photos are for real content (a rabbit, an item, the BunFest logo)."
-        value={d.image_url}
-        userId={userId}
-        onChange={(url) => setD({ ...d, image_url: url })}
-        onBusyChange={setImageBusy}
-      />
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Button says
-          <input className={staffInput} value={d.cta_label} onChange={txt('cta_label')} placeholder="Enter BunFest" />
-        </label>
-        <label className="block text-sm font-semibold text-slate-700">
-          Opens
-          <input className={staffInput} value={d.cta_url} onChange={txt('cta_url')} placeholder="/bunfest" />
-        </label>
+    <EditorForm
+      title={heading}
+      hint="Cards show on the app’s home screen and the website’s home page."
+      onSubmit={() => run(() => onSubmit(d))}
+      onCancel={onCancel}
+      busy={busy || imageBusy}
+      saveLabel={saveLabel}
+      canSave={!!d.headline.trim()}
+      error={error}
+      remove={onRemove ? { label: 'Remove', confirm: `Remove “${initial.headline}”? This can’t be undone.`, onRemove: () => run(onRemove) } : undefined}
+    >
+      <div className="space-y-3">
+        <Part n="A" hint="needed">
+          What it says
+        </Part>
+        <Field label="Headline" needed>
+          <input className={staffInput} required value={d.headline} onChange={txt('headline')} placeholder="Midwest BunFest 2026 — Binky On!" />
+        </Field>
+        <Field label="One line under it">
+          <textarea className={staffInput} rows={2} value={d.subline} onChange={txt('subline')} />
+        </Field>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Show from
-          <input type="datetime-local" className={staffInput} value={d.starts_at} onChange={txt('starts_at')} />
-        </label>
-        <label className="block text-sm font-semibold text-slate-700">
-          Show until
-          <input type="datetime-local" className={staffInput} value={d.ends_at} onChange={txt('ends_at')} />
-        </label>
+
+      <div className="space-y-3">
+        <Part n="B" hint="optional">
+          Picture
+        </Part>
+        <StaffImageField
+          label="Picture"
+          hint="Leave it empty and the card shows its fixed icon — photos are for real content (a rabbit, an item, the BunFest logo)."
+          value={d.image_url}
+          userId={userId}
+          onChange={(url) => setD({ ...d, image_url: url })}
+          onBusyChange={setImageBusy}
+        />
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Order (higher first)
+
+      <div className="space-y-3">
+        <Part n="C" hint="optional">
+          Button
+        </Part>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Button says">
+            <input className={staffInput} value={d.cta_label} onChange={txt('cta_label')} placeholder="Enter BunFest" />
+          </Field>
+          <Field label="Opens">
+            <input className={staffInput} value={d.cta_url} onChange={txt('cta_url')} placeholder="/bunfest" />
+          </Field>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <Part n="D" hint="optional">
+          When it shows
+        </Part>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Show from">
+            <input type="datetime-local" className={staffInput} value={d.starts_at} onChange={txt('starts_at')} />
+          </Field>
+          <Field label="Show until">
+            <input type="datetime-local" className={staffInput} value={d.ends_at} onChange={txt('ends_at')} />
+          </Field>
+        </div>
+        <Field label="Order number (higher shows first)" hint="Or leave it and use Move up and Move down on the list.">
           <input inputMode="numeric" className={staffInput} value={d.sort_order} onChange={(e) => setD({ ...d, sort_order: e.target.value.replace(/[^0-9]/g, '') })} />
-        </label>
-        <label className="flex items-end gap-2 pb-2 text-sm font-semibold text-slate-700">
-          <input type="checkbox" className="h-5 w-5 rounded border-slate-300 text-brand-blue" checked={d.is_published} onChange={(e) => setD({ ...d, is_published: e.target.checked })} />
+        </Field>
+        <label className="flex min-h-[44px] items-center gap-3 text-base font-semibold text-slate-700">
+          <input type="checkbox" className="h-6 w-6 rounded border-slate-300 text-brand-blue" checked={d.is_published} onChange={(e) => setD({ ...d, is_published: e.target.checked })} />
           People can see this
         </label>
       </div>
-      <FormError>{error}</FormError>
-      <div className="flex gap-2">
-        <button type="submit" disabled={busy || imageBusy || !d.headline.trim()} className={`${btn.primary} flex-1 disabled:opacity-60`}>
-          {busy ? 'Saving…' : submitLabel}
-        </button>
-        {onDelete &&
-          (confirmDelete ? (
-            <button type="button" onClick={() => onDelete().catch((e) => setError(errMessage(e)))} className="rounded-full bg-red-600 px-4 py-2.5 text-sm font-bold text-white">
-              Confirm delete
-            </button>
-          ) : (
-            <button type="button" onClick={() => setConfirmDelete(true)} className="rounded-full border border-red-200 px-4 py-2.5 text-sm font-bold text-red-600">
-              Delete
-            </button>
-          ))}
-        <button type="button" onClick={onCancel} className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500">
-          Cancel
-        </button>
-      </div>
-    </form>
+    </EditorForm>
   )
 }

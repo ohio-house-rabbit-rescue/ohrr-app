@@ -14,6 +14,7 @@
 // Everything from update 27 (photo, socials, paperwork, the two lists) hides
 // until that SQL has been run; the older fields keep working either way.
 import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
+import { pill } from '../../components/StaffJob'
 import { errMessage } from '../../lib/supabase'
 import { btn } from '../../components/ui'
 import { Icon } from '../../components/icons'
@@ -794,7 +795,7 @@ function VendorYears({ supplierId, orgId }: { supplierId: string; orgId: string 
                 </span>
                 {y.notes && <span className="block text-xs text-slate-500">{y.notes}</span>}
               </span>
-              <button type="button" onClick={() => setEditing(y.year)} className="min-h-[44px] shrink-0 px-2 text-sm font-bold text-brand-blue">
+              <button type="button" onClick={() => setEditing(y.year)} className={pill.outline}>
                 Edit
               </button>
             </li>
@@ -1007,7 +1008,7 @@ function Given({ company, orgId, onChanged }: { company: Company; orgId: string;
                     {g.acknowledged_on ? `Thank-you sent ${fmtDate(g.acknowledged_on)}` : 'No thank-you sent yet'}
                   </span>
                 </span>
-                <button type="button" onClick={() => setEditing(g.id)} className="min-h-[44px] shrink-0 px-2 text-sm font-bold text-brand-blue">
+                <button type="button" onClick={() => setEditing(g.id)} className={pill.outline}>
                   Edit
                 </button>
               </div>

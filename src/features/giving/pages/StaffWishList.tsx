@@ -3,13 +3,14 @@
 // first, then in the order here) with a "Buy on Amazon" button. Amazon won't
 // let a program read the list, so the links are pasted in by hand. The website
 // has the desktop mirror.
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage, supabase } from '../../../lib/supabase'
-import { Screen, Card, Badge, btn } from '../../../components/ui'
+import { Screen, Card, Badge } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
+import { CardActions, EditorForm, Field, NotOnYet, Part, StepButton, pill } from '../../../components/StaffJob'
 import {
   cleanAmazonLink,
   isAmazonUrl,
@@ -46,55 +47,74 @@ function ItemFields({ draft, onChange }: { draft: Draft; onChange: (d: Draft) =>
   const linkLooksWrong = draft.link.trim() !== '' && !isAmazonUrl(cleanAmazonLink(draft.link))
   return (
     <>
-      <label className="block text-sm font-semibold text-slate-700">
-        Item
-        <input
-          className={staffInput}
-          value={draft.name}
-          maxLength={160}
-          placeholder="e.g. Oxbow Western Timothy Hay, 90 oz"
-          onChange={(e) => onChange({ ...draft, name: e.target.value })}
-        />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        Amazon link
-        <span className="block text-xs font-normal text-slate-500">{LINK_HINT}</span>
-        <input
-          className={staffInput}
-          value={draft.link}
-          inputMode="url"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          placeholder="https://a.co/d/…"
-          onChange={(e) => onChange({ ...draft, link: e.target.value })}
-        />
-        {linkLooksWrong && <span className="mt-1 block text-xs font-semibold text-red-600">{BAD_LINK}</span>}
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        Note <span className="font-normal text-slate-400">(optional)</span>
-        <input
-          className={staffInput}
-          value={draft.note}
-          maxLength={300}
-          placeholder="e.g. The big bags last longest"
-          onChange={(e) => onChange({ ...draft, note: e.target.value })}
-        />
-      </label>
-      <div className="flex flex-wrap gap-x-5">
-        <label className="flex min-h-[44px] items-center gap-2 text-sm font-semibold text-slate-700">
+      <div className="space-y-3">
+        <Part n="A" hint="needed">
+          The item
+        </Part>
+        <Field label="Item" needed>
+          <input
+            className={staffInput}
+            value={draft.name}
+            maxLength={160}
+            placeholder="e.g. Oxbow Western Timothy Hay, 90 oz"
+            onChange={(e) => onChange({ ...draft, name: e.target.value })}
+          />
+        </Field>
+        <Field
+          label="Amazon link"
+          needed
+          hint={
+            <>
+              {LINK_HINT}
+              {linkLooksWrong && <span className="mt-1 block text-sm font-semibold text-red-600">{BAD_LINK}</span>}
+            </>
+          }
+        >
+          <input
+            className={staffInput}
+            value={draft.link}
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="https://a.co/d/…"
+            onChange={(e) => onChange({ ...draft, link: e.target.value })}
+          />
+        </Field>
+      </div>
+
+      <div className="space-y-3">
+        <Part n="B" hint="optional">
+          More about it
+        </Part>
+        <Field label="Note">
+          <input
+            className={staffInput}
+            value={draft.note}
+            maxLength={300}
+            placeholder="e.g. The big bags last longest"
+            onChange={(e) => onChange({ ...draft, note: e.target.value })}
+          />
+        </Field>
+        <label className="flex min-h-[44px] items-center gap-3 text-base font-semibold text-slate-700">
           <input
             type="checkbox"
-            className="h-5 w-5 rounded border-slate-300 text-brand-blue"
+            className="h-6 w-6 rounded border-slate-300 text-brand-blue"
             checked={draft.mostNeeded}
             onChange={(e) => onChange({ ...draft, mostNeeded: e.target.checked })}
           />
-          Most needed
+          Most needed (shown first)
         </label>
-        <label className="flex min-h-[44px] items-center gap-2 text-sm font-semibold text-slate-700">
+      </div>
+
+      <div className="space-y-3">
+        <Part n="C" hint="optional">
+          Showing
+        </Part>
+        <label className="flex min-h-[44px] items-center gap-3 text-base font-semibold text-slate-700">
           <input
             type="checkbox"
-            className="h-5 w-5 rounded border-slate-300 text-brand-blue"
+            className="h-6 w-6 rounded border-slate-300 text-brand-blue"
             checked={draft.shown}
             onChange={(e) => onChange({ ...draft, shown: e.target.checked })}
           />
@@ -110,6 +130,7 @@ export default function StaffWishList() {
   const orgId = membership?.orgId ?? ''
   const [rows, setRows] = useState<WishListItem[] | null>(null)
   const [missing, setMissing] = useState(false)
+  const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [editing, setEditing] = useState<{ id: string; draft: Draft } | null>(null)
   const [busy, setBusy] = useState(false)
@@ -136,7 +157,7 @@ export default function StaffWishList() {
   if (!can('giving.wishlist'))
     return (
       <Screen>
-        <p className="text-sm text-slate-600">You don’t have access to the wish list items.</p>
+        <p className="text-base text-slate-600">You don’t have access to the wish list items.</p>
       </Screen>
     )
 
@@ -155,8 +176,7 @@ export default function StaffWishList() {
     setError(errMessage(e))
   }
 
-  const add = async (e: FormEvent) => {
-    e.preventDefault()
+  const add = async () => {
     const c = checkDraft(draft)
     if (!c.ok) return setError(c.error)
     start()
@@ -174,6 +194,7 @@ export default function StaffWishList() {
     })
     if (error) return fail(/amazon_url/i.test(error.message) ? new Error(BAD_LINK) : error)
     setDraft(EMPTY)
+    setAdding(false)
     await done(`Added ${c.name}.`)
   }
 
@@ -216,12 +237,22 @@ export default function StaffWishList() {
     setBusy(false)
   }
 
+  const toggle = async (item: WishListItem) => {
+    start()
+    const { error } = await supabase.from('wish_list_items').update({ is_published: !item.is_published }).eq('id', item.id)
+    if (error) return fail(error)
+    await done(item.is_published ? `${item.name} is hidden.` : `${item.name} is shown again.`)
+  }
+
   const remove = async (item: WishListItem) => {
-    if (!window.confirm(`Take “${item.name}” off the wish list items?`)) return
     start()
     const { error } = await supabase.from('wish_list_items').delete().eq('id', item.id)
     if (error) return fail(error)
+    setEditing(null)
     await done(`Removed ${item.name}.`)
+  }
+  const confirmRemove = (item: WishListItem) => {
+    if (window.confirm(`Take “${item.name}” off the wish list items?`)) void remove(item)
   }
 
   const shown = list.filter((x) => x.is_published).length
@@ -237,134 +268,123 @@ export default function StaffWishList() {
           and the website — “Most needed” first. The button to the whole list stays. Amazon’s photos can’t be used, so
           items show by name.
         </p>
+        <p>Move up and Move down change the order inside “Most needed” and inside the rest.</p>
       </StaffTitle>
 
       {missing && (
-        <Card className="border-amber-200 bg-amber-50">
-          <p className="text-sm leading-relaxed text-slate-700">
-            Wish list items aren’t switched on yet — ask an admin. Until then
-            the Support page shows the button to the whole list, as it does now.
-          </p>
-        </Card>
+        <NotOnYet what="Wish list items" update={32}>
+          Until then the Support page shows the button to the whole list, as it does now.
+        </NotOnYet>
       )}
 
       {rows === null && !error && <Spinner />}
       {rows && !missing && (
         <>
-          <form onSubmit={add}>
-            <Card className="space-y-3">
-              <p className="font-display text-lg font-extrabold text-ink">Add an item</p>
+          {adding ? (
+            <EditorForm
+              title="New wish list item"
+              hint="Paste the item’s own Amazon link so the Buy button goes straight to it."
+              onSubmit={add}
+              onCancel={() => {
+                setAdding(false)
+                setError(null)
+              }}
+              busy={busy}
+              saveLabel="Add"
+              canSave={!!draft.name.trim() && !!draft.link.trim()}
+              error={error}
+            >
               <ItemFields draft={draft} onChange={setDraft} />
-              <button type="submit" disabled={busy || !draft.name.trim() || !draft.link.trim()} className={`${btn.primary} w-full disabled:opacity-60`}>
-                <Icon name="plus" size={16} /> {busy ? 'Saving…' : 'Add'}
-              </button>
-            </Card>
-          </form>
+            </EditorForm>
+          ) : (
+            <StepButton tone="orange" icon="plus" onClick={() => setAdding(true)}>
+              New item
+            </StepButton>
+          )}
 
-          <FormError>{error}</FormError>
+          {!adding && !editing && <FormError>{error}</FormError>}
           {msg && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{msg}</p>}
 
-          <Card className="!p-0">
-            <p className="border-b border-slate-100 px-4 py-3 font-display text-lg font-extrabold text-ink">
-              {list.length} {list.length === 1 ? 'item' : 'items'}
-              {list.length > shown && <span className="ml-2 text-sm font-semibold text-slate-500">({list.length - shown} hidden)</span>}
-            </p>
-            {list.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-slate-600">
-                No items yet. Until there are, the Support page shows only the button to the whole list.
-              </p>
-            ) : (
-              <ul className="divide-y divide-slate-100">
-                {list.map((item) => {
-                  const group = list.filter((x) => x.most_needed === item.most_needed)
-                  const pos = group.findIndex((x) => x.id === item.id)
-                  if (editing?.id === item.id)
-                    return (
-                      <li key={item.id} className="space-y-2 bg-slate-50/60 px-4 py-3">
-                        <ItemFields draft={editing.draft} onChange={(d) => setEditing({ id: item.id, draft: d })} />
-                        <div className="grid grid-cols-2 gap-2 pt-1">
-                          <button type="button" disabled={busy} onClick={() => void saveEdit()} className={`${btn.blue} disabled:opacity-60`}>
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditing(null)}
-                            className="inline-flex items-center justify-center rounded-full border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-600"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </li>
-                    )
+          <p className="font-display text-lg font-extrabold text-ink">
+            {list.length} {list.length === 1 ? 'item' : 'items'}
+            {list.length > shown && <span className="ml-2 text-sm font-semibold text-slate-500">({list.length - shown} hidden)</span>}
+          </p>
+          {list.length === 0 ? (
+            <Card className="text-base text-slate-600">No items yet. Until there are, the Support page shows only the button to the whole list.</Card>
+          ) : (
+            <div className="space-y-3">
+              {list.map((item) => {
+                const group = list.filter((x) => x.most_needed === item.most_needed)
+                const pos = group.findIndex((x) => x.id === item.id)
+                if (editing?.id === item.id)
                   return (
-                    <li key={item.id} className="px-4 py-2">
-                      <div className="flex items-start gap-2">
-                        <div className="min-w-0 flex-1 py-1.5">
-                          <p className={`text-sm font-semibold ${item.is_published ? 'text-ink' : 'text-slate-400 line-through'}`}>{item.name}</p>
-                          {item.note && <p className="text-xs text-slate-500">{item.note}</p>}
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                            {item.most_needed && <Badge tone="orange">Most needed</Badge>}
-                            {!item.is_published && <Badge tone="slate">Hidden</Badge>}
-                            <a
-                              href={item.amazon_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs font-bold text-brand-blue"
-                            >
-                              Check the link <Icon name="external" size={11} />
-                            </a>
-                          </div>
-                        </div>
-                        <span className="flex shrink-0 flex-col">
-                          <button
-                            type="button"
-                            aria-label={`Move ${item.name} up`}
-                            disabled={busy || pos <= 0}
-                            onClick={() => void move(item, -1)}
-                            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 disabled:opacity-30"
-                          >
-                            <Icon name="chevron" size={16} className="-rotate-90" />
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={`Move ${item.name} down`}
-                            disabled={busy || pos >= group.length - 1}
-                            onClick={() => void move(item, 1)}
-                            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 disabled:opacity-30"
-                          >
-                            <Icon name="chevron" size={16} className="rotate-90" />
-                          </button>
-                        </span>
-                      </div>
-                      <span className="-ml-2 flex text-sm font-bold">
-                        <button
-                          type="button"
-                          className="min-h-[40px] px-2 text-brand-blue"
-                          onClick={() =>
-                            setEditing({
-                              id: item.id,
-                              draft: {
-                                name: item.name,
-                                link: item.amazon_url,
-                                note: item.note ?? '',
-                                mostNeeded: item.most_needed,
-                                shown: item.is_published,
-                              },
-                            })
-                          }
-                        >
-                          Edit
-                        </button>
-                        <button type="button" className="min-h-[40px] px-2 text-red-600 disabled:opacity-60" disabled={busy} onClick={() => void remove(item)}>
-                          Remove
-                        </button>
-                      </span>
-                    </li>
+                    <EditorForm
+                      key={item.id}
+                      title="Edit this item"
+                      onSubmit={saveEdit}
+                      onCancel={() => {
+                        setEditing(null)
+                        setError(null)
+                      }}
+                      busy={busy}
+                      canSave={!!editing.draft.name.trim() && !!editing.draft.link.trim()}
+                      error={error}
+                      remove={{ label: 'Remove', confirm: `Take “${item.name}” off the wish list items?`, onRemove: () => remove(item) }}
+                    >
+                      <ItemFields draft={editing.draft} onChange={(d) => setEditing({ id: item.id, draft: d })} />
+                    </EditorForm>
                   )
-                })}
-              </ul>
-            )}
-          </Card>
+                return (
+                  <Card key={item.id} className="space-y-3">
+                    <div className="min-w-0">
+                      <p className={`text-base font-semibold ${item.is_published ? 'text-ink' : 'text-slate-400 line-through'}`}>{item.name}</p>
+                      {item.note && <p className="text-sm text-slate-600">{item.note}</p>}
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        {item.most_needed && <Badge tone="orange">Most needed</Badge>}
+                        {!item.is_published && <Badge tone="slate">Hidden</Badge>}
+                      </div>
+                    </div>
+                    <CardActions>
+                      <button
+                        type="button"
+                        className={pill.blue}
+                        onClick={() => {
+                          setError(null)
+                          setEditing({
+                            id: item.id,
+                            draft: {
+                              name: item.name,
+                              link: item.amazon_url,
+                              note: item.note ?? '',
+                              mostNeeded: item.most_needed,
+                              shown: item.is_published,
+                            },
+                          })
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button type="button" className={pill.outline} disabled={busy} onClick={() => void toggle(item)}>
+                        {item.is_published ? 'Hide' : 'Show'}
+                      </button>
+                      <button type="button" className={pill.outline} disabled={busy || pos <= 0} onClick={() => void move(item, -1)}>
+                        Move up
+                      </button>
+                      <button type="button" className={pill.outline} disabled={busy || pos >= group.length - 1} onClick={() => void move(item, 1)}>
+                        Move down
+                      </button>
+                      <a href={item.amazon_url} target="_blank" rel="noopener noreferrer" className={pill.soft}>
+                        Check the link <Icon name="external" size={14} />
+                      </a>
+                      <button type="button" className={pill.red} disabled={busy} onClick={() => confirmRemove(item)}>
+                        Remove
+                      </button>
+                    </CardActions>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
         </>
       )}
     </Screen>

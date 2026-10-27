@@ -11,7 +11,8 @@
 // phone and a laptop, and a row lands exactly where it's typed.
 import { useMemo, useState } from 'react'
 import { errMessage } from '../../../lib/supabase'
-import { Card, btn } from '../../../components/ui'
+import { Card } from '../../../components/ui'
+import { CardActions, pill } from '../../../components/StaffJob'
 import { Icon } from '../../../components/icons'
 import { FormError, staffInput } from '../../../components/staffui'
 import { saveVenue } from '../api'
@@ -93,7 +94,7 @@ function NumberField({
           +
         </button>
       </span>
-      {hint && <span className="mt-1 block text-xs font-normal text-slate-500">{hint}</span>}
+      {hint && <span className="mt-1 block text-sm font-normal text-slate-500">{hint}</span>}
     </label>
   )
 }
@@ -219,7 +220,7 @@ export default function StaffVenue({
       <Card className="space-y-3">
         <div>
           <h2 className="font-display text-[15px] font-extrabold text-ink">Start the {year} floor plan</h2>
-          <p className="mt-1 text-sm leading-relaxed text-slate-600">
+          <p className="mt-1 text-[15px] leading-relaxed text-slate-600">
             Nothing is designed for {year} yet. Start from a venue you’ve used before and change what’s
             different, or start with an empty room.
           </p>
@@ -240,14 +241,14 @@ export default function StaffVenue({
               }
               setStarting(false)
             }}
-            className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left hover:bg-slate-50 disabled:opacity-60"
+            className="flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left hover:bg-slate-50 disabled:opacity-60"
           >
             <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-blue-50 text-brand-blue">
               <Icon name="mappin" size={20} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold text-ink">{o.label}</span>
-              <span className="block text-xs text-slate-500">{o.hint}</span>
+              <span className="block text-base font-bold text-ink">{o.label}</span>
+              <span className="block text-sm text-slate-500">{o.hint}</span>
             </span>
             <Icon name="chevron" size={18} className="shrink-0 text-slate-300" />
           </button>
@@ -295,13 +296,13 @@ export default function StaffVenue({
                 setRoomId(r.id)
                 setPick(null)
               }}
-              className="min-h-[44px] rounded-full border border-dashed border-slate-300 px-4 text-sm font-bold text-brand-blue"
+              className={pill.soft}
             >
-              + Add a room
+              <Icon name="plus" size={16} /> Add a room
             </button>
           </div>
         </div>
-        <p className="text-xs leading-relaxed text-slate-500">
+        <p className="text-sm leading-relaxed text-slate-600">
           Tables are numbered room by room in this order, row by row — {totalTables(venue)} tables in all.
         </p>
       </Card>
@@ -322,32 +323,34 @@ export default function StaffVenue({
               A line for visitors (optional)
               <input className={staffInput} value={room.note} onChange={(e) => setRoom(room.id, { note: e.target.value })} placeholder="Stairs up to the education sessions" />
             </label>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => moveRoom(room.id, -1)} className={`${btn.outline} !px-3 !py-2 text-xs`}>
-                Move earlier
+            <CardActions>
+              <button type="button" onClick={() => moveRoom(room.id, -1)} className={pill.outline}>
+                Move up
               </button>
-              <button type="button" onClick={() => moveRoom(room.id, 1)} className={`${btn.outline} !px-3 !py-2 text-xs`}>
-                Move later
+              <button type="button" onClick={() => moveRoom(room.id, 1)} className={pill.outline}>
+                Move down
               </button>
               {venue.rooms.length > 1 && (
                 <button
                   type="button"
                   onClick={() => {
+                    if (!window.confirm(`Remove ${room.name || 'this room'}? Its rows, areas and doors go with it.`)) return
                     onChange({ ...venue, rooms: venue.rooms.filter((r) => r.id !== room.id) })
                     setRoomId(null)
                     setPick(null)
                   }}
-                  className="rounded-full border border-red-200 px-3 py-2 text-xs font-bold text-red-600"
+                  className={pill.red}
                 >
-                  Remove this room
+                  <Icon name="trash" size={16} /> Remove this room
                 </button>
               )}
-            </div>
+            </CardActions>
+            <p className="text-sm text-slate-600">Move up puts the room earlier in the numbering; Move down puts it later.</p>
           </Card>
 
           {/* ------------------------------------------------ the drawing */}
           <div className="space-y-1">
-            <p className="px-1 text-xs font-bold text-slate-500">
+            <p className="px-1 text-sm font-bold text-slate-600">
               {room.name}
               {roomRange ? ` · tables ${roomRange[0]}–${roomRange[1]}` : ' · no tables yet'} · tap anything to edit it
             </p>
@@ -403,10 +406,10 @@ export default function StaffVenue({
                         onClick={() => setPick(open ? null : { kind: 'run', id: r.id })}
                         className="flex min-h-[48px] w-full items-center justify-between gap-2 px-3 text-left"
                       >
-                        <span className="text-sm font-bold text-ink">
+                        <span className="text-[15px] font-bold text-ink">
                           Row {i + 1} · tables {a}–{z}
                         </span>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-sm text-slate-500">
                           {r.tables} × {r.length} ft {r.across ? '→' : '↓'}
                         </span>
                       </button>
@@ -421,7 +424,7 @@ export default function StaffVenue({
                     </div>
                   )
                 })}
-                <button type="button" onClick={() => addItem('runs', newRun(room))} className={`${btn.outline} w-full`}>
+                <button type="button" onClick={() => addItem('runs', newRun(room))} className={pill.soft}>
                   <Icon name="plus" size={16} /> Add a row of tables
                 </button>
               </div>
@@ -438,8 +441,8 @@ export default function StaffVenue({
                         onClick={() => setPick(open ? null : { kind: 'area', id: a.id })}
                         className="flex min-h-[48px] w-full items-center justify-between gap-2 px-3 text-left"
                       >
-                        <span className="text-sm font-bold text-ink">{a.label || 'Unnamed area'}</span>
-                        <span className="text-xs text-slate-500">{AREA_KINDS.find((k) => k.value === a.kind)?.label}</span>
+                        <span className="text-[15px] font-bold text-ink">{a.label || 'Unnamed area'}</span>
+                        <span className="text-sm text-slate-500">{AREA_KINDS.find((k) => k.value === a.kind)?.label}</span>
                       </button>
                       {open && <AreaEditor area={a} onChange={(patch) => setItem('areas', a.id, patch)} onDelete={() => removeItem('areas', a.id)} />}
                     </div>
@@ -448,7 +451,7 @@ export default function StaffVenue({
                 <button
                   type="button"
                   onClick={() => addItem('areas', { id: newId('area'), label: 'New area', kind: 'amenity', x: 4, y: 4, w: 12, h: 8 })}
-                  className={`${btn.outline} w-full`}
+                  className={pill.soft}
                 >
                   <Icon name="plus" size={16} /> Add an area
                 </button>
@@ -472,8 +475,8 @@ export default function StaffVenue({
                         onClick={() => setPick(open ? null : { kind: 'door', id: d.id })}
                         className="flex min-h-[48px] w-full items-center justify-between gap-2 px-3 text-left"
                       >
-                        <span className="text-sm font-bold text-ink">{d.label || 'Door'}</span>
-                        <span className="text-xs text-slate-500">{WALL_NAMES[d.wall]} wall</span>
+                        <span className="text-[15px] font-bold text-ink">{d.label || 'Door'}</span>
+                        <span className="text-sm text-slate-500">{WALL_NAMES[d.wall]} wall</span>
                       </button>
                       {open && <DoorEditor door={d} room={room} onChange={(patch) => setItem('doors', d.id, patch)} onDelete={() => removeItem('doors', d.id)} />}
                     </div>
@@ -482,7 +485,7 @@ export default function StaffVenue({
                 <button
                   type="button"
                   onClick={() => addItem('doors', { id: newId('door'), label: 'Entrance', wall: 'bottom', at: Math.max(0, room.width / 2 - 3), width: 6 })}
-                  className={`${btn.outline} w-full`}
+                  className={pill.soft}
                 >
                   <Icon name="plus" size={16} /> Add a door
                 </button>
@@ -496,12 +499,12 @@ export default function StaffVenue({
       {(check.errors.length > 0 || check.warnings.length > 0) && (
         <Card className="space-y-1.5">
           {check.errors.map((e) => (
-            <p key={e} className="flex gap-2 text-sm font-semibold text-red-700">
+            <p key={e} className="flex gap-2 text-[15px] font-semibold text-red-700">
               <Icon name="info" size={16} className="mt-0.5 shrink-0" /> {e}
             </p>
           ))}
           {check.warnings.map((w) => (
-            <p key={w} className="flex gap-2 text-sm text-amber-800">
+            <p key={w} className="flex gap-2 text-[15px] text-amber-800">
               <Icon name="info" size={16} className="mt-0.5 shrink-0" /> {w}
             </p>
           ))}
@@ -510,23 +513,23 @@ export default function StaffVenue({
 
       <Card className="space-y-2">
         {hasAssignments && dirty && (
-          <p className="text-xs leading-relaxed text-amber-800">
+          <p className="text-[15px] leading-relaxed text-amber-800">
             Tables are already given out for {year}. Adding, removing or reordering rows renumbers the
             tables after the change — check “Who sits where” after saving.
           </p>
         )}
         <FormError>{error}</FormError>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={save}
             disabled={busy || check.errors.length > 0 || (!dirty && !!saved)}
-            className={`${btn.primary} flex-1 disabled:opacity-60`}
+            className="inline-flex min-h-[52px] flex-1 items-center justify-center rounded-2xl bg-brand-orange px-5 font-display text-base font-extrabold text-ink shadow-sm transition hover:bg-brand-orange-dark active:scale-[.98] disabled:opacity-50"
           >
             {busy ? 'Saving…' : saved ? (dirty ? 'Save the venue' : 'Saved') : 'Save this venue'}
           </button>
           {dirty && saved && (
-            <button type="button" onClick={() => onChange(saved)} className={`${btn.outline} shrink-0`}>
+            <button type="button" onClick={() => onChange(saved)} className="inline-flex min-h-[52px] shrink-0 items-center justify-center rounded-2xl border-2 border-slate-200 bg-white px-5 text-base font-bold text-slate-700">
               Undo changes
             </button>
           )}
@@ -576,14 +579,14 @@ function RunEditor({
         <NumberField label="Walkway after every" value={run.walkEvery} min={0} max={40} onChange={(walkEvery) => onChange({ walkEvery: Math.round(walkEvery) })} hint={run.walkEvery ? `${run.walkEvery} tables` : 'no walkway'} />
         <NumberField label="Walkway width (ft)" value={run.walkWidth} min={2} max={30} step={0.5} onChange={(walkWidth) => onChange({ walkWidth })} />
       </div>
-      <div className="flex gap-2">
-        <button type="button" onClick={onDuplicate} className={`${btn.outline} flex-1 !py-2 text-sm`}>
+      <CardActions>
+        <button type="button" onClick={onDuplicate} className={pill.blue}>
           Copy as the next row
         </button>
-        <button type="button" onClick={onDelete} className="rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-600">
-          Delete
+        <button type="button" onClick={() => window.confirm('Delete this row of tables?') && onDelete()} className={pill.red}>
+          <Icon name="trash" size={16} /> Delete this row
         </button>
-      </div>
+      </CardActions>
       <Explain label="About “Copy as the next row”">
         <p>
           “Copy as the next row” puts the copy facing this one across a 6 ft aisle, or back to back
@@ -617,8 +620,8 @@ function AreaEditor({ area, onChange, onDelete }: { area: Area; onChange: (patch
         <NumberField label="Width (ft)" value={area.w} min={1} step={0.5} onChange={(w) => onChange({ w })} />
         <NumberField label="Depth (ft)" value={area.h} min={1} step={0.5} onChange={(h) => onChange({ h })} />
       </div>
-      <button type="button" onClick={onDelete} className="w-full rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-600">
-        Delete this area
+      <button type="button" onClick={() => window.confirm('Delete this area?') && onDelete()} className={pill.red}>
+        <Icon name="trash" size={16} /> Delete this area
       </button>
     </div>
   )
@@ -647,8 +650,8 @@ function DoorEditor({ door, room, onChange, onDelete }: { door: Door; room: Room
         <NumberField label={`Distance ${along} (ft)`} value={door.at} step={0.5} max={wallLength} onChange={(at) => onChange({ at })} />
         <NumberField label="Width (ft)" value={door.width} min={2} max={40} step={0.5} onChange={(width) => onChange({ width })} />
       </div>
-      <button type="button" onClick={onDelete} className="w-full rounded-full border border-red-200 px-4 py-2 text-sm font-bold text-red-600">
-        Delete this door
+      <button type="button" onClick={() => window.confirm('Delete this door?') && onDelete()} className={pill.red}>
+        <Icon name="trash" size={16} /> Delete this door
       </button>
     </div>
   )

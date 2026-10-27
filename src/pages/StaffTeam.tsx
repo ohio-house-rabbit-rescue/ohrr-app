@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
-import { btn, Badge, Card, Screen } from '../components/ui'
+import { Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { Explain, StaffTitle } from '../components/StaffTitle'
+import { CardActions, EditorForm, Field, Part, pill } from '../components/StaffJob'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import QrCode from '../components/QrCode'
 import StaffAvatar from '../components/StaffAvatar'
@@ -194,7 +195,7 @@ function HowAccessWorks({ tiersReady }: { tiersReady: boolean }) {
           they use their private volunteer link. Only people who work in the staff area (the Counter, check-in,
           editing) need one.
         </p>
-        {!tiersReady && <p className="text-xs text-slate-500">The ten levels and end dates aren’t switched on yet — ask an admin.</p>}
+        {!tiersReady && <p className="text-sm text-slate-600">The ten levels and end dates aren’t switched on yet — ask an admin.</p>}
       </div>
     </Explain>
   )
@@ -322,7 +323,7 @@ function InvitePanel({
     return (
       <Card className="space-y-1">
         <h2 className="font-display text-[15px] font-extrabold text-ink">Invite someone</h2>
-        <p className="text-sm text-slate-600">{NEEDS_UPDATE_30}</p>
+        <p className="text-[15px] text-slate-600">{NEEDS_UPDATE_30}</p>
       </Card>
     )
   }
@@ -331,7 +332,7 @@ function InvitePanel({
     return (
       <Card className="space-y-1">
         <h2 className="font-display text-[15px] font-extrabold text-ink">Invite someone</h2>
-        <p className="text-sm text-slate-600">
+        <p className="text-[15px] text-slate-600">
           You can invite people below your own level, and there isn’t one below yours. Ask someone above you to invite
           them.
         </p>
@@ -341,50 +342,44 @@ function InvitePanel({
 
   return (
     <>
-      <Card className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Icon name="users" size={18} className="text-brand-blue" />
-          <h2 className="font-display text-[15px] font-extrabold text-ink">Invite someone</h2>
+      <EditorForm
+        title="Invite someone"
+        hint="Fill in A (a name or an email) and B. C is optional — leave it alone to use the usual tasks for that level."
+        onSubmit={() => generate({ preventDefault() {} })}
+        busy={busy}
+        saveLabel="Make the invite code"
+        canSave={(who.name.trim().length > 0 || who.email.trim().length > 0) && (fullAccess || !isCustom || customCaps.size > 0)}
+        error={error}
+      >
+        <div className="space-y-3">
+          <Part n="A" hint="needed">Who</Part>
+          <Field label="Their name" needed hint="Or just their email below.">
+            <input className={staffInput} value={who.name} onChange={setWhoField('name')} placeholder="Bev" />
+          </Field>
+          <Field label="Email" hint="With an email you can send the invite in one tap.">
+            <input className={staffInput} type="email" value={who.email} onChange={setWhoField('email')} />
+          </Field>
+          <Field label="Text / phone">
+            <input className={staffInput} type="tel" value={who.phone} onChange={setWhoField('phone')} />
+          </Field>
+          <Field label="The position they asked about" hint="Lets you see who an unused invite belongs to.">
+            <input className={staffInput} value={who.position} onChange={setWhoField('position')} placeholder="Hop Shop, Saturdays" />
+          </Field>
         </div>
 
-        <form onSubmit={generate} className="space-y-3">
-          {/* Who it's for — so a pending invite isn't an anonymous code. */}
-          <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
-            <label className="block text-sm font-semibold text-slate-700">
-              Their name
-              <input className={staffInput} value={who.name} onChange={setWhoField('name')} placeholder="Bev" />
-            </label>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block text-sm font-semibold text-slate-700">
-                Email
-                <input className={staffInput} type="email" value={who.email} onChange={setWhoField('email')} />
-              </label>
-              <label className="block text-sm font-semibold text-slate-700">
-                Text / phone <span className="font-normal text-slate-400">(optional)</span>
-                <input className={staffInput} type="tel" value={who.phone} onChange={setWhoField('phone')} />
-              </label>
-            </div>
-            <label className="block text-sm font-semibold text-slate-700">
-              The position they asked about <span className="font-normal text-slate-400">(optional)</span>
-              <input className={staffInput} value={who.position} onChange={setWhoField('position')} placeholder="Hop Shop, Saturdays" />
-            </label>
-            <p className="text-xs text-slate-500">
-              Optional, but it means you can see who an unused invite belongs to — and send it to them in a tap.
-            </p>
-          </div>
+        <div className="space-y-2">
+          <Part n="B" hint="needed">Level</Part>
+          <LevelPicker value={level} choices={levelChoices} onChange={pickLevel} />
+          <p className="text-sm text-slate-600">{levelInfo(level).blurb}.</p>
+        </div>
 
-          <div>
-            <p className="text-sm font-semibold text-slate-700">Level</p>
-            <LevelPicker value={level} choices={levelChoices} onChange={pickLevel} />
-            <p className="mt-1.5 text-xs text-slate-500">{levelInfo(level).blurb}.</p>
-          </div>
-
+        <div className="space-y-3">
+          <Part n="C" hint="optional">What they can do</Part>
           {fullAccess ? (
-            <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">Holds every task — nothing to choose.</p>
+            <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">Holds every task — nothing to choose.</p>
           ) : (
             <>
-              <label className="block text-sm font-semibold text-slate-700">
-                Tasks
+              <Field label="Tasks">
                 <select className={staffInput} value={isCustom ? CUSTOM : preset} onChange={(e) => pickPreset(e.target.value)}>
                   {presetNames.map((p) => (
                     <option key={p} value={p}>
@@ -393,29 +388,29 @@ function InvitePanel({
                   ))}
                   <option value={CUSTOM}>Choose tasks myself</option>
                 </select>
-              </label>
+              </Field>
               {isCustom ? (
                 <div className="rounded-xl border border-slate-200 p-3">
-                  <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Pick their tasks</p>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-bold text-slate-600">Pick their tasks</p>
                     <button
                       type="button"
                       onClick={() => setCustomCaps(allPicked ? new Set() : new Set(shareable))}
-                      className="min-h-[44px] text-xs font-bold text-brand-blue"
+                      className={pill.soft}
                     >
-                      {allPicked ? 'Clear them all' : 'Select all the tasks I can share'}
+                      {allPicked ? 'Clear them all' : 'Select all I can share'}
                     </button>
                   </div>
                   <div className="space-y-2">
                     {areas.map(({ area, caps }) => (
                       <div key={area}>
-                        <p className="text-xs font-bold text-slate-500">{area}</p>
+                        <p className="text-sm font-bold text-slate-600">{area}</p>
                         <div className="mt-1 grid grid-cols-1">
                           {caps.map((c) => (
-                            <label key={c.key} className="flex min-h-[44px] items-center gap-2.5 text-sm text-slate-700">
+                            <label key={c.key} className="flex min-h-[44px] items-center gap-3 text-[15px] text-slate-700">
                               <input
                                 type="checkbox"
-                                className="h-5 w-5 shrink-0 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30"
+                                className="h-6 w-6 shrink-0 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30"
                                 checked={customCaps.has(c.key)}
                                 onChange={() => toggleCustom(c.key)}
                               />
@@ -426,130 +421,103 @@ function InvitePanel({
                       </div>
                     ))}
                   </div>
-                  <p className="mt-2 text-xs text-slate-500">Only the tasks you have yourself are listed.</p>
+                  <p className="mt-2 text-sm text-slate-600">Only the tasks you have yourself are listed.</p>
                 </div>
               ) : (
-                <div className="rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-500">
-                  <p className="font-bold text-slate-600">Gives them:</p>
-                  <ul className="mt-0.5 list-disc pl-4">
+                <div className="rounded-xl bg-slate-50 px-3 py-2 text-[15px] leading-relaxed text-slate-600">
+                  <p className="font-bold text-slate-700">Gives them:</p>
+                  <ul className="mt-0.5 list-disc pl-5">
                     {PRESETS[preset]?.map((k) => <li key={k}>{describe(k)}</li>)}
                   </ul>
                 </div>
               )}
               {helpersOffered && (
-                <label className="flex min-h-[44px] items-start gap-2.5 text-sm text-slate-700">
+                <label className="flex min-h-[44px] items-start gap-3 text-[15px] text-slate-700">
                   <input
                     type="checkbox"
-                    className="mt-0.5 h-5 w-5 shrink-0 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30"
+                    className="mt-0.5 h-6 w-6 shrink-0 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30"
                     checked={helpers}
                     onChange={(e) => setHelpers(e.target.checked)}
                   />
                   <span>
                     <span className="font-semibold">Can bring on helpers</span>
-                    <span className="block text-xs text-slate-500">
-                      They can invite people below them and share only the tasks they have.
-                    </span>
+                    <span className="block text-sm text-slate-600">They can invite people below them and share only the tasks they have.</span>
                   </span>
                 </label>
               )}
-            </>
-          )}
-
-          {!fullAccess && (
-            <div>
-              <label className="block text-sm font-semibold text-slate-700">
-                Access until <span className="font-normal text-slate-400">(optional)</span>
-                <input
-                  type="date"
-                  className={staffInput}
-                  value={accessUntil}
-                  min={ohrrToday()}
-                  onChange={(e) => setAccessUntil(e.target.value)}
-                />
-              </label>
-              <div className="mt-1 flex items-center justify-between gap-2">
-                <p className="text-xs text-slate-500">For a set time, e.g. BunFest weekend. Leave empty for no end.</p>
+              <div className="space-y-1.5">
+                <Field label="Access until" hint="For a set time, e.g. BunFest weekend. Leave empty for no end.">
+                  <input type="date" className={staffInput} value={accessUntil} min={ohrrToday()} onChange={(e) => setAccessUntil(e.target.value)} />
+                </Field>
                 {accessUntil && (
-                  <button type="button" onClick={() => setAccessUntil('')} className="min-h-[36px] shrink-0 text-xs font-bold text-brand-blue">
+                  <button type="button" onClick={() => setAccessUntil('')} className={pill.outline}>
                     No end date
                   </button>
                 )}
               </div>
-            </div>
+            </>
           )}
+        </div>
+      </EditorForm>
 
-          <FormError>{error}</FormError>
-
-          <button
-            type="submit"
-            disabled={busy || (!fullAccess && isCustom && customCaps.size === 0)}
-            className={`${btn.blue} w-full disabled:opacity-60`}
-          >
-            {busy ? 'Generating…' : 'Generate invite code'}
-          </button>
-        </form>
-
-        {code && made && (
-          <div className="space-y-3 rounded-xl border border-brand-blue/30 bg-brand-blue-50/60 p-3">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-brand-blue">
-                Invite {who.name ? `for ${who.name}` : '— share with them'} · joins as {levelInfo(made.level).label}
-              </p>
-              {made.until && <p className="mt-0.5 text-xs font-semibold text-slate-600">Access until {accessDate(made.until)}</p>}
-            </div>
-
-            {/* Show the code to a phone camera — no typing, no transcription. */}
-            <div className="flex flex-col items-center gap-2">
-              <QrCode value={joinUrl(code)} size={188} alt="QR code to join the OHRR staff app" />
-              <p className="text-center text-xs text-slate-600">
-                Hold this up — their camera opens the sign-up with the code already in it.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2">
-              <code className="font-mono text-lg font-black tracking-wider text-ink">{code}</code>
-              <button type="button" onClick={copy} className="min-h-[44px] rounded-full bg-brand-blue px-4 text-xs font-bold text-white">
-                {copied ? 'Copied!' : 'Copy'}
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {who.email && (
-                <a
-                  href={`mailto:${who.email}?subject=${encodeURIComponent('Your OHRR staff invite')}&body=${encodeURIComponent(
-                    `Hi${who.name ? ` ${who.name}` : ''},\n\nHere's your invite to the OHRR staff app${who.position ? ` for ${who.position}` : ''}. Open this link, create your sign-in, and you're in:\n\n${joinUrl(code)}\n\nOr enter the code ${code} at ${joinUrl('')}\n\nIt's single-use and expires in 14 days.${made.until ? ` Your access runs until ${accessDate(made.until)}.` : ''}\n\nOhio House Rabbit Rescue`,
-                  )}`}
-                  className="inline-flex min-h-[44px] items-center rounded-full bg-brand-blue px-4 text-xs font-bold text-white"
-                >
-                  Email it
-                </a>
-              )}
-              {who.phone && (
-                <a
-                  href={`sms:${who.phone.replace(/[^0-9+]/g, '')}?&body=${encodeURIComponent(
-                    `Your OHRR staff invite: ${joinUrl(code)} (code ${code})`,
-                  )}`}
-                  className="inline-flex min-h-[44px] items-center rounded-full bg-brand-blue px-4 text-xs font-bold text-white"
-                >
-                  Text it
-                </a>
-              )}
-              <button
-                type="button"
-                onClick={() => shareText(`Your OHRR staff invite: ${joinUrl(code)} (code ${code})`, 'OHRR staff invite')}
-                className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600"
-              >
-                Share
-              </button>
-            </div>
-
-            <p className="text-xs leading-relaxed text-slate-500">
-              Single-use, expires in 14 days. They sign in (or create a sign-in) and the code joins them to the team with
-              the access you chose.
+      {code && made && (
+        <Card className="space-y-3 border-brand-blue/30 bg-brand-blue-50/60">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-wide text-brand-blue">
+              Invite {who.name ? `for ${who.name}` : '— share with them'} · joins as {levelInfo(made.level).label}
             </p>
+            {made.until && <p className="mt-0.5 text-sm font-semibold text-slate-600">Access until {accessDate(made.until)}</p>}
           </div>
-        )}
-      </Card>
+
+          {/* Show the code to a phone camera — no typing, no transcription. */}
+          <div className="flex flex-col items-center gap-2">
+            <QrCode value={joinUrl(code)} size={188} alt="QR code to join the OHRR staff app" />
+            <p className="text-center text-sm text-slate-600">Hold this up — their camera opens the sign-up with the code already in it.</p>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2">
+            <code className="font-mono text-lg font-black tracking-wider text-ink">{code}</code>
+            <button type="button" onClick={copy} className={pill.blue}>
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+
+          <CardActions>
+            {who.email && (
+              <a
+                href={`mailto:${who.email}?subject=${encodeURIComponent('Your OHRR staff invite')}&body=${encodeURIComponent(
+                  `Hi${who.name ? ` ${who.name}` : ''},\n\nHere's your invite to the OHRR staff app${who.position ? ` for ${who.position}` : ''}. Open this link, create your sign-in, and you're in:\n\n${joinUrl(code)}\n\nOr enter the code ${code} at ${joinUrl('')}\n\nIt's single-use and expires in 14 days.${made.until ? ` Your access runs until ${accessDate(made.until)}.` : ''}\n\nOhio House Rabbit Rescue`,
+                )}`}
+                className={pill.blue}
+              >
+                <Icon name="mail" size={16} /> Email it
+              </a>
+            )}
+            {who.phone && (
+              <a
+                href={`sms:${who.phone.replace(/[^0-9+]/g, '')}?&body=${encodeURIComponent(
+                  `Your OHRR staff invite: ${joinUrl(code)} (code ${code})`,
+                )}`}
+                className={pill.blue}
+              >
+                Text it
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => shareText(`Your OHRR staff invite: ${joinUrl(code)} (code ${code})`, 'OHRR staff invite')}
+              className={pill.outline}
+            >
+              Share
+            </button>
+          </CardActions>
+
+          <p className="text-sm leading-relaxed text-slate-600">
+            Single-use, expires in 14 days. They sign in (or create a sign-in) and the code joins them to the team with the
+            access you chose.
+          </p>
+        </Card>
+      )}
 
       <WaitingInvites orgId={orgId} reloadKey={code ?? ''} />
     </>
@@ -598,7 +566,6 @@ function parseInvites(data: Json | null): WaitingInvite[] {
 
 function WaitingInvites({ orgId, reloadKey }: { orgId: string; reloadKey: string }) {
   const [invites, setInvites] = useState<WaitingInvite[]>([])
-  const [confirm, setConfirm] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -616,7 +583,6 @@ function WaitingInvites({ orgId, reloadKey }: { orgId: string; reloadKey: string
     const { error } = await supabase.rpc('revoke_invite', { p_code: code })
     setBusy(false)
     if (error) return setError(errMessage(error))
-    setConfirm(null)
     await load()
   }
 
@@ -638,54 +604,37 @@ function WaitingInvites({ orgId, reloadKey }: { orgId: string; reloadKey: string
             <li key={i.code} className="space-y-1.5 py-2.5">
               <div className="flex items-start justify-between gap-2">
                 <span className="min-w-0">
-                  <span className="block break-all text-sm font-bold text-ink">{i.invitee_name || i.invitee_email || 'No name given'}</span>
-                  {i.invitee_name && i.invitee_email && <span className="block break-all text-xs text-slate-400">{i.invitee_email}</span>}
-                  {i.position_note && <span className="block text-xs text-slate-500">{i.position_note}</span>}
+                  <span className="block break-all text-base font-bold text-ink">{i.invitee_name || i.invitee_email || 'No name given'}</span>
+                  {i.invitee_name && i.invitee_email && <span className="block break-all text-sm text-slate-500">{i.invitee_email}</span>}
+                  {i.position_note && <span className="block text-sm text-slate-600">{i.position_note}</span>}
                 </span>
                 {i.level && <Badge tone={isFullAccess(i.level) ? 'blue' : 'slate'}>{levelInfo(i.level).label}</Badge>}
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-sm text-slate-600">
                 {tasks}
                 {i.access_until ? ` · access until ${accessDay(i.access_until)}` : ''}
                 {i.expires_at ? ` · code expires ${shortDate(i.expires_at.slice(0, 10))}` : ''}
                 <span className="font-mono"> · {i.code}</span>
               </p>
-              {confirm === i.code ? (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void revoke(i.code)}
-                    disabled={busy}
-                    className="min-h-[44px] flex-1 rounded-full bg-red-600 px-4 text-xs font-bold text-white disabled:opacity-60"
-                  >
-                    {busy ? 'Canceling…' : 'Cancel this invite'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirm(null)}
-                    className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600"
-                  >
-                    Keep
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => shareText(`Your OHRR staff invite: ${joinUrl(i.code)} (code ${i.code})`, 'OHRR staff invite')}
-                    className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600"
-                  >
-                    Send again
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirm(i.code)}
-                    className="min-h-[44px] rounded-full border border-red-200 px-4 text-xs font-bold text-red-600"
-                  >
-                    Cancel invite
-                  </button>
-                </div>
-              )}
+              <CardActions>
+                <button
+                  type="button"
+                  onClick={() => shareText(`Your OHRR staff invite: ${joinUrl(i.code)} (code ${i.code})`, 'OHRR staff invite')}
+                  className={pill.outline}
+                >
+                  Send again
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    if (window.confirm(`Cancel the invite for ${i.invitee_name || i.invitee_email || 'this person'}? The code stops working.`)) void revoke(i.code)
+                  }}
+                  className={pill.red}
+                >
+                  {busy ? 'Canceling…' : 'Cancel invite'}
+                </button>
+              </CardActions>
             </li>
           )
         })}
@@ -707,7 +656,6 @@ function CertRow({
   certifiedBy: string | null
   onRemoved: () => Promise<void>
 }) {
-  const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const exp = certExpiry(cert.expires_on)
@@ -733,14 +681,14 @@ function CertRow({
     >
       <div className="flex items-start gap-2">
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-bold text-ink">{label}</span>
-          <span className="block text-xs text-slate-500">
+          <span className="block text-base font-bold text-ink">{label}</span>
+          <span className="block text-sm text-slate-600">
             Certified {shortDate(cert.certified_on)}
             {certifiedBy ? ` by ${certifiedBy}` : ''}
             {cert.notes ? ` · ${cert.notes}` : ''}
           </span>
           <span
-            className={`block text-xs font-bold ${
+            className={`block text-sm font-bold ${
               exp.state === 'expired' ? 'text-red-600' : exp.state === 'soon' ? 'text-brand-orange-dark' : 'text-slate-500'
             }`}
           >
@@ -750,35 +698,20 @@ function CertRow({
             {exp.text}
           </span>
         </span>
-        {canRemove && !confirm && (
-          <button
-            type="button"
-            onClick={() => setConfirm(true)}
-            aria-label={`Remove ${label}`}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white hover:text-red-600"
-          >
-            <Icon name="trash" size={16} />
-          </button>
-        )}
       </div>
-      {confirm && (
-        <div className="mt-2 flex gap-2">
+      {canRemove && (
+        <CardActions className="mt-2">
           <button
             type="button"
-            onClick={() => void remove()}
             disabled={busy}
-            className="min-h-[44px] flex-1 rounded-full bg-red-600 px-4 text-sm font-bold text-white disabled:opacity-60"
+            onClick={() => {
+              if (window.confirm(`Remove “${label}” from this person?`)) void remove()
+            }}
+            className={pill.red}
           >
-            {busy ? 'Removing…' : `Remove ${label}`}
+            <Icon name="trash" size={16} /> {busy ? 'Removing…' : 'Remove'}
           </button>
-          <button
-            type="button"
-            onClick={() => setConfirm(false)}
-            className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600"
-          >
-            Keep
-          </button>
-        </div>
+        </CardActions>
       )}
       <FormError>{error}</FormError>
     </li>
@@ -898,7 +831,7 @@ function CertForm({
             key={n}
             type="button"
             onClick={() => certifiedOn && setExpiresOn(addYears(certifiedOn, n))}
-            className="min-h-[44px] rounded-full border border-slate-200 bg-white px-3.5 text-sm font-bold text-slate-600"
+            className={pill.outline}
           >
             Expires in {n} year{n === 1 ? '' : 's'}
           </button>
@@ -907,7 +840,7 @@ function CertForm({
           <button
             type="button"
             onClick={() => setExpiresOn('')}
-            className="min-h-[44px] rounded-full border border-slate-200 bg-white px-3.5 text-sm font-bold text-slate-600"
+            className={pill.outline}
           >
             No expiry
           </button>
@@ -917,13 +850,13 @@ function CertForm({
         Notes <span className="font-normal text-slate-400">(optional)</span>
         <input className={staffInput} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Trained by Bev on the new till" />
       </label>
-      {renewing && <p className="text-xs text-slate-500">They already have this one — saving renews it with these dates.</p>}
+      {renewing && <p className="text-sm text-slate-600">They already have this one — saving renews it with these dates.</p>}
       <FormError>{error}</FormError>
       <div className="flex gap-2">
-        <button type="button" onClick={() => void save()} disabled={busy || !finalKind} className={`${btn.primary} flex-1 disabled:opacity-60`}>
+        <button type="button" onClick={() => void save()} disabled={busy || !finalKind} className={`${pill.orange} flex-1`}>
           {busy ? 'Saving…' : renewing ? 'Renew' : 'Save'}
         </button>
-        <button type="button" onClick={onCancel} className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600">
+        <button type="button" onClick={onCancel} className={pill.outline}>
           Cancel
         </button>
       </div>
@@ -952,8 +885,8 @@ function Certifications({
   if (certs.length === 0 && !manage) return null
   return (
     <div className="space-y-2 rounded-xl border border-slate-200 p-3">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Certified for</p>
-      {certs.length === 0 && !adding && <p className="text-sm text-slate-500">Nothing recorded yet.</p>}
+      <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Certified for</p>
+      {certs.length === 0 && !adding && <p className="text-[15px] text-slate-600">Nothing recorded yet.</p>}
       {certs.length > 0 && (
         <ul className="space-y-2">
           {certs.map((c) => (
@@ -975,11 +908,7 @@ function Certifications({
             onCancel={() => setAdding(false)}
           />
         ) : (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-brand-blue/40 px-4 text-sm font-bold text-brand-blue"
-          >
+          <button type="button" onClick={() => setAdding(true)} className={pill.soft}>
             <Icon name="plus" size={16} /> Add a certification
           </button>
         ))}
@@ -1011,18 +940,18 @@ function AccessUntilField({
 
   return (
     <div className="space-y-1.5 rounded-xl border border-slate-200 p-3">
-      <label className="block text-xs font-bold uppercase tracking-wide text-slate-400">
+      <label className="block text-sm font-bold uppercase tracking-wide text-slate-500">
         Put on hold automatically after
         <input
           type="date"
-          className={`${staffInput} font-sans text-sm font-normal normal-case tracking-normal`}
+          className={`${staffInput} font-sans font-normal normal-case tracking-normal`}
           value={value}
           min={ohrrToday()}
           disabled={busy}
           onChange={(e) => setValue(e.target.value)}
         />
       </label>
-      <p className="text-xs text-slate-500">
+      <p className="text-sm text-slate-600">
         {current
           ? accessEnded(current)
             ? `Their access ended on ${accessDate(current)}, so they’re on hold. Pick a later day to extend it.`
@@ -1034,7 +963,7 @@ function AccessUntilField({
           type="button"
           onClick={() => void save(value)}
           disabled={busy || !value || value === current}
-          className="min-h-[44px] flex-1 rounded-full bg-brand-blue px-4 text-sm font-bold text-white disabled:opacity-50"
+          className={`${pill.blue} flex-1`}
         >
           {busy ? 'Saving…' : 'Save'}
         </button>
@@ -1043,7 +972,7 @@ function AccessUntilField({
             type="button"
             onClick={() => void save(null)}
             disabled={busy}
-            className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600 disabled:opacity-50"
+            className={pill.outline}
           >
             No end date
           </button>
@@ -1104,8 +1033,8 @@ function MemberCard({
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [statusBusy, setStatusBusy] = useState(false)
   const [statusError, setStatusError] = useState<string | null>(null)
-  const [confirmHold, setConfirmHold] = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)
+  const [changingLevel, setChangingLevel] = useState(false)
   const [pendingLevel, setPendingLevel] = useState<StaffLevel | null>(null)
   const [levelBusy, setLevelBusy] = useState(false)
   const [levelError, setLevelError] = useState<string | null>(null)
@@ -1132,7 +1061,6 @@ function MemberCard({
     const err = await action(member)
     setStatusBusy(false)
     if (err) setStatusError(err)
-    else setConfirmHold(false)
   }
 
   const saveLevel = async () => {
@@ -1142,7 +1070,10 @@ function MemberCard({
     const err = await onSetLevel(member, pendingLevel)
     setLevelBusy(false)
     if (err) setLevelError(err)
-    else setPendingLevel(null)
+    else {
+      setPendingLevel(null)
+      setChangingLevel(false)
+    }
   }
 
   return (
@@ -1152,24 +1083,15 @@ function MemberCard({
           <StaffAvatar name={name} photoUrl={member.photo_url} size={52} />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="break-all font-display text-[15px] font-extrabold text-ink">{name}</span>
-              {isSelf && <span className="shrink-0 text-xs font-bold text-slate-400">(you)</span>}
+              <span className="break-all font-display text-base font-extrabold text-ink">{name}</span>
+              {isSelf && <span className="shrink-0 text-sm font-bold text-slate-500">(you)</span>}
             </div>
-            {member.title && <span className="block text-xs font-semibold text-slate-500">{member.title}</span>}
+            {member.title && <span className="block text-sm font-semibold text-slate-600">{member.title}</span>}
             {member.display_name && member.email && (
-              <span className="block break-all text-xs text-slate-400">{member.email}</span>
+              <span className="block break-all text-sm text-slate-500">{member.email}</span>
             )}
             {!member.email && !member.display_name && (
               <span className="font-mono text-[11px] text-slate-400">ID {member.user_id.slice(0, 8)}</span>
-            )}
-            {(isSelf || manage) && (
-              <button
-                type="button"
-                onClick={() => setEditingProfile((v) => !v)}
-                className="min-h-[36px] text-xs font-bold text-brand-blue"
-              >
-                {editingProfile ? 'Close' : member.photo_url ? 'Edit photo & title' : 'Add a photo & title'}
-              </button>
             )}
           </div>
         </div>
@@ -1193,9 +1115,25 @@ function MemberCard({
         </p>
       )}
 
+      {(isSelf || manage || (levelsMode && manage && levelChoices.length > 0)) && !editingProfile && (
+        <CardActions>
+          {(isSelf || manage) && (
+            <button type="button" onClick={() => setEditingProfile(true)} className={pill.outline}>
+              {member.photo_url ? 'Edit photo & title' : 'Add a photo & title'}
+            </button>
+          )}
+          {levelsMode && manage && levelChoices.length > 0 && !changingLevel && (
+            <button type="button" onClick={() => setChangingLevel(true)} className={pill.outline}>
+              Change level
+            </button>
+          )}
+        </CardActions>
+      )}
+
       {editingProfile && (
         <ProfileForm
           member={member}
+          onCancel={() => setEditingProfile(false)}
           onDone={async () => {
             setEditingProfile(false)
             await onProfileSaved()
@@ -1204,9 +1142,9 @@ function MemberCard({
       )}
 
       {/* Level — only the levels this person may give, and only for people below them. */}
-      {levelsMode && manage && levelChoices.length > 0 && (
+      {levelsMode && manage && levelChoices.length > 0 && changingLevel && (
         <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Level</p>
+          <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Change level</p>
           <LevelPicker
             value={pendingLevel ?? member.level}
             choices={levelChoices}
@@ -1231,14 +1169,14 @@ function MemberCard({
                   type="button"
                   onClick={() => void saveLevel()}
                   disabled={levelBusy}
-                  className="min-h-[44px] flex-1 rounded-full bg-brand-blue px-4 text-sm font-bold text-white disabled:opacity-60"
+                  className={`${pill.blue} flex-1`}
                 >
                   {levelBusy ? 'Saving…' : `Make ${levelInfo(pendingLevel).label}`}
                 </button>
                 <button
                   type="button"
                   onClick={() => setPendingLevel(null)}
-                  className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600"
+                  className={pill.outline}
                 >
                   Cancel
                 </button>
@@ -1246,21 +1184,33 @@ function MemberCard({
             </div>
           )}
           <FormError>{levelError}</FormError>
+          {!pendingLevel && (
+            <button
+              type="button"
+              onClick={() => {
+                setChangingLevel(false)
+                setLevelError(null)
+              }}
+              className={`${pill.outline} mt-2`}
+            >
+              Close
+            </button>
+          )}
         </div>
       )}
 
       {fullAccess ? (
-        <p className="text-sm text-slate-500">Holds every task.</p>
+        <p className="text-[15px] text-slate-600">Holds every task.</p>
       ) : manage ? (
         <div className="space-y-2">
           {cantShare && (
-            <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
               Grayed-out tasks: only someone who has this task can share it.
             </p>
           )}
           {AREAS.map(({ area, caps }) => (
             <div key={area}>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{area}</p>
+              <p className="text-sm font-bold uppercase tracking-wide text-slate-500">{area}</p>
               <div className="mt-0.5 grid grid-cols-1">
                 {caps.map((c) => {
                   const on = grants.has(c.key)
@@ -1269,11 +1219,11 @@ function MemberCard({
                     <label
                       key={c.key}
                       title={mine ? undefined : 'Only someone who has this task can share it.'}
-                      className={`flex min-h-[44px] items-center gap-2.5 text-sm ${mine ? 'text-slate-700' : 'text-slate-400'}`}
+                      className={`flex min-h-[44px] items-center gap-3 text-[15px] ${mine ? 'text-slate-700' : 'text-slate-400'}`}
                     >
                       <input
                         type="checkbox"
-                        className="h-5 w-5 shrink-0 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30 disabled:opacity-50"
+                        className="h-6 w-6 shrink-0 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30 disabled:opacity-50"
                         checked={on}
                         disabled={!mine || busyKey === c.key}
                         onChange={(e) => handleCap(c.key, e.target.checked)}
@@ -1287,7 +1237,7 @@ function MemberCard({
           ))}
         </div>
       ) : (
-        <p className="text-sm text-slate-500">
+        <p className="text-[15px] text-slate-600">
           {grants.size === 0
             ? 'No tasks switched on.'
             : `${grants.size} ${grants.size === 1 ? 'task' : 'tasks'} switched on.`}
@@ -1298,7 +1248,7 @@ function MemberCard({
       {manage && tiersReady && !isFullAccess(member.level) && <AccessUntilField member={member} onSave={onSetAccessUntil} />}
 
       {levelsMode && !manage && (
-        <p className="text-xs font-semibold text-slate-400">
+        <p className="text-sm font-semibold text-slate-500">
           {isSelf ? `Your own level and access: ${managedBy(member.level).toLowerCase()}.` : `${managedBy(member.level)}.`}
         </p>
       )}
@@ -1316,53 +1266,31 @@ function MemberCard({
       )}
 
       {/* On hold: they keep their account, level and tasks; turning back on needs no new invite. */}
-      {canHold &&
-        (onHold ? (
-          <button
-            type="button"
-            onClick={() => void runStatus(onTurnBackOn)}
-            disabled={statusBusy}
-            className="min-h-[44px] rounded-full border border-emerald-200 px-4 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-60"
-          >
-            {statusBusy ? 'Turning back on…' : 'Turn back on'}
-          </button>
-        ) : confirmHold ? (
-          <div className="space-y-2 rounded-xl bg-brand-orange-50/70 p-3">
-            <p className="text-sm text-ink">
-              Put {name} on hold? They keep their account, level and tasks, but can’t use anything in the staff area until
-              someone turns them back on.
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => void runStatus(onPutOnHold)}
-                disabled={statusBusy}
-                className="min-h-[44px] flex-1 rounded-full bg-brand-orange-dark px-4 text-sm font-bold text-white disabled:opacity-60"
-              >
-                {statusBusy ? 'Putting on hold…' : 'Put on hold'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setConfirmHold(false)
-                  setStatusError(null)
-                }}
-                disabled={statusBusy}
-                className="min-h-[44px] rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-600"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setConfirmHold(true)}
-            className="min-h-[44px] rounded-full border border-brand-orange/40 px-4 text-xs font-bold text-brand-orange-dark transition hover:bg-brand-orange-50"
-          >
-            Put on hold
-          </button>
-        ))}
+      {canHold && (
+        <CardActions>
+          {onHold ? (
+            <button type="button" onClick={() => void runStatus(onTurnBackOn)} disabled={statusBusy} className={pill.green}>
+              {statusBusy ? 'Turning back on…' : 'Turn back on'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={statusBusy}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Put ${name} on hold? They keep their account, level and tasks, but can’t use anything in the staff area until someone turns them back on.`,
+                  )
+                )
+                  void runStatus(onPutOnHold)
+              }}
+              className={pill.outline}
+            >
+              {statusBusy ? 'Putting on hold…' : 'Put on hold'}
+            </button>
+          )}
+        </CardActions>
+      )}
       <FormError>{statusError}</FormError>
     </Card>
   )
@@ -1584,14 +1512,20 @@ export default function StaffTeam() {
   // Everyone not on hold, grouped by level (highest first); within a level, in the order they joined.
   const groups = useMemo(
     () =>
-      ALL_LEVELS.map((l) => ({ ...l, people: members.filter((m) => m.level === l.value && !isOnHold(m)) })).filter(
+      ALL_LEVELS.map((l) => ({
+        ...l,
+        people: members.filter((m) => m.level === l.value && !isOnHold(m)).sort((a, b) => memberName(a).localeCompare(memberName(b), undefined, { sensitivity: 'base' })),
+      })).filter(
         (g) => g.people.length > 0,
       ),
     [members],
   )
   // Everyone on hold, in one section at the bottom: highest level first.
   const onHold = useMemo(
-    () => ALL_LEVELS.flatMap((l) => members.filter((m) => m.level === l.value && isOnHold(m))),
+    () =>
+      ALL_LEVELS.flatMap((l) =>
+        members.filter((m) => m.level === l.value && isOnHold(m)).sort((a, b) => memberName(a).localeCompare(memberName(b), undefined, { sensitivity: 'base' })),
+      ),
     [members],
   )
 
@@ -1646,7 +1580,7 @@ export default function StaffTeam() {
       <Screen className="space-y-3 pt-2">
         <h1 className="font-display text-2xl font-black text-ink">Team</h1>
         <Card className="border-slate-200 bg-slate-50/80">
-          <p className="text-sm leading-relaxed text-slate-600">
+          <p className="text-[15px] leading-relaxed text-slate-600">
             You don't have access to manage the team. Ask {levelsReady ? 'someone above your level' : 'an owner or admin'} if
             you need it.
           </p>
@@ -1679,7 +1613,7 @@ export default function StaffTeam() {
             <Icon name="clock" size={18} className="text-brand-orange-dark" />
             {expiring.length} certification{expiring.length === 1 ? '' : 's'} to renew
           </p>
-          <ul className="space-y-0.5 text-sm text-slate-700">
+          <ul className="space-y-0.5 text-[15px] text-slate-700">
             {expiring.slice(0, 6).map((x, i) => (
               <li key={i}>
                 <span className="font-semibold">{x.who}</span> — {x.what}:{' '}
@@ -1698,12 +1632,12 @@ export default function StaffTeam() {
           {groups.map((g) => (
             <section key={g.value} className="space-y-2">
               <div className="px-1">
-                <p className="font-display text-base font-extrabold text-ink">
+                <p className="font-display text-lg font-extrabold text-ink">
                   {levelsReady ? g.plural : g.value === 'founder' ? 'Owners' : g.value === 'board' ? 'Admins' : 'Staff'}{' '}
                   <span className="font-bold text-slate-400">({g.people.length})</span>
                 </p>
                 {levelsReady && (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-sm text-slate-600">
                     {!tiersReady && g.value === 'board' ? 'Every task' : g.blurb}
                   </p>
                 )}
@@ -1721,7 +1655,7 @@ export default function StaffTeam() {
                 </span>
                 <Icon name="chevron" size={16} className="rotate-90 text-slate-400 transition-transform group-open:-rotate-90" />
               </summary>
-              <p className="px-1 pt-1 text-xs text-slate-500">
+              <p className="px-1 pt-1 text-sm text-slate-600">
                 They keep their level and tasks. Turn someone back on when you need them again, e.g. for next year’s
                 BunFest.
               </p>
@@ -1731,7 +1665,7 @@ export default function StaffTeam() {
         </>
       )}
 
-      <p className="px-1 text-xs leading-relaxed text-slate-400">
+      <p className="px-1 text-sm leading-relaxed text-slate-500">
         Members are shown by email. (If you see only short IDs, the database helper that exposes
         emails hasn’t been added yet — it’s a one-time setup step.)
       </p>
@@ -1746,7 +1680,7 @@ export default function StaffTeam() {
  * would rather not be photographed, and the team list draws a bunny instead.
  * A member may always edit their own; staff.permissions.manage may edit anyone's.
  */
-function ProfileForm({ member, onDone }: { member: Member; onDone: () => Promise<void> }) {
+function ProfileForm({ member, onDone, onCancel }: { member: Member; onDone: () => Promise<void>; onCancel: () => void }) {
   const { user } = useAuth()
   const [d, setD] = useState({
     display_name: member.display_name ?? '',
@@ -1779,38 +1713,46 @@ function ProfileForm({ member, onDone }: { member: Member; onDone: () => Promise
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-brand-blue/20 bg-brand-blue-50/40 p-3">
-      <StaffImageField
-        label="Photo"
-        hint="Entirely optional — without one the team list shows a bunny with an excuse."
-        value={d.photo_url}
-        userId={user?.id ?? ''}
-        onChange={(url) => setD({ ...d, photo_url: url })}
-        onBusyChange={setImageBusy}
-      />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="block text-sm font-semibold text-slate-700">
-          Name to show
+    <EditorForm
+      title={`${member.photo_url || member.title ? 'Edit' : 'Add'} photo & title`}
+      hint="Nothing here is needed — fill in what you like."
+      onSubmit={save}
+      onCancel={onCancel}
+      busy={busy || imageBusy}
+      error={error}
+    >
+      <div className="space-y-3">
+        <Part n="A" hint="optional">Who</Part>
+        <Field label="Name to show">
           <input className={staffInput} value={d.display_name} onChange={(e) => setD({ ...d, display_name: e.target.value })} placeholder="Bev" />
-        </label>
-        <label className="block text-sm font-semibold text-slate-700">
-          What they do
+        </Field>
+        <Field label="What they do">
           <input className={staffInput} value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} placeholder="Adoption Coordinator" />
+        </Field>
+      </div>
+      <div className="space-y-3">
+        <Part n="B" hint="optional">Photo</Part>
+        <StaffImageField
+          label="Photo (optional)"
+          hint="Entirely optional — without one the team list shows a bunny with an excuse."
+          value={d.photo_url}
+          userId={user?.id ?? ''}
+          onChange={(url) => setD({ ...d, photo_url: url })}
+          onBusyChange={setImageBusy}
+        />
+      </div>
+      <div className="space-y-3">
+        <Part n="C" hint="optional">Public About page</Part>
+        <label className="flex min-h-[44px] items-center gap-3 text-base font-semibold text-slate-700">
+          <input
+            type="checkbox"
+            className="h-6 w-6 rounded border-slate-300 text-brand-blue"
+            checked={d.show_on_about}
+            onChange={(e) => setD({ ...d, show_on_about: e.target.checked })}
+          />
+          Show on the public About page
         </label>
       </div>
-      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <input
-          type="checkbox"
-          className="h-5 w-5 rounded border-slate-300 text-brand-blue"
-          checked={d.show_on_about}
-          onChange={(e) => setD({ ...d, show_on_about: e.target.checked })}
-        />
-        Show on the public About page
-      </label>
-      <FormError>{error}</FormError>
-      <button type="button" onClick={save} disabled={busy || imageBusy} className={`${btn.primary} w-full disabled:opacity-60`}>
-        {busy ? 'Saving…' : 'Save'}
-      </button>
-    </div>
+    </EditorForm>
   )
 }

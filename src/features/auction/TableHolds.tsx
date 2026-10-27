@@ -51,9 +51,9 @@ interface Helper {
 }
 
 const small =
-  'inline-flex min-h-[44px] items-center justify-center rounded-full border border-slate-200 px-4 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60'
+  'inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 text-[15px] font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60'
 const danger =
-  'inline-flex min-h-[44px] items-center justify-center rounded-full border border-red-200 px-4 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-60'
+  'inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-red-200 bg-white px-4 text-[15px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-60'
 
 const isMissing = (m: string) => /could not find the function|does not exist|schema cache|PGRST202/i.test(m)
 
@@ -158,7 +158,7 @@ export default function TableHolds({ orgId, onChange }: { orgId: string; onChang
               New: #{c.pickup_no} {c.title} — {c.buyer_name}, {money(c.amount_cents)}
             </p>
           ))}
-          <button type="button" onClick={() => setFresh([])} className="text-xs underline">
+          <button type="button" onClick={() => setFresh([])} className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-white px-4 text-[15px] font-bold text-ink">
             Got it
           </button>
         </div>
@@ -170,7 +170,7 @@ export default function TableHolds({ orgId, onChange }: { orgId: string; onChang
 
       {done.length > 0 && (
         <div>
-          <button type="button" onClick={() => setShowDone((v) => !v)} className="inline-flex min-h-[44px] items-center text-sm font-bold text-brand-blue">
+          <button type="button" onClick={() => setShowDone((v) => !v)} className={small} aria-expanded={showDone}>
             {showDone ? 'Hide' : 'Show'} handed over and put back ({done.length})
           </button>
           {showDone && (

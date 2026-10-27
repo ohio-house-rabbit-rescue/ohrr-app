@@ -25,6 +25,7 @@ import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen, SectionLabel } from '../components/ui'
 import { Icon } from '../components/icons'
 import { StaffTitle } from '../components/StaffTitle'
+import { Field, NotOnYet, Optional, Part, StepButton, StepRow, StepRows, WorkingOn, pill } from '../components/StaffJob'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { RafflePhoto } from '../features/raffle/RafflePhoto'
 import { uploadAuctionPhoto } from '../features/raffle/photoUpload'
@@ -45,12 +46,12 @@ import {
   type AuctionSettings,
 } from '../features/raffle/types'
 import { GivenByCompany } from '../features/bunfest/GivenByCompany'
-import { useBunfestEvent } from '../lib/events'
+import { eventDate, useBunfestEvent } from '../lib/events'
 import { auctionApi, fmtWhen, money, ONLINE_AUCTION_EVENT } from '../features/auction/client'
 import { AuctionEventProvider, BUNFEST_AUCTION, ONLINE_AUCTION, useAuctionEvent } from '../features/auction/event'
 
-const pill =
-  'rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-60'
+// Card buttons are 40px by default; the phone at the table wants 44px.
+const act = (p: string) => `${p} !min-h-[44px]`
 
 /* ------------------------------------------------------------------ */
 /* Photo step — camera first                                           */
@@ -122,19 +123,14 @@ function PhotoCapture({
           <img src={photo} alt="Item photo" className="h-full w-full object-cover" />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" disabled={busy} onClick={() => cameraRef.current?.click()} className={pill}>
-            {busy ? 'Uploading…' : 'Retake'}
+          <button type="button" disabled={busy} onClick={() => cameraRef.current?.click()} className={act(pill.outline)}>
+            <Icon name="camera" size={16} /> {busy ? 'Uploading…' : 'Retake'}
           </button>
-          <button type="button" disabled={busy} onClick={() => libraryRef.current?.click()} className={pill}>
+          <button type="button" disabled={busy} onClick={() => libraryRef.current?.click()} className={act(pill.outline)}>
             Choose another
           </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onPhoto(null)}
-            className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-60"
-          >
-            Remove
+          <button type="button" disabled={busy} onClick={() => onPhoto(null)} className={act(pill.red)}>
+            <Icon name="trash" size={16} /> Remove photo
           </button>
         </div>
         <FormError>{error}</FormError>
@@ -156,14 +152,9 @@ function PhotoCapture({
         <span className="font-display text-base font-extrabold">
           {busy ? 'Uploading…' : 'Take a photo'}
         </span>
-        <span className="text-xs font-semibold text-slate-500">Opens your camera</span>
+        <span className="text-sm font-semibold text-slate-500">Opens your camera</span>
       </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => libraryRef.current?.click()}
-        className="block w-full text-center text-sm font-bold text-brand-blue hover:text-brand-blue-dark disabled:opacity-60"
-      >
+      <button type="button" disabled={busy} onClick={() => libraryRef.current?.click()} className={`${act(pill.outline)} w-full`}>
         Choose from your photos instead
       </button>
       <FormError>{error}</FormError>
@@ -301,9 +292,15 @@ function ItemForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3">
+    <form onSubmit={submit} className="space-y-4">
+      <Part n="A" hint="needed">
+        The item
+      </Part>
       <div>
-        <span className="text-sm font-semibold text-slate-700">Photo</span>
+        <span className="text-sm font-semibold text-slate-700">
+          Photo
+          <Optional />
+        </span>
         <div className="mt-1.5">
           <PhotoCapture
             orgId={orgId}
@@ -314,63 +311,66 @@ function ItemForm({
         </div>
       </div>
 
-      <label className="block text-sm font-semibold text-slate-700">
-        Title
+      <Field label="Title" needed>
         <input className={staffInput} required value={draft.title} onChange={set('title')} />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        Description
+      </Field>
+      <Field label="Description">
         <textarea className={staffInput} rows={3} value={draft.description} onChange={set('description')} />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        Donated by
+      </Field>
+      <Field label="Donated by">
         <input className={staffInput} value={draft.donated_by} onChange={set('donated_by')} />
-      </label>
+      </Field>
 
+      <Part n="B" hint="optional">
+        Value and where it shows
+      </Part>
       <div className="flex gap-3">
-        <label className="block flex-1 text-sm font-semibold text-slate-700">
-          Value ($)
-          <input
-            className={staffInput}
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            placeholder="0"
-            value={draft.value}
-            onChange={set('value')}
-          />
-        </label>
+        <div className="min-w-0 flex-1">
+          <Field label="Value ($)">
+            <input
+              className={staffInput}
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.01"
+              placeholder="0"
+              value={draft.value}
+              onChange={set('value')}
+            />
+          </Field>
+        </div>
         {!ev.online && (
-          <label className="block flex-1 text-sm font-semibold text-slate-700">
-            Session
-            <select className={staffInput} value={draft.session} onChange={set('session')}>
-              {AUCTION_SESSIONS.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="min-w-0 flex-1">
+            <Field label="Session">
+              <select className={staffInput} value={draft.session} onChange={set('session')}>
+                {AUCTION_SESSIONS.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
         )}
       </div>
 
       <div className="flex items-end gap-3">
-        <label className="block w-28 text-sm font-semibold text-slate-700">
-          Sort order
-          <input
-            className={staffInput}
-            type="number"
-            inputMode="numeric"
-            step="1"
-            value={draft.sort_order}
-            onChange={set('sort_order')}
-          />
-        </label>
-        <label className="flex flex-1 items-center gap-2 pb-3 text-sm font-semibold text-slate-700">
+        <div className="w-28">
+          <Field label="Sort order">
+            <input
+              className={staffInput}
+              type="number"
+              inputMode="numeric"
+              step="1"
+              value={draft.sort_order}
+              onChange={set('sort_order')}
+            />
+          </Field>
+        </div>
+        <label className="flex min-h-[44px] flex-1 items-center gap-2 pb-1 text-sm font-semibold text-slate-700">
           <input
             type="checkbox"
-            className="h-4 w-4 rounded border-slate-300 text-brand-blue"
+            className="h-5 w-5 rounded border-slate-300 text-brand-blue"
             checked={draft.is_published}
             onChange={(e) => setDraft((d) => ({ ...d, is_published: e.target.checked }))}
           />
@@ -379,27 +379,28 @@ function ItemForm({
       </div>
 
       {hasBidding && (
-        <div className="space-y-3 border-t border-slate-100 pt-3">
-          <div>
-            <p className="font-display text-[15px] font-extrabold text-ink">Online bidding</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-              Blank starting bid = one bid step. Blank step = the auction’s default step (Auction setup).
-            </p>
-          </div>
+        <div className="space-y-3">
+          <Part n="C" hint="optional">
+            Online bidding
+          </Part>
+          <p className="text-sm leading-relaxed text-slate-500">
+            Blank starting bid = one bid step. Blank step = the auction’s default step (Auction setup).
+          </p>
           <div className="flex gap-3">
-            <label className="block flex-1 text-sm font-semibold text-slate-700">
-              Starting bid ($)
-              <input className={staffInput} type="number" inputMode="decimal" min="0" step="0.01" placeholder="Not set" value={draft.starting_bid} onChange={set('starting_bid')} />
-            </label>
-            <label className="block flex-1 text-sm font-semibold text-slate-700">
-              Bid step ($)
-              <input className={staffInput} type="number" inputMode="decimal" min="0.01" step="0.01" placeholder="Default" value={draft.bid_step} onChange={set('bid_step')} />
-            </label>
+            <div className="min-w-0 flex-1">
+              <Field label="Starting bid ($)">
+                <input className={staffInput} type="number" inputMode="decimal" min="0" step="0.01" placeholder="Not set" value={draft.starting_bid} onChange={set('starting_bid')} />
+              </Field>
+            </div>
+            <div className="min-w-0 flex-1">
+              <Field label="Bid step ($)">
+                <input className={staffInput} type="number" inputMode="decimal" min="0.01" step="0.01" placeholder="Default" value={draft.bid_step} onChange={set('bid_step')} />
+              </Field>
+            </div>
           </div>
-          <label className="block text-sm font-semibold text-slate-700">
-            Buy Now price ($, optional)
+          <Field label="Buy Now price ($)">
             <input className={staffInput} type="number" inputMode="decimal" min="0.01" step="0.01" placeholder="No Buy Now" value={draft.buy_now} onChange={set('buy_now')} />
-          </label>
+          </Field>
           <div className="flex items-end gap-3">
             <label className="flex min-h-[44px] flex-1 items-center gap-2 text-sm font-semibold text-slate-700">
               <input
@@ -411,10 +412,11 @@ function ItemForm({
               Pickup only
             </label>
             {!draft.pickup_only && (
-              <label className="block w-36 text-sm font-semibold text-slate-700">
-                Shipping fee ($)
-                <input className={staffInput} type="number" inputMode="decimal" min="0" step="0.01" placeholder="0" value={draft.ship_fee} onChange={set('ship_fee')} />
-              </label>
+              <div className="w-36">
+                <Field label="Shipping fee ($)" needed>
+                  <input className={staffInput} type="number" inputMode="decimal" min="0" step="0.01" placeholder="0" value={draft.ship_fee} onChange={set('ship_fee')} />
+                </Field>
+              </div>
             )}
           </div>
         </div>
@@ -426,16 +428,11 @@ function ItemForm({
         <button
           type="submit"
           disabled={busy || draft.title.trim().length === 0}
-          className={`${btn.primary} flex-1 disabled:opacity-60`}
+          className={`${btn.primary} min-h-[48px] flex-1 disabled:opacity-60`}
         >
           {busy ? 'Saving…' : submitLabel}
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={busy}
-          className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50"
-        >
+        <button type="button" onClick={onCancel} disabled={busy} className={act(pill.outline)}>
           Cancel
         </button>
       </div>
@@ -472,15 +469,11 @@ function AddItem({
           <button
             type="button"
             onClick={() => setStep('details')}
-            className={`${btn.primary} flex-1`}
+            className={`${btn.primary} min-h-[48px] flex-1`}
           >
             {photo ? 'Continue' : 'Continue without a photo'}
           </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50"
-          >
+          <button type="button" onClick={onCancel} className={act(pill.outline)}>
             Cancel
           </button>
         </div>
@@ -629,7 +622,7 @@ function ItemCard({
             {value && <span className="shrink-0 text-sm font-bold text-emerald-600">{value}</span>}
           </div>
           {item.donated_by && (
-            <p className="mt-0.5 truncate text-xs font-semibold text-slate-400">Donated by {item.donated_by}</p>
+            <p className="mt-0.5 truncate text-sm font-semibold text-slate-500">Donated by {item.donated_by}</p>
           )}
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {won ? <Badge tone="orange">{hasSale ? (item.won_kind === 'buy_now' ? 'Sold · Buy Now' : 'Sold') : 'Won'}</Badge> : <Badge tone="blue">Available</Badge>}
@@ -637,7 +630,7 @@ function ItemCard({
             {!ev.online && <Badge tone="slate">{sessionLabel(item.session)}</Badge>}
           </div>
           {hasBidding && (
-            <p className="mt-1.5 text-xs font-semibold text-slate-500">
+            <p className="mt-1.5 text-sm font-semibold text-slate-500">
               {currentBid != null ? (
                 <>
                   {won ? 'Sold for' : 'Current bid'} {money(currentBid)} · {bidCount} bid{bidCount === 1 ? '' : 's'}
@@ -655,91 +648,54 @@ function ItemCard({
             </p>
           )}
         </div>
-        <div className="flex shrink-0 flex-col gap-1">
-          <button
-            type="button"
-            aria-label="Move up"
-            disabled={busy || isFirst}
-            onClick={() => move(-1)}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-30"
-          >
-            <Icon name="chevron" size={14} className="-rotate-90" />
-          </button>
-          <button
-            type="button"
-            aria-label="Move down"
-            disabled={busy || isLast}
-            onClick={() => move(1)}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-30"
-          >
-            <Icon name="chevron" size={14} className="rotate-90" />
-          </button>
-        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 pt-1">
         {hasSale ? (
-          <Link to={`/staff/auction-desk${ev.online ? '?auction=online' : ''}`} className={pill}>
+          <Link to={`/staff/auction-desk${ev.online ? '?auction=online' : ''}`} className={act(pill.soft)}>
             Sale on the Auction desk
           </Link>
         ) : won ? (
-          <button type="button" disabled={busy} onClick={() => patch({ status: 'available' })} className={pill}>
+          <button type="button" disabled={busy} onClick={() => patch({ status: 'available' })} className={act(pill.outline)}>
             Back to available
           </button>
         ) : (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => patch({ status: 'won' })}
-            className="rounded-full bg-brand-orange px-3 py-1.5 text-xs font-bold text-ink hover:bg-brand-orange-dark disabled:opacity-60"
-          >
-            Mark won
+          <button type="button" disabled={busy} onClick={() => patch({ status: 'won' })} className={act(pill.orange)}>
+            <Icon name="check" size={16} /> Mark won
           </button>
         )}
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => patch({ is_published: !item.is_published })}
-          className={pill}
-        >
-          {item.is_published ? 'Unpublish' : 'Publish'}
-        </button>
-        <button type="button" onClick={() => setEditing(true)} className={pill}>
+        <button type="button" onClick={() => setEditing(true)} className={act(pill.outline)}>
           Edit
         </button>
-        <button type="button" disabled={busy} onClick={() => void printLabel()} className={pill}>
-          Print label
+        <button type="button" disabled={busy} onClick={() => patch({ is_published: !item.is_published })} className={act(pill.outline)}>
+          <Icon name={item.is_published ? 'eyeOff' : 'eye'} size={16} /> {item.is_published ? 'Hide from the app' : 'Show in the app'}
+        </button>
+        <button type="button" disabled={busy} onClick={() => void printLabel()} className={act(pill.outline)}>
+          <Icon name="printer" size={16} /> Print label
         </button>
         {hasBidding && !hasSale && bidCount === 0 && (
-          <button type="button" disabled={busy} onClick={() => void moveToOther()} className={pill}>
-            Move to {other.online ? 'the Online Auction' : 'BunFest'}
+          <button type="button" disabled={busy} onClick={() => void moveToOther()} className={act(pill.outline)}>
+            Move to {other.online ? `the ${ONLINE_AUCTION.name}` : `the ${BUNFEST_AUCTION.name}`}
           </button>
         )}
+        <button type="button" aria-label={`Move ${item.title} up`} disabled={busy || isFirst} onClick={() => move(-1)} className={act(pill.outline)}>
+          <Icon name="chevron" size={16} className="-rotate-90" /> Move up
+        </button>
+        <button type="button" aria-label={`Move ${item.title} down`} disabled={busy || isLast} onClick={() => move(1)} className={act(pill.outline)}>
+          <Icon name="chevron" size={16} className="rotate-90" /> Move down
+        </button>
         {confirmDelete ? (
           <>
-            <button
-              type="button"
-              onClick={doDelete}
-              disabled={busy}
-              className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
-            >
-              {busy ? 'Deleting…' : 'Confirm delete'}
+            <button type="button" onClick={doDelete} disabled={busy} className={`${act(pill.red)} !bg-red-600 !text-white`}>
+              {busy ? 'Removing…' : 'Yes, remove it'}
             </button>
-            <button
-              type="button"
-              onClick={() => setConfirmDelete(false)}
-              className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-50"
-            >
+            <button type="button" onClick={() => setConfirmDelete(false)} className={act(pill.outline)}>
               Cancel
             </button>
           </>
         ) : (
-          <button
-            type="button"
-            onClick={() => setConfirmDelete(true)}
-            className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50"
-          >
-            Delete
+          <button type="button" onClick={() => setConfirmDelete(true)} className={act(pill.red)}>
+            <Icon name="trash" size={16} /> Remove
           </button>
         )}
       </div>
@@ -776,10 +732,10 @@ function PaymentServerStatus() {
       alive = false
     }
   }, [])
-  if (h === undefined) return <p className="text-xs text-slate-400">Checking the payment server…</p>
+  if (h === undefined) return <p className="text-sm text-slate-500">Checking the payment server…</p>
   if (h === null) {
     return (
-      <p className="text-xs leading-relaxed text-amber-800">
+      <p className="text-sm leading-relaxed text-amber-800">
         Payment server: not reachable. The Supabase function <code>ohrr-auction</code> isn’t deployed yet (or this phone is offline).
         Registering and Buy Now need it; the catalog and bids don’t.
       </p>
@@ -787,7 +743,7 @@ function PaymentServerStatus() {
   }
   const ok = h.square && h.supabase
   return (
-    <div className={`text-xs leading-relaxed ${ok ? 'text-emerald-800' : 'text-amber-800'}`}>
+    <div className={`text-sm leading-relaxed ${ok ? 'text-emerald-800' : 'text-amber-800'}`}>
       <p className="font-bold">Payment server: {ok ? 'ready' : 'not finished'}</p>
       <ul className="mt-0.5 space-y-0.5">
         <li>
@@ -825,14 +781,14 @@ function FindLocation({ event, applicationId, onPick }: { event: string; applica
   }
   return (
     <div className="space-y-1.5">
-      <button type="button" disabled={busy || !applicationId.trim()} onClick={() => void find()} className={pill}>
+      <button type="button" disabled={busy || !applicationId.trim()} onClick={() => void find()} className={act(pill.soft)}>
         {busy ? 'Asking Square…' : 'Find it from Square'}
       </button>
-      {list && list.length === 0 && <p className="text-xs text-amber-800">Square has no locations for this token.</p>}
+      {list && list.length === 0 && <p className="text-sm text-amber-800">Square has no locations for this token.</p>}
       {list && list.length > 1 && (
         <div className="flex flex-wrap gap-1.5">
           {list.map((l) => (
-            <button key={l.id} type="button" onClick={() => onPick(l.id)} className={pill}>
+            <button key={l.id} type="button" onClick={() => onPick(l.id)} className={act(pill.outline)}>
               {l.name}
               {!l.active && ' (inactive)'}
             </button>
@@ -849,6 +805,7 @@ function SetupPanel({
   settings,
   canManageSettings,
   hasBidding,
+  openSignal,
   onSaved,
 }: {
   orgId: string
@@ -856,6 +813,8 @@ function SetupPanel({
   canManageSettings: boolean
   /** The database has update 35 — show and save the online-bidding fields. */
   hasBidding: boolean
+  /** Goes up by one each time step 1 asks for the form to open. */
+  openSignal: number
   onSaved: () => void
 }) {
   const ev = useAuctionEvent()
@@ -911,6 +870,15 @@ function SetupPanel({
     setError(null)
     setEditing(true)
   }
+
+  // Step 1 on the page ("Set up the auction") opens this form.
+  useEffect(() => {
+    if (openSignal > 0) {
+      startEdit()
+      setTimeout(() => document.getElementById('auction-setup')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openSignal])
 
   const save = async (e: { preventDefault(): void }) => {
     e.preventDefault()
@@ -1005,89 +973,130 @@ function SetupPanel({
   const priceLabel = rafflePriceLine(settings)
 
   return (
-    <section className="space-y-2.5">
+    <section id="auction-setup" className="space-y-2.5">
       <SectionLabel>Auction setup</SectionLabel>
       <Card className="space-y-3">
         {editing ? (
-          <form onSubmit={save} className="space-y-3">
+          <form onSubmit={save} className="space-y-4">
+            <Part n="A" hint="needed">
+              What and when
+            </Part>
             {ev.online ? (
               <>
-                <label className="block text-sm font-semibold text-slate-700">
-                  Auction name
+                <Field label="Auction name">
                   <input className={staffInput} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="OHRR Online Auction" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">
-                  Auction closes
+                </Field>
+                <Field label="Auction closes" needed hint="Every item closes at this time (your phone’s time zone). Visitors see it on the catalog.">
                   <input className={staffInput} type="datetime-local" value={closesAt} onChange={(e) => setClosesAt(e.target.value)} />
-                  <span className="mt-1 block text-xs font-normal text-slate-500">Every item closes at this time (your phone’s time zone). Visitors see it on the catalog.</span>
-                </label>
+                </Field>
               </>
             ) : (
               <>
-                <p className="text-xs leading-relaxed text-slate-500">
-                  Close times are on BunFest day ({dayText}), Eastern time. Visitors see the session
-                  names on each item, not these times.
+                <p className="text-sm leading-relaxed text-slate-500">
+                  Close times are on {dayText} ({bunfest.title}), Eastern time. Visitors see the session names on each item, not these times.
                 </p>
                 <div className="flex gap-3">
-                  <label className="block flex-1 text-sm font-semibold text-slate-700">
-                    Morning closes
-                    <input className={staffInput} type="time" value={morning} onChange={(e) => setMorning(e.target.value)} />
-                  </label>
-                  <label className="block flex-1 text-sm font-semibold text-slate-700">
-                    Afternoon closes
-                    <input className={staffInput} type="time" value={afternoon} onChange={(e) => setAfternoon(e.target.value)} />
-                  </label>
+                  <div className="min-w-0 flex-1">
+                    <Field label="Morning closes" needed>
+                      <input className={staffInput} type="time" value={morning} onChange={(e) => setMorning(e.target.value)} />
+                    </Field>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <Field label="Afternoon closes" needed>
+                      <input className={staffInput} type="time" value={afternoon} onChange={(e) => setAfternoon(e.target.value)} />
+                    </Field>
+                  </div>
                 </div>
               </>
             )}
-            <label className="block text-sm font-semibold text-slate-700">
-              Intro line (optional)
+            <Field label="Intro line">
               <input
                 className={staffInput}
                 value={intro}
                 onChange={(e) => setIntro(e.target.value)}
                 placeholder="Shown at the top of the public catalog"
               />
-            </label>
+            </Field>
+
+            {hasBidding && (
+              <div className="space-y-4">
+                <Part n="B" hint="needed">
+                  Bidding rules
+                </Part>
+                <p className="text-sm leading-relaxed text-slate-500">
+                  On = people can register, bid and Buy Now in the app and on the website. Off = the catalog is a preview.
+                </p>
+                <label className="flex min-h-[44px] items-center gap-2 text-sm font-semibold text-slate-700">
+                  <input type="checkbox" className="h-5 w-5 rounded border-slate-300 text-brand-blue" checked={biddingOn} onChange={(e) => setBiddingOn(e.target.checked)} />
+                  Online bidding is on
+                </label>
+                <Field label="Bidding opens" hint={`Blank = as soon as it’s switched on. Items close at ${ev.online ? 'the closing time above' : 'their session’s time above'}.`}>
+                  <input className={staffInput} type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} />
+                </Field>
+                <div className="flex gap-3">
+                  <div className="min-w-0 flex-1">
+                    <Field label="Going once: extend by (minutes)" needed>
+                      <input className={staffInput} type="number" inputMode="numeric" min="0" max="60" step="1" value={extendMin} onChange={(e) => setExtendMin(e.target.value)} />
+                    </Field>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <Field label="Default bid step ($)" needed>
+                      <input className={staffInput} type="number" inputMode="decimal" min="0.01" step="0.01" value={defaultStep} onChange={(e) => setDefaultStep(e.target.value)} />
+                    </Field>
+                  </div>
+                </div>
+                <p className="text-sm leading-relaxed text-slate-500">A bid in the last N minutes pushes that item’s close N minutes out; 0 turns it off.</p>
+                <label className="flex min-h-[44px] items-start gap-2 text-sm font-semibold text-slate-700">
+                  <input type="checkbox" className="mt-0.5 h-5 w-5 rounded border-slate-300 text-brand-blue" checked={autoCharge} onChange={(e) => setAutoCharge(e.target.checked)} />
+                  <span>
+                    Charge winners automatically
+                    <span className="mt-0.5 block text-sm font-normal leading-relaxed text-slate-500">
+                      Within about 5 minutes of an item closing, the winner’s saved card is charged — no one needs to press anything. Off = staff close and
+                      charge from the Auction desk.
+                    </span>
+                  </span>
+                </label>
+                <Field label="Bidding note">
+                  <textarea className={staffInput} rows={2} value={biddingNote} onChange={(e) => setBiddingNote(e.target.value)} placeholder="Shown at the top of the catalog — e.g. when cards are charged" />
+                </Field>
+
+                <Part n="C" hint="optional — except Square, which is needed to switch bidding on">
+                  Pickup, shipping and payment
+                </Part>
+                <Field label="Pickup note">
+                  <textarea className={staffInput} rows={2} value={pickupNote} onChange={(e) => setPickupNote(e.target.value)} placeholder="Where and when winners collect items" />
+                </Field>
+                <Field label="Shipping note">
+                  <textarea className={staffInput} rows={2} value={shippingNote} onChange={(e) => setShippingNote(e.target.value)} placeholder="How soon items ship, what can’t be shipped" />
+                </Field>
+                <Field
+                  label="Square application ID"
+                  needed={biddingOn}
+                  hint={
+                    <>
+                      From developer.squareup.com → your app → Credentials. It’s safe to be public. The <strong>access token</strong> never goes here — it
+                      goes in Supabase → Edge Functions → Secrets.
+                    </>
+                  }
+                >
+                  <input className={`${staffInput} font-mono`} autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="sq0idp-… (or sandbox-sq0idb-… to test)" value={squareApp} onChange={(e) => setSquareApp(e.target.value)} />
+                </Field>
+                <Field label="Square location ID" needed={biddingOn}>
+                  <input className={`${staffInput} font-mono`} autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="L…" value={squareLoc} onChange={(e) => setSquareLoc(e.target.value)} />
+                </Field>
+                <FindLocation event={ev.slug} applicationId={squareApp} onPick={setSquareLoc} />
+              </div>
+            )}
 
             {!ev.online && (
-            <div className="space-y-3 border-t border-slate-100 pt-3">
-              <div>
-                <p className="font-display text-[15px] font-extrabold text-ink">Raffle tickets</p>
-                <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-                  Shown on the BunFest raffle page. Leave a price blank and the app shows no price
-                  at all — nothing is assumed.
+              <div className="space-y-4">
+                <Part n={hasBidding ? 'D' : 'B'} hint="optional">
+                  Raffle tickets
+                </Part>
+                <p className="text-sm leading-relaxed text-slate-500">
+                  Shown on the raffle page. Leave a price blank and the app shows no price at all — nothing is assumed.
                 </p>
-              </div>
-              <label className="block text-sm font-semibold text-slate-700">
-                Ticket price ($ each)
-                <input
-                  className={staffInput}
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.01"
-                  placeholder="Not set"
-                  value={ticketPrice}
-                  onChange={(e) => setTicketPrice(e.target.value)}
-                />
-              </label>
-              <div className="flex gap-3">
-                <label className="block flex-1 text-sm font-semibold text-slate-700">
-                  Bundle quantity
-                  <input
-                    className={staffInput}
-                    type="number"
-                    inputMode="numeric"
-                    min="2"
-                    step="1"
-                    placeholder="e.g. 6"
-                    value={bundleQty}
-                    onChange={(e) => setBundleQty(e.target.value)}
-                  />
-                </label>
-                <label className="block flex-1 text-sm font-semibold text-slate-700">
-                  Bundle price ($)
+                <Field label="Ticket price ($ each)">
                   <input
                     className={staffInput}
                     type="number"
@@ -1095,103 +1104,58 @@ function SetupPanel({
                     min="0"
                     step="0.01"
                     placeholder="Not set"
-                    value={bundlePrice}
-                    onChange={(e) => setBundlePrice(e.target.value)}
+                    value={ticketPrice}
+                    onChange={(e) => setTicketPrice(e.target.value)}
                   />
-                </label>
-              </div>
-              <label className="block text-sm font-semibold text-slate-700">
-                Raffle details (optional)
-                <textarea
-                  className={staffInput}
-                  rows={3}
-                  value={raffleDetails}
-                  onChange={(e) => setRaffleDetails(e.target.value)}
-                  placeholder="Where tickets are sold, drawing time, how winners are notified"
-                />
-              </label>
-            </div>
-            )}
-
-            {hasBidding && (
-              <div className="space-y-3 border-t border-slate-100 pt-3">
-                <div>
-                  <p className="font-display text-[15px] font-extrabold text-ink">Online bidding</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-                    On = people can register, bid and Buy Now in the app and on the website. Off = the catalog is a preview.
-                  </p>
-                </div>
-                <label className="flex min-h-[44px] items-center gap-2 text-sm font-semibold text-slate-700">
-                  <input type="checkbox" className="h-5 w-5 rounded border-slate-300 text-brand-blue" checked={biddingOn} onChange={(e) => setBiddingOn(e.target.checked)} />
-                  Online bidding is on
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">
-                  Bidding opens (optional)
-                  <input className={staffInput} type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} />
-                  <span className="mt-1 block text-xs font-normal text-slate-500">
-                    Blank = as soon as it’s switched on. Items close at {ev.online ? 'the closing time above' : 'their session’s time above'}.
-                  </span>
-                </label>
+                </Field>
                 <div className="flex gap-3">
-                  <label className="block flex-1 text-sm font-semibold text-slate-700">
-                    Going once: extend by (minutes)
-                    <input className={staffInput} type="number" inputMode="numeric" min="0" max="60" step="1" value={extendMin} onChange={(e) => setExtendMin(e.target.value)} />
-                  </label>
-                  <label className="block flex-1 text-sm font-semibold text-slate-700">
-                    Default bid step ($)
-                    <input className={staffInput} type="number" inputMode="decimal" min="0.01" step="0.01" value={defaultStep} onChange={(e) => setDefaultStep(e.target.value)} />
-                  </label>
+                  <div className="min-w-0 flex-1">
+                    <Field label="Bundle quantity">
+                      <input
+                        className={staffInput}
+                        type="number"
+                        inputMode="numeric"
+                        min="2"
+                        step="1"
+                        placeholder="e.g. 6"
+                        value={bundleQty}
+                        onChange={(e) => setBundleQty(e.target.value)}
+                      />
+                    </Field>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <Field label="Bundle price ($)">
+                      <input
+                        className={staffInput}
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.01"
+                        placeholder="Not set"
+                        value={bundlePrice}
+                        onChange={(e) => setBundlePrice(e.target.value)}
+                      />
+                    </Field>
+                  </div>
                 </div>
-                <p className="text-xs leading-relaxed text-slate-500">A bid in the last N minutes pushes that item’s close N minutes out; 0 turns it off.</p>
-                <label className="flex min-h-[44px] items-start gap-2 text-sm font-semibold text-slate-700">
-                  <input type="checkbox" className="mt-0.5 h-5 w-5 rounded border-slate-300 text-brand-blue" checked={autoCharge} onChange={(e) => setAutoCharge(e.target.checked)} />
-                  <span>
-                    Charge winners automatically
-                    <span className="mt-0.5 block text-xs font-normal leading-relaxed text-slate-500">
-                      Within about 5 minutes of an item closing, the winner’s saved card is charged — no one needs to press anything. Off = staff close and
-                      charge from the Auction desk.
-                    </span>
-                  </span>
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">
-                  Square application id
-                  <input className={`${staffInput} font-mono text-xs`} autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="sq0idp-… (or sandbox-sq0idb-… to test)" value={squareApp} onChange={(e) => setSquareApp(e.target.value)} />
-                  <span className="mt-1 block text-xs font-normal leading-relaxed text-slate-500">
-                    From developer.squareup.com → your app → Credentials. It’s safe to be public. The <strong>access token</strong> never goes here — it
-                    goes in Supabase → Edge Functions → Secrets.
-                  </span>
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">
-                  Square location id
-                  <input className={`${staffInput} font-mono text-xs`} autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="L…" value={squareLoc} onChange={(e) => setSquareLoc(e.target.value)} />
-                </label>
-                <FindLocation event={ev.slug} applicationId={squareApp} onPick={setSquareLoc} />
-                <label className="block text-sm font-semibold text-slate-700">
-                  Bidding note (optional)
-                  <textarea className={staffInput} rows={2} value={biddingNote} onChange={(e) => setBiddingNote(e.target.value)} placeholder="Shown at the top of the catalog — e.g. when cards are charged" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">
-                  Pickup note (optional)
-                  <textarea className={staffInput} rows={2} value={pickupNote} onChange={(e) => setPickupNote(e.target.value)} placeholder="Where and when winners collect items" />
-                </label>
-                <label className="block text-sm font-semibold text-slate-700">
-                  Shipping note (optional)
-                  <textarea className={staffInput} rows={2} value={shippingNote} onChange={(e) => setShippingNote(e.target.value)} placeholder="How soon items ship, what can’t be shipped" />
-                </label>
+                <Field label="Raffle details">
+                  <textarea
+                    className={staffInput}
+                    rows={3}
+                    value={raffleDetails}
+                    onChange={(e) => setRaffleDetails(e.target.value)}
+                    placeholder="Where tickets are sold, drawing time, how winners are notified"
+                  />
+                </Field>
               </div>
             )}
 
             <FormError>{error}</FormError>
             <div className="flex gap-2">
-              <button type="submit" disabled={busy} className={`${btn.primary} flex-1 disabled:opacity-60`}>
+              <button type="submit" disabled={busy} className={`${btn.primary} min-h-[48px] flex-1 disabled:opacity-60`}>
                 {busy ? 'Saving…' : 'Save setup'}
               </button>
-              <button
-                type="button"
-                onClick={() => setEditing(false)}
-                disabled={busy}
-                className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50"
-              >
+              <button type="button" onClick={() => setEditing(false)} disabled={busy} className={act(pill.outline)}>
                 Cancel
               </button>
             </div>
@@ -1201,42 +1165,42 @@ function SetupPanel({
             {ev.online ? (
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Name</p>
+                  <p className="text-[13px] font-bold uppercase tracking-wide text-slate-500">Name</p>
                   <p className="mt-0.5 font-semibold text-ink">{settings?.title || ev.name}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Closes</p>
+                  <p className="text-[13px] font-bold uppercase tracking-wide text-slate-500">Closes</p>
                   <p className="mt-0.5 font-semibold text-ink">{settings?.afternoon_closes_at ? fmtWhen(settings.afternoon_closes_at) : 'Not set'}</p>
                 </div>
               </div>
             ) : (
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Morning closes</p>
+                <p className="text-[13px] font-bold uppercase tracking-wide text-slate-500">Morning closes</p>
                 <p className="mt-0.5 font-semibold text-ink">{morningLabel ?? 'Not set'}</p>
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Afternoon closes</p>
+                <p className="text-[13px] font-bold uppercase tracking-wide text-slate-500">Afternoon closes</p>
                 <p className="mt-0.5 font-semibold text-ink">{afternoonLabel ?? 'Not set'}</p>
               </div>
             </div>
             )}
             <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Intro line</p>
+              <p className="text-[13px] font-bold uppercase tracking-wide text-slate-500">Intro line</p>
               <p className="mt-0.5 text-sm text-slate-600">
                 {settings?.intro_text?.trim() || <span className="text-slate-400">None — the catalog shows items only</span>}
               </p>
             </div>
             {!ev.online && (
             <div className="space-y-2 border-t border-slate-100 pt-3">
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Raffle tickets</p>
+              <p className="text-[13px] font-bold uppercase tracking-wide text-slate-500">Raffle tickets</p>
               <p className="text-sm font-semibold text-ink">
                 {priceLabel ?? <span className="font-normal text-slate-400">Price not set — the app shows no price</span>}
               </p>
               <p className="whitespace-pre-line text-sm text-slate-600">
                 {settings?.raffle_details?.trim() || <span className="text-slate-400">No details yet</span>}
               </p>
-              <p className="text-xs leading-relaxed text-slate-500">
+              <p className="text-sm leading-relaxed text-slate-500">
                 The in-app ticket reservation form is a test feature: it appears on the raffle
                 page only while switched on in{' '}
                 {canManageSettings ? (
@@ -1251,7 +1215,7 @@ function SetupPanel({
             </div>
             )}
             <div className="space-y-2 border-t border-slate-100 pt-3">
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Online bidding</p>
+              <p className="text-[13px] font-bold uppercase tracking-wide text-slate-500">Online bidding</p>
               {hasBidding ? (
                 <>
                   <p className="text-sm font-semibold text-ink">
@@ -1273,7 +1237,7 @@ function SetupPanel({
                     {settings?.auto_charge ? 'winners charged automatically' : 'staff charge from the desk'}
                   </p>
                   {(settings?.bidding_note || settings?.pickup_note || settings?.shipping_note) && (
-                    <p className="whitespace-pre-line text-xs text-slate-500">
+                    <p className="whitespace-pre-line text-sm text-slate-500">
                       {[settings?.bidding_note, settings?.pickup_note && `Pickup: ${settings.pickup_note}`, settings?.shipping_note && `Shipping: ${settings.shipping_note}`]
                         .filter(Boolean)
                         .join('\n')}
@@ -1282,13 +1246,10 @@ function SetupPanel({
                   <PaymentServerStatus />
                 </>
               ) : (
-                <p className="text-xs leading-relaxed text-slate-500">
-                  The online-bidding switch, prices and Square details aren’t switched on yet — ask an admin. They appear here once that has been
-                  run on the database.
-                </p>
+                <NotOnYet what="Online bidding, prices and Square details" update={35} />
               )}
             </div>
-            <button type="button" onClick={startEdit} className={pill}>
+            <button type="button" onClick={startEdit} className={act(pill.blue)}>
               {settings ? 'Edit setup' : 'Set up'}
             </button>
           </>
@@ -1324,6 +1285,11 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  // Goes up each time step 1 asks the setup form to open.
+  const [setupSignal, setSetupSignal] = useState(0)
+  // BunFest's name and day come from its event record, never from this page.
+  const bunfest = useBunfestEvent()
+  const bunfestDay = eventDate(bunfest)
   // Does the database have update 35 (online bidding)? One tiny probe on load.
   const [hasBidding, setHasBidding] = useState(false)
 
@@ -1414,6 +1380,17 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
   const nextSortOrder = items.reduce((max, i) => Math.max(max, i.sort_order), -1) + 1
   const availableCount = items.filter((i) => i.status === 'available' && i.is_published).length
 
+  // The Auction desk, on the right auction and (optionally) the right tab.
+  const deskTo = (tab?: 'done') => {
+    const q = new URLSearchParams()
+    if (ev.online) q.set('auction', 'online')
+    if (tab) q.set('tab', tab)
+    const qs = q.toString()
+    return `/staff/auction-desk${qs ? `?${qs}` : ''}`
+  }
+  const openSetup = () => setSetupSignal((n) => n + 1)
+  const noDesk = 'Online bidding isn’t switched on yet — ask an admin. Until then, mark items won on each item.'
+
   return (
     <Screen className="space-y-5">
       {hasBidding && (
@@ -1425,27 +1402,14 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
               role="tab"
               aria-selected={a.slug === ev.slug}
               onClick={() => onSwitch(a.online)}
-              className={`min-h-[40px] rounded-full px-3 text-sm font-bold ${a.slug === ev.slug ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-500'}`}
+              className={`min-h-[44px] rounded-full px-3 text-[15px] font-bold ${a.slug === ev.slug ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-500'}`}
             >
-              {a.online ? 'Online Auction' : 'BunFest'}
+              {a.name}
             </button>
           ))}
         </div>
       )}
-      <StaffTitle
-        title={ev.online ? settings?.title || ev.name : 'Silent Auction'}
-        actions={
-          !creating ? (
-            <button
-              type="button"
-              onClick={() => setCreating(true)}
-              className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
-            >
-              <Icon name="award" size={15} /> Add
-            </button>
-          ) : undefined
-        }
-      >
+      <StaffTitle title={ev.online ? settings?.title || ev.name : ev.name}>
         <p>
           {ev.online ? (
             <>
@@ -1460,21 +1424,90 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
               .
             </>
           ) : (
-            'Items appear in the BunFest app while they’re published.'
+            'Items appear in the app while they’re published.'
           )}{' '}
-          {hasBidding ? (
-            <>
-              Bids, Buy Now and sales run on the{' '}
-              <Link to={`/staff/auction-desk${ev.online ? '?auction=online' : ''}`} className="font-bold text-brand-blue hover:text-brand-blue-dark">
-                Auction desk
-              </Link>
-              .
-            </>
-          ) : (
-            'Mark items won as the day goes.'
-          )}
+          {hasBidding ? 'Bids, Buy Now and sales run on the Auction desk.' : 'Mark items won as the day goes.'}
         </p>
       </StaffTitle>
+
+      <WorkingOn
+        icon="gavel"
+        tone="blue"
+        label="Working on"
+        name={ev.online ? settings?.title || ev.name : `${ev.name} · ${bunfest.title}`}
+        line={
+          loading
+            ? undefined
+            : `${ev.online ? '' : `${bunfestDay} · `}${items.length} item${items.length === 1 ? '' : 's'} · ${availableCount} available in the app`
+        }
+      />
+
+      <StepRows label={ev.online ? 'How the Online Auction runs' : 'How the Silent Auction runs'}>
+        <StepRow n={1} name="Set up the auction" done={Boolean(settings)} hint={settings ? undefined : 'close times, bidding rules'}>
+          <StepButton icon="settings" tone={settings ? 'outline' : 'orange'} onClick={openSetup}>
+            {settings ? 'Edit the setup' : 'Set up the auction'}
+          </StepButton>
+        </StepRow>
+        <StepRow n={2} name="Add items and photos" done={items.length > 0} hint={items.length > 0 ? `${items.length} so far` : undefined}>
+          <StepButton icon="camera" tone={items.length === 0 && Boolean(settings) ? 'orange' : 'outline'} onClick={() => setCreating(true)} disabled={creating}>
+            Add an item
+          </StepButton>
+        </StepRow>
+        {ev.online ? (
+          <>
+            <StepRow n={3} name="Winners are charged" hint="the auction closes itself">
+              {hasBidding ? (
+                <StepButton to={deskTo()} icon="gavel">
+                  Watch the Auction desk
+                </StepButton>
+              ) : (
+                <span className="py-2.5 text-sm text-slate-500">{noDesk}</span>
+              )}
+            </StepRow>
+            <StepRow n={4} name="Hand over or ship">
+              {hasBidding && (
+                <>
+                  <StepButton to={deskTo()} icon="check">
+                    Hand over and ship
+                  </StepButton>
+                  <StepButton to={deskTo('done')} icon="file">
+                    I’m done: the summary
+                  </StepButton>
+                </>
+              )}
+            </StepRow>
+          </>
+        ) : (
+          <>
+            <StepRow n={3} name="Print bid-sheet labels">
+              <StepButton to="/staff/labels" icon="printer">
+                Print the labels
+              </StepButton>
+            </StepRow>
+            <StepRow n={4} name="On the day: Auction desk">
+              {hasBidding ? (
+                <StepButton to={deskTo()} icon="gavel" tone="orange">
+                  Open the Auction desk
+                </StepButton>
+              ) : (
+                <span className="py-2.5 text-sm text-slate-500">{noDesk}</span>
+              )}
+            </StepRow>
+            <StepRow n={5} name="Close, charge and hand over">
+              {hasBidding && (
+                <>
+                  <StepButton to={deskTo()} icon="check">
+                    Close and charge
+                  </StepButton>
+                  <StepButton to={deskTo('done')} icon="file">
+                    I’m done: the summary
+                  </StepButton>
+                </>
+              )}
+            </StepRow>
+          </>
+        )}
+      </StepRows>
 
       {creating && (
         <AddItem
@@ -1487,7 +1520,14 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
       )}
 
       {!loading && (
-        <SetupPanel orgId={orgId} settings={settings} canManageSettings={can('settings.manage')} hasBidding={hasBidding} onSaved={load} />
+        <SetupPanel
+          orgId={orgId}
+          settings={settings}
+          canManageSettings={can('settings.manage')}
+          hasBidding={hasBidding}
+          openSignal={setupSignal}
+          onSaved={load}
+        />
       )}
 
       <FormError>{error}</FormError>
@@ -1497,7 +1537,7 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
       ) : items.length === 0 ? (
         <Card className="border-slate-200 bg-slate-50/80 text-center">
           <p className="text-sm leading-relaxed text-slate-600">
-            No items yet. Tap “Add” to photograph the first one — visitors see it {ev.online ? 'in the Online Auction' : 'in the BunFest app'} right
+            No items yet. Tap “Add an item” in step 2 to photograph the first one — visitors see it {ev.online ? 'in the Online Auction' : 'in the app'} right
             away.
           </p>
         </Card>

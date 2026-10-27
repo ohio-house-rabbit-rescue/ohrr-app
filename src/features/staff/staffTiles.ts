@@ -97,14 +97,14 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       { to: '/staff/catalog', title: 'Receive items', hint: 'Donated or bought: photo, name, where kept, its use', icon: 'camera', group: 'items', show: canItems },
       { to: '/staff/catalog?box=1', title: 'Receive into boxes', hint: 'Add each item, its label, into a numbered box', icon: 'box', group: 'items', show: canItems },
       { to: '/staff/items', title: 'Items', hint: 'Donations to sort, baskets, auction and raffle', icon: 'box', group: 'items', show: canItems },
-      { to: '/staff/hopshop', title: 'Hop Shop inventory', hint: 'What the shop carries, stock, reorder', icon: 'store', group: 'items', show: canSeeHopShop },
-      { to: '/staff/hopshop/deliveries/new', title: 'Add a delivery', hint: 'Stock from the supplier’s invoice', icon: 'box', group: 'items', show: can('hopshop.inventory.update') || can('hopshop.products.edit') || can('hopshop.products.create') },
-      { to: '/staff/dropoffs', title: 'Drop-offs and thank-yous', hint: 'Who gave what, the letter', icon: 'mail', group: 'items', show: canItems },
-      { to: '/staff/donations/report', title: 'Monthly donations report', hint: 'Totals, by donor, a spreadsheet', icon: 'file', group: 'items', show: canItems },
       { to: '/staff/labels', title: 'Print labels', hint: 'Codes for items, any label size', icon: 'printer', group: 'items', show: canItems },
       { to: '/staff/boxes', title: 'Boxes', hint: 'Pack items in a numbered box, its label and list', icon: 'box', group: 'items', show: canItems },
       { to: '/staff/scan', title: 'Scan an item', hint: 'See, change or sort a labeled item', icon: 'scan', group: 'items', today: true, show: canItems },
+      { to: '/staff/hopshop', title: 'Hop Shop inventory', hint: 'What the shop carries, stock, reorder', icon: 'store', group: 'items', show: canSeeHopShop },
+      { to: '/staff/hopshop/deliveries/new', title: 'Add a delivery', hint: 'Stock from the supplier’s invoice', icon: 'box', group: 'items', show: can('hopshop.inventory.update') || can('hopshop.products.edit') || can('hopshop.products.create') },
       { to: '/staff/counter', title: 'Counter', hint: 'Sell, the till, door tickets', icon: 'bag', group: 'items', today: true, show: canCounter },
+      { to: '/staff/dropoffs', title: 'Drop-offs and thank-yous', hint: 'Who gave what, the letter', icon: 'mail', group: 'items', show: canItems },
+      { to: '/staff/donations/report', title: 'Monthly donations report', hint: 'Totals, by donor, a spreadsheet', icon: 'file', group: 'items', show: canItems },
 
       // Rabbits and care
       { to: '/staff/adopt', title: 'Adoptable rabbits', hint: 'Rabbits, photos, adoption status', icon: 'heart', group: 'rabbits', show: canAdopt },
@@ -115,9 +115,9 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
 
       // Volunteers
       { to: '/staff/calls', title: 'Volunteer calls', hint: 'Put out a need, check in, thank', icon: 'heart', group: 'volunteers', show: canVolunteer || canBookings },
+      { to: '/staff/bookings', title: 'Bookings', hint: pendingCount > 0 ? `${pendingCount} to confirm` : 'Shifts and appointments', icon: 'calendar', group: 'volunteers', today: true, badge: pendingCount, show: canBookings },
       { to: '/staff/volunteers', title: 'Volunteers', hint: 'The roster and their hours', icon: 'users', group: 'volunteers', show: canVolunteer || canBookings },
       { to: '/staff/volunteer', title: 'Volunteer opportunities', hint: 'Shifts, transport runs, events', icon: 'calendar', group: 'volunteers', show: canVolunteer },
-      { to: '/staff/bookings', title: 'Bookings', hint: pendingCount > 0 ? `${pendingCount} to confirm` : 'Shifts and appointments', icon: 'calendar', group: 'volunteers', today: true, badge: pendingCount, show: canBookings },
 
       // Events and BunFest
       { to: '/staff/events', title: 'Events', hint: 'BunFest and OHRR hoppenings', icon: 'calendar', group: 'events', show: canEvents },

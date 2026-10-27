@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
-import { btn, Badge, Card, Screen, SegTabs } from '../components/ui'
+import { Badge, Card, Screen, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
 import { StaffTitle } from '../components/StaffTitle'
+import { CardActions, EditorForm, Field, StepButton, pill } from '../components/StaffJob'
+import { CheckRow, PartBox, byName, confirmRemove, useCardAction, useSaving } from '../components/ContentEditorBits'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import type { VetRow } from '../lib/vets'
 import { seedVets, VET_REGIONS } from '../data/vets'
@@ -87,134 +89,108 @@ function toRow(d: Draft) {
 
 function VetForm({
   initial,
-  submitLabel,
+  title,
+  saveLabel,
   onSubmit,
   onCancel,
+  onRemove,
 }: {
   initial: Draft
-  submitLabel: string
+  title: string
+  saveLabel: string
   onSubmit: (d: Draft) => Promise<void>
   onCancel: () => void
+  onRemove?: () => Promise<void>
 }) {
   const [draft, setDraft] = useState<Draft>(initial)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { busy, error, submit, guard } = useSaving(() => onSubmit(draft))
   const set =
     (k: keyof Draft) =>
     (e: { target: { value: string } }) =>
       setDraft((d) => ({ ...d, [k]: e.target.value }))
-  const check = (k: 'is_emergency' | 'is_low_cost_spay' | 'gives_rhdv2' | 'is_published') => (e: { target: { checked: boolean } }) =>
-    setDraft((d) => ({ ...d, [k]: e.target.checked }))
-
-  const submit = async (e: { preventDefault(): void }) => {
-    e.preventDefault()
-    setError(null)
-    setBusy(true)
-    try {
-      await onSubmit(draft)
-    } catch (err) {
-      setError(errMessage(err))
-      setBusy(false)
-    }
-  }
+  const check = (k: 'is_emergency' | 'is_low_cost_spay' | 'gives_rhdv2' | 'is_published') => (v: boolean) =>
+    setDraft((d) => ({ ...d, [k]: v }))
 
   return (
-    <form onSubmit={submit} className="space-y-3">
-      <label className="block text-sm font-semibold text-slate-700">
-        Practice name
-        <input className={staffInput} required value={draft.name} onChange={set('name')} />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        Doctors
-        <input className={staffInput} value={draft.doctors} onChange={set('doctors')} placeholder="Dr. …, Dr. …" />
-      </label>
-      <div className="flex gap-3">
-        <label className="block flex-[2] text-sm font-semibold text-slate-700">
-          Street address
+    <EditorForm
+      title={title}
+      hint="Needed parts are marked. Save puts the clinic in Find a vet right away if it is shown."
+      onSubmit={submit}
+      onCancel={onCancel}
+      busy={busy}
+      saveLabel={saveLabel}
+      canSave={draft.name.trim().length > 0}
+      error={error}
+      remove={
+        onRemove
+          ? { label: 'Remove this clinic', confirm: 'Remove this clinic? This can’t be undone.', onRemove: guard(onRemove) }
+          : undefined
+      }
+    >
+      <PartBox n="A" title="The clinic" hint="needed">
+        <Field label="Practice name" needed>
+          <input className={staffInput} required value={draft.name} onChange={set('name')} />
+        </Field>
+        <Field label="Doctors">
+          <input className={staffInput} value={draft.doctors} onChange={set('doctors')} placeholder="Dr. …, Dr. …" />
+        </Field>
+        <Field label="Street address">
           <input className={staffInput} value={draft.address} onChange={set('address')} />
-        </label>
-        <label className="block flex-1 text-sm font-semibold text-slate-700">
-          City, State ZIP
+        </Field>
+        <Field label="City, State ZIP">
           <input className={staffInput} value={draft.city} onChange={set('city')} placeholder="Columbus, OH 43214" />
-        </label>
-      </div>
-      <label className="block text-sm font-semibold text-slate-700">
-        Region
-        <input className={staffInput} list="vet-regions" value={draft.region} onChange={set('region')} />
-        <datalist id="vet-regions">
-          {VET_REGIONS.map((r) => (
-            <option key={r} value={r} />
-          ))}
-        </datalist>
-      </label>
-      <div className="flex gap-3">
-        <label className="block flex-1 text-sm font-semibold text-slate-700">
-          Phone
-          <input className={staffInput} value={draft.phone} onChange={set('phone')} placeholder="614-…" />
-        </label>
-        <label className="block flex-1 text-sm font-semibold text-slate-700">
-          Second phone / text
-          <input className={staffInput} value={draft.phone2} onChange={set('phone2')} placeholder="Text 614-…" />
-        </label>
-      </div>
-      <div className="flex gap-3">
-        <label className="block flex-1 text-sm font-semibold text-slate-700">
-          Email
-          <input className={staffInput} type="email" value={draft.email} onChange={set('email')} />
-        </label>
-        <label className="block flex-1 text-sm font-semibold text-slate-700">
-          Website
-          <input className={staffInput} value={draft.website} onChange={set('website')} placeholder="https://…" />
-        </label>
-      </div>
-      <label className="block text-sm font-semibold text-slate-700">
-        Notes
-        <input className={staffInput} value={draft.notes} onChange={set('notes')} placeholder="e.g. Open 24/7 for exotics emergencies" />
-      </label>
-      <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={draft.is_emergency} onChange={check('is_emergency')} />
-          24/7 / after-hours emergencies (shows an EMERGENCY badge)
-        </label>
-        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={draft.is_low_cost_spay} onChange={check('is_low_cost_spay')} />
-          Low-cost spay/neuter (listed in that section)
-        </label>
-        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={draft.gives_rhdv2} onChange={check('gives_rhdv2')} />
-          Gives the RHDV2 vaccine (BunFest’s rabbit rule points people here)
-        </label>
+        </Field>
+        <Field label="Region" needed>
+          <input className={staffInput} list="vet-regions" value={draft.region} onChange={set('region')} />
+          <datalist id="vet-regions">
+            {VET_REGIONS.map((r) => (
+              <option key={r} value={r} />
+            ))}
+          </datalist>
+        </Field>
+      </PartBox>
+
+      <PartBox n="B" title="Contact and hours" hint="optional">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Phone">
+            <input className={staffInput} inputMode="tel" value={draft.phone} onChange={set('phone')} placeholder="614-…" />
+          </Field>
+          <Field label="Second phone or text">
+            <input className={staffInput} value={draft.phone2} onChange={set('phone2')} placeholder="Text 614-…" />
+          </Field>
+          <Field label="Email">
+            <input className={staffInput} type="email" value={draft.email} onChange={set('email')} />
+          </Field>
+          <Field label="Website">
+            <input className={staffInput} value={draft.website} onChange={set('website')} placeholder="https://…" />
+          </Field>
+        </div>
+      </PartBox>
+
+      <PartBox n="C" title="Notes and what they offer" hint="optional">
+        <Field label="Notes">
+          <input className={staffInput} value={draft.notes} onChange={set('notes')} placeholder="e.g. Open 24/7 for exotics emergencies" />
+        </Field>
+        <CheckRow label="24/7 or after-hours emergencies" hint="Shows an Emergency badge." checked={draft.is_emergency} onChange={check('is_emergency')} />
+        <CheckRow label="Low-cost spay/neuter" hint="Listed in that section." checked={draft.is_low_cost_spay} onChange={check('is_low_cost_spay')} />
+        <CheckRow label="Gives the RHDV2 vaccine" hint="BunFest’s rabbit rule points people here." checked={draft.gives_rhdv2} onChange={check('gives_rhdv2')} />
         {draft.gives_rhdv2 && (
-          <label className="block text-sm font-semibold text-slate-700">
-            How to get it there
+          <Field label="How to get it there">
             <input className={staffInput} value={draft.rhdv2_note} onChange={set('rhdv2_note')} placeholder="By appointment — call 614-…" />
-          </label>
+          </Field>
         )}
-        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <input type="checkbox" className="h-4 w-4 rounded border-slate-300" checked={draft.is_published} onChange={check('is_published')} />
-          Show in the app (uncheck for a draft)
-        </label>
-      </div>
+      </PartBox>
 
-      <FormError>{error}</FormError>
-
-      <div className="flex gap-2">
-        <button type="submit" disabled={busy || draft.name.trim().length === 0} className={`${btn.primary} flex-1 disabled:opacity-60`}>
-          {busy ? 'Saving…' : submitLabel}
-        </button>
-        <button type="button" onClick={onCancel} disabled={busy} className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500 transition hover:bg-slate-50">
-          Cancel
-        </button>
-      </div>
-    </form>
+      <PartBox n="D" title="Showing" hint="optional">
+        <CheckRow label="Show in the app (leave unchecked to keep it as a draft)" checked={draft.is_published} onChange={check('is_published')} />
+      </PartBox>
+    </EditorForm>
   )
 }
 
 function VetCard({ item, onChanged }: { item: VetRow; onChanged: () => void }) {
   const [editing, setEditing] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { busy, error, run } = useCardAction()
 
   const saveEdit = async (d: Draft) => {
     const { error } = await supabase.from('vets').update(toRow(d)).eq('id', item.id)
@@ -223,43 +199,41 @@ function VetCard({ item, onChanged }: { item: VetRow; onChanged: () => void }) {
     onChanged()
   }
 
-  const togglePublish = async () => {
-    setBusy(true)
-    const { error } = await supabase.from('vets').update({ is_published: !item.is_published }).eq('id', item.id)
-    if (error) setError(errMessage(error))
-    setBusy(false)
-    if (!error) onChanged()
-  }
+  const togglePublish = () =>
+    run(async () => {
+      const { error } = await supabase.from('vets').update({ is_published: !item.is_published }).eq('id', item.id)
+      if (error) throw error
+      onChanged()
+    })
 
   const doDelete = async () => {
-    setBusy(true)
     const { error } = await supabase.from('vets').delete().eq('id', item.id)
-    if (error) {
-      setError(errMessage(error))
-      setBusy(false)
-      setConfirmDelete(false)
-      return
-    }
+    if (error) throw error
     onChanged()
   }
 
   if (editing) {
     return (
-      <Card>
-        <VetForm initial={draftFrom(item)} submitLabel="Save changes" onSubmit={saveEdit} onCancel={() => setEditing(false)} />
-      </Card>
+      <VetForm
+        initial={draftFrom(item)}
+        title={`Edit ${item.name}`}
+        saveLabel="Save changes"
+        onSubmit={saveEdit}
+        onCancel={() => setEditing(false)}
+        onRemove={doDelete}
+      />
     )
   }
 
   return (
-    <Card className="space-y-1.5">
+    <Card className="space-y-2">
       <div className="flex items-start justify-between gap-2">
-        <h3 className="min-w-0 font-display text-[15px] font-extrabold text-ink">{item.name}</h3>
-        {item.is_published ? <Badge tone="blue">Live</Badge> : <Badge tone="slate">Draft</Badge>}
+        <h3 className="min-w-0 font-display text-base font-extrabold text-ink">{item.name}</h3>
+        {item.is_published ? <Badge tone="blue">Shown</Badge> : <Badge tone="slate">Hidden</Badge>}
       </div>
-      {item.doctors && <p className="text-sm text-slate-500">{item.doctors}</p>}
-      <p className="text-sm text-slate-600">{[item.address, item.city].filter(Boolean).join(', ')}</p>
-      <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-600">
+      {item.doctors && <p className="text-[15px] text-slate-500">{item.doctors}</p>}
+      <p className="text-[15px] text-slate-600">{[item.address, item.city].filter(Boolean).join(', ')}</p>
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[15px] text-slate-600">
         {item.phone && <span>{item.phone}</span>}
         {item.phone2 && <span>{item.phone2}</span>}
       </div>
@@ -269,28 +243,24 @@ function VetCard({ item, onChanged }: { item: VetRow; onChanged: () => void }) {
         {item.is_low_cost_spay && <Badge tone="orange">Low-cost spay/neuter</Badge>}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 pt-1">
-        <button type="button" onClick={togglePublish} disabled={busy} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-60">
-          {item.is_published ? 'Unpublish' : 'Publish'}
-        </button>
-        <button type="button" onClick={() => setEditing(true)} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50">
+      <CardActions className="pt-1">
+        <button type="button" onClick={() => setEditing(true)} className={pill.blue}>
           Edit
         </button>
-        {confirmDelete ? (
-          <>
-            <button type="button" onClick={doDelete} disabled={busy} className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60">
-              {busy ? 'Deleting…' : 'Confirm delete'}
-            </button>
-            <button type="button" onClick={() => setConfirmDelete(false)} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-50">
-              Cancel
-            </button>
-          </>
-        ) : (
-          <button type="button" onClick={() => setConfirmDelete(true)} className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50">
-            Delete
-          </button>
-        )}
-      </div>
+        <button type="button" onClick={() => void togglePublish()} disabled={busy} className={pill.outline}>
+          <Icon name={item.is_published ? 'eyeOff' : 'eye'} size={16} /> {item.is_published ? 'Hide' : 'Show'}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            if (confirmRemove(`“${item.name}”`)) void run(doDelete)
+          }}
+          className={pill.red}
+        >
+          <Icon name="trash" size={16} /> Remove
+        </button>
+      </CardActions>
       <FormError>{error}</FormError>
     </Card>
   )
@@ -338,7 +308,10 @@ export default function StaffVets() {
     const present = [...new Set(items.map((i) => i.region))]
     return ['All', ...present]
   }, [items])
-  const list = region === 'All' ? items : items.filter((i) => i.region === region)
+  const list = useMemo(
+    () => (region === 'All' ? items : items.filter((i) => i.region === region)).slice().sort(byName((v: VetRow) => v.name)),
+    [items, region],
+  )
 
   const create = async (d: Draft) => {
     const { error } = await supabase.from('vets').insert({
@@ -385,7 +358,7 @@ export default function StaffVets() {
       <Screen className="space-y-3 pt-2">
         <h1 className="font-display text-2xl font-black text-ink">Vet directory</h1>
         <Card className="border-slate-200 bg-slate-50/80">
-          <p className="text-sm leading-relaxed text-slate-600">
+          <p className="text-base leading-relaxed text-slate-600">
             You don’t have access to edit the vet directory. An owner or admin can grant the “Edit
             education / care content” capability.
           </p>
@@ -396,24 +369,20 @@ export default function StaffVets() {
 
   return (
     <Screen className="space-y-4">
-      <StaffTitle
-        title="Vet directory"
-        actions={
-          !creating ? (
-            <button type="button" onClick={() => setCreating(true)} className={`${btn.primary} shrink-0 !px-4 !py-2.5`}>
-              <Icon name="phone" size={15} /> New
-            </button>
-          ) : undefined
-        }
-      >
-        <p>The rabbit-savvy vets shown in Find a vet.</p>
+      <StaffTitle title="Vet directory">
+        <p>The rabbit-savvy vets shown in Find a vet. They are listed A to Z.</p>
       </StaffTitle>
 
+      {!creating && (
+        <div>
+          <StepButton tone="orange" icon="plus" onClick={() => setCreating(true)}>
+            Add a vet
+          </StepButton>
+        </div>
+      )}
+
       {creating && (
-        <Card>
-          <p className="mb-3 font-display text-[15px] font-extrabold text-ink">New vet</p>
-          <VetForm initial={emptyDraft} submitLabel="Add vet" onSubmit={create} onCancel={() => setCreating(false)} />
-        </Card>
+        <VetForm initial={emptyDraft} title="New vet" saveLabel="Add vet" onSubmit={create} onCancel={() => setCreating(false)} />
       )}
 
       <FormError>{error}</FormError>
@@ -422,13 +391,13 @@ export default function StaffVets() {
         <Spinner label="Loading…" />
       ) : items.length === 0 ? (
         <Card className="space-y-3 border-slate-200 bg-slate-50/80 text-center">
-          <p className="text-sm leading-relaxed text-slate-600">
-            No vets yet. Load the directory from ohiohouserabbitrescue.org ({seedVets.length} vets),
-            then edit from there — or add your own with “New”.
+          <p className="text-base leading-relaxed text-slate-600">
+            No vets yet. Load the directory from ohiohouserabbitrescue.org ({seedVets.length} vets), then edit from there
+            — or add your own with “Add a vet”.
           </p>
-          <button type="button" onClick={importSeed} disabled={importing} className={`${btn.blue} mx-auto disabled:opacity-60`}>
+          <StepButton tone="blue" onClick={() => void importSeed()} disabled={importing} className="mx-auto">
             {importing ? 'Importing…' : 'Import the vet directory'}
-          </button>
+          </StepButton>
         </Card>
       ) : (
         <>

@@ -527,6 +527,31 @@ export default function CatalogFlow() {
     })()
   }
 
+  /** Start a drop-off for this donor (saved in the background; Save waits for it). */
+  const openDropoff = (w: { donor: string; email: string; date: string }) => {
+    const c: Current = { id: null, donor: w.donor.trim(), email: w.email.trim(), date: w.date || todayIso(), day: todayIso() }
+    setCurrent(c)
+    saveCurrent(c)
+    setDropoffNote(null)
+    dropoffPromise.current = startDropoff(orgId, { donorName: c.donor, donorEmail: c.email, receivedOn: c.date }).then(
+      (d) => {
+        if (!d?.id) return null
+        const next = { ...c, id: d.id }
+        setCurrent(next)
+        saveCurrent(next)
+        return d.id
+      },
+      (err) => {
+        setDropoffNote(
+          isNeeds40(err)
+            ? 'Drop-offs aren’t switched on yet — ask an admin. Until then the donor is saved on each item.'
+            : `The drop-off didn’t save (${errMessage(err)}). The donor is saved on each item.`,
+        )
+        return null
+      },
+    )
+  }
+
   /** Start (or keep adding to) a drop-off, then the first item. */
   const begin = () => {
     if (!current && !wantsBoxes && draft.source === 'donation') {
@@ -534,30 +559,27 @@ export default function CatalogFlow() {
         setError('That email doesn’t look right. Fix it, or leave it empty.')
         return
       }
-      const c: Current = { id: null, donor: who.donor.trim(), email: who.email.trim(), date: who.date || todayIso(), day: todayIso() }
-      setCurrent(c)
-      saveCurrent(c)
-      setDropoffNote(null)
-      dropoffPromise.current = startDropoff(orgId, { donorName: c.donor, donorEmail: c.email, receivedOn: c.date }).then(
-        (d) => {
-          if (!d?.id) return null
-          const next = { ...c, id: d.id }
-          setCurrent(next)
-          saveCurrent(next)
-          return d.id
-        },
-        (err) => {
-          setDropoffNote(
-            isNeeds40(err)
-              ? 'Drop-offs aren’t switched on yet — ask an admin. Until then the donor is saved on each item.'
-              : `The drop-off didn’t save (${errMessage(err)}). The donor is saved on each item.`,
-          )
-          return null
-        },
-      )
+      openDropoff(who)
     }
     startItem()
   }
+
+  // Arrived from a donor's drop-off ("Receive more from this donor", ?donor=Name&email=…):
+  // the donor and the day are known, so skip "Who is it from?" and land on the first item.
+  const donorFromLink = useRef(false)
+  useEffect(() => {
+    if (!orgId || donorFromLink.current || wantsBoxes) return
+    const donor = (params.get('donor') ?? '').trim()
+    if (!donor) return
+    donorFromLink.current = true
+    if (current && current.donor === donor && current.day === todayIso()) return // already on this donor's drop-off
+    const email = looksLikeEmail(params.get('email') ?? '') ? (params.get('email') ?? '').trim() : ''
+    const w = { donor, email, date: todayIso() }
+    setWho(w)
+    setDraft((d) => ({ ...d, source: 'donation' }))
+    openDropoff(w)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId])
 
   /** A new drop-off: forget the current one (it stays in Drop-offs). */
   const newDropoff = () => {

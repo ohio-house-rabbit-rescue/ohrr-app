@@ -1,12 +1,22 @@
-// Staff → Bookings: who's coming (roster + confirm/check-in), make times in
-// bulk ("Saturdays and Sundays, noon–4, one hour each"), and set up what can
-// be booked. Everything the public /book pages show comes from here.
+// Staff → Bookings: the job in the order it happens.
+//
+//   1 To confirm        requests waiting for a yes
+//   2 Today             check people in at the door
+//   3 Coming up         who's booked in the next days; email a whole shift
+//   4 Make times        add times by hand (the weekly schedule fills in its own)
+//   5 Hours             who volunteered how much, and their letters
+//   6 Set up the types  what can be booked, when, and who may book it
+//
+// Everything the public /book pages show comes from step 6.
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
-import { Screen, Card, Badge, btn } from '../../../components/ui'
+import { authOrigin } from '../../../lib/appUrl'
+import { Screen, Card, Badge } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
+import { CardActions, EditorForm, Field, Part, pill } from '../../../components/StaffJob'
 import {
   deleteSlot,
   generateSlots,
@@ -19,6 +29,7 @@ import {
   type SlotRow,
 } from '../api'
 import { bccMailto, exportCsv, toCsv } from '../../../lib/exportFile'
+import { copyText } from '../../share/share'
 import {
   dayKey,
   durationLabel,
@@ -37,19 +48,49 @@ import HoursTab from './HoursTab'
 import { APPROVAL_KINDS, kindLabel } from '../../volunteers/approval'
 import { Explain, StaffTitle } from '../../../components/StaffTitle'
 
-type Tab = 'roster' | 'times' | 'hours' | 'setup'
+type Tab = 'confirm' | 'today' | 'coming' | 'times' | 'hours' | 'setup'
+
+/** The steps, in the order the work happens. */
+const STEPS: { tab: Tab; n: number; label: string }[] = [
+  { tab: 'confirm', n: 1, label: 'To confirm' },
+  { tab: 'today', n: 2, label: 'Today' },
+  { tab: 'coming', n: 3, label: 'Coming up' },
+  { tab: 'times', n: 4, label: 'Make times' },
+  { tab: 'hours', n: 5, label: 'Hours' },
+  { tab: 'setup', n: 6, label: 'Set up the types' },
+]
+const isTab = (s: string | null): s is Tab => STEPS.some((x) => x.tab === s)
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+/** 48px buttons for the door: check in, confirm, no show. */
+const big = '!min-h-[48px]'
 
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
+/** "Step 2 of 6 · Today" over the step's content. */
+function StepLine({ n, label }: { n: number; label: string }) {
+  return (
+    <p className="flex items-center gap-2 text-sm font-bold text-slate-500" aria-label={`Step ${n} of ${STEPS.length}`}>
+      Step {n} of {STEPS.length} · {label}
+      <span className="flex gap-1" aria-hidden="true">
+        {STEPS.map((s) => (
+          <span key={s.tab} className={`h-2 w-2 rounded-full ${s.n <= n ? 'bg-brand-orange' : 'bg-slate-200'}`} />
+        ))}
+      </span>
+    </p>
+  )
+}
+
 export default function StaffBookings() {
   const { membership } = useAuth()
   const orgId = membership?.orgId ?? ''
-  const [tab, setTab] = useState<Tab>('roster')
+  const [params, setParams] = useSearchParams()
+  const [picked, setPicked] = useState<Tab | null>(() => (isTab(params.get('tab')) ? (params.get('tab') as Tab) : null))
   const [types, setTypes] = useState<BookingType[] | null>(null)
+  const [rows, setRows] = useState<RosterRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const reloadTypes = useCallback(async () => {
@@ -63,75 +104,28 @@ export default function StaffBookings() {
     if (orgId) void reloadTypes()
   }, [orgId, reloadTypes])
 
-  return (
-    <Screen className="space-y-4">
-      <StaffTitle title="Bookings">
-        <p>Shifts and appointments people book in the app and on the website.</p>
-      </StaffTitle>
-      <div className="flex gap-2">
-        {(
-          [
-            ['roster', 'Who’s coming'],
-            ['times', 'Make times'],
-            ['hours', 'Hours'],
-            ['setup', 'Set up'],
-          ] as [Tab, string][]
-        ).map(([t, label]) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTab(t)}
-            className={`min-h-[44px] flex-1 rounded-full px-2 text-[13px] font-bold ${tab === t ? 'bg-brand-blue text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600'}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <FormError>{error}</FormError>
-      {types === null && !error && <Spinner />}
-      {types && tab === 'roster' && <Roster orgId={orgId} />}
-      {types && tab === 'times' && <MakeTimes types={types} />}
-      {types && tab === 'hours' && <HoursTab />}
-      {types && tab === 'setup' && <Setup orgId={orgId} types={types} onChanged={reloadTypes} />}
-    </Screen>
-  )
-}
-
-/* ================================================================ roster */
-
-function Roster({ orgId }: { orgId: string }) {
-  const [days, setDays] = useState(7)
-  const [rows, setRows] = useState<RosterRow[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
+  // Everyone booked from today on, for the next 60 days: steps 1–3 read from this.
+  const reloadRows = useCallback(async () => {
     const from = new Date()
     from.setHours(0, 0, 0, 0)
-    const to = new Date(from.getTime() + days * 86_400_000)
     try {
-      setRows(await loadRoster(orgId, from, to))
+      setRows(await loadRoster(orgId, from, new Date(from.getTime() + 60 * 86_400_000)))
     } catch (e) {
       setError(errMessage(e))
     }
-  }, [orgId, days])
+  }, [orgId])
   useEffect(() => {
-    void load()
-  }, [load])
-
-  const grouped = useMemo(() => {
-    const byDay = new Map<string, Map<string, RosterRow[]>>()
-    for (const r of rows ?? []) {
-      if (r.status === 'cancelled') continue
-      const d = dayKey(r.starts_at)
-      const slotKey = `${r.slot_id}`
-      const m = byDay.get(d) ?? new Map<string, RosterRow[]>()
-      m.set(slotKey, [...(m.get(slotKey) ?? []), r])
-      byDay.set(d, m)
-    }
-    return [...byDay.entries()]
-  }, [rows])
+    if (orgId) void reloadRows()
+  }, [orgId, reloadRows])
 
   const pending = (rows ?? []).filter((r) => r.status === 'requested').length
+  // Open on the step the day calls for: requests first, otherwise the door.
+  const tab: Tab = picked ?? (pending > 0 ? 'confirm' : 'today')
+  const step = STEPS.find((s) => s.tab === tab)!
+  const pick = (t: Tab) => {
+    setPicked(t)
+    setParams({ tab: t }, { replace: true })
+  }
 
   const act = async (r: RosterRow, status: BookingStatus) => {
     setError(null)
@@ -144,26 +138,114 @@ function Roster({ orgId }: { orgId: string }) {
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        {[1, 7, 30].map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => setDays(n)}
-            className={`min-h-[40px] rounded-full px-3.5 text-sm font-bold ${days === n ? 'bg-brand-orange text-ink' : 'border border-slate-200 bg-white text-slate-600'}`}
-          >
-            {n === 1 ? 'Today' : `Next ${n} days`}
-          </button>
-        ))}
-        {pending > 0 && <Badge tone="orange">{pending} to confirm</Badge>}
+    <Screen className="space-y-4">
+      <StaffTitle title="Bookings">
+        <p>Shifts and appointments people book in the app and on the website.</p>
+        <p>The steps run in the order the work happens: confirm requests, check people in, look ahead, add times, then set up what can be booked.</p>
+      </StaffTitle>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="tablist" aria-label="The steps of Bookings">
+        {STEPS.map((s) => {
+          const on = tab === s.tab
+          return (
+            <button
+              key={s.tab}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => pick(s.tab)}
+              className={`inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-full px-2 text-sm font-bold ${on ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
+            >
+              <span className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold ${on ? 'bg-white text-brand-blue' : 'bg-brand-blue text-white'}`}>{s.n}</span>
+              {s.label}
+              {s.tab === 'confirm' && pending > 0 ? ` (${pending})` : ''}
+            </button>
+          )
+        })}
       </div>
+      <StepLine n={step.n} label={step.label} />
       <FormError>{error}</FormError>
-      {rows === null && !error && <Spinner />}
-      {rows && grouped.length === 0 && (
-        <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">No bookings in this range.</p>
+      {types === null && !error && <Spinner />}
+      {types && (tab === 'confirm' || tab === 'today' || tab === 'coming') && (
+        <Roster mode={tab} rows={rows} onAct={act} goTo={pick} />
       )}
-      {rows && rows.length > 0 && (
+      {types && tab === 'times' && <MakeTimes types={types} />}
+      {types && tab === 'hours' && <HoursTab />}
+      {types && tab === 'setup' && <Setup orgId={orgId} types={types} onChanged={reloadTypes} />}
+    </Screen>
+  )
+}
+
+/* ================================================================ roster */
+
+function Roster({
+  mode,
+  rows,
+  onAct,
+  goTo,
+}: {
+  mode: 'confirm' | 'today' | 'coming'
+  rows: RosterRow[] | null
+  onAct: (r: RosterRow, status: BookingStatus) => Promise<void>
+  goTo: (t: Tab) => void
+}) {
+  const [days, setDays] = useState(7)
+  const todayKey = dayKey(new Date().toISOString())
+
+  // What this step shows, from the 60 days loaded above.
+  const shown = useMemo(() => {
+    const live = (rows ?? []).filter((r) => r.status !== 'cancelled')
+    if (mode === 'confirm') return live.filter((r) => r.status === 'requested')
+    if (mode === 'today') return live.filter((r) => dayKey(r.starts_at) === todayKey)
+    const limit = Date.now() + days * 86_400_000
+    return live.filter((r) => dayKey(r.starts_at) > todayKey && new Date(r.starts_at).getTime() <= limit)
+  }, [rows, mode, days, todayKey])
+
+  const grouped = useMemo(() => {
+    const byDay = new Map<string, Map<string, RosterRow[]>>()
+    for (const r of shown) {
+      const d = dayKey(r.starts_at)
+      const m = byDay.get(d) ?? new Map<string, RosterRow[]>()
+      m.set(r.slot_id, [...(m.get(r.slot_id) ?? []), r])
+      byDay.set(d, m)
+    }
+    return [...byDay.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  }, [shown])
+
+  const empty =
+    mode === 'confirm'
+      ? 'Nothing is waiting for a yes.'
+      : mode === 'today'
+        ? 'Nobody is booked for today.'
+        : `Nobody is booked in the next ${days} days.`
+
+  return (
+    <div className="space-y-3">
+      {mode === 'coming' && (
+        <div className="flex flex-wrap items-center gap-2">
+          {[7, 30, 60].map((n) => (
+            <button key={n} type="button" onClick={() => setDays(n)} aria-pressed={days === n} className={days === n ? pill.orange : pill.outline}>
+              Next {n} days
+            </button>
+          ))}
+        </div>
+      )}
+      {mode === 'today' && (
+        <p className="text-[15px] text-slate-600">
+          Tap <strong>Check in</strong> as people arrive.
+        </p>
+      )}
+      {rows === null && <Spinner />}
+      {rows && grouped.length === 0 && (
+        <div className="space-y-3 rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center">
+          <p className="text-base text-slate-600">{empty}</p>
+          {mode === 'confirm' && (
+            <button type="button" onClick={() => goTo('today')} className={pill.blue}>
+              Go to 2 · Today
+            </button>
+          )}
+        </div>
+      )}
+      {mode === 'coming' && rows && shown.length > 0 && (
         <button
           type="button"
           onClick={() =>
@@ -171,7 +253,7 @@ function Roster({ orgId }: { orgId: string }) {
               `ohrr-bookings-${new Date().toISOString().slice(0, 10)}.csv`,
               toCsv(
                 ['Date', 'Time', 'What', 'Name', 'Email', 'Phone', 'People', 'Status', 'Answer', 'Notes'],
-                rows.map((r) => [
+                shown.map((r) => [
                   fmtDayShort(r.starts_at),
                   fmtRange(r.starts_at, r.ends_at),
                   r.type_name,
@@ -186,23 +268,23 @@ function Roster({ orgId }: { orgId: string }) {
               ),
             )
           }
-          className={`${btn.outline} w-full`}
+          className={pill.outline}
         >
-          <Icon name="printer" size={16} /> Export this list (CSV)
+          <Icon name="printer" size={16} /> Export this list (spreadsheet)
         </button>
       )}
       {grouped.map(([day, slots]) => (
         <section key={day} className="space-y-2">
-          <p className="font-display text-[15px] font-extrabold text-ink">{fmtDay([...slots.values()][0][0].starts_at)}</p>
+          <p className="font-display text-base font-extrabold text-ink">{fmtDay([...slots.values()][0][0].starts_at)}</p>
           {[...slots.values()].map((list) => {
             const first = list[0]
             const taken = list.filter((r) => r.status !== 'no_show').reduce((n, r) => n + r.party_size, 0)
             return (
               <Card key={first.slot_id} className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-bold text-slate-700">
+                  <p className="text-[15px] font-bold text-slate-700">
                     {fmtRange(first.starts_at, first.ends_at)} · {first.type_name}{' '}
-                    <span className="font-semibold text-slate-400">
+                    <span className="font-semibold text-slate-500">
                       {taken}/{first.capacity}
                     </span>
                   </p>
@@ -213,22 +295,22 @@ function Roster({ orgId }: { orgId: string }) {
                       list.filter((r) => r.status !== 'cancelled').map((r) => r.email),
                       `OHRR — ${first.type_name}, ${fmtDayShort(first.starts_at)}`,
                     )}
-                    className="rounded-full bg-brand-blue-50 px-3 py-1.5 text-xs font-bold text-brand-blue"
+                    className={pill.soft}
                   >
-                    <Icon name="mail" size={14} className="mr-1 inline" /> Email everyone
+                    <Icon name="mail" size={16} /> Email everyone
                   </a>
                 </div>
                 <ul className="divide-y divide-slate-100">
                   {list.map((r) => (
-                    <li key={r.booking_id} className="space-y-1.5 py-2">
+                    <li key={r.booking_id} className="space-y-2 py-3">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="font-display text-[15px] font-extrabold text-ink">{r.name}</span>
-                        {r.party_size > 1 && <span className="text-xs font-bold text-slate-500">×{r.party_size}</span>}
+                        <span className="font-display text-base font-extrabold text-ink">{r.name}</span>
+                        {r.party_size > 1 && <span className="text-sm font-bold text-slate-600">×{r.party_size}</span>}
                         {r.status === 'requested' && <Badge tone="orange">Needs confirming</Badge>}
                         {r.status === 'checked_in' && <Badge tone="blue">Checked in</Badge>}
                         {r.status === 'no_show' && <Badge tone="slate">No show</Badge>}
                       </div>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-[15px] text-slate-600">
                         {r.email}
                         {r.phone ? ` · ${r.phone}` : ''}
                         {r.answer && !r.answer.includes('\n') ? ` · ${r.answer}` : ''}
@@ -236,37 +318,37 @@ function Roster({ orgId }: { orgId: string }) {
                         {r.attested ? ' · confirmed requirements' : ''}
                       </p>
                       {/* Answers to the form's questions: one line each. */}
-                      {r.answer?.includes('\n') && <p className="whitespace-pre-line rounded-xl bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-700">{r.answer}</p>}
-                      <div className="flex flex-wrap gap-1.5">
-                        {r.phone && (
-                          <a href={`tel:${r.phone.replace(/[^0-9+]/g, '')}`} className="rounded-full bg-brand-blue-50 px-3 py-1.5 text-xs font-bold text-brand-blue">
-                            Call
-                          </a>
-                        )}
-                        <a href={`mailto:${r.email}?subject=${encodeURIComponent(`OHRR — ${r.type_name} ${fmtDayShort(r.starts_at)}`)}`} className="rounded-full bg-brand-blue-50 px-3 py-1.5 text-xs font-bold text-brand-blue">
-                          Email
-                        </a>
+                      {r.answer?.includes('\n') && <p className="whitespace-pre-line rounded-xl bg-slate-50 px-3 py-2 text-[15px] leading-relaxed text-slate-700">{r.answer}</p>}
+                      <CardActions>
                         {r.status === 'requested' && (
-                          <button type="button" onClick={() => void act(r, 'confirmed')} className="rounded-full bg-brand-orange px-3 py-1.5 text-xs font-bold text-ink">
-                            Confirm
+                          <button type="button" onClick={() => void onAct(r, 'confirmed')} className={`${pill.orange} ${big}`}>
+                            <Icon name="check" size={16} /> Confirm
                           </button>
                         )}
                         {(r.status === 'confirmed' || r.status === 'requested') && (
-                          <button type="button" onClick={() => void act(r, 'checked_in')} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600">
+                          <button type="button" onClick={() => void onAct(r, 'checked_in')} className={`${pill.green} ${big}`}>
                             Check in
                           </button>
                         )}
                         {r.status === 'confirmed' && (
-                          <button type="button" onClick={() => void act(r, 'no_show')} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600">
+                          <button type="button" onClick={() => void onAct(r, 'no_show')} className={`${pill.outline} ${big}`}>
                             No show
                           </button>
                         )}
+                        {r.phone && (
+                          <a href={`tel:${r.phone.replace(/[^0-9+]/g, '')}`} className={`${pill.soft} ${big}`}>
+                            <Icon name="phone" size={16} /> Call
+                          </a>
+                        )}
+                        <a href={`mailto:${r.email}?subject=${encodeURIComponent(`OHRR — ${r.type_name} ${fmtDayShort(r.starts_at)}`)}`} className={`${pill.soft} ${big}`}>
+                          <Icon name="mail" size={16} /> Email
+                        </a>
                         {r.status !== 'cancelled' && (
-                          <button type="button" onClick={() => window.confirm(`Cancel ${r.name}'s booking?`) && void act(r, 'cancelled')} className="rounded-full px-3 py-1.5 text-xs font-bold text-red-600">
-                            Cancel
+                          <button type="button" onClick={() => window.confirm(`Cancel ${r.name}’s booking?`) && void onAct(r, 'cancelled')} className={`${pill.red} ${big}`}>
+                            Cancel booking
                           </button>
                         )}
-                      </div>
+                      </CardActions>
                     </li>
                   ))}
                 </ul>
@@ -311,8 +393,7 @@ function MakeTimes({ types }: { types: BookingType[] }) {
     void loadSlots()
   }, [loadSlots])
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
+  const submit = async () => {
     if (!type) return
     setBusy(true)
     setError(null)
@@ -347,47 +428,59 @@ function MakeTimes({ types }: { types: BookingType[] }) {
 
   return (
     <div className="space-y-4">
-      <Card className="space-y-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          What
-          <select className={staffInput} value={typeId} onChange={(e) => setTypeId(e.target.value)}>
-            {types.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        {type && (
-          <Explain label="About these times">
-            <p>
-              {type.weekly.length > 0
-                ? 'The weekly schedule (Set up) fills in its own times. Use this for extras — a special day, a one-off clinic.'
-                : 'Tip: give this a weekly schedule under Set up and the times make themselves.'}{' '}
-              Each time is {durationLabel(type.duration_min)}; up to {type.capacity} {type.kind === 'shift' ? 'people' : 'booking'} per time unless you change it below.
-            </p>
-          </Explain>
-        )}
-        <form onSubmit={submit} className="space-y-3">
+      <EditorForm
+        title="Make times"
+        hint="Fill in the days and hours; each time below is made for you."
+        onSubmit={submit}
+        busy={busy}
+        saveLabel="Make these times"
+        canSave={weekdays.length > 0 && !!type}
+        error={error}
+      >
+        <div className="space-y-3">
+          <Part n="A" hint="needed">What</Part>
+          <Field label="What" needed>
+            <select className={staffInput} value={typeId} onChange={(e) => setTypeId(e.target.value)}>
+              {types.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {type && (
+            <Explain label="About these times">
+              <p>
+                {type.weekly.length > 0
+                  ? 'The weekly schedule (step 6) fills in its own times. Use this for extras — a special day, a one-off clinic.'
+                  : 'Tip: give this a weekly schedule in step 6 and the times make themselves.'}{' '}
+                Each time is {durationLabel(type.duration_min)}; up to {type.capacity} {type.kind === 'shift' ? 'people' : 'booking'} per time unless you change it below.
+              </p>
+            </Explain>
+          )}
+        </div>
+        <div className="space-y-3">
+          <Part n="B" hint="needed">When</Part>
           <div className="grid grid-cols-2 gap-3">
-            <label className="block text-sm font-semibold text-slate-700">
-              From
+            <Field label="From" needed>
               <input type="date" className={staffInput} value={from} onChange={(e) => setFrom(e.target.value)} required />
-            </label>
-            <label className="block text-sm font-semibold text-slate-700">
-              To
+            </Field>
+            <Field label="To" needed>
               <input type="date" className={staffInput} value={to} onChange={(e) => setTo(e.target.value)} required />
-            </label>
+            </Field>
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-700">On these days</p>
-            <div className="mt-1 flex flex-wrap gap-1.5">
+            <p className="text-sm font-semibold text-slate-700">
+              On these days <span className="ml-1.5 text-xs font-bold text-brand-orange">needed</span>
+            </p>
+            <div className="mt-1 flex flex-wrap gap-2">
               {WEEKDAYS.map((d, i) => (
                 <button
                   key={d}
                   type="button"
+                  aria-pressed={weekdays.includes(i)}
                   onClick={() => toggleDay(i)}
-                  className={`min-h-[40px] rounded-full px-3.5 text-sm font-bold ${weekdays.includes(i) ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
+                  className={`min-h-[44px] min-w-[52px] rounded-full px-3.5 text-[15px] font-bold ${weekdays.includes(i) ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
                 >
                   {d}
                 </button>
@@ -395,60 +488,54 @@ function MakeTimes({ types }: { types: BookingType[] }) {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <label className="block text-sm font-semibold text-slate-700">
-              First time starts
+            <Field label="First time starts" needed>
               <input type="time" className={staffInput} value={start} onChange={(e) => setStart(e.target.value)} required />
-            </label>
-            <label className="block text-sm font-semibold text-slate-700">
-              Last time ends by
+            </Field>
+            <Field label="Last time ends by" needed>
               <input type="time" className={staffInput} value={end} onChange={(e) => setEnd(e.target.value)} required />
-            </label>
+            </Field>
           </div>
+        </div>
+        <div className="space-y-3">
+          <Part n="C" hint="optional">Details</Part>
           <div className="grid grid-cols-2 gap-3">
-            <label className="block text-sm font-semibold text-slate-700">
-              People per time
+            <Field label="People per time">
               <input inputMode="numeric" className={staffInput} value={capacity} onChange={(e) => setCapacity(e.target.value.replace(/[^0-9]/g, ''))} placeholder={type ? String(type.capacity) : ''} />
-            </label>
-            <label className="block text-sm font-semibold text-slate-700">
-              Note (optional)
+            </Field>
+            <Field label="Note">
               <input className={staffInput} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Nail trims only" />
-            </label>
+            </Field>
           </div>
-          <FormError>{error}</FormError>
-          {made !== null && <p className="text-sm font-bold text-green-700">{made === 0 ? 'Those times already existed.' : `Made ${made} time${made === 1 ? '' : 's'}.`}</p>}
-          <button type="submit" disabled={busy || weekdays.length === 0} className={`${btn.primary} w-full disabled:opacity-60`}>
-            {busy ? 'Making times…' : 'Make these times'}
-          </button>
-        </form>
-      </Card>
+          {made !== null && <p className="text-[15px] font-bold text-green-700">{made === 0 ? 'Those times already existed.' : `Made ${made} time${made === 1 ? '' : 's'}.`}</p>}
+        </div>
+      </EditorForm>
 
       <section className="space-y-2">
-        <p className="font-display text-[15px] font-extrabold text-ink">Times in the next 60 days</p>
+        <p className="font-display text-base font-extrabold text-ink">Times in the next 60 days</p>
         {slots === null && <Spinner />}
-        {slots && slots.length === 0 && <p className="text-sm text-slate-500">None yet — make some above.</p>}
+        {slots && slots.length === 0 && <p className="text-[15px] text-slate-600">None yet — make some above.</p>}
         {byDay.map(([day, list]) => (
           <Card key={day} className="space-y-1.5">
-            <p className="text-sm font-bold text-slate-700">{fmtDay(list[0].starts_at)}</p>
+            <p className="text-[15px] font-bold text-slate-700">{fmtDay(list[0].starts_at)}</p>
             <ul className="divide-y divide-slate-100">
               {list.map((s) => (
-                <li key={s.id} className="flex items-center gap-2 py-1.5 text-sm">
-                  <span className={`flex-1 ${s.is_open ? 'text-ink' : 'text-slate-400 line-through'}`}>
+                <li key={s.id} className="flex flex-wrap items-center gap-2 py-2 text-[15px]">
+                  <span className={`min-w-0 flex-1 ${s.is_open ? 'text-ink' : 'text-slate-400 line-through'}`}>
                     {fmtRange(s.starts_at, s.ends_at)} · {s.capacity} {s.note ? `· ${s.note}` : ''}
                   </span>
                   <button
                     type="button"
                     onClick={() => setSlotOpen(s.id, !s.is_open).then(loadSlots).catch((e) => setError(errMessage(e)))}
-                    className="rounded-full border border-slate-200 px-3 py-1 text-xs font-bold text-slate-600"
+                    className={pill.outline}
                   >
                     {s.is_open ? 'Close' : 'Open'}
                   </button>
                   <button
                     type="button"
                     onClick={() => window.confirm('Delete this time? Anyone booked on it is canceled too.') && deleteSlot(s.id).then(loadSlots).catch((e) => setError(errMessage(e)))}
-                    className="text-red-600"
-                    aria-label="Delete"
+                    className={pill.red}
                   >
-                    <Icon name="trash" size={16} />
+                    <Icon name="trash" size={16} /> Delete
                   </button>
                 </li>
               ))}
@@ -486,64 +573,81 @@ const emptyType = (orgId: string): Partial<BookingType> & { org_id: string; slug
 
 function Setup({ orgId, types, onChanged }: { orgId: string; types: BookingType[]; onChanged: () => Promise<void> }) {
   const [editing, setEditing] = useState<string | 'new' | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
   // A new type gets the questions box once the database has the column (update 43).
   const hasQuestions = types.some((t) => t.questions !== undefined)
+  const linkFor = (slug: string) => `${authOrigin()}/book/${slug}`
   return (
     <div className="space-y-3">
-      {types.map((t) => (
-        <Card key={t.id} className="space-y-2">
-          <div className="flex items-start gap-3">
-            <span className="min-w-0 flex-1">
-              <span className="flex flex-wrap items-center gap-2">
-                <span className="font-display text-[15px] font-extrabold text-ink">{t.name}</span>
-                <Badge tone={t.kind === 'shift' ? 'blue' : 'orange'}>{t.kind === 'shift' ? 'Shift' : 'Appointment'}</Badge>
-                {!t.is_published && <Badge tone="slate">Hidden</Badge>}
-              </span>
-              <span className="block text-xs text-slate-500">
-                {durationLabel(t.duration_min)} · {t.capacity} per time · book {t.min_lead_hours}h ahead
-                {t.max_per_month ? ` · max ${t.max_per_month}/month` : ''}
-                {t.confirm_mode === 'staff' ? ' · staff confirms' : ''} · /book/{t.slug}
-              </span>
-              {t.approval_role && (
-                <span className="mt-1 block text-xs font-semibold text-slate-700">
-                  Only volunteers approved for {kindLabel(t.approval_role)}
-                </span>
-              )}
-              {t.weekly.length > 0 ? (
-                <span className="mt-1 block text-xs text-slate-600">
-                  <span className="font-bold text-brand-blue">Every week:</span> {fmtWeekly(t.weekly).join(' · ')}
-                </span>
-              ) : (
-                <span className="mt-1 block text-xs font-semibold text-brand-orange-dark">No weekly schedule — times only appear when made by hand.</span>
-              )}
-            </span>
-            <button type="button" onClick={() => setEditing(editing === t.id ? null : t.id)} className="text-sm font-bold text-brand-blue">
-              {editing === t.id ? 'Close' : 'Edit'}
-            </button>
-          </div>
-          {editing === t.id && (
-            <TypeForm
-              initial={t}
-              onSaved={async () => {
-                setEditing(null)
-                await onChanged()
-              }}
-            />
-          )}
-        </Card>
-      ))}
-      {editing === 'new' ? (
-        <Card>
+      {types.map((t) =>
+        editing === t.id ? (
           <TypeForm
-            initial={{ ...emptyType(orgId), ...(hasQuestions ? { questions: '' } : {}) }}
+            key={t.id}
+            initial={t}
+            onCancel={() => setEditing(null)}
             onSaved={async () => {
               setEditing(null)
               await onChanged()
             }}
           />
-        </Card>
+        ) : (
+          <Card key={t.id} className="space-y-2">
+            <div className="min-w-0">
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="font-display text-base font-extrabold text-ink">{t.name}</span>
+                <Badge tone={t.kind === 'shift' ? 'blue' : 'orange'}>{t.kind === 'shift' ? 'Shift' : 'Appointment'}</Badge>
+                {!t.is_published && <Badge tone="slate">Hidden</Badge>}
+              </span>
+              <span className="block text-[15px] text-slate-600">
+                {durationLabel(t.duration_min)} · {t.capacity} per time · book {t.min_lead_hours}h ahead
+                {t.max_per_month ? ` · max ${t.max_per_month}/month` : ''}
+                {t.confirm_mode === 'staff' ? ' · staff confirms' : ''}
+              </span>
+              {t.approval_role && (
+                <span className="mt-1 block text-[15px] font-semibold text-slate-700">Only volunteers approved for {kindLabel(t.approval_role)}</span>
+              )}
+              {t.weekly.length > 0 ? (
+                <span className="mt-1 block text-[15px] text-slate-600">
+                  <span className="font-bold text-brand-blue">Every week:</span> {fmtWeekly(t.weekly).join(' · ')}
+                </span>
+              ) : (
+                <span className="mt-1 block text-[15px] font-semibold text-brand-orange-dark">No weekly schedule — times only appear when made by hand.</span>
+              )}
+            </div>
+            <CardActions>
+              <button type="button" onClick={() => setEditing(t.id)} className={pill.blue}>
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (await copyText(linkFor(t.slug))) {
+                    setCopied(t.id)
+                    setTimeout(() => setCopied((c) => (c === t.id ? null : c)), 1800)
+                  }
+                }}
+                className={pill.outline}
+              >
+                {copied === t.id ? 'Copied' : 'Copy link'}
+              </button>
+              <a href={linkFor(t.slug)} target="_blank" rel="noopener noreferrer" className={pill.outline}>
+                <Icon name="external" size={16} /> Open
+              </a>
+            </CardActions>
+          </Card>
+        ),
+      )}
+      {editing === 'new' ? (
+        <TypeForm
+          initial={{ ...emptyType(orgId), ...(hasQuestions ? { questions: '' } : {}) }}
+          onCancel={() => setEditing(null)}
+          onSaved={async () => {
+            setEditing(null)
+            await onChanged()
+          }}
+        />
       ) : (
-        <button type="button" onClick={() => setEditing('new')} className={`${btn.outline} w-full`}>
+        <button type="button" onClick={() => setEditing('new')} className={pill.orange}>
           <Icon name="plus" size={16} /> Add something bookable
         </button>
       )}
@@ -551,16 +655,24 @@ function Setup({ orgId, types, onChanged }: { orgId: string; types: BookingType[
   )
 }
 
-function TypeForm({ initial, onSaved }: { initial: Partial<BookingType> & { org_id: string; slug: string; name: string }; onSaved: () => Promise<void> }) {
+function TypeForm({
+  initial,
+  onSaved,
+  onCancel,
+}: {
+  initial: Partial<BookingType> & { org_id: string; slug: string; name: string }
+  onSaved: () => Promise<void>
+  onCancel: () => void
+}) {
   const [d, setD] = useState({ ...initial })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const isNew = !initial.slug && !('id' in initial && initial.id)
   const num = (k: keyof BookingType) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value === '' ? null : Number(e.target.value) })
   const txt = (k: keyof BookingType) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value })
   const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
+  const submit = async () => {
     setBusy(true)
     setError(null)
     try {
@@ -590,111 +702,105 @@ function TypeForm({ initial, onSaved }: { initial: Partial<BookingType> & { org_
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3 border-t border-slate-100 pt-3">
-      <label className="block text-sm font-semibold text-slate-700">
-        Name
-        <input className={staffInput} required value={d.name} onChange={txt('name')} />
-      </label>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Type
+    <EditorForm
+      title={isNew ? 'Something new to book' : `Change ${initial.name || 'this'}`}
+      hint="A and B are needed. C is for the people booking — fill in what helps them."
+      onSubmit={submit}
+      onCancel={onCancel}
+      busy={busy}
+      canSave={!!d.name.trim()}
+      error={error}
+    >
+      <div className="space-y-3">
+        <Part n="A" hint="needed">What it is</Part>
+        <Field label="Name" needed>
+          <input className={staffInput} required value={d.name} onChange={txt('name')} />
+        </Field>
+        <Field label="Type" needed>
           <select className={staffInput} value={d.kind} onChange={txt('kind')}>
             <option value="shift">Volunteer shift</option>
             <option value="appointment">Appointment</option>
           </select>
-        </label>
-        <label className="block text-sm font-semibold text-slate-700">
-          Who confirms
+        </Field>
+        <Field label="What it is (shown to people)">
+          <textarea className={staffInput} rows={2} value={d.description ?? ''} onChange={txt('description')} />
+        </Field>
+        <Field label="Where">
+          <input className={staffInput} value={d.location ?? ''} onChange={txt('location')} />
+        </Field>
+      </div>
+
+      <div className="space-y-3">
+        <Part n="B" hint="needed">When and how many</Part>
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="Minutes" needed>
+            <input inputMode="numeric" className={staffInput} value={d.duration_min ?? ''} onChange={num('duration_min')} required />
+          </Field>
+          <Field label="Per time" needed>
+            <input inputMode="numeric" className={staffInput} value={d.capacity ?? ''} onChange={num('capacity')} required />
+          </Field>
+          <Field label="Per booking" needed>
+            <input inputMode="numeric" className={staffInput} value={d.max_party ?? ''} onChange={num('max_party')} required />
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Book at least (hours ahead)" needed>
+            <input inputMode="numeric" className={staffInput} value={d.min_lead_hours ?? ''} onChange={num('min_lead_hours')} required />
+          </Field>
+          <Field label="Max per month" hint="Blank = no limit.">
+            <input inputMode="numeric" className={staffInput} value={d.max_per_month ?? ''} onChange={num('max_per_month')} />
+          </Field>
+        </div>
+        <WeeklyEditor rules={d.weekly ?? []} defaultCapacity={d.capacity ?? 1} onChange={(weekly) => setD({ ...d, weekly })} />
+        <Field label="Keep this many weeks of times ready">
+          <input inputMode="numeric" className={staffInput} value={d.auto_weeks ?? 8} onChange={num('auto_weeks')} />
+        </Field>
+      </div>
+
+      <div className="space-y-3">
+        <Part n="C" hint="optional">For the people booking</Part>
+        <Field label="Who confirms">
           <select className={staffInput} value={d.confirm_mode} onChange={txt('confirm_mode')}>
             <option value="auto">Booked instantly</option>
             <option value="staff">Staff confirms</option>
           </select>
+        </Field>
+        <Field label="Who can book" hint="Approved-only: people enter the email they applied with before they see the times.">
+          <select className={staffInput} value={d.approval_role ?? ''} onChange={(e) => setD({ ...d, approval_role: e.target.value || null })}>
+            <option value="">Anyone</option>
+            {d.approval_role && !APPROVAL_KINDS.some((k) => k.value === d.approval_role) && (
+              <option value={d.approval_role}>Approved volunteers for {kindLabel(d.approval_role)}</option>
+            )}
+            {APPROVAL_KINDS.map((k) => (
+              <option key={k.value} value={k.value}>
+                Approved volunteers for {k.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Requirements — one per line">
+          <textarea className={staffInput} rows={3} value={d.requirements ?? ''} onChange={txt('requirements')} />
+        </Field>
+        {d.questions !== undefined && (
+          <Field
+            label="Questions on the form — one per line"
+            hint="Put choices after a | to make a pick-list. End the question with * if it must be answered. The answers show under each person in the list."
+          >
+            <textarea className={staffInput} rows={4} value={d.questions ?? ''} onChange={txt('questions')} placeholder={'Your rabbit’s name *\nSpayed or neutered? * | Yes | No | Booked in'} />
+          </Field>
+        )}
+        <Field label={d.questions !== undefined ? 'A last question, answered in their own words' : 'A question to ask'}>
+          <input className={staffInput} value={d.ask_reason ?? ''} onChange={txt('ask_reason')} placeholder="Which rabbit would you like to meet?" />
+        </Field>
+        <Field label="A box they must tick">
+          <input className={staffInput} value={d.attest_text ?? ''} onChange={txt('attest_text')} placeholder="I have completed the Buncare Orientation." />
+        </Field>
+        <label className="flex min-h-[44px] items-center gap-3 text-base font-semibold text-slate-700">
+          <input type="checkbox" className="h-6 w-6 rounded border-slate-300 text-brand-blue" checked={Boolean(d.is_published)} onChange={(e) => setD({ ...d, is_published: e.target.checked })} />
+          People can see and book this
         </label>
       </div>
-      <label className="block text-sm font-semibold text-slate-700">
-        Who can book
-        <select className={staffInput} value={d.approval_role ?? ''} onChange={(e) => setD({ ...d, approval_role: e.target.value || null })}>
-          <option value="">Anyone</option>
-          {d.approval_role && !APPROVAL_KINDS.some((k) => k.value === d.approval_role) && (
-            <option value={d.approval_role}>Approved volunteers for {kindLabel(d.approval_role)}</option>
-          )}
-          {APPROVAL_KINDS.map((k) => (
-            <option key={k.value} value={k.value}>
-              Approved volunteers for {k.label}
-            </option>
-          ))}
-        </select>
-        <span className="mt-1 block text-xs font-normal text-slate-500">
-          Approved-only: people enter the email they applied with before they see the times.
-        </span>
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        What it is (shown to people)
-        <textarea className={staffInput} rows={2} value={d.description ?? ''} onChange={txt('description')} />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        Requirements — one per line
-        <textarea className={staffInput} rows={3} value={d.requirements ?? ''} onChange={txt('requirements')} />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        Where
-        <input className={staffInput} value={d.location ?? ''} onChange={txt('location')} />
-      </label>
-      <div className="grid grid-cols-3 gap-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Minutes
-          <input inputMode="numeric" className={staffInput} value={d.duration_min ?? ''} onChange={num('duration_min')} required />
-        </label>
-        <label className="block text-sm font-semibold text-slate-700">
-          Per time
-          <input inputMode="numeric" className={staffInput} value={d.capacity ?? ''} onChange={num('capacity')} required />
-        </label>
-        <label className="block text-sm font-semibold text-slate-700">
-          Per booking
-          <input inputMode="numeric" className={staffInput} value={d.max_party ?? ''} onChange={num('max_party')} required />
-        </label>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Book at least (hours ahead)
-          <input inputMode="numeric" className={staffInput} value={d.min_lead_hours ?? ''} onChange={num('min_lead_hours')} required />
-        </label>
-        <label className="block text-sm font-semibold text-slate-700">
-          Max per month (blank = no limit)
-          <input inputMode="numeric" className={staffInput} value={d.max_per_month ?? ''} onChange={num('max_per_month')} />
-        </label>
-      </div>
-      {d.questions !== undefined && (
-        <label className="block text-sm font-semibold text-slate-700">
-          Questions on the form (optional) — one per line
-          <textarea className={staffInput} rows={4} value={d.questions ?? ''} onChange={txt('questions')} placeholder={'Your rabbit’s name *\nSpayed or neutered? * | Yes | No | Booked in'} />
-          <span className="mt-1 block text-xs font-normal text-slate-500">
-            Put choices after a | to make a pick-list. End the question with * if it must be answered. The answers show under each person in the list.
-          </span>
-        </label>
-      )}
-      <label className="block text-sm font-semibold text-slate-700">
-        {d.questions !== undefined ? 'A last question, answered in their own words (optional)' : 'A question to ask (optional)'}
-        <input className={staffInput} value={d.ask_reason ?? ''} onChange={txt('ask_reason')} placeholder="Which rabbit would you like to meet?" />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        A box they must tick (optional)
-        <input className={staffInput} value={d.attest_text ?? ''} onChange={txt('attest_text')} placeholder="I have completed the Buncare Orientation." />
-      </label>
-      <WeeklyEditor rules={d.weekly ?? []} defaultCapacity={d.capacity ?? 1} onChange={(weekly) => setD({ ...d, weekly })} />
-      <label className="block text-sm font-semibold text-slate-700">
-        Keep this many weeks of times ready
-        <input inputMode="numeric" className={staffInput} value={d.auto_weeks ?? 8} onChange={num('auto_weeks')} />
-      </label>
-      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-brand-blue" checked={Boolean(d.is_published)} onChange={(e) => setD({ ...d, is_published: e.target.checked })} />
-        People can see and book this
-      </label>
-      <FormError>{error}</FormError>
-      <button type="submit" disabled={busy || !d.name.trim()} className={`${btn.primary} w-full disabled:opacity-60`}>
-        {busy ? 'Saving…' : 'Save'}
-      </button>
-    </form>
+    </EditorForm>
   )
 }
 
@@ -719,34 +825,35 @@ function WeeklyEditor({
   }
   return (
     <div className="space-y-2 rounded-2xl border border-brand-blue/20 bg-brand-blue-50/40 p-3">
-      <p className="text-sm font-bold text-ink">Every week</p>
-      <p className="text-xs text-slate-600">
+      <p className="text-base font-bold text-ink">Every week</p>
+      <p className="text-sm text-slate-600">
         The times people can book, week after week. They appear by themselves{rules.length ? '.' : ' — add the first line.'}
       </p>
       {rules.map((r, i) => (
         <div key={i} className="space-y-2 rounded-xl border border-slate-200 bg-white p-2.5">
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {WEEKDAY_SHORT.map((label, day) => (
               <button
                 key={label}
                 type="button"
+                aria-pressed={r.days.includes(day)}
                 onClick={() => toggle(i, day)}
-                className={`min-h-[36px] rounded-full px-2.5 text-xs font-bold ${r.days.includes(day) ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
+                className={`min-h-[44px] min-w-[48px] rounded-full px-2.5 text-sm font-bold ${r.days.includes(day) ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
               >
                 {label}
               </button>
             ))}
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <label className="block text-xs font-semibold text-slate-600">
+            <label className="block text-sm font-semibold text-slate-600">
               From
               <input type="time" className={staffInput} value={r.start} onChange={(e) => set(i, { start: e.target.value })} required />
             </label>
-            <label className="block text-xs font-semibold text-slate-600">
+            <label className="block text-sm font-semibold text-slate-600">
               To
               <input type="time" className={staffInput} value={r.end} onChange={(e) => set(i, { end: e.target.value })} required />
             </label>
-            <label className="block text-xs font-semibold text-slate-600">
+            <label className="block text-sm font-semibold text-slate-600">
               People
               <input
                 inputMode="numeric"
@@ -757,23 +864,26 @@ function WeeklyEditor({
               />
             </label>
           </div>
-          <div className="flex items-center gap-2">
-            <input
-              className={`${staffInput} !mt-0 flex-1`}
-              value={r.label ?? ''}
-              placeholder="Name for this time (optional) — Breakfast shift"
-              onChange={(e) => set(i, { label: e.target.value })}
-            />
-            <button type="button" onClick={() => onChange(rules.filter((_, j) => j !== i))} className="text-red-600" aria-label="Remove this line">
-              <Icon name="trash" size={16} />
-            </button>
-          </div>
+          <input
+            className={staffInput}
+            value={r.label ?? ''}
+            aria-label="Name for this time"
+            placeholder="Name for this time (optional) — Breakfast shift"
+            onChange={(e) => set(i, { label: e.target.value })}
+          />
+          <button
+            type="button"
+            onClick={() => window.confirm('Remove this weekly time? Its future empty times go with it.') && onChange(rules.filter((_, j) => j !== i))}
+            className={pill.red}
+          >
+            <Icon name="trash" size={16} /> Remove this line
+          </button>
         </div>
       ))}
       <button
         type="button"
         onClick={() => onChange([...rules, { days: [6, 0], start: '12:00', end: '13:00', capacity: null, label: '' }])}
-        className={`${btn.outline} w-full`}
+        className={pill.soft}
       >
         <Icon name="plus" size={16} /> Add a weekly time
       </button>

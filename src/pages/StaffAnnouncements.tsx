@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
-import { btn, Badge, Card, Screen } from '../components/ui'
-import { Icon } from '../components/icons'
+import { Badge, Card, Screen } from '../components/ui'
 import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
+import { CardActions, EditorForm, Field, Part, StepButton, pill } from '../components/StaffJob'
 import StaffImageField from '../components/StaffImageField'
 import type { Database } from '../lib/database.types'
 
@@ -33,29 +33,32 @@ function fmtDate(iso: string): string {
 }
 
 function AnnouncementForm({
+  heading,
   initial,
   userId,
-  submitLabel,
+  saveLabel,
   onSubmit,
   onCancel,
+  onRemove,
 }: {
+  heading: string
   initial: Draft
   userId: string
-  submitLabel: string
+  saveLabel: string
   onSubmit: (d: Draft) => Promise<void>
   onCancel: () => void
+  onRemove?: () => Promise<void>
 }) {
   const [draft, setDraft] = useState<Draft>(initial)
   const [busy, setBusy] = useState(false)
   const [imageBusy, setImageBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const submit = async (e: { preventDefault(): void }) => {
-    e.preventDefault()
+  const run = async (fn: () => Promise<void>) => {
     setError(null)
     setBusy(true)
     try {
-      await onSubmit(draft)
+      await fn()
     } catch (err) {
       setError(errMessage(err))
       setBusy(false)
@@ -63,66 +66,71 @@ function AnnouncementForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3">
-      <label className="block text-sm font-semibold text-slate-700">
-        Title
-        <input
-          className={staffInput}
-          required
-          value={draft.title}
-          onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-          placeholder="e.g. Closed this Saturday for BunFest"
-        />
-      </label>
-      <label className="block text-sm font-semibold text-slate-700">
-        Message
-        <textarea
-          className={staffInput}
-          rows={3}
-          required
-          value={draft.body}
-          onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))}
-          placeholder="What do visitors need to know?"
-        />
-      </label>
-      <StaffImageField
-        label="A picture"
-        hint="Shown with the notice on the app's home screen and the website."
-        value={draft.image_url}
-        userId={userId}
-        onChange={(url) => setDraft((d) => ({ ...d, image_url: url }))}
-        onBusyChange={setImageBusy}
-      />
-      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-        <input
-          type="checkbox"
-          className="h-5 w-5 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30"
-          checked={draft.is_published}
-          onChange={(e) => setDraft((d) => ({ ...d, is_published: e.target.checked }))}
-        />
-        Show in the app now (uncheck to save as a draft)
-      </label>
-
-      <FormError>{error}</FormError>
-
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={busy || imageBusy || draft.title.trim().length === 0 || draft.body.trim().length === 0}
-          className={`${btn.primary} flex-1 disabled:opacity-60`}
-        >
-          {busy ? 'Saving…' : submitLabel}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={busy}
-          className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500 transition hover:bg-slate-50"
-        >
-          Cancel
-        </button>
+    <EditorForm
+      title={heading}
+      hint="Notices show on the app’s home screen and the website."
+      onSubmit={() => run(() => onSubmit(draft))}
+      onCancel={onCancel}
+      busy={busy || imageBusy}
+      saveLabel={saveLabel}
+      canSave={draft.title.trim().length > 0 && draft.body.trim().length > 0}
+      error={error}
+      remove={onRemove ? { label: 'Remove', confirm: `Remove “${initial.title}”? This can’t be undone.`, onRemove: () => run(onRemove) } : undefined}
+    >
+      <div className="space-y-3">
+        <Part n="A" hint="needed">
+          What it says
+        </Part>
+        <Field label="Title" needed>
+          <input
+            className={staffInput}
+            required
+            value={draft.title}
+            onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+            placeholder="Closed this Saturday for BunFest"
+          />
+        </Field>
+        <Field label="Message" needed>
+          <textarea
+            className={staffInput}
+            rows={3}
+            required
+            value={draft.body}
+            onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))}
+            placeholder="What do visitors need to know?"
+          />
+        </Field>
       </div>
-    </form>
+
+      <div className="space-y-3">
+        <Part n="B" hint="optional">
+          A picture
+        </Part>
+        <StaffImageField
+          label="Picture"
+          hint="Shown with the notice on the app’s home screen and the website."
+          value={draft.image_url}
+          userId={userId}
+          onChange={(url) => setDraft((d) => ({ ...d, image_url: url }))}
+          onBusyChange={setImageBusy}
+        />
+      </div>
+
+      <div className="space-y-3">
+        <Part n="C" hint="optional">
+          Showing
+        </Part>
+        <label className="flex min-h-[44px] items-center gap-3 text-base font-semibold text-slate-700">
+          <input
+            type="checkbox"
+            className="h-6 w-6 rounded border-slate-300 text-brand-blue focus:ring-brand-blue/30"
+            checked={draft.is_published}
+            onChange={(e) => setDraft((d) => ({ ...d, is_published: e.target.checked }))}
+          />
+          Show it now (leave unchecked to keep it as a draft)
+        </label>
+      </div>
+    </EditorForm>
   )
 }
 
@@ -136,7 +144,6 @@ function AnnouncementCard({
   onChanged: () => void
 }) {
   const [editing, setEditing] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -163,89 +170,42 @@ function AnnouncementCard({
   }
 
   const doDelete = async () => {
-    setBusy(true)
-    setError(null)
     const { error } = await supabase.from('announcements').delete().eq('id', item.id)
-    if (error) {
-      setError(errMessage(error))
-      setBusy(false)
-      setConfirmDelete(false)
-      return
-    }
+    if (error) throw error
     onChanged()
   }
 
   if (editing) {
     return (
-      <Card>
-        <AnnouncementForm
-          initial={{ title: item.title, body: item.body, image_url: item.image_url ?? '', is_published: item.is_published }}
-          userId={userId}
-          submitLabel="Save changes"
-          onSubmit={saveEdit}
-          onCancel={() => setEditing(false)}
-        />
-      </Card>
+      <AnnouncementForm
+        heading="Edit this notice"
+        initial={{ title: item.title, body: item.body, image_url: item.image_url ?? '', is_published: item.is_published }}
+        userId={userId}
+        saveLabel="Save"
+        onSubmit={saveEdit}
+        onCancel={() => setEditing(false)}
+        onRemove={doDelete}
+      />
     )
   }
 
   return (
     <Card className="space-y-2">
       <div className="flex items-start justify-between gap-2">
-        <h3 className="min-w-0 font-display text-[15px] font-extrabold text-ink">{item.title}</h3>
-        {item.is_published ? (
-          <Badge tone="blue">Live</Badge>
-        ) : (
-          <Badge tone="slate">Draft</Badge>
-        )}
+        <h3 className="min-w-0 font-display text-base font-extrabold text-ink">{item.title}</h3>
+        {item.is_published ? <Badge tone="blue">Shown</Badge> : <Badge tone="slate">Hidden</Badge>}
       </div>
-      <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600">{item.body}</p>
-      <p className="text-xs text-slate-400">Updated {fmtDate(item.updated_at)}</p>
+      <p className="whitespace-pre-line text-[15px] leading-relaxed text-slate-600">{item.body}</p>
+      <p className="text-sm text-slate-500">Updated {fmtDate(item.updated_at)}</p>
 
-      <div className="flex flex-wrap items-center gap-2 pt-1">
-        <button
-          type="button"
-          onClick={togglePublish}
-          disabled={busy}
-          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
-        >
-          {item.is_published ? 'Unpublish' : 'Publish'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50"
-        >
+      <CardActions className="pt-1">
+        <button type="button" onClick={() => setEditing(true)} className={pill.blue}>
           Edit
         </button>
-        {confirmDelete ? (
-          <>
-            <button
-              type="button"
-              onClick={doDelete}
-              disabled={busy}
-              className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
-            >
-              {busy ? 'Deleting…' : 'Confirm delete'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmDelete(false)}
-              className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setConfirmDelete(true)}
-            className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50"
-          >
-            Delete
-          </button>
-        )}
-      </div>
+        <button type="button" onClick={togglePublish} disabled={busy} className={pill.outline}>
+          {item.is_published ? 'Hide' : 'Show'}
+        </button>
+      </CardActions>
       <FormError>{error}</FormError>
     </Card>
   )
@@ -268,6 +228,7 @@ export default function StaffAnnouncements() {
       return
     }
     setError(null)
+    // Newest first.
     const { data, error } = await supabase
       .from('announcements')
       .select('*')
@@ -305,7 +266,7 @@ export default function StaffAnnouncements() {
       <Screen className="space-y-3 pt-2">
         <h1 className="font-display text-2xl font-black text-ink">Announcements</h1>
         <Card className="border-slate-200 bg-slate-50/80">
-          <p className="text-sm leading-relaxed text-slate-600">
+          <p className="text-base leading-relaxed text-slate-600">
             You don’t have access to post announcements. An owner or admin can grant the “Post
             announcements” capability.
           </p>
@@ -316,34 +277,26 @@ export default function StaffAnnouncements() {
 
   return (
     <Screen className="space-y-4">
-      <StaffTitle
-        title="Announcements"
-        actions={
-          !creating ? (
-            <button
-              type="button"
-              onClick={() => setCreating(true)}
-              className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
-            >
-              <Icon name="gift" size={15} /> New
-            </button>
-          ) : undefined
-        }
-      >
-        <p>Short notices that appear on the app’s home screen for visitors.</p>
+      <StaffTitle title="Announcements">
+        <p>Short notices that appear on the app’s home screen for visitors. The newest is first.</p>
+        <p>Tap Hide to take a notice down without losing it, and Show to bring it back. To remove one for good, tap Edit, then Remove.</p>
       </StaffTitle>
 
+      {!creating && (
+        <StepButton tone="orange" icon="plus" onClick={() => setCreating(true)}>
+          New announcement
+        </StepButton>
+      )}
+
       {creating && (
-        <Card>
-          <p className="mb-3 font-display text-[15px] font-extrabold text-ink">New announcement</p>
-          <AnnouncementForm
-            initial={emptyDraft}
-            userId={userId}
-            submitLabel="Post announcement"
-            onSubmit={create}
-            onCancel={() => setCreating(false)}
-          />
-        </Card>
+        <AnnouncementForm
+          heading="New announcement"
+          initial={emptyDraft}
+          userId={userId}
+          saveLabel="Post announcement"
+          onSubmit={create}
+          onCancel={() => setCreating(false)}
+        />
       )}
 
       <FormError>{error}</FormError>
@@ -352,8 +305,8 @@ export default function StaffAnnouncements() {
         <Spinner label="Loading announcements…" />
       ) : items.length === 0 ? (
         <Card className="border-slate-200 bg-slate-50/80 text-center">
-          <p className="text-sm leading-relaxed text-slate-600">
-            No announcements yet. Tap “New” to post one — it’ll show on the app’s home screen.
+          <p className="text-base leading-relaxed text-slate-600">
+            No announcements yet. Tap “New announcement” to post one — it’ll show on the app’s home screen.
           </p>
         </Card>
       ) : (

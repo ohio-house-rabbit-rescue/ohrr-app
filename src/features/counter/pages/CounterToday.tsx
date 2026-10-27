@@ -4,8 +4,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { errMessage } from '../../../lib/supabase'
 import { staffInput } from '../../../components/staffui'
+import ExportButtons from '../../../components/ExportButtons'
+import { ohrr } from '../../../data/ohrr'
 import { ErrorBox, StepShell } from '../../scan/ScanUI'
 import { money } from '../local'
+import { dayPdf, daySheet, dayWords } from '../daySummary'
 import { counterDay, useTill, type CounterDay } from '../sales'
 import { SyncPill, useCounterOrg } from '../CounterShell'
 
@@ -36,14 +39,14 @@ export default function CounterToday() {
           <input type="date" className={`${staffInput} !mt-0 !w-auto`} value={day} onChange={(e) => setDay(e.target.value || today())} aria-label="Which day" />
         </div>
         {till.waiting > 0 && (
-          <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
             {till.waiting} {till.waiting === 1 ? 'sale on this phone hasn’t' : 'sales on this phone haven’t'} been sent yet, so {till.waiting === 1 ? 'it isn’t' : 'they aren’t'} counted below. They’ll send when there’s signal.
           </p>
         )}
-        {offline && <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">The totals need signal.</p>}
+        {offline && <p className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">The totals need signal.</p>}
         <ErrorBox>{error}</ErrorBox>
-        {data === undefined && !error && !offline && <p className="text-center text-sm text-slate-500">Adding it up…</p>}
-        {data === null && <p className="text-sm text-slate-600">You don’t have access to the till totals.</p>}
+        {data === undefined && !error && !offline && <p className="text-center text-base text-slate-600">Adding it up…</p>}
+        {data === null && <p className="text-base text-slate-600">You don’t have access to the till totals.</p>}
         {data && (
           <>
             <div className="grid grid-cols-2 gap-2">
@@ -52,8 +55,13 @@ export default function CounterToday() {
               <Tot label="Sales" text={String(data.sales)} />
               <Tot label="Total" cents={data.cash_cents + data.card_cents + data.other_cents} strong />
             </div>
+            <ExportButtons
+              spec={() => daySheet(data, day)}
+              label="Spreadsheet"
+              pdf={{ label: 'Day’s totals (PDF)', title: `Today at the till - ${dayWords(day)}`, filename: `ohrr-till-${day}`, build: () => dayPdf(data, day, ohrr.name) }}
+            />
             {data.items.length === 0 ? (
-              <p className="text-center text-sm text-slate-500">Nothing sold on this day.</p>
+              <p className="text-center text-base text-slate-600">Nothing sold on this day.</p>
             ) : (
               <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white">
                 {data.items.map((i) => (
@@ -76,7 +84,7 @@ export default function CounterToday() {
 function Tot({ label, cents, text, strong }: { label: string; cents?: number; text?: string; strong?: boolean }) {
   return (
     <div className={`rounded-2xl p-3 ${strong ? 'bg-ink text-white' : 'border border-slate-200 bg-white'}`}>
-      <p className={`text-xs font-extrabold uppercase tracking-wider ${strong ? 'text-white/70' : 'text-slate-500'}`}>{label}</p>
+      <p className={`text-sm font-extrabold uppercase tracking-wider ${strong ? 'text-white/80' : 'text-slate-600'}`}>{label}</p>
       <p className="font-display text-2xl font-black">{text ?? money(cents ?? 0)}</p>
     </div>
   )

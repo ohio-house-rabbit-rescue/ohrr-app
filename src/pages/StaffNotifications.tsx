@@ -4,14 +4,14 @@
 // phones?" check. The ohrr-jobs function does the sending (send_notification()
 // only writes the message). Below: the latest notifications, the automatic
 // ones included. The website has the desktop mirror.
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../lib/auth'
 import { errMessage, supabase } from '../lib/supabase'
 import type { Database, Json, PushTopic } from '../lib/database.types'
-import { Screen, Card, Badge, btn } from '../components/ui'
-import { Icon } from '../components/icons'
+import { Screen, Card, Badge } from '../components/ui'
 import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
+import { EditorForm, Field, NotOnYet, Part, pill } from '../components/StaffJob'
 import { PUSH_TOPICS, PUSH_TOPIC_LABEL, isPushTopic } from '../features/account/push'
 
 type Message = Pick<
@@ -134,7 +134,7 @@ export default function StaffNotifications() {
   if (!can('notifications.send'))
     return (
       <Screen>
-        <p className="text-sm text-slate-600">You don’t have access to send notifications.</p>
+        <p className="text-base text-slate-600">You don’t have access to send notifications.</p>
       </Screen>
     )
 
@@ -144,8 +144,7 @@ export default function StaffNotifications() {
     if (!linkTouched) setLink(TOPIC_LINK[t])
   }
 
-  const check = (e: FormEvent) => {
-    e.preventDefault()
+  const check = () => {
     setError(null)
     setMsg(null)
     if (!title.trim()) return setError('Give it a title.')
@@ -183,48 +182,56 @@ export default function StaffNotifications() {
         <p>New volunteer calls, events and rabbits send a notification by themselves.</p>
       </StaffTitle>
       {/* Kept in view, not folded: it is the caution to read before sending. */}
-      <p className="text-sm text-slate-600">Keep it for what matters — every one lands on someone’s lock screen.</p>
+      <p className="text-base text-slate-700">Keep it for what matters — every one lands on someone’s lock screen.</p>
 
       {counts === 'loading' && !error && <Spinner />}
       {counts === null && <FormError>{error}</FormError>}
-      {counts === 'missing' && (
-        <Card className="border-amber-200 bg-amber-50">
-          <p className="text-sm leading-relaxed text-slate-700">
-            Phone notifications aren’t switched on yet — ask an admin.
-          </p>
-        </Card>
-      )}
+      {counts === 'missing' && <NotOnYet what="Phone notifications" update={32} />}
       {counts && typeof counts === 'object' && (
         <>
-          {!counts.ready && (
-            <Card className="border-amber-200 bg-amber-50">
-              <p className="text-sm leading-relaxed text-slate-700">
-                Notifications switch on once the ohrr-jobs function has been set up in Supabase.
-              </p>
-            </Card>
-          )}
+          {!counts.ready && <NotOnYet what="Sending to phones" />}
 
-          <form onSubmit={check}>
-            <Card className="space-y-4">
-              <fieldset className="space-y-1">
-                <legend className="text-sm font-semibold text-slate-700">Who it’s for</legend>
+          <EditorForm
+            title="New notification"
+            hint="It goes to the phones of people who asked for this kind of news."
+            onSubmit={confirming ? send : check}
+            onCancel={confirming ? () => setConfirming(false) : undefined}
+            cancelLabel="Not yet"
+            busy={busy}
+            saveLabel={confirming ? `Yes, send to ${phones(n)}` : 'Send…'}
+            canSave={confirming || (ready && n > 0 && !!title.trim())}
+            error={error}
+          >
+            <div className="space-y-2">
+              <Part n="A" hint="needed">
+                Who gets it
+              </Part>
+              <fieldset>
+                <legend className="sr-only">Who it’s for</legend>
                 {PUSH_TOPICS.map((t) => (
-                  <label key={t.key} className="flex min-h-[44px] items-center gap-2.5 text-sm text-slate-700">
+                  <label key={t.key} className="flex min-h-[48px] items-center gap-3 text-base text-slate-700">
                     <input
                       type="radio"
                       name="topic"
-                      className="h-5 w-5 shrink-0 border-slate-300 text-brand-blue"
+                      className="h-6 w-6 shrink-0 border-slate-300 text-brand-blue"
                       checked={topic === t.key}
                       onChange={() => pickTopic(t.key)}
                     />
                     <span className="min-w-0 flex-1">{t.label}</span>
-                    <span className="text-xs font-semibold text-slate-500">{phones(counts.byTopic[t.key])}</span>
+                    <span className="text-sm font-semibold text-slate-600">{phones(counts.byTopic[t.key])}</span>
                   </label>
                 ))}
               </fieldset>
+              {ready && n === 0 && (
+                <p className="text-sm text-slate-600">No phones have asked for {PUSH_TOPIC_LABEL[topic].toLowerCase()} yet.</p>
+              )}
+            </div>
 
-              <label className="block text-sm font-semibold text-slate-700">
-                Title
+            <div className="space-y-3">
+              <Part n="B" hint="needed">
+                What it says
+              </Part>
+              <Field label="Title" needed>
                 <input
                   className={staffInput}
                   value={title}
@@ -235,10 +242,9 @@ export default function StaffNotifications() {
                     setConfirming(false)
                   }}
                 />
-                <span className="mt-1 block text-right text-xs font-normal text-slate-400">{title.length}/120</span>
-              </label>
-              <label className="block text-sm font-semibold text-slate-700">
-                Message
+                <span className="mt-1 block text-right text-xs font-normal text-slate-500">{title.length}/120</span>
+              </Field>
+              <Field label="Message">
                 <textarea
                   className={staffInput}
                   rows={3}
@@ -250,10 +256,22 @@ export default function StaffNotifications() {
                     setConfirming(false)
                   }}
                 />
-                <span className="mt-1 block text-right text-xs font-normal text-slate-400">{body.length}/400</span>
-              </label>
-              <label className="block text-sm font-semibold text-slate-700">
-                Tapping it opens
+                <span className="mt-1 block text-right text-xs font-normal text-slate-500">{body.length}/400</span>
+              </Field>
+            </div>
+
+            <div className="space-y-2">
+              <Part n="C" hint="optional">
+                When
+              </Part>
+              <p className="text-base text-slate-700">It goes out as soon as you confirm.</p>
+            </div>
+
+            <div className="space-y-3">
+              <Part n="D" hint="optional">
+                Where it opens
+              </Part>
+              <Field label="Tapping it opens">
                 <select
                   className={staffInput}
                   value={link}
@@ -269,11 +287,9 @@ export default function StaffNotifications() {
                     </option>
                   ))}
                 </select>
-              </label>
+              </Field>
               {link === 'custom' && (
-                <label className="block text-sm font-semibold text-slate-700">
-                  Link
-                  <span className="block text-xs font-normal text-slate-500">A page in the app (starts with /) or a web address (https://…)</span>
+                <Field label="Link" hint="A page in the app (starts with /) or a web address (https://…)">
                   <input
                     className={staffInput}
                     value={custom}
@@ -287,7 +303,7 @@ export default function StaffNotifications() {
                       setConfirming(false)
                     }}
                   />
-                </label>
+                </Field>
               )}
 
               <div>
@@ -296,78 +312,50 @@ export default function StaffNotifications() {
                   <div className="flex gap-3 rounded-xl bg-white p-3 shadow-sm">
                     <img src="/ohrr-mark.png" alt="" className="h-10 w-10 shrink-0 rounded-lg" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-semibold text-slate-400">OHRR · now</p>
-                      <p className={`break-words text-sm font-bold ${title.trim() ? 'text-ink' : 'text-slate-300'}`}>{title.trim() || 'Your title'}</p>
+                      <p className="text-xs font-semibold text-slate-500">OHRR · now</p>
+                      <p className={`break-words text-base font-bold ${title.trim() ? 'text-ink' : 'text-slate-400'}`}>{title.trim() || 'Your title'}</p>
                       {body.trim() && <p className="line-clamp-4 whitespace-pre-line break-words text-sm text-slate-600">{body.trim()}</p>}
                     </div>
                   </div>
-                  <p className="mt-2 break-all text-xs text-slate-500">Tapping it opens: {linkLabel || '—'}</p>
+                  <p className="mt-2 break-all text-sm text-slate-600">Tapping it opens: {linkLabel || '—'}</p>
                 </div>
               </div>
+            </div>
 
-              <FormError>{error}</FormError>
-              {msg && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{msg}</p>}
-
-              {confirming ? (
-                <div className="space-y-2 rounded-xl border border-brand-orange/40 bg-brand-orange-50 p-3">
-                  <p className="text-sm font-bold text-ink">Send to {phones(n)}?</p>
-                  <div className="flex gap-2">
-                    <button type="button" disabled={busy} onClick={() => void send()} className={`${btn.primary} flex-1 disabled:opacity-60`}>
-                      {busy ? 'Sending…' : 'Yes, send it'}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => setConfirming(false)}
-                      className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600"
-                    >
-                      Not yet
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <button type="submit" disabled={!ready || n === 0 || !title.trim()} className={`${btn.primary} w-full disabled:opacity-60`}>
-                    <Icon name="device" size={16} /> Send…
-                  </button>
-                  {ready && n === 0 && (
-                    <p className="text-xs text-slate-500">No phones have asked for {PUSH_TOPIC_LABEL[topic].toLowerCase()} yet.</p>
-                  )}
-                </>
-              )}
-            </Card>
-          </form>
+            {msg && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{msg}</p>}
+            {confirming && (
+              <p className="rounded-xl border border-brand-orange/40 bg-brand-orange-50 px-3 py-3 text-base font-bold text-ink">Send to {phones(n)}?</p>
+            )}
+          </EditorForm>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between px-1">
-              <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Sent lately</p>
-              <button type="button" onClick={() => void load()} className="min-h-[40px] text-xs font-bold text-brand-blue">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <h2 className="font-display text-lg font-extrabold text-ink">Sent lately</h2>
+              <button type="button" onClick={() => void load()} className={pill.outline}>
                 Refresh
               </button>
             </div>
             {history.length === 0 ? (
-              <p className="px-1 text-sm text-slate-500">Nothing sent yet.</p>
+              <p className="px-1 text-base text-slate-600">Nothing sent yet.</p>
             ) : (
-              <Card className="!p-0">
-                <ul className="divide-y divide-slate-100">
-                  {history.map((m) => (
-                    <li key={m.id} className="px-4 py-3">
-                      <p className="break-words text-sm font-semibold text-ink">{m.title}</p>
-                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
-                        <Badge tone="slate">{isPushTopic(m.topic) ? PUSH_TOPIC_LABEL[m.topic] : m.topic}</Badge>
-                        {!m.created_by && <span>automatic</span>}
-                        <span>{when(m.created_at)}</span>
-                        <span className="font-semibold">{status(m)}</span>
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
+              <div className="space-y-2">
+                {history.map((m) => (
+                  <Card key={m.id} className="!p-3">
+                    <p className="break-words text-base font-semibold text-ink">{m.title}</p>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600">
+                      <Badge tone="slate">{isPushTopic(m.topic) ? PUSH_TOPIC_LABEL[m.topic] : m.topic}</Badge>
+                      {!m.created_by && <span>automatic</span>}
+                      <span>{when(m.created_at)}</span>
+                      <span className="font-semibold">{status(m)}</span>
+                    </p>
+                  </Card>
+                ))}
+              </div>
             )}
           </div>
         </>
       )}
-      {counts === null && !error && <p className="text-sm text-slate-600">You don’t have access to send notifications.</p>}
+      {counts === null && !error && <p className="text-base text-slate-600">You don’t have access to send notifications.</p>}
     </Screen>
   )
 }
