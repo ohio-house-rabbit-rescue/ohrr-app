@@ -121,8 +121,8 @@ export interface LabelItem {
 }
 
 export interface BoxLabel {
-  /** The names of the items inside, in the order they went in. */
-  items: string[]
+  /** The items inside, in the order they went in: each line is "DON-00001  Stuffed bunny". */
+  items: { code: string; title: string }[]
   /** Where the box is kept. */
   location?: string | null
 }
@@ -485,7 +485,8 @@ async function renderAuctionLabel(canvas: HTMLCanvasElement, item: LabelItem, a:
 /**
  * The box label: QR on the left; the rescue, BOX and the number, where it's
  * kept and how many items to its right; the barcode and code across the
- * label; then the names of the items inside, one per line. The names shrink to
+ * label; then the items inside, one per line — the item's code, then its name
+ * ("DON-00001  Stuffed bunny"; OHRR's pick 2026-10-27). The lines shrink to
  * fit, then go in two columns, and only then end in "+ N more".
  */
 async function renderBoxLabel(canvas: HTMLCanvasElement, item: LabelItem, box: BoxLabel, size: LabelSize, dpi: number): Promise<void> {
@@ -547,16 +548,22 @@ async function renderBoxLabel(canvas: HTMLCanvasElement, item: LabelItem, box: B
   ctx.textAlign = 'left'
   top += Math.round(codePx * 1.2) + Math.round(m / 2)
 
-  // A rule, then the names.
+  // A rule, then the items: code, then name.
   ctx.fillRect(m, top, W - 2 * m, Math.max(2, Math.round(dpi / 100)))
   top += m
   const bottom = H - m
   const room = bottom - top
   if (room < 0.12 * dpi) return
-  const names = box.items.length > 0 ? box.items.map((n) => n.trim() || 'Untitled') : ['(empty — scan items into this box)']
+  const rows = box.items.map((it) => ({ code: it.code, title: it.title.trim() || 'Untitled' }))
   const maxPx = Math.round(Math.min(0.2 * dpi, short * 0.06))
   const minPx = Math.round(0.085 * dpi)
-  const fits = (px: number, cols: number) => Math.floor(room / Math.round(px * 1.25)) * cols >= names.length
+  if (rows.length === 0) {
+    ctx.font = `600 ${maxPx}px "Open Sans"`
+    ctx.fillStyle = '#0f172a'
+    ctx.fillText(ellipsize(ctx, '(empty — scan items into this box)', W - 2 * m), m, top)
+    return
+  }
+  const fits = (px: number, cols: number) => Math.floor(room / Math.round(px * 1.25)) * cols >= rows.length
   let px = maxPx
   let cols = 1
   while (px > minPx && !fits(px, 1)) px -= 1
@@ -568,21 +575,30 @@ async function renderBoxLabel(canvas: HTMLCanvasElement, item: LabelItem, box: B
   const lineH = Math.round(px * 1.25)
   const perCol = Math.max(1, Math.floor(room / lineH))
   const capacity = perCol * cols
-  const shown = names.length > capacity ? names.slice(0, capacity - 1) : names
-  const more = names.length - shown.length
+  const shown = rows.length > capacity ? rows.slice(0, capacity - 1) : rows
+  const more = rows.length - shown.length
   const gap = m
   const colW = Math.floor((W - 2 * m - gap * (cols - 1)) / cols)
-  ctx.font = `600 ${px}px "Open Sans"`
   ctx.fillStyle = '#0f172a'
-  const lines = more > 0 ? [...shown, cols === 1 ? `+ ${more} more — scan for the full list` : `+ ${more} more (scan the box)`] : shown
-  lines.forEach((line, i) => {
-    const col = Math.floor(i / perCol)
-    const x = m + col * (colW + gap)
+  // The names line up after the widest code.
+  const codeFont = `900 ${px}px "Courier New", monospace`
+  ctx.font = codeFont
+  const codeW = Math.min(Math.round(colW * 0.6), Math.max(...shown.map((r) => ctx.measureText(r.code).width)))
+  const nameX = Math.round(codeW + px * 0.6)
+  shown.forEach((r, i) => {
+    const x = m + Math.floor(i / perCol) * (colW + gap)
     const ly = top + (i % perCol) * lineH
-    const last = more > 0 && i === lines.length - 1
-    ctx.font = last ? `800 ${px}px "Nunito"` : `600 ${px}px "Open Sans"`
-    ctx.fillText(ellipsize(ctx, last ? line : `• ${line}`, colW), x, ly)
+    ctx.font = codeFont
+    ctx.fillText(ellipsize(ctx, r.code, codeW), x, ly)
+    ctx.font = `600 ${px}px "Open Sans"`
+    ctx.fillText(ellipsize(ctx, r.title, colW - nameX), x + nameX, ly)
   })
+  if (more > 0) {
+    const i = shown.length
+    ctx.font = `800 ${px}px "Nunito"`
+    const line = cols === 1 ? `+ ${more} more — scan for the full list` : `+ ${more} more (scan the box)`
+    ctx.fillText(ellipsize(ctx, line, colW), m + Math.floor(i / perCol) * (colW + gap), top + (i % perCol) * lineH)
+  }
 }
 
 /** One label as a PNG data URL (for previews and the print page). */

@@ -40,7 +40,7 @@ const SELECT =
   'mt-1 block min-h-[48px] w-full rounded-xl border-2 border-slate-200 bg-white px-3 text-base font-semibold text-ink outline-none focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15'
 
 export function boxLabel(box: Box): LabelItem {
-  return { code: box.code, title: boxName(box.code), box: { items: box.items.map((i) => i.title), location: box.location } }
+  return { code: box.code, title: boxName(box.code), box: { items: box.items.map((i) => ({ code: i.code, title: i.title })), location: box.location } }
 }
 
 /** What happened to one scanned or ticked item, in a sentence. */
