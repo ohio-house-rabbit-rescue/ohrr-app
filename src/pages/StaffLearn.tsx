@@ -3,6 +3,7 @@ import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import {
   CARE_ICONS,
@@ -372,21 +373,22 @@ export default function StaffLearn() {
 
   return (
     <Screen className="space-y-4">
-      <div className="flex items-start justify-between gap-3 pt-1">
-        <div>
-          <h1 className="font-display text-2xl font-black text-ink">Care guides</h1>
-          <p className="mt-1 text-sm text-slate-600">The Rabbit Care articles shown in Learn.</p>
-        </div>
-        {!creating && (
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
-          >
-            <Icon name="book" size={15} /> New
-          </button>
-        )}
-      </div>
+      <StaffTitle
+        title="Care guides"
+        actions={
+          !creating ? (
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
+            >
+              <Icon name="book" size={15} /> New
+            </button>
+          ) : undefined
+        }
+      >
+        <p>The Rabbit Care articles shown in Learn.</p>
+      </StaffTitle>
 
       {creating && (
         <Card>

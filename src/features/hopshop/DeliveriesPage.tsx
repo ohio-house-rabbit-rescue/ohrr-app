@@ -9,6 +9,7 @@ import { useAuth } from '../../lib/auth'
 import { errMessage } from '../../lib/supabase'
 import { btn, Card, Screen } from '../../components/ui'
 import { Icon } from '../../components/icons'
+import { StaffTitle } from '../../components/StaffTitle'
 import { FormError, Spinner, staffInput } from '../../components/staffui'
 import { listSuppliers, money, type Supplier } from './api'
 import { dayText, deliveryDetail, invoiceFileUrl, listDeliveries, undoDelivery, type Delivery } from './deliveries'
@@ -59,8 +60,9 @@ function DeliveryList() {
     <Screen className="space-y-4">
       <div className="pt-1">
         <Back />
-        <h1 className="mt-1 font-display text-2xl font-black text-ink">Deliveries</h1>
-        <p className="mt-1 text-base text-slate-600">Every invoice added to stock, with what it cost and what the shipping was.</p>
+        <StaffTitle title="Deliveries">
+          <p>Every invoice added to stock, with what it cost and what the shipping was.</p>
+        </StaffTitle>
       </div>
       <Link to={`/staff/hopshop/deliveries/new${supplier ? `?supplier=${supplier}` : ''}`} className={`${btn.primary} min-h-[52px] w-full`}>
         <Icon name="plus" size={18} /> Add a delivery

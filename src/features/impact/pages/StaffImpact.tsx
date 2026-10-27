@@ -9,6 +9,7 @@ import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
 import { hoursTotalForYear } from '../../bookings/api'
 import { IMPACT_FIELDS, deleteImpact, listImpact, saveImpact, type ImpactYear } from '../api'
+import { StaffTitle } from '../../../components/StaffTitle'
 
 type Draft = { fields: Record<string, string>; highlights: string; note: string; is_published: boolean }
 
@@ -93,10 +94,9 @@ export default function StaffImpact() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Impact</h1>
-        <p className="mt-1 text-sm text-slate-600">The year in numbers, for donors, sponsors and volunteers. Shown at /impact on the app and the website once published.</p>
-      </div>
+      <StaffTitle title="Impact">
+        <p>The year in numbers, for donors, sponsors and volunteers. Shown at /impact on the app and the website once published.</p>
+      </StaffTitle>
       <div className="flex flex-wrap gap-2">
         {years.map((y) => {
           const has = rows?.find((r) => r.year === y)

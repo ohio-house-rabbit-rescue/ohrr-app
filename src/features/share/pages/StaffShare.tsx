@@ -24,6 +24,7 @@ import { canvasToBlob, renderCard } from '../render'
 import { canShareFiles, copyText, savePng, sharePng } from '../share'
 import { createPost, uploadPostPng } from '../queue'
 import { useNavigate } from 'react-router-dom'
+import { Explain, StaffTitle } from '../../../components/StaffTitle'
 
 type Tab = 'suggested' | 'rabbits' | 'events' | 'messages' | 'custom'
 
@@ -69,12 +70,11 @@ export default function StaffShare() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Share kit</h1>
-        <p className="mt-1 text-sm text-slate-600">
+      <StaffTitle title="Share kit" flow={['Pick a post', 'Share', 'Paste the caption', 'Post']}>
+        <p>
           Pick something, tap <strong>Share</strong>, choose Instagram, Facebook or TikTok. The picture and the caption are made for you.
         </p>
-      </div>
+      </StaffTitle>
 
       <div className="flex flex-wrap gap-2">
         {(
@@ -302,9 +302,11 @@ function Composer({ post, onBack }: { post: CardPost; onBack: () => void }) {
           Caption (edit if you like)
           <textarea className={staffInput} rows={7} value={caption} onChange={(e) => setCaption(e.target.value)} />
         </label>
-        <p className="text-xs leading-relaxed text-slate-500">
-          <strong>How to post:</strong> Share → pick Instagram (Feed or Story) or Facebook → the picture is already there → paste the caption → Post. TikTok: Share → TikTok → add the image as a photo post.
-        </p>
+        <Explain label="How to post">
+          <p>
+            <strong>How to post:</strong> Share → pick Instagram (Feed or Story) or Facebook → the picture is already there → paste the caption → Post. TikTok: Share → TikTok → add the image as a photo post.
+          </p>
+        </Explain>
       </Card>
     </Screen>
   )

@@ -12,6 +12,7 @@ import { isNeeds40, listDropoffs, type Dropoff } from '../api'
 import { ErrorBox } from '../ScanUI'
 import { KIND_META, formatMoney, usDate } from '../types'
 import { plural } from '../letters'
+import { StaffTitle } from '../../../components/StaffTitle'
 
 export default function Dropoffs() {
   const { membership, can } = useAuth()
@@ -44,8 +45,9 @@ export default function Dropoffs() {
         <Link to="/staff/items" className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
           <Icon name="arrowLeft" size={20} /> Items
         </Link>
-        <h1 className="mt-1 font-display text-2xl font-black text-ink">Drop-offs</h1>
-        <p className="mt-1 text-base text-slate-600">Each time someone brings donations: who gave, what they gave, and their thank-you letter.</p>
+        <StaffTitle title="Drop-offs">
+          <p>Each time someone brings donations: who gave, what they gave, and their thank-you letter.</p>
+        </StaffTitle>
       </div>
 
       {!allowed ? (

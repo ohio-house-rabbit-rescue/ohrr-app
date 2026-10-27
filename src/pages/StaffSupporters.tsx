@@ -13,6 +13,7 @@ import { useAuth } from '../lib/auth'
 import { errMessage, supabase } from '../lib/supabase'
 import { Screen, Card, Badge, btn } from '../components/ui'
 import { Icon } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { exportCsv, toCsv } from '../lib/exportFile'
 import { INTERESTS, INTEREST_LABEL, cleanInterests, isMissing, type Interest } from '../features/account/emailList'
@@ -133,13 +134,12 @@ export default function StaffSupporters() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Supporters</h1>
-        <p className="mt-1 text-sm leading-relaxed text-slate-600">
+      <StaffTitle title="Supporters">
+        <p>
           Everyone who asked OHRR for emails, and what about. People change or stop theirs with the link in every email
           or in My OHRR.
         </p>
-      </div>
+      </StaffTitle>
 
       {missing ? (
         <Card className="border-amber-200 bg-amber-50">

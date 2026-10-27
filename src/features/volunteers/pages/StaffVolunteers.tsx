@@ -45,6 +45,7 @@ import {
   type VolunteerRow,
 } from '../api'
 import { APPROVAL_KINDS, approvedText, EVERYTHING, kindLabel } from '../approval'
+import { StaffTitle } from '../../../components/StaffTitle'
 
 type Tab = 'roster' | 'hours'
 
@@ -85,13 +86,12 @@ export default function StaffVolunteers() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Volunteers</h1>
-        <p className="mt-1 text-sm text-slate-600">
+      <StaffTitle title="Volunteers">
+        <p>
           Who volunteers, what they’re cleared for, and the hours they’ve given. Each person gets a private link to log
           their own.
         </p>
-      </div>
+      </StaffTitle>
 
       {rows && <Applications rows={rows} userId={user?.id ?? null} onChanged={load} />}
 

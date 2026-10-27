@@ -3,6 +3,7 @@ import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import type { VetRow } from '../lib/vets'
 import { seedVets, VET_REGIONS } from '../data/vets'
@@ -395,17 +396,18 @@ export default function StaffVets() {
 
   return (
     <Screen className="space-y-4">
-      <div className="flex items-start justify-between gap-3 pt-1">
-        <div>
-          <h1 className="font-display text-2xl font-black text-ink">Vet directory</h1>
-          <p className="mt-1 text-sm text-slate-600">The rabbit-savvy vets shown in Find a vet.</p>
-        </div>
-        {!creating && (
-          <button type="button" onClick={() => setCreating(true)} className={`${btn.primary} shrink-0 !px-4 !py-2.5`}>
-            <Icon name="phone" size={15} /> New
-          </button>
-        )}
-      </div>
+      <StaffTitle
+        title="Vet directory"
+        actions={
+          !creating ? (
+            <button type="button" onClick={() => setCreating(true)} className={`${btn.primary} shrink-0 !px-4 !py-2.5`}>
+              <Icon name="phone" size={15} /> New
+            </button>
+          ) : undefined
+        }
+      >
+        <p>The rabbit-savvy vets shown in Find a vet.</p>
+      </StaffTitle>
 
       {creating && (
         <Card>

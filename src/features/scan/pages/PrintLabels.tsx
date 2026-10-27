@@ -45,6 +45,7 @@ import { setSetting, useSetting } from '../../settings/useSetting'
 import type { Json } from '../../../lib/database.types'
 import { AUCTION_EVENT_SLUG } from '../../raffle/types'
 import BluetoothPrint from '../printer/BluetoothPrint'
+import { Explain, StaffTitle } from '../../../components/StaffTitle'
 
 type Mode = 'items' | 'shop'
 
@@ -442,12 +443,13 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
           <Link to={shop ? '/staff/hopshop' : '/staff/items'} className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
             <Icon name="arrowLeft" size={20} /> {shop ? 'Hop Shop inventory' : 'Items'}
           </Link>
-          <h1 className="mt-1 font-display text-2xl font-black text-ink">{shop ? 'Hop Shop labels' : 'Print labels'}</h1>
-          <p className="mt-1 text-base text-slate-600">
-            {shop
-              ? 'A price label for each item on the shelf: the name, the price and its SKU. The barcode scans at the till; the QR code opens the item.'
-              : 'A label per donation — or a copy for every piece: the QR code opens it, the barcode scans at the till or desk, and the DON number can be typed. Any label printer works.'}
-          </p>
+          <StaffTitle title={shop ? 'Hop Shop labels' : 'Print labels'} flow={['Label size', 'Tick items', 'Print']}>
+            <p>
+              {shop
+                ? 'A price label for each item on the shelf: the name, the price and its SKU. The barcode scans at the till; the QR code opens the item.'
+                : 'A label per donation — or a copy for every piece: the QR code opens it, the barcode scans at the till or desk, and the DON number can be typed. Any label printer works.'}
+            </p>
+          </StaffTitle>
           <p className="mt-1 text-sm">
             <Link to={shop ? '/staff/labels' : '/staff/hopshop/labels'} className="inline-flex min-h-[44px] items-center font-bold text-brand-blue">
               {shop ? 'Donation labels →' : 'Hop Shop price labels →'}
@@ -574,11 +576,13 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
             )}
           </p>
         )}
-        <p className="text-sm text-slate-500">
-          {isNative
-            ? 'Print or share: in the share sheet choose the printer’s app — for OHRR’s Phomemo and Omezizy printers that is Labelife: PDF processing → pick the label size → Print. AirPrint works for printers that have it.'
-            : 'In the print dialog choose the label printer and its label size; margins are zero. “Save as PDF” works too.'}
-        </p>
+        <Explain label="About printing">
+          <p>
+            {isNative
+              ? 'Print or share: in the share sheet choose the printer’s app — for OHRR’s Phomemo and Omezizy printers that is Labelife: PDF processing → pick the label size → Print. AirPrint works for printers that have it.'
+              : 'In the print dialog choose the label printer and its label size; margins are zero. “Save as PDF” works too.'}
+          </p>
+        </Explain>
 
         <div className="grid grid-cols-2 gap-2">
           <label className="text-sm font-bold text-slate-600">

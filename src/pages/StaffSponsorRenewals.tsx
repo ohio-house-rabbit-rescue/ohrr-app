@@ -8,6 +8,7 @@ import { copyText } from '../features/share/share'
 import { isNative } from '../native/platform'
 import { btn, Badge, Card, QuietNote, Screen, SegTabs } from '../components/ui'
 import { Icon } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { SponsorLogo } from '../features/sponsors/SponsorLogo'
 import {
@@ -751,10 +752,9 @@ export default function StaffSponsorRenewals() {
   return (
     <Screen className="space-y-4">
       <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Sponsor renewals</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Sponsorships end on their own on their end date. This is who to ask about continuing, soonest first.
-        </p>
+        <StaffTitle title="Sponsor renewals">
+          <p>Sponsorships end on their own on their end date. This is who to ask about continuing, soonest first.</p>
+        </StaffTitle>
         <p className="mt-1 hidden text-sm text-slate-600 print:block">
           {windowLabel === 'All' ? 'All upcoming' : windowLabel}, as of {fmtDate(today)}.
         </p>

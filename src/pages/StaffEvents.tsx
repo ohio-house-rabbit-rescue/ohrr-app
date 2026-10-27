@@ -3,6 +3,7 @@ import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import StaffImageField from '../components/StaffImageField'
 import { slugify } from '../lib/careContent'
@@ -399,20 +400,21 @@ export default function StaffEvents() {
 
   return (
     <Screen className="space-y-4">
-      <div className="flex items-start justify-between gap-3 pt-1">
-        <div>
-          <h1 className="font-display text-2xl font-black text-ink">Events</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Shown on the app’s Events screen and the website. The BunFest section reads its date,
-            venue and theme from the <code>midwest-bunfest-2026</code> record.
-          </p>
-        </div>
-        {!creating && (
-          <button type="button" onClick={() => setCreating(true)} className={`${btn.primary} shrink-0 !px-4 !py-2.5`}>
-            <Icon name="calendar" size={15} /> New
-          </button>
-        )}
-      </div>
+      <StaffTitle
+        title="Events"
+        actions={
+          !creating ? (
+            <button type="button" onClick={() => setCreating(true)} className={`${btn.primary} shrink-0 !px-4 !py-2.5`}>
+              <Icon name="calendar" size={15} /> New
+            </button>
+          ) : undefined
+        }
+      >
+        <p>
+          Shown on the app’s Events screen and the website. The BunFest section reads its date,
+          venue and theme from the <code>midwest-bunfest-2026</code> record.
+        </p>
+      </StaffTitle>
 
       {creating && (
         <Card>

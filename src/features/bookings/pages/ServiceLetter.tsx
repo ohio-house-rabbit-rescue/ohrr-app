@@ -32,6 +32,7 @@ import { fmtHours } from '../../volunteers/calls'
 import { LETTER_KINDS, buildLetter, letterText, longDate, type LetterInput, type LetterKind } from '../../volunteers/letters'
 import { paintCertificate, paintLetter } from '../../volunteers/paint'
 import { useOrgBits } from '../../volunteers/orgBits'
+import { StaffTitle } from '../../../components/StaffTitle'
 
 const iso = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
 
@@ -197,10 +198,9 @@ export default function ServiceLetter() {
         <Link to="/staff/volunteers" className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
           <Icon name="arrowLeft" size={20} /> Volunteers
         </Link>
-        <div>
-          <h1 className="font-display text-2xl font-black text-ink">Hours letter for {name}</h1>
-          <p className="text-sm text-slate-600">Written from the hours on record. Every letter thanks them.</p>
-        </div>
+        <StaffTitle title={`Hours letter for ${name}`}>
+          <p>Written from the hours on record. Every letter thanks them.</p>
+        </StaffTitle>
 
         <div>
           <p className="text-sm font-semibold text-slate-700">Who it’s for</p>

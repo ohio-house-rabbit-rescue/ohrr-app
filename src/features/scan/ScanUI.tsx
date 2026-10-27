@@ -7,6 +7,7 @@ import { itemPhotos } from './api'
 import PhotoGallery from '../../components/PhotoGallery'
 import { boxName } from './codes'
 import { KIND_META, extrasSummary, formatMoney, kindLabel, statusLabel, type TaggedItem } from './types'
+import { Explain, FlowStrip } from '../../components/StaffTitle'
 
 type BigTone = 'orange' | 'blue' | 'outline' | 'plain' | 'danger'
 
@@ -52,6 +53,9 @@ export function BigButton({
 export function StepShell({
   title,
   help,
+  explain,
+  explainLabel,
+  flow,
   step,
   of,
   onBack,
@@ -61,6 +65,11 @@ export function StepShell({
 }: {
   title: string
   help?: string
+  /** A longer explanation, folded away behind a "How it works" button under the title. */
+  explain?: ReactNode
+  explainLabel?: string
+  /** The steps in order, shown as one short line under the title. */
+  flow?: string[]
   step?: number
   of?: number
   onBack?: () => void
@@ -96,6 +105,8 @@ export function StepShell({
         </div>
         <h1 className="mt-2 font-display text-[26px] font-black leading-tight text-ink">{title}</h1>
         {help && <p className="mt-1.5 text-base leading-snug text-slate-600">{help}</p>}
+        {explain && <Explain className="mt-2" label={explainLabel ?? 'How it works'}>{explain}</Explain>}
+        {flow && flow.length > 0 && <FlowStrip steps={flow} />}
       </div>
       <div className="flex-1 px-5 pb-6 pt-5">{children}</div>
       {footer && (

@@ -12,6 +12,7 @@ import { useAuth } from '../lib/auth'
 import { useAllAccess } from '../lib/allAccess'
 import { Badge, Card, Screen, SectionLabel } from '../components/ui'
 import { Icon } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError } from '../components/staffui'
 import { fetchSettings, setSetting } from '../features/settings/useSetting'
 import { APP_FEATURES, FEATURE_GROUPS, RAFFLE_TICKETS_FLAG } from '../features/settings/features'
@@ -96,14 +97,13 @@ export default function StaffFeatures() {
 
   return (
     <Screen className="space-y-5">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Features</h1>
-        <p className="mt-1 text-sm text-slate-600">
+      <StaffTitle title="Features">
+        <p>
           Turn parts of the app, the website and the BunFest site on and off. Switched off, a feature disappears for
           visitors; signed-in staff still see it, marked “Hidden from the public”, so it can be got ready first. A change
           shows the next time a page opens — no new version needed.
         </p>
-      </div>
+      </StaffTitle>
 
       <FormError>{error}</FormError>
       {loading ? (

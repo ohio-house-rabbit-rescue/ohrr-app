@@ -7,6 +7,7 @@ import { useAuth } from '../lib/auth'
 import type { Database } from '../lib/database.types'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { slugify } from '../lib/careContent'
 import { SEED_TOPICS } from '../features/bunnyhelp/seedTopics'
@@ -407,20 +408,21 @@ export default function StaffBunnyHelp() {
 
   return (
     <Screen className="space-y-4">
-      <div className="flex items-start justify-between gap-3 pt-1">
-        <div>
-          <h1 className="font-display text-2xl font-black text-ink">Bunny Help topics</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            What the “My bunny is…” search in My Bunny answers with. Health topics should only say “call a
-            rabbit-savvy vet”.
-          </p>
-        </div>
-        {!creating && (
-          <button type="button" onClick={() => setCreating(true)} className={`${btn.primary} shrink-0 !px-4 !py-2.5`}>
-            <Icon name="help" size={15} /> New
-          </button>
-        )}
-      </div>
+      <StaffTitle
+        title="Bunny Help topics"
+        actions={
+          !creating ? (
+            <button type="button" onClick={() => setCreating(true)} className={`${btn.primary} shrink-0 !px-4 !py-2.5`}>
+              <Icon name="help" size={15} /> New
+            </button>
+          ) : undefined
+        }
+      >
+        <p>
+          What the “My bunny is…” search in My Bunny answers with. Health topics should only say “call a
+          rabbit-savvy vet”.
+        </p>
+      </StaffTitle>
 
       {needsReview > 0 && (
         <Card className="border-amber-200 bg-amber-50">

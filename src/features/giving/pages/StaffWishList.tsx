@@ -18,6 +18,7 @@ import {
   WISH_ITEM_COLUMNS,
   type WishListItem,
 } from '../wishList'
+import { StaffTitle } from '../../../components/StaffTitle'
 
 const BAD_LINK = 'That doesn’t look like an Amazon link.'
 const LINK_HINT = 'On Amazon, open the item from OHRR’s list, tap Share → Copy link, and paste it here.'
@@ -227,9 +228,8 @@ export default function StaffWishList() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Wish list items</h1>
-        <p className="mt-1 text-sm text-slate-600">
+      <StaffTitle title="Wish list items">
+        <p>
           Items from OHRR’s Amazon wish list, each with its own “Buy on Amazon” button on{' '}
           <Link to="/support" className="font-semibold text-brand-blue underline underline-offset-2">
             the Support page
@@ -237,7 +237,7 @@ export default function StaffWishList() {
           and the website — “Most needed” first. The button to the whole list stays. Amazon’s photos can’t be used, so
           items show by name.
         </p>
-      </div>
+      </StaffTitle>
 
       {missing && (
         <Card className="border-amber-200 bg-amber-50">

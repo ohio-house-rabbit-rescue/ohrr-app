@@ -3,6 +3,7 @@ import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
+import { Explain, StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import QrCode from '../components/QrCode'
 import StaffAvatar from '../components/StaffAvatar'
@@ -151,12 +152,8 @@ const EXPLAINER_GROUPS: { label: string; levels: StaffLevel[] }[] = [
 
 function HowAccessWorks({ tiersReady }: { tiersReady: boolean }) {
   return (
-    <details className="group rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-1">
-      <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-2 font-display text-[15px] font-extrabold text-ink [&::-webkit-details-marker]:hidden">
-        How access works
-        <Icon name="chevron" size={16} className="rotate-90 text-slate-400 transition-transform group-open:-rotate-90" />
-      </summary>
-      <div className="space-y-3 pb-3 text-sm leading-relaxed text-slate-600">
+    <Explain label="How access works">
+      <div className="space-y-3">
         <ul className="space-y-1">
           {EXPLAINER_GROUPS.map((g) =>
             g.levels.length === 1 ? (
@@ -199,7 +196,7 @@ function HowAccessWorks({ tiersReady }: { tiersReady: boolean }) {
         </p>
         {!tiersReady && <p className="text-xs text-slate-500">The ten levels and end dates arrive with update 30.</p>}
       </div>
-    </details>
+    </Explain>
   )
 }
 
@@ -1660,14 +1657,13 @@ export default function StaffTeam() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Team</h1>
-        <p className="mt-1 text-sm text-slate-600">
+      <StaffTitle title="Team">
+        <p>
           {levelsReady
             ? 'Everyone on the team, by level. You can change people below your own level and share the tasks you have. Changes take effect immediately and are logged.'
             : 'Invite staff and control what each person can do. Changes take effect immediately and are logged.'}
         </p>
-      </div>
+      </StaffTitle>
 
       {!loading && levelsReady && <HowAccessWorks tiersReady={tiersReady} />}
 

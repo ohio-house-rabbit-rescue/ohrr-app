@@ -18,6 +18,7 @@ import { useAuth } from '../../../lib/auth'
 import { PERMISSION_CATALOG } from '../../../lib/capabilities'
 import { errMessage } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
+import { StaffTitle } from '../../../components/StaffTitle'
 import { Screen } from '../../../components/ui'
 import { Spinner } from '../../../components/staffui'
 import ExportButtons from '../../../components/ExportButtons'
@@ -152,6 +153,9 @@ function sheetRow(i: TaggedItem): SheetRow {
     ],
   }
 }
+
+// One line under the title: how an item moves through OHRR.
+const ITEMS_FLOW = ['Receive', 'Label', 'Put away', 'Sort by use', 'Sell, raffle or use']
 
 export default function ItemsList() {
   const { membership, can } = useAuth()
@@ -294,16 +298,19 @@ export default function ItemsList() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Items</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Donations to sort, auction lots and raffle prizes with a code. Tap one to update it or decide where it goes. Things the shop carries live in{' '}
+      <StaffTitle title="Items" flow={ITEMS_FLOW}>
+        <p>
+          Donations to sort, auction lots and raffle prizes with a code. Tap one to update it or decide what it’s for. Things the shop carries live in{' '}
           <Link to="/staff/hopshop" className="font-bold text-brand-blue">
             Hop Shop inventory
           </Link>
           .
         </p>
-      </div>
+        <p>
+          <strong>Receive items</strong> takes a photo and the name, whether it was donated (DON-00042) or we bought it (PUR-00001), and where it’s kept. Its label
+          prints next. Then sort it here by what it’s for — an event, the Hop Shop or our own use — and mark it sold, won or drawn when it goes.
+        </p>
+      </StaffTitle>
 
       {saved && (
         <div role="status" className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-base font-bold text-green-900">
@@ -318,34 +325,33 @@ export default function ItemsList() {
         <Link to="/staff/scan" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-brand-blue font-display text-base font-extrabold text-white shadow-sm">
           <Icon name="scan" size={20} /> Scan
         </Link>
-        <Link to="/staff/dropoffs" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-brand-blue/50 bg-white px-2 text-center font-display text-base font-extrabold text-brand-blue">
-          <Icon name="mail" size={20} /> Drop-offs & thank-yous
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Link to="/staff/labels" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+          <Icon name="printer" size={17} /> Labels
         </Link>
-        <Link to="/staff/donations/report" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-brand-blue/50 bg-white px-2 text-center font-display text-base font-extrabold text-brand-blue">
-          <Icon name="book" size={20} /> Monthly report
+        <Link to="/staff/boxes" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+          <Icon name="box" size={17} /> Boxes
         </Link>
-        <Link to="/staff/labels" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white font-display text-base font-extrabold text-slate-600">
-          <Icon name="printer" size={20} /> Print labels
+        <Link to="/staff/dropoffs" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+          <Icon name="mail" size={17} /> Drop-offs
         </Link>
-        <Link to="/staff/boxes" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white font-display text-base font-extrabold text-slate-600">
-          <Icon name="box" size={20} /> Boxes
+        <Link to="/staff/donations/report" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+          <Icon name="book" size={17} /> Report
         </Link>
         {/* Sponsor (2026-10-27): "where is the vendor potion for things tht we buy … i dont see it on the page of items and hop shop". */}
         {canSeeVendors && (
-        <Link
-          to="/staff/hopshop/suppliers"
-          className="col-span-2 inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-2 text-center font-display text-base font-extrabold text-slate-600"
-        >
-          <Icon name="bag" size={20} /> Vendors — who we buy from, who sells at our events
-        </Link>
+          <Link to="/staff/hopshop/suppliers" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+            <Icon name="bag" size={17} /> Vendors
+          </Link>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1" role="group" aria-label="Which items">
         {(['donation', 'event', ...ITEM_KINDS, 'all'] as Filter[]).map((f) => {
           const active = f === filter
           const label =
-            f === 'all' ? 'Everything' : f === 'event' ? 'Auction & raffle' : f === 'donation' ? 'Donations to sort' : KIND_META[f].label.replace('Hop Shop ', '')
+            f === 'all' ? 'Everything' : f === 'event' ? 'Auction & raffle' : f === 'donation' ? 'Donations to sort' : f === 'stock' ? 'Shop stock' : KIND_META[f].label
           return (
             <button
               key={f}
@@ -355,7 +361,7 @@ export default function ItemsList() {
                 stopPicking()
               }}
               aria-pressed={active}
-              className={`min-h-[44px] rounded-full px-4 text-[15px] font-bold transition ${
+              className={`min-h-[44px] shrink-0 whitespace-nowrap rounded-full px-4 text-[15px] font-bold transition ${
                 active ? 'bg-brand-blue text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600'
               }`}
             >
@@ -367,8 +373,8 @@ export default function ItemsList() {
 
       {filter === 'donation' && !picking && (
         <div className="rounded-2xl border border-slate-200 bg-white p-3">
-          <p className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Where they’re headed</p>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Where they are headed">
+          <p className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">What they’re for</p>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="What they are for">
             {SUBS.map((s) => (
               <button
                 key={s.key}

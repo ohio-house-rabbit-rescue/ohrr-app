@@ -15,6 +15,7 @@ import { BigButton, ErrorBox } from '../ScanUI'
 import { labelDataUrl, labelsPdf } from '../labels'
 import BluetoothPrint from '../printer/BluetoothPrint'
 import { BOX_SIZE, boxLabel, listBoxes, markBoxesPrinted, newBox, type Box } from '../boxes'
+import { StaffTitle } from '../../../components/StaffTitle'
 
 export default function Boxes() {
   const { membership } = useAuth()
@@ -79,10 +80,11 @@ export default function Boxes() {
           <Link to="/staff/items" className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
             <Icon name="arrowLeft" size={20} /> Items
           </Link>
-          <h1 className="mt-1 font-display text-2xl font-black text-ink">Boxes</h1>
-          <p className="mt-1 text-base text-slate-600">
-            Numbered boxes and what’s in them. Receive into boxes adds new items straight into a box; an empty box is for items that already have labels — scan them in. Scanning a box label opens the full list.
-          </p>
+          <StaffTitle title="Boxes">
+            <p>
+              Numbered boxes and what’s in them. Receive into boxes adds new items straight into a box; an empty box is for items that already have labels — scan them in. Scanning a box label opens the full list.
+            </p>
+          </StaffTitle>
         </div>
 
         {saved && (

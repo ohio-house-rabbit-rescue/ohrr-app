@@ -13,6 +13,7 @@ import { useAuth } from '../../../../lib/auth'
 import { errMessage, supabase } from '../../../../lib/supabase'
 import { Screen, Card, Badge, btn } from '../../../../components/ui'
 import { Icon } from '../../../../components/icons'
+import { Explain, StaffTitle } from '../../../../components/StaffTitle'
 import { Spinner, staffInput } from '../../../../components/staffui'
 import { AUCTION_EVENT_SLUG, formatValue } from '../../types'
 import { deskOrders, deskSummary, drawTicket, money, orderByToken, recordBucketDraw, sellAtTable, setOrderStatus, ticketLabel, ticketRange, tokenFromScan, undoDraw, winners, type DeskSummary, type RaffleOrder, type RaffleWinner } from '../api'
@@ -52,16 +53,15 @@ export default function RaffleDesk() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Raffle tickets</h1>
-        <p className="mt-1 text-sm text-slate-600">
+      <StaffTitle title="Raffle tickets">
+        <p>
           The raffle table, on your phone. Prices are set in{' '}
           <Link to="/staff/raffle" className="font-bold text-brand-blue">
             Silent Auction → Auction setup
           </Link>
           ; prizes come from Scan an item.
         </p>
-      </div>
+      </StaffTitle>
       {summary && (
         <div className="grid grid-cols-3 gap-2 text-center">
           <Card className="!p-2">
@@ -271,7 +271,9 @@ function SellTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
   return (
     <form onSubmit={sell} className="space-y-3">
       <Card className="space-y-3">
-        <p className="text-sm text-slate-600">Cash in hand at the table. The numbers are paid straight away and go into the same draw as app tickets — write them on stubs if you draw from the bucket.</p>
+        <Explain label="About table sales">
+          <p>Cash in hand at the table. The numbers are paid straight away and go into the same draw as app tickets — write them on stubs if you draw from the bucket.</p>
+        </Explain>
         <div className="flex items-center justify-between gap-3">
           <span className="text-sm font-semibold text-slate-700">How many?</span>
           <div className="flex items-center gap-3">

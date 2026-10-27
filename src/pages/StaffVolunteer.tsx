@@ -3,6 +3,7 @@ import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { LIMIT_KINDS, OPP_CATEGORIES, categoryLabel, remainingLabel, type VolunteerOpp } from '../lib/volunteerOpps'
 
@@ -449,24 +450,25 @@ export default function StaffVolunteer() {
 
   return (
     <Screen className="space-y-4">
-      <div className="flex items-start justify-between gap-3 pt-1">
-        <div>
-          <h1 className="font-display text-2xl font-black text-ink">Volunteer opportunities</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Open shifts for each volunteer position (and events needing hands) shown on the
-            Volunteer pages.
-          </p>
-        </div>
-        {!creating && (
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
-          >
-            <Icon name="heart" size={15} /> New
-          </button>
-        )}
-      </div>
+      <StaffTitle
+        title="Volunteer opportunities"
+        actions={
+          !creating ? (
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
+            >
+              <Icon name="heart" size={15} /> New
+            </button>
+          ) : undefined
+        }
+      >
+        <p>
+          Open shifts for each volunteer position (and events needing hands) shown on the
+          Volunteer pages.
+        </p>
+      </StaffTitle>
 
       {creating && (
         <Card>

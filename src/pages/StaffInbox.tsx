@@ -9,6 +9,7 @@ import { supabase, errMessage } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 import { Screen, Card, Badge, btn } from '../components/ui'
 import { Icon, type IconName } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { exportCsv, toCsv } from '../lib/exportFile'
 import { publishHappyTail } from '../features/tails/api'
@@ -126,10 +127,9 @@ export default function StaffInbox() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Inbox</h1>
-        <p className="mt-1 text-sm text-slate-600">Requests and sign-ups sent from the app and the website.</p>
-      </div>
+      <StaffTitle title="Inbox">
+        <p>Requests and sign-ups sent from the app and the website.</p>
+      </StaffTitle>
 
       <div className="flex flex-wrap gap-2">
         {([{ value: 'open', label: 'To do' }, ...STATUS.filter((s) => s.value !== 'new' && s.value !== 'in_progress')] as { value: Status | 'open'; label: string }[]).map((s) => (

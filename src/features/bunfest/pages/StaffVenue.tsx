@@ -36,6 +36,7 @@ import {
   type Venue,
 } from '../floor'
 import { VenuePlan, ZoomBox, type PickKind } from '../VenuePlan'
+import { Explain } from '../../../components/StaffTitle'
 
 type Pick = { kind: PickKind; id: string } | null
 
@@ -451,10 +452,12 @@ export default function StaffVenue({
                 >
                   <Icon name="plus" size={16} /> Add an area
                 </button>
-                <p className="text-xs leading-relaxed text-slate-500">
-                  An odd-shaped room? Draw it as a rectangle and add a “Not part of the room” area over the
-                  corner that isn’t there.
-                </p>
+                <Explain label="An odd-shaped room?">
+                  <p>
+                    An odd-shaped room? Draw it as a rectangle and add a “Not part of the room” area over the
+                    corner that isn’t there.
+                  </p>
+                </Explain>
               </div>
             )}
 
@@ -581,10 +584,12 @@ function RunEditor({
           Delete
         </button>
       </div>
-      <p className="text-xs leading-relaxed text-slate-500">
-        “Copy as the next row” puts the copy facing this one across a 6 ft aisle, or back to back
-        with it — the usual way rows pair up.
-      </p>
+      <Explain label="About “Copy as the next row”">
+        <p>
+          “Copy as the next row” puts the copy facing this one across a 6 ft aisle, or back to back
+          with it — the usual way rows pair up.
+        </p>
+      </Explain>
     </div>
   )
 }

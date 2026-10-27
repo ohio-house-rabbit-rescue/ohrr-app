@@ -42,6 +42,7 @@ import { addWalkIn, callRoster, callSources, callThanks, hoursForByEmail, loadCa
 import { paintLetter } from '../paint'
 import { useOrgBits } from '../orgBits'
 import CallEditor from './CallEditor'
+import { Explain, StaffTitle } from '../../../components/StaffTitle'
 
 type Tab = 'signups' | 'share' | 'day' | 'thanks'
 
@@ -86,12 +87,9 @@ export default function StaffCall() {
   if (id === 'new' || editing) {
     return (
       <Screen className="space-y-4">
-        <div className="pt-1">
-          <h1 className="font-display text-2xl font-black text-ink">{id === 'new' ? 'A new volunteer call' : 'Edit the call'}</h1>
-          <p className="mt-1 text-sm leading-relaxed text-slate-600">
-            Say what you need once — the shifts, the posts, the emails and the letters all come from it.
-          </p>
-        </div>
+        <StaffTitle title={id === 'new' ? 'A new volunteer call' : 'Edit the call'}>
+          <p>Say what you need once — the shifts, the posts, the emails and the letters all come from it.</p>
+        </StaffTitle>
         <CallEditor
           orgId={orgId}
           initial={id === 'new' ? null : (row ?? null)}
@@ -362,10 +360,12 @@ function ShareTab({ call, org }: { call: Call; org: OrgBits }) {
   return (
     <div className="space-y-3">
       <Card className="space-y-2">
-        <p className="text-sm leading-relaxed text-slate-600">
-          Each one has its own link, so “Sign-ups” shows which worked. Posts and texts open the app; emails,
-          letters and flyers open the website.
-        </p>
+        <Explain label="About the links">
+          <p>
+            Each one has its own link, so “Sign-ups” shows which worked. Posts and texts open the app; emails,
+            letters and flyers open the website.
+          </p>
+        </Explain>
         <label className="block text-sm font-semibold text-slate-700">
           Sending an email or letter? Who to (optional)
           <input className={staffInput} value={to} onChange={(e) => setTo(e.target.value)} placeholder="Upper Arlington Scout Troop 12" />
@@ -492,10 +492,12 @@ function DayTab({ call, roster, reload }: { call: Call; roster: RosterLine[]; re
 
   return (
     <div className="space-y-3">
-      <Card className="text-sm leading-relaxed text-slate-600">
-        Tap <strong>Here</strong> as people arrive. Being here for a shift counts the whole shift — no clocking in
-        or out. Anyone who turns up without signing up can be added to their shift below.
-      </Card>
+      <Explain label="How checking in works">
+        <p>
+          Tap <strong>Here</strong> as people arrive. Being here for a shift counts the whole shift — no clocking in
+          or out. Anyone who turns up without signing up can be added to their shift below.
+        </p>
+      </Explain>
       <FormError>{error}</FormError>
       {(call.shifts ?? []).map((s) => {
         const people = roster.filter((r) => r.slot_id === s.slot_id && r.booking_id)
@@ -633,10 +635,12 @@ function ThanksTab({ call, org, orgId }: { call: Call; org: OrgBits; orgId: stri
         <p className="font-display text-[15px] font-extrabold text-ink">
           {thanked} of {people.length} thanked
         </p>
-        <p className="text-sm leading-relaxed text-slate-600">
-          Each thank-you gives their hours here, this year and in all, and links to their own hours page. Send it by
-          email or text, then tick it off.
-        </p>
+        <Explain label="About the thank-yous">
+          <p>
+            Each thank-you gives their hours here, this year and in all, and links to their own hours page. Send it by
+            email or text, then tick it off.
+          </p>
+        </Explain>
       </Card>
       <FormError>{error}</FormError>
       {people.map((p) => {

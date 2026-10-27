@@ -35,6 +35,7 @@ import {
 } from '../types'
 import HoursTab from './HoursTab'
 import { APPROVAL_KINDS, kindLabel } from '../../volunteers/approval'
+import { Explain, StaffTitle } from '../../../components/StaffTitle'
 
 type Tab = 'roster' | 'times' | 'hours' | 'setup'
 
@@ -64,10 +65,9 @@ export default function StaffBookings() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Bookings</h1>
-        <p className="mt-1 text-sm text-slate-600">Shifts and appointments people book in the app and on the website.</p>
-      </div>
+      <StaffTitle title="Bookings">
+        <p>Shifts and appointments people book in the app and on the website.</p>
+      </StaffTitle>
       <div className="flex gap-2">
         {(
           [
@@ -359,12 +359,14 @@ function MakeTimes({ types }: { types: BookingType[] }) {
           </select>
         </label>
         {type && (
-          <p className="text-xs text-slate-500">
-            {type.weekly.length > 0
-              ? 'The weekly schedule (Set up) fills in its own times. Use this for extras — a special day, a one-off clinic.'
-              : 'Tip: give this a weekly schedule under Set up and the times make themselves.'}{' '}
-            Each time is {durationLabel(type.duration_min)}; up to {type.capacity} {type.kind === 'shift' ? 'people' : 'booking'} per time unless you change it below.
-          </p>
+          <Explain label="About these times">
+            <p>
+              {type.weekly.length > 0
+                ? 'The weekly schedule (Set up) fills in its own times. Use this for extras — a special day, a one-off clinic.'
+                : 'Tip: give this a weekly schedule under Set up and the times make themselves.'}{' '}
+              Each time is {durationLabel(type.duration_min)}; up to {type.capacity} {type.kind === 'shift' ? 'people' : 'booking'} per time unless you change it below.
+            </p>
+          </Explain>
         )}
         <form onSubmit={submit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">

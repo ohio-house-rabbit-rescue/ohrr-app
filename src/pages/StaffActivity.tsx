@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { Badge, Card, Screen } from '../components/ui'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError } from '../components/staffui'
 import type { Database } from '../lib/database.types'
 
@@ -113,12 +114,9 @@ export default function StaffActivity() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Activity</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          A record of staff and permission changes — who did what, and when.
-        </p>
-      </div>
+      <StaffTitle title="Activity">
+        <p>A record of staff and permission changes — who did what, and when.</p>
+      </StaffTitle>
 
       <FormError>{error}</FormError>
 

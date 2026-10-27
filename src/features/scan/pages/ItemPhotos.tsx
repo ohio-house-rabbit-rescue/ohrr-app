@@ -15,6 +15,7 @@ import { pickPhoto } from '../../../native/camera'
 import { MAX_ITEM_PHOTOS, dataUrlToBlob, findByCode, itemPhotos, setItemPhotos, uploadItemPhoto } from '../api'
 import { BigButton, Busy, ErrorBox, StepShell } from '../ScanUI'
 import type { TaggedItem } from '../types'
+import { Explain } from '../../../components/StaffTitle'
 
 export default function ItemPhotos() {
   const { membership } = useAuth()
@@ -194,7 +195,9 @@ export default function ItemPhotos() {
                   })}
                 </ul>
               )}
-              <p className="text-sm text-slate-500">Up to {MAX_ITEM_PHOTOS} photos, shown in this order. The cover shows in the catalog, on labels and on the public pages. Use the arrows to change the order.</p>
+              <Explain label="About the photos">
+                <p>Up to {MAX_ITEM_PHOTOS} photos, shown in this order. The cover shows in the catalog, on labels and on the public pages. Use the arrows to change the order.</p>
+              </Explain>
             </>
           )}
         </div>

@@ -6,6 +6,7 @@ import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import { errMessage } from '../../lib/supabase'
 import { Badge, btn, Card } from '../../components/ui'
 import { Icon } from '../../components/icons'
+import { Explain } from '../../components/StaffTitle'
 import { FormError, staffInput } from '../../components/staffui'
 import { deleteType, saveType, suggestTypeCode, type ProductType } from './api'
 
@@ -108,11 +109,13 @@ export function TypesPanel({
   const [editing, setEditing] = useState<string | null>(null)
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate-600">
-        Every Hop Shop SKU starts with its type’s three letters, then the supplier’s vendor number, then the item number:{' '}
-        <span className="font-mono font-bold text-ink">HAY-101-001</span> is Hay from vendor 101. Vendor <span className="font-mono font-bold">000</span> means
-        no supplier — donated, or made by OHRR.
-      </p>
+      <Explain label="About SKUs">
+        <p>
+          Every Hop Shop SKU starts with its type’s three letters, then the supplier’s vendor number, then the item number:{' '}
+          <span className="font-mono font-bold text-ink">HAY-101-001</span> is Hay from vendor 101. Vendor <span className="font-mono font-bold">000</span> means
+          no supplier — donated, or made by OHRR.
+        </p>
+      </Explain>
       <ul className="space-y-2">
         {types.map((t) =>
           editing === t.id ? (

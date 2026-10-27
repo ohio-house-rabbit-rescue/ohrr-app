@@ -31,6 +31,7 @@ import {
   type TicketType,
 } from '../door'
 import { useCounterOrg } from '../CounterShell'
+import { Explain } from '../../../components/StaffTitle'
 
 const TYPE_LABEL: Record<TicketType, string> = { adult: 'Adult ticket', child: 'Child 5–12 ticket', under5: 'Under-5 ticket', skip: 'Not a ticket' }
 
@@ -228,9 +229,11 @@ function ImportCsv({ onImport }: { onImport: (rows: ReturnType<typeof rowsToTick
       <p className="font-display text-lg font-extrabold text-ink">Load the advance tickets</p>
       {!rows ? (
         <>
-          <p className="text-sm text-slate-600">
-            In the ticket shop (Square), export the orders as a CSV file, then choose it here. Do it again the morning of the event to pick up late buyers — receipts already loaded are just updated.
-          </p>
+          <Explain label="Where to get the file">
+            <p>
+              In the ticket shop (Square), export the orders as a CSV file, then choose it here. Do it again the morning of the event to pick up late buyers — receipts already loaded are just updated.
+            </p>
+          </Explain>
           <label className="inline-flex min-h-[52px] w-full cursor-pointer items-center justify-center rounded-2xl bg-brand-blue px-5 font-display text-base font-extrabold text-white">
             Choose the CSV file
             <input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => void onFile(e)} />

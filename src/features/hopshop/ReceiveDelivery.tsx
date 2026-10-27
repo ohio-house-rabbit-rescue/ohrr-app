@@ -16,6 +16,7 @@ import { useAuth } from '../../lib/auth'
 import { errMessage } from '../../lib/supabase'
 import { Badge, btn, Card, Screen } from '../../components/ui'
 import { Icon } from '../../components/icons'
+import { StaffTitle } from '../../components/StaffTitle'
 import { FormError, Spinner, staffInput } from '../../components/staffui'
 import { isNative } from '../../native/platform'
 import { pickPhoto } from '../../native/camera'
@@ -115,6 +116,9 @@ const unitsOf = (r: Row) => (r.productId ? unitsFor(qtyOf(r), r.unitsPer) : 0)
 const dollars = (cents: number | null) => (cents === null ? '' : fromCents(cents))
 
 type Step = 'start' | 'reading' | 'review' | 'saving' | 'done'
+
+// The screens in order: the invoice, the read, the check, the stock, the labels.
+const DELIVERY_FLOW = ['Invoice', 'Read it', 'Check', 'Add to stock', 'Labels']
 
 export default function ReceiveDelivery() {
   const { membership, can } = useAuth()
@@ -398,13 +402,14 @@ export default function ReceiveDelivery() {
         <Link to="/staff/hopshop/reorder" className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
           <Icon name="arrowLeft" size={20} /> Hop Shop inventory
         </Link>
-        <h1 className="mt-1 font-display text-2xl font-black text-ink">Add a delivery</h1>
-        {step === 'start' && (
-          <p className="mt-1 text-base text-slate-600">
-            From the supplier’s invoice: the PDF from their email, or photos of a paper one. It’s read on this device, then you check the list
-            before anything changes.
-          </p>
-        )}
+        <StaffTitle title="Add a delivery" flow={DELIVERY_FLOW}>
+          {step === 'start' && (
+            <p>
+              From the supplier’s invoice: the PDF from their email, or photos of a paper one. It’s read on this device, then you check the list
+              before anything changes.
+            </p>
+          )}
+        </StaffTitle>
       </div>
 
       {step === 'start' && (

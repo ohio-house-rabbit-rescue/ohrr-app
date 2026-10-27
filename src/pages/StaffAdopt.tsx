@@ -3,6 +3,7 @@ import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { isNative } from '../native/platform'
 import { pickPhoto } from '../native/camera'
@@ -820,23 +821,22 @@ export default function StaffAdopt() {
 
   return (
     <Screen className="space-y-4">
-      <div className="flex items-start justify-between gap-3 pt-1">
-        <div>
-          <h1 className="font-display text-2xl font-black text-ink">Adoptable rabbits</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            These appear on the public Adopt page. Upload photos and set each rabbit’s status.
-          </p>
-        </div>
-        {canCreate && !creating && (
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
-          >
-            <Icon name="heart" size={15} /> Add
-          </button>
-        )}
-      </div>
+      <StaffTitle
+        title="Adoptable rabbits"
+        actions={
+          canCreate && !creating ? (
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
+            >
+              <Icon name="heart" size={15} /> Add
+            </button>
+          ) : undefined
+        }
+      >
+        <p>These appear on the public Adopt page. Upload photos and set each rabbit’s status.</p>
+      </StaffTitle>
 
       {orgId && <RescueGroupsCheck orgId={orgId} canRefresh={canCreate || canEdit} onRefreshed={reload} />}
 

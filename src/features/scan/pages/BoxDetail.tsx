@@ -20,6 +20,7 @@ import { PAGE_SIZE, filterRows, groupByDay, type ListRow } from '../labelList'
 import BluetoothPrint from '../printer/BluetoothPrint'
 import { KIND_META, kindLabel, type TaggedItem } from '../types'
 import { BOX_SIZE, boxByCode, boxLabel, deleteBox, markBoxesPrinted, packingListPdf, putInBox, saveBox, takeOutOfBox, type Box, type BoxPutResult } from '../boxes'
+import { Explain } from '../../../components/StaffTitle'
 
 type Mode = 'list' | 'scan' | 'type' | 'pick'
 
@@ -474,10 +475,10 @@ export default function BoxDetail() {
               Packing list (letter paper)
             </BigButton>
             {note && <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">{note}</p>}
-            <p className="text-sm text-slate-500">
-              {box.label_printed_at ? 'The label has been printed. ' : ''}
-              Put a 4 × 6 in roll in the printer first. The label lists the names; scanning it opens this page with everything in the box.
-            </p>
+            {box.label_printed_at && <p className="text-sm text-slate-500">The label has been printed.</p>}
+            <Explain label="About the box label">
+              <p>Put a 4 × 6 in roll in the printer first. The label lists the names; scanning it opens this page with everything in the box.</p>
+            </Explain>
           </section>
         )}
 

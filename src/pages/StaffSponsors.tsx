@@ -4,6 +4,7 @@ import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { SponsorLogo } from '../features/sponsors/SponsorLogo'
 import {
@@ -953,29 +954,28 @@ export default function StaffSponsors() {
 
   return (
     <Screen className="space-y-4">
-      <div className="flex items-start justify-between gap-3 pt-1">
-        <div>
-          <h1 className="font-display text-2xl font-black text-ink">Sponsors & partners</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            The roster on the public Our Partners page, partner perks, and “Presented by” strips.
-          </p>
-          <Link
-            to="/staff/sponsors/renewals"
-            className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-brand-blue/40 px-4 text-sm font-bold text-brand-blue transition hover:bg-brand-blue-50"
-          >
-            <Icon name="calendar" size={15} /> Renewals list
-          </Link>
-        </div>
-        {!creating && (
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
-          >
-            <Icon name="award" size={15} /> Add
-          </button>
-        )}
-      </div>
+      <StaffTitle
+        title="Sponsors & partners"
+        actions={
+          !creating ? (
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
+            >
+              <Icon name="award" size={15} /> Add
+            </button>
+          ) : undefined
+        }
+      >
+        <p>The roster on the public Our Partners page, partner perks, and “Presented by” strips.</p>
+      </StaffTitle>
+      <Link
+        to="/staff/sponsors/renewals"
+        className="-mt-2 inline-flex min-h-[44px] w-fit items-center gap-1.5 rounded-full border border-brand-blue/40 px-4 text-sm font-bold text-brand-blue transition hover:bg-brand-blue-50"
+      >
+        <Icon name="calendar" size={15} /> Renewals list
+      </Link>
 
       {creating && (
         <Card>

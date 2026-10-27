@@ -35,6 +35,7 @@ import {
 } from '../floor'
 import { VenuePlan, ZoomBox } from '../VenuePlan'
 import StaffVenue from './StaffVenue'
+import { Explain } from '../../../components/StaffTitle'
 
 const clone = (v: Venue): Venue => JSON.parse(JSON.stringify(v))
 
@@ -224,11 +225,13 @@ export default function StaffFloor({ orgId }: { orgId: string }) {
           <Card className="space-y-3">
             <div>
               <h2 className="font-display text-[15px] font-extrabold text-ink">Who sits where</h2>
-              <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                Type a stand’s table numbers — <strong>7</strong>, or <strong>7, 8</strong>, or <strong>7-9</strong> —
-                and press Save. The map below fills in straight away. Tables side by side show as one
-                stand, with the name once.
-              </p>
+              <Explain label="Typing table numbers" className="mt-1">
+                <p>
+                  Type a stand’s table numbers — <strong>7</strong>, or <strong>7, 8</strong>, or <strong>7-9</strong> —
+                  and press Save. The map below fills in straight away. Tables side by side show as one
+                  stand, with the name once.
+                </p>
+              </Explain>
             </div>
             <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
               <Icon name="search" size={16} className="shrink-0 text-slate-400" />

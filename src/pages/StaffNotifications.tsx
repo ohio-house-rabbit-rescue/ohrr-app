@@ -10,6 +10,7 @@ import { errMessage, supabase } from '../lib/supabase'
 import type { Database, Json, PushTopic } from '../lib/database.types'
 import { Screen, Card, Badge, btn } from '../components/ui'
 import { Icon } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { PUSH_TOPICS, PUSH_TOPIC_LABEL, isPushTopic } from '../features/account/push'
 
@@ -175,14 +176,14 @@ export default function StaffNotifications() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Send a notification</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          To the phones of people who asked for notifications about one thing. Keep it for what matters — every one lands
-          on someone’s lock screen.
+      <StaffTitle title="Send a notification">
+        <p>
+          To the phones of people who asked for notifications about one thing.
         </p>
-        <p className="mt-2 text-sm text-slate-600">New volunteer calls, events and rabbits send a notification by themselves.</p>
-      </div>
+        <p>New volunteer calls, events and rabbits send a notification by themselves.</p>
+      </StaffTitle>
+      {/* Kept in view, not folded: it is the caution to read before sending. */}
+      <p className="text-sm text-slate-600">Keep it for what matters — every one lands on someone’s lock screen.</p>
 
       {counts === 'loading' && !error && <Spinner />}
       {counts === null && <FormError>{error}</FormError>}

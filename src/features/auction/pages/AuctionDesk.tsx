@@ -39,6 +39,7 @@ import {
   type Sale,
 } from '../client'
 import TableHolds from '../TableHolds'
+import { Explain, StaffTitle } from '../../../components/StaffTitle'
 
 const DESK_POLL_MS = 20_000
 
@@ -125,7 +126,7 @@ function Desk() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
+      <div>
         <div className="mb-3 grid grid-cols-2 gap-1 rounded-full bg-slate-100 p-1" role="tablist" aria-label="Which auction">
           {[BUNFEST_AUCTION, ONLINE_AUCTION].map((a) => (
             <Link
@@ -140,15 +141,16 @@ function Desk() {
             </Link>
           ))}
         </div>
-        <h1 className="font-display text-2xl font-black text-ink">Auction desk</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          {ev.online ? 'Charge winners, hand items over or ship them.' : 'Close bidding and charge cards, record table sales, hand items over.'} Prices and the
-          bidding switch are in{' '}
-          <Link to={ev.online ? '/staff/raffle?auction=online' : '/staff/raffle'} className="font-bold text-brand-blue">
-            {ev.online ? 'Auctions → Online Auction' : 'Silent Auction → Auction setup'}
-          </Link>
-          .
-        </p>
+        <StaffTitle title="Auction desk">
+          <p>
+            {ev.online ? 'Charge winners, hand items over or ship them.' : 'Close bidding and charge cards, record table sales, hand items over.'} Prices and the
+            bidding switch are in{' '}
+            <Link to={ev.online ? '/staff/raffle?auction=online' : '/staff/raffle'} className="font-bold text-brand-blue">
+              {ev.online ? 'Auctions → Online Auction' : 'Silent Auction → Auction setup'}
+            </Link>
+            .
+          </p>
+        </StaffTitle>
       </div>
 
       {orgId && !ev.online && <TableHolds orgId={orgId} onChange={refresh} />}
@@ -176,7 +178,8 @@ function Desk() {
           <Totals t={data.totals} />
           <CloseAndCharge orgId={orgId} data={data} onDone={refresh} />
           {data.settings?.auto_charge && (
-            <QuietNote>Winners are charged automatically within about 5 minutes of an item closing. Use Close &amp; charge only if you don’t want to wait.</QuietNote>
+            // Kept in view, not folded: it is about charging cards.
+            <p className="text-sm text-slate-600">Winners are charged automatically within about 5 minutes of an item closing. Use Close &amp; charge only if you don’t want to wait.</p>
           )}
           {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
           <div className="flex gap-2">
@@ -289,9 +292,12 @@ function CloseAndCharge({ orgId, data, onDone }: { orgId: string; data: DeskData
       <div>
         <p className="font-display text-base font-extrabold text-ink">Close &amp; charge</p>
         <p className="mt-0.5 text-sm leading-relaxed text-slate-600">
+          {ready.length > 0 ? `${ready.length} item${ready.length === 1 ? ' is' : 's are'} ready.` : 'Nothing is ready right now.'}
+        </p>
+        {/* Kept in view, not folded: it charges cards. */}
+        <p className="mt-1 text-sm text-slate-600">
           Charges the high bidder of every item whose time has passed, on the card they saved. Declined cards show here so
           you can retry or pass the item to the next bidder.
-          {ready.length > 0 ? ` ${ready.length} item${ready.length === 1 ? ' is' : 's are'} ready.` : ' Nothing is ready right now.'}
         </p>
       </div>
       {confirm ? (

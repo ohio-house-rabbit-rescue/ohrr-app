@@ -9,6 +9,7 @@ import { Icon } from '../../../components/icons'
 import { staffInput } from '../../../components/staffui'
 import { OUTREACH, fillLetter, mailtoFor, type OutreachLetter } from '../outreach'
 import { copyText, shareText } from '../share'
+import { Explain, StaffTitle } from '../../../components/StaffTitle'
 
 const SENDER_KEY = 'ohrr.outreach.sender'
 
@@ -41,10 +42,9 @@ export default function Outreach() {
   if (!pick) {
     return (
       <Screen className="space-y-4">
-        <div className="pt-1">
-          <h1 className="font-display text-2xl font-black text-ink">Outreach letters</h1>
-          <p className="mt-1 text-sm text-slate-600">Ready-to-send emails that put OHRR in front of the people it is missing. Pick who you are writing to.</p>
-        </div>
+        <StaffTitle title="Outreach letters">
+          <p>Ready-to-send emails that put OHRR in front of the people it is missing. Pick who you are writing to.</p>
+        </StaffTitle>
         <div className="space-y-2">
           {OUTREACH.map((l) => (
             <button key={l.id} type="button" onClick={() => { setPick(l); setStatus(null) }} className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm">
@@ -56,7 +56,9 @@ export default function Outreach() {
             </button>
           ))}
         </div>
-        <p className="text-xs text-slate-500">Each letter links to the right page with its own tag, so the analytics show which ones bring people in. Pair the campus, vet and store letters with a printed flyer.</p>
+        <Explain label="About these letters">
+          <p>Each letter links to the right page with its own tag, so the analytics show which ones bring people in. Pair the campus, vet and store letters with a printed flyer.</p>
+        </Explain>
       </Screen>
     )
   }

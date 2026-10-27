@@ -78,6 +78,7 @@ import {
 import { boxByCode, loadPackingBox, newBox, putInBox, savePackingBox, type PackingBox } from '../boxes'
 import { tellOthersLabelsChanged } from '../labelSync'
 import { useLabelSize } from '../useLabelSize'
+import { Explain } from '../../../components/StaffTitle'
 import BluetoothPrint from '../printer/BluetoothPrint'
 import { bluetoothAvailable } from '../printer/bluetooth'
 
@@ -687,11 +688,12 @@ export default function CatalogFlow() {
     screen = (
       <StepShell
         title={wantsBoxes ? 'Receive into boxes' : 'Receive items'}
-        help={
+        explain={
           wantsBoxes
             ? 'For sorting items nobody wrote down — no donor needed. Start a box, say where it will be kept and write its number on it. Add each item, print its label, put it in the box. Tap Box is full, then start the next one.'
             : 'First how it came in — a donation or something we bought — then each item: photo, name, how many, where it’s kept, and what it’s for.'
         }
+        flow={wantsBoxes ? ['Start a box', 'Add each item', 'Box is full', 'Print box labels'] : ['Receiving', 'Where it’s kept', 'What it’s for', 'Label']}
         onBack={() => navigate('/staff')}
         backLabel="Dashboard"
         footer={
@@ -732,15 +734,14 @@ export default function CatalogFlow() {
                 <LocationField v={{ location: boxPlace }} set={(p) => setBoxPlace(p.location ?? '')} places={suggestions.locations} label="Where will this box be kept?" />
                 <p className="mt-1.5 text-sm text-slate-500">Everything put in the box is kept there too. It can be changed later from the box.</p>
               </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-[15px] text-slate-600">
-              <p className="text-base font-bold text-ink">How it works</p>
-              <ol className="mt-1 list-decimal space-y-1 pl-5">
+            <Explain label="How filling a box works">
+              <ol className="list-decimal space-y-1 pl-5">
                 <li>Start a box — the app gives it the next number. Write the number on the box.</li>
                 <li>For each item: photo, say the name, Save, print its label, put it in the box.</li>
                 <li>Tap Box is full, and start the next box.</li>
                 <li>When the sorting is done, put the 4 × 6 roll in the printer and print all the box labels from Boxes. Stick each one over the number.</li>
               </ol>
-            </div>
+            </Explain>
             </>
           ) : null}
           {!wantsBoxes && <ReceivedAsField v={draft} set={update} />}
@@ -756,7 +757,9 @@ export default function CatalogFlow() {
                 placeholder="Tractor Supply"
                 ariaLabel="Where it was bought"
               />
-              <p className="text-sm text-slate-500">What we paid goes on each item. A store on the Hop Shop vendor list shows what we bought on its card.</p>
+              <Explain label="About the price">
+                <p>What we paid goes on each item. A store on the Hop Shop vendor list shows what we bought on its card.</p>
+              </Explain>
             </div>
           ) : current ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -891,10 +894,12 @@ export default function CatalogFlow() {
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <LocationField v={{ location: boxPlace }} set={(p) => setBoxPlace(p.location ?? '')} places={suggestions.locations} label="Where will the next box be kept?" />
           </div>
-          <p className="text-base text-slate-600">
-            When every box is done, put the 4 × 6 roll in the printer, open <span className="font-bold">Boxes</span> and print all the waiting box labels at
-            once. Stick each label over the number you wrote on the box.
-          </p>
+          <Explain label="When every box is done">
+            <p>
+              When every box is done, put the 4 × 6 roll in the printer, open <span className="font-bold">Boxes</span> and print all the waiting box labels at
+              once. Stick each label over the number you wrote on the box.
+            </p>
+          </Explain>
         </div>
       </StepShell>
     )
@@ -1082,13 +1087,16 @@ export default function CatalogFlow() {
     screen = (
       <StepShell
         title="What is it?"
-        help={[
-          bought ? (draft.boughtFrom.trim() ? `Bought at ${draft.boughtFrom.trim()}.` : 'Bought.') : current?.donor && !wantsBoxes ? `Gift of ${current.donor}.` : null,
-          box ? `Going in Box ${box.box_no}.` : null,
-          'First how it came in and where it’s kept, then what it’s for.',
-        ]
-          .filter(Boolean)
-          .join(' ')}
+        help={
+          [
+            bought ? (draft.boughtFrom.trim() ? `Bought at ${draft.boughtFrom.trim()}.` : 'Bought.') : current?.donor && !wantsBoxes ? `Gift of ${current.donor}.` : null,
+            box ? `Going in Box ${box.box_no}.` : null,
+          ]
+            .filter(Boolean)
+            .join(' ') || undefined
+        }
+        explain="First how it came in and where it’s kept, then what it’s for."
+        explainLabel="How this goes"
         onBack={() => setStep('start')}
         backLabel="Pause"
         footer={

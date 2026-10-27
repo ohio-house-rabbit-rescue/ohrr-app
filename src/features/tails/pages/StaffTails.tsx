@@ -16,6 +16,7 @@ import { dataUrlToBlob, uploadItemPhoto } from '../../scan/api'
 import { TAIL_STATUS, exampleTail, type TailStatus } from '../../../data/tails'
 import { ExampleBadge } from '../../../components/tailbits'
 import { deleteTail, listTails, saveTail, type TailRow } from '../api'
+import { StaffTitle } from '../../../components/StaffTitle'
 
 export default function StaffTails() {
   const { membership } = useAuth()
@@ -38,13 +39,12 @@ export default function StaffTails() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Happy Tails</h1>
-        <p className="mt-1 text-sm text-slate-600">
+      <StaffTitle title="Happy Tails">
+        <p>
           Adoption stories on the app and the website. Most come in through the Inbox — publish one there, then edit it
           here.
         </p>
-      </div>
+      </StaffTitle>
 
       <FormError>{error}</FormError>
       {rows === null && !error && <Spinner />}

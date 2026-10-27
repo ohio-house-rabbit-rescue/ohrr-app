@@ -31,6 +31,7 @@ import {
 } from '../queue'
 import { easterCampaign } from '../easterCampaign'
 import { EasterCampaignCard, EasterNudge } from '../EasterCampaignCard'
+import { StaffTitle } from '../../../components/StaffTitle'
 
 /** Resolves to the error text, or null when it worked (the list has reloaded). */
 type OnStatus = (p: SocialPost, s: PostStatus, opts?: { postedTo?: Platform[]; note?: string }) => Promise<string | null>
@@ -115,12 +116,11 @@ export default function PostQueue() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Post queue</h1>
-        <p className="mt-1 text-sm text-slate-600">
+      <StaffTitle title="Post queue" flow={['Write', 'Send for approval', 'Approved', 'Released']}>
+        <p>
           Write a post and send it for approval. Someone other than the writer approves it, then {canPublish ? 'you release it' : 'the person with posting rights releases it'}.
         </p>
-      </div>
+      </StaffTitle>
       {canDraft && campaign && <EasterNudge campaign={campaign} />}
       {canDraft && (
         <div className="grid grid-cols-2 gap-2">

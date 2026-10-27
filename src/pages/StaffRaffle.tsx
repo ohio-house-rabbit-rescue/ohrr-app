@@ -24,6 +24,7 @@ import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen, SectionLabel } from '../components/ui'
 import { Icon } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { RafflePhoto } from '../features/raffle/RafflePhoto'
 import { uploadAuctionPhoto } from '../features/raffle/photoUpload'
@@ -1425,48 +1426,49 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
           ))}
         </div>
       )}
-      <div className="flex items-start justify-between gap-3 pt-1">
-        <div>
-          <h1 className="font-display text-2xl font-black text-ink">{ev.online ? settings?.title || ev.name : 'Silent Auction'}</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            {ev.online ? (
-              <>
-                Items appear at /auction in the app and on the website while they’re published and the Online Auction is switched on in{' '}
-                {can('settings.manage') ? (
-                  <Link to="/staff/features" className="font-bold text-brand-blue hover:text-brand-blue-dark">
-                    Features
-                  </Link>
-                ) : (
-                  'Features'
-                )}
-                .
-              </>
-            ) : (
-              'Items appear in the BunFest app while they’re published.'
-            )}{' '}
-            {hasBidding ? (
-              <>
-                Bids, Buy Now and sales run on the{' '}
-                <Link to={`/staff/auction-desk${ev.online ? '?auction=online' : ''}`} className="font-bold text-brand-blue hover:text-brand-blue-dark">
-                  Auction desk
+      <StaffTitle
+        title={ev.online ? settings?.title || ev.name : 'Silent Auction'}
+        actions={
+          !creating ? (
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
+            >
+              <Icon name="award" size={15} /> Add
+            </button>
+          ) : undefined
+        }
+      >
+        <p>
+          {ev.online ? (
+            <>
+              Items appear at /auction in the app and on the website while they’re published and the Online Auction is switched on in{' '}
+              {can('settings.manage') ? (
+                <Link to="/staff/features" className="font-bold text-brand-blue hover:text-brand-blue-dark">
+                  Features
                 </Link>
-                .
-              </>
-            ) : (
-              'Mark items won as the day goes.'
-            )}
-          </p>
-        </div>
-        {!creating && (
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
-          >
-            <Icon name="award" size={15} /> Add
-          </button>
-        )}
-      </div>
+              ) : (
+                'Features'
+              )}
+              .
+            </>
+          ) : (
+            'Items appear in the BunFest app while they’re published.'
+          )}{' '}
+          {hasBidding ? (
+            <>
+              Bids, Buy Now and sales run on the{' '}
+              <Link to={`/staff/auction-desk${ev.online ? '?auction=online' : ''}`} className="font-bold text-brand-blue hover:text-brand-blue-dark">
+                Auction desk
+              </Link>
+              .
+            </>
+          ) : (
+            'Mark items won as the day goes.'
+          )}
+        </p>
+      </StaffTitle>
 
       {creating && (
         <AddItem

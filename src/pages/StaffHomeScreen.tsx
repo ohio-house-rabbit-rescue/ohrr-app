@@ -9,6 +9,7 @@ import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import StaffImageField from '../components/StaffImageField'
 import { slideVisual } from '../data/heroSlides'
@@ -165,12 +166,11 @@ export default function StaffHomeScreen() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Home screen</h1>
-        <p className="mt-1 text-sm text-slate-600">
+      <StaffTitle title="Home screen">
+        <p>
           What the app opens on, and the picture cards on the website’s home page. Leave a group empty and it shows the built-in cards.
         </p>
-      </div>
+      </StaffTitle>
 
       <FormError>{error}</FormError>
       {items === null && !error && <Spinner />}

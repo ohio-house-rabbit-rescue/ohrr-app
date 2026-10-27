@@ -10,6 +10,7 @@ import { Spinner, FormError } from '../../../components/staffui'
 import { fmtClock, fmtDay } from '../calls'
 import { callRoster, listCalls, type CallRow } from '../callsApi'
 import StaffCall from './StaffCall'
+import { StaffTitle } from '../../../components/StaffTitle'
 
 /** A fresh page per call, so moving from "new" to the saved call starts clean. */
 export function StaffCallRoute() {
@@ -60,13 +61,12 @@ export default function StaffCalls() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Volunteer calls</h1>
-        <p className="mt-1 text-sm leading-relaxed text-slate-600">
+      <StaffTitle title="Volunteer calls" flow={['Put out a call', 'Spread the word', 'Sign-ups', 'On the day', 'Thank everyone']}>
+        <p>
           Put out a need once — “5 people for 2-hour shifts at BunFest” — and it makes the shifts, writes the posts,
           texts, emails, letters and flyers, takes the sign-ups, and helps you thank everyone afterwards.
         </p>
-      </div>
+      </StaffTitle>
 
       <Link to="/staff/calls/new" className={`${btn.primary} w-full`}>
         <Icon name="plus" size={16} /> Put out a new call

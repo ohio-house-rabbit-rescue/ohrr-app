@@ -11,6 +11,7 @@ import { Screen, Card, Badge, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
 import { guessSortName, sortGuardians, type Guardian } from '../guardians'
+import { StaffTitle } from '../../../components/StaffTitle'
 
 /** Update 29 hasn't been run: PostgREST can't find the table. */
 function tableMissing(e: { code?: string; message?: string }) {
@@ -151,17 +152,18 @@ export default function StaffGuardians() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Rescue Rabbit Guardians</h1>
-        <p className="mt-1 text-sm text-slate-600">
+      <StaffTitle title="Rescue Rabbit Guardians">
+        <p>
           The Legacy Fund thank-you list: people who have made a planned gift or given $1,000 or more in a calendar year. The
           newest year is shown by name on{' '}
           <Link to="/info/legacy-fund#guardians" className="font-semibold text-brand-blue underline underline-offset-2">
             the Legacy Fund page
           </Link>
-          , earlier years underneath. Write each name the way the family wants it. Leave off anyone who asked not to be listed.
+          , earlier years underneath.
         </p>
-      </div>
+      </StaffTitle>
+      {/* Kept in view, not folded: it is a privacy rule to follow while typing names. */}
+      <p className="text-sm text-slate-600">Write each name the way the family wants it. Leave off anyone who asked not to be listed.</p>
 
       {missing && (
         <Card className="border-amber-200 bg-amber-50">

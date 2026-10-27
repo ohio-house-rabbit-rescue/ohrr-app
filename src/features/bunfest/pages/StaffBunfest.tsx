@@ -57,6 +57,7 @@ import {
   saveFeature,
   type FeatureRow,
 } from '../api'
+import { Explain, StaffTitle } from '../../../components/StaffTitle'
 
 type Tab = 'schedule' | 'vendors' | 'partners' | 'year' | 'pages' | 'floor'
 const TABS: [Tab, string][] = [
@@ -131,12 +132,9 @@ export default function StaffBunfest() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Midwest BunFest</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          The program, the vendor tables and the rescue directory — what visitors see in the app and on the website.
-        </p>
-      </div>
+      <StaffTitle title="Midwest BunFest">
+        <p>The program, the vendor tables and the rescue directory — what visitors see in the app and on the website.</p>
+      </StaffTitle>
       <div className="grid grid-cols-3 gap-2">
         {TABS.map(([t, label]) => (
           <button
@@ -552,11 +550,15 @@ function VendorsTab({ orgId }: { orgId: string }) {
   return (
     <div className="space-y-3">
       <Card className="text-sm text-slate-600">
-        A vendor is a company in the Hop Shop <strong>Suppliers</strong> list with “Vendor” ticked. Visitors see the name,
-        category, <strong>About them</strong> and website; everything else on the card — contact, photo, paperwork, fees,
-        what they’ve given — is for the team only.{' '}
+        <Explain label="About vendors">
+          <p>
+            A vendor is a company in the Hop Shop <strong>Suppliers</strong> list with “Vendor” ticked. Visitors see the name,
+            category, <strong>About them</strong> and website; everything else on the card — contact, photo, paperwork, fees,
+            what they’ve given — is for the team only.
+          </p>
+        </Explain>
         {rows && rows.length > 0 && (
-          <span className="font-semibold text-ink">
+          <span className="mt-2 block font-semibold text-ink">
             {published} of {rows.length} published.
           </span>
         )}
@@ -651,8 +653,12 @@ function PartnersTab({ orgId }: { orgId: string }) {
   return (
     <div className="space-y-3">
       <Card className="text-sm text-slate-600">
-        The rescue directory — BunFest’s rescue partners and “find a rescue near you”. Leave it empty and the app keeps
-        showing the researched 2026 list.
+        <Explain label="About the rescue directory">
+          <p>
+            The rescue directory — BunFest’s rescue partners and “find a rescue near you”. Leave it empty and the app keeps
+            showing the researched 2026 list.
+          </p>
+        </Explain>
       </Card>
       <div className="relative">
         <Icon name="search" size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -889,10 +895,12 @@ function ThisYearTab({ orgId }: { orgId: string }) {
             ))}
           </select>
         </label>
-        <p className="text-xs text-slate-600">
-          These are the cards under “At the festival” on the BunFest home screen. Leave a year empty and the app shows
-          the built-in list.
-        </p>
+        <Explain label="About these cards">
+          <p>
+            These are the cards under “At the festival” on the BunFest home screen. Leave a year empty and the app shows
+            the built-in list.
+          </p>
+        </Explain>
       </Card>
 
       <FormError>{error}</FormError>
@@ -1000,11 +1008,13 @@ function StartNextYearCard({ orgId }: { orgId: string }) {
     <Card className="space-y-3">
       <div>
         <h2 className="font-display text-[15px] font-extrabold text-ink">Start next year</h2>
-        <p className="mt-1 text-sm leading-relaxed text-slate-600">
-          Copies the program, the festival cards, every page, both rosters and the floor plan into a
-          new year, so you edit last year’s instead of starting from a blank screen. Nothing already in
-          the new year is touched — and a new venue can be designed from scratch on the Floor plan tab.
-        </p>
+        <Explain label="What gets copied" className="mt-1">
+          <p>
+            Copies the program, the festival cards, every page, both rosters and the floor plan into a
+            new year, so you edit last year’s instead of starting from a blank screen. Nothing already in
+            the new year is touched — and a new venue can be designed from scratch on the Floor plan tab.
+          </p>
+        </Explain>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <label className="block text-sm font-semibold text-slate-700">
@@ -1290,12 +1300,14 @@ function PagesTab({ orgId }: { orgId: string }) {
               ))}
           </select>
         </label>
-        <p className="text-xs leading-relaxed text-slate-600">
-          These are the pages behind the cards on the BunFest home screen — the Bunny Spa, Glamour
-          Shots, the raffle, the host hotel and so on. Leave a year empty and the app falls back to
-          the built-in copy. Use <strong>This year → Start next year</strong> to copy a whole set
-          forward.
-        </p>
+        <Explain label="About these pages">
+          <p>
+            These are the pages behind the cards on the BunFest home screen — the Bunny Spa, Glamour
+            Shots, the raffle, the host hotel and so on. Leave a year empty and the app falls back to
+            the built-in copy. Use <strong>This year → Start next year</strong> to copy a whole set
+            forward.
+          </p>
+        </Explain>
       </Card>
 
       <FormError>{error}</FormError>
@@ -1560,10 +1572,12 @@ function PageForm({
       </label>
       {d.feature === 'reserve' && (
         <div className="space-y-2 rounded-2xl bg-slate-50 p-3">
-          <p className="text-xs leading-relaxed text-slate-600">
-            Requests arrive in the staff Inbox, and nobody pays until they turn up. Set the last day
-            you want to take them and the form takes itself down — you don’t have to remember.
-          </p>
+          <Explain label="About reserving">
+            <p>
+              Requests arrive in the staff Inbox, and nobody pays until they turn up. Set the last day
+              you want to take them and the form takes itself down — you don’t have to remember.
+            </p>
+          </Explain>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm font-semibold text-slate-700">
               Open requests from

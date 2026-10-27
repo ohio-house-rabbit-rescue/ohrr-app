@@ -15,6 +15,7 @@ import { donationsReceived, isNeeds40, type DonationLine } from '../api'
 import { ErrorBox } from '../ScanUI'
 import { KIND_META, formatMoney, usDate } from '../types'
 import { donationsCsv, donorOf, inGivenOrder, lineCode, lineLabel, monthName, monthRange, plural, reportTotals, whereNow, worthLine } from '../letters'
+import { StaffTitle } from '../../../components/StaffTitle'
 
 const navBtn =
   'inline-flex min-h-[48px] min-w-[48px] items-center justify-center gap-1 rounded-2xl border-2 border-slate-200 bg-white px-3 text-[15px] font-bold text-brand-blue transition active:scale-[.98] disabled:opacity-30'
@@ -91,8 +92,9 @@ export default function DonationsReport() {
           <Link to="/staff/dropoffs" className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
             <Icon name="arrowLeft" size={20} /> Drop-offs
           </Link>
-          <h1 className="mt-1 font-display text-2xl font-black text-ink">{isThisMonth ? 'Donations this month' : `Donations in ${name}`}</h1>
-          <p className="mt-1 text-base text-slate-600">Everything that came in, who gave it, what it was worth and where it is now.</p>
+          <StaffTitle title={isThisMonth ? 'Donations this month' : `Donations in ${name}`}>
+            <p>Everything that came in, who gave it, what it was worth and where it is now.</p>
+          </StaffTitle>
         </div>
 
         {!allowed ? (

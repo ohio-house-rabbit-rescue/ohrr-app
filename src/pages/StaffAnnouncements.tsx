@@ -3,6 +3,7 @@ import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
+import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import StaffImageField from '../components/StaffImageField'
 import type { Database } from '../lib/database.types'
@@ -315,23 +316,22 @@ export default function StaffAnnouncements() {
 
   return (
     <Screen className="space-y-4">
-      <div className="flex items-start justify-between gap-3 pt-1">
-        <div>
-          <h1 className="font-display text-2xl font-black text-ink">Announcements</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Short notices that appear on the app’s home screen for visitors.
-          </p>
-        </div>
-        {!creating && (
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
-          >
-            <Icon name="gift" size={15} /> New
-          </button>
-        )}
-      </div>
+      <StaffTitle
+        title="Announcements"
+        actions={
+          !creating ? (
+            <button
+              type="button"
+              onClick={() => setCreating(true)}
+              className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
+            >
+              <Icon name="gift" size={15} /> New
+            </button>
+          ) : undefined
+        }
+      >
+        <p>Short notices that appear on the app’s home screen for visitors.</p>
+      </StaffTitle>
 
       {creating && (
         <Card>

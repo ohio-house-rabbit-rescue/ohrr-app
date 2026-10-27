@@ -9,6 +9,7 @@ import { FLYERS, flyerLink, renderFlyer, type Flyer } from '../flyers'
 import { canvasToBlob } from '../render'
 import { canShareFiles, copyText, savePngAsync, sharePng } from '../share'
 import { isNative } from '../../../native/platform'
+import { Explain, StaffTitle } from '../../../components/StaffTitle'
 
 export default function Flyers() {
   const { can } = useAuth()
@@ -80,10 +81,9 @@ export default function Flyers() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">Flyers</h1>
-        <p className="mt-1 text-sm text-slate-600">Letter-size posters with a QR code. Pick one, then share it to whoever prints, save it, or print from this phone.</p>
-      </div>
+      <StaffTitle title="Flyers">
+        <p>Letter-size posters with a QR code. Pick one, then share it to whoever prints, save it, or print from this phone.</p>
+      </StaffTitle>
 
       <div className="grid grid-cols-1 gap-2">
         {FLYERS.map((f) => (
@@ -115,7 +115,9 @@ export default function Flyers() {
       </button>
       {status && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{status}</p>}
       {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</p>}
-      <p className="text-xs text-slate-500">Prints on one US-Letter page, color or black-and-white. Each flyer carries its own link, so the analytics show which ones bring people in.</p>
+      <Explain label="About printing">
+        <p>Prints on one US-Letter page, color or black-and-white. Each flyer carries its own link, so the analytics show which ones bring people in.</p>
+      </Explain>
     </Screen>
   )
 }

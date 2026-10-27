@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Card, Screen } from '../components/ui'
+import { Explain, StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { fetchSettings, setSetting } from '../features/settings/useSetting'
 import { ORG_PROFILE_FALLBACK, ORG_PROFILE_KEY, type OrgProfile } from '../lib/orgProfile'
@@ -88,13 +89,12 @@ export default function StaffOrgDetails() {
 
   return (
     <Screen className="space-y-4">
-      <div className="pt-1">
-        <h1 className="font-display text-2xl font-black text-ink">OHRR details</h1>
-        <p className="mt-1 text-sm text-slate-600">
+      <StaffTitle title="OHRR details">
+        <p>
           Hours, phone, address and a notice — shown wherever the app or the website mentions the rescue. Everyone sees
           a change the next time they open it.
         </p>
-      </div>
+      </StaffTitle>
 
       {loading ? (
         <Spinner />
@@ -147,10 +147,12 @@ export default function StaffOrgDetails() {
           <Card className="space-y-3">
             <div>
               <h2 className="font-display text-[15px] font-extrabold text-ink">Volunteer-hours letters</h2>
-              <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                Who signs the letters volunteers need for school credit, a military service award or a workplace
-                program. Their name and title go under the signature line.
-              </p>
+              <Explain label="About these letters" className="mt-1">
+                <p>
+                  Who signs the letters volunteers need for school credit, a military service award or a workplace
+                  program. Their name and title go under the signature line.
+                </p>
+              </Explain>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block text-sm font-semibold text-slate-700">
