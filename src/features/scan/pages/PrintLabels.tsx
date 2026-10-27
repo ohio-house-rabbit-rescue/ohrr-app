@@ -11,7 +11,7 @@
 // ?c=X:N (repeatable) ticks X with N copies (a delivery's labels).
 // Silent Auction items print as bid-sheet labels (prices, "Scan to buy it
 // now") unless "Bid-sheet labels" is unticked (update 44).
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage, supabase } from '../../../lib/supabase'
@@ -25,13 +25,27 @@ import { listItems, markLabelsPrinted } from '../api'
 import { listProducts, money, type StockCard } from '../../hopshop/api'
 import { BigButton, ErrorBox } from '../ScanUI'
 import { KIND_META, type TaggedItem } from '../types'
-import { LABEL_SIZES, LABEL_SIZE_SETTING, customLabelSize, labelDataUrl, labelSizeFrom, loadLabelSize, saveLabelSize, type AuctionLabel, type LabelItem, type LabelSize } from '../labels'
+import {
+  LABEL_SIZES,
+  LABEL_SIZE_SETTING,
+  customLabelSize,
+  labelDataUrl,
+  labelSizeFrom,
+  labelSizePickedAt,
+  labelSizeSetAt,
+  loadLabelSize,
+  saveLabelSize,
+  type AuctionLabel,
+  type LabelItem,
+  type LabelSize,
+} from '../labels'
+import { listenForLabelChanges, tellOthersLabelsChanged } from '../labelSync'
+import { PAGE_SIZE, SHOW_OPTIONS, SORT_OPTIONS, WHEN_OPTIONS, filterRows, groupByDay, loadView, saveView, type ListView } from '../labelList'
 import { setSetting, useSetting } from '../../settings/useSetting'
 import type { Json } from '../../../lib/database.types'
 import { AUCTION_EVENT_SLUG } from '../../raffle/types'
 import BluetoothPrint from '../printer/BluetoothPrint'
 
-type Show = 'unprinted' | 'all'
 type Mode = 'items' | 'shop'
 
 /** One line on the page: a donation or prize, or a Hop Shop product. */
@@ -47,6 +61,10 @@ interface Row {
   label_printed_at: string | null
   price_cents: number | null
   label: LabelItem
+  /** When it was added (ISO), for "Added" and the day groups. */
+  added: string | null
+  /** The item kind, or the product's type — for the Kind dropdown. */
+  kind: string
 }
 
 const PRICE_KEY = 'ohrr.labels.shopPrice'
@@ -89,6 +107,9 @@ async function auctionDetails(orgId: string, ids: string[]): Promise<Map<string,
   return out
 }
 
+const SELECT =
+  'mt-1 block min-h-[48px] w-full rounded-xl border-2 border-slate-200 bg-white px-3 text-base font-semibold text-ink outline-none focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15'
+
 /** Copies of one label: 1 to 200. */
 const MAX_COPIES = 200
 const clampCopies = (n: number) => Math.min(MAX_COPIES, Math.max(1, Math.round(n) || 1))
@@ -126,6 +147,8 @@ function itemRow(i: TaggedItem, auction?: AuctionLabel): Row {
     quantity: i.quantity,
     label_printed_at: i.label_printed_at ?? null,
     price_cents: null,
+    added: i.created_at ?? null,
+    kind: i.kind,
     label: {
       code: i.code,
       title: i.title,
@@ -149,6 +172,8 @@ function productRow(p: StockCard): Row {
     quantity: p.quantity,
     label_printed_at: p.label_printed_at ?? null,
     price_cents: p.price_cents,
+    added: (p as { created_at?: string | null }).created_at ?? p.updated_at ?? null,
+    kind: p.type_name ?? p.category ?? 'Other',
     label: { code, title: p.name, photo_url: p.photo_url, shop: true, price_cents: p.price_cents },
   }
 }
@@ -157,9 +182,10 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   const shop = mode === 'shop'
   const { membership, user, can } = useAuth()
   const orgId = membership?.orgId ?? ''
-  // The label size is the rescue's (one printer, one roll): whoever may manage
-  // settings sets it for every phone and computer; anyone else can still pick
-  // another size, for this device until the page is opened again.
+  // The label size is the rescue's (one printer, one roll). The last size picked
+  // stays until someone picks another: whoever may manage settings picks it for
+  // every phone and computer; anyone else picks it for this device, until the
+  // rescue's size is changed after that.
   const sharedSize = useSetting<Json>(LABEL_SIZE_SETTING, null)
   const setsForAll = can('settings.manage')
   const [items, setItems] = useState<Row[] | null>(null)
@@ -183,7 +209,15 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   const wantedCopies = Number(searchParams.get('copies')) || 0
   const toLabel = (r: Row): LabelItem =>
     shop ? { ...r.label, price_cents: showPrice ? r.price_cents : null } : bidSheet ? r.label : { ...r.label, auction: null }
-  const [show, setShow] = useState<Show>(wanted.length ? 'all' : 'unprinted')
+  // Show / Added / Kind / Sort, kept on the device ("Print this label" links show just their items).
+  const [view, setViewState] = useState<ListView>(() => (wanted.length ? { ...loadView(), show: 'ticked' } : loadView()))
+  const [limit, setLimit] = useState(PAGE_SIZE)
+  const setView = (patch: Partial<ListView>) => {
+    const next = { ...view, ...patch }
+    setViewState(next)
+    saveView(next)
+    setLimit(PAGE_SIZE)
+  }
   const [q, setQ] = useState('')
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [size, setSize] = useState<LabelSize>(() => loadLabelSize())
@@ -197,7 +231,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   // Copies per label, as typed (so the box can be cleared while typing); 1 when not set.
   const [copyText, setCopyText] = useState<Record<string, string>>({})
 
-  const load = async () => {
+  const load = async (again = false) => {
     try {
       // Hop Shop products print on their own page, as price labels.
       let rows: Row[]
@@ -208,9 +242,22 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
         const prices = await auctionDetails(orgId, list.filter((i) => i.kind === 'auction').map((i) => i.ref_id)).catch(() => new Map<string, AuctionLabel>())
         rows = list.map((i) => itemRow(i, i.kind === 'auction' ? prices.get(i.ref_id) : undefined))
       }
+      if (again) {
+        // Printed on another phone or computer since the last look: untick them, so nothing prints twice.
+        const before = new Map((items ?? []).map((r) => [r.code, r.label_printed_at]))
+        const done = rows.filter((r) => r.label_printed_at && before.has(r.code) && !before.get(r.code)).map((r) => r.code)
+        if (done.length) {
+          setPicked((p) => {
+            const gone = done.filter((c) => p.has(c))
+            if (gone.length === 0) return p
+            setNote(`${plural(gone.length)} you had ticked ${gone.length === 1 ? 'was' : 'were'} printed by someone else, so ${gone.length === 1 ? 'it is' : 'they are'} unticked.`)
+            return new Set([...p].filter((c) => !gone.includes(c)))
+          })
+        }
+      }
       setItems(rows)
       setPicked((p) => {
-        if (p.size) return p
+        if (again || p.size) return p
         if (wanted.length) {
           const have = new Set(rows.map((r) => r.code))
           const w = wanted.filter((c) => have.has(c))
@@ -220,7 +267,8 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
             return new Set(w)
           }
         }
-        return new Set(rows.filter((r) => !r.label_printed_at).map((r) => r.code))
+        // Nothing ticked to start with: with hundreds of items, people tick what they want.
+        return new Set<string>()
       })
     } catch (e) {
       setError(errMessage(e))
@@ -230,15 +278,32 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
     if (orgId) void load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, mode])
+  // Printing marks the labels in the database for everyone. When another device
+  // does that, it sends a nudge (labelSync.ts) and this page reads the list again
+  // — no polling. It also reads it again when the page comes back into view, in
+  // case a nudge was missed while the phone was asleep.
+  const loadRef = useRef(load)
+  loadRef.current = load
+  useEffect(() => {
+    if (!orgId) return
+    const again = () => {
+      if (document.visibilityState === 'visible') void loadRef.current(true)
+    }
+    const stop = listenForLabelChanges(orgId, () => void loadRef.current(true))
+    document.addEventListener('visibilitychange', again)
+    return () => {
+      stop()
+      document.removeEventListener('visibilitychange', again)
+    }
+  }, [orgId, mode])
 
-  const shown = useMemo(() => {
-    const needle = q.trim().toLowerCase()
-    return (items ?? []).filter(
-      (i) =>
-        (show === 'all' || !i.label_printed_at) &&
-        (!needle || i.title.toLowerCase().includes(needle) || i.code.toLowerCase().includes(needle) || i.sub.toLowerCase().includes(needle)),
-    )
-  }, [items, show, q])
+  const shown = useMemo(() => filterRows(items ?? [], view, q, picked), [items, view, q, picked])
+  const groups = useMemo(() => groupByDay(shown.slice(0, limit), view.sort), [shown, limit, view.sort])
+  const kinds = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const r of items ?? []) if (!seen.has(r.kind)) seen.set(r.kind, shop ? r.kind : (KIND_META[r.kind as keyof typeof KIND_META]?.label ?? r.kind))
+    return [...seen].sort((a, b) => a[1].localeCompare(b[1]))
+  }, [items, shop])
   const selected = useMemo(() => (items ?? []).filter((i) => picked.has(i.code)), [items, picked])
   const copiesOf = (code: string) => clampCopies(parseInt(copyText[code] ?? '1', 10))
   const setCopies = (code: string, n: number) => setCopyText((c) => ({ ...c, [code]: String(clampCopies(n)) }))
@@ -261,21 +326,26 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, shown, size, showPrice, bidSheet])
 
-  const showSize = (s: LabelSize) => {
+  const [customOpen, setCustomOpen] = useState(false)
+  const showSize = (s: LabelSize, at: number) => {
     setSize(s)
-    saveLabelSize(s)
+    saveLabelSize(s, at)
     setCustomW(String(s.wIn))
     setCustomH(String(s.hIn))
   }
   const rescueSize = sharedSize.loading ? null : labelSizeFrom(sharedSize.value)
+  const rescueAt = labelSizeSetAt(sharedSize.value)
   useEffect(() => {
-    if (rescueSize) showSize(rescueSize)
+    // The newer pick wins: the rescue's size only replaces this device's own pick if it was set after it.
+    if (rescueSize && rescueAt > labelSizePickedAt()) showSize(rescueSize, rescueAt)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rescueSize?.key])
+  }, [rescueSize?.key, rescueAt])
   const chooseSize = (s: LabelSize) => {
-    showSize(s)
+    const at = Date.now()
+    showSize(s, at)
+    setCustomOpen(false)
     if (setsForAll && orgId)
-      setSetting(LABEL_SIZE_SETTING, { wIn: s.wIn, hIn: s.hIn }, { orgId, userId: user?.id }).catch((e) =>
+      setSetting(LABEL_SIZE_SETTING, { wIn: s.wIn, hIn: s.hIn, at }, { orgId, userId: user?.id }).catch((e) =>
         setError(`The size is set on this device, but couldn’t be saved for everyone: ${errMessage(e)}`),
       )
   }
@@ -296,6 +366,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   const markPrinted = async (codes: string[], printed = true) => {
     try {
       await markLabelsPrinted(orgId, codes, printed)
+      tellOthersLabelsChanged(orgId)
       setItems((rows) => (rows ?? []).map((r) => (codes.includes(r.code) ? { ...r, label_printed_at: printed ? new Date().toISOString() : null } : r)))
       setLastMarked(printed ? codes : [])
     } catch (e) {
@@ -356,7 +427,12 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
     }
   }
 
-  const unprintedCount = (items ?? []).filter((i) => !i.label_printed_at).length
+  const counts = {
+    unprinted: (items ?? []).filter((i) => !i.label_printed_at).length,
+    printed: (items ?? []).filter((i) => i.label_printed_at).length,
+    all: items?.length ?? 0,
+    ticked: picked.size,
+  }
 
   return (
     <>
@@ -379,42 +455,48 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <p className="text-base font-bold text-ink">Label size</p>
-          <p className="text-sm text-slate-500">
-            {setsForAll
-              ? 'The size of the labels in the printer. Saved for the whole rescue — every phone and computer prints this size.'
-              : rescueSize
-                ? `The rescue’s size is ${rescueSize.label}. Picking another one changes this device only.`
-                : 'The size of the labels in your printer. Remembered on this device.'}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <label htmlFor="label-size" className="text-base font-bold text-ink">
+            Label size
+          </label>
+          <select
+            id="label-size"
+            value={customOpen || size.key.startsWith('custom:') ? 'custom' : size.key}
+            onChange={(e) => {
+              const s = LABEL_SIZES.find((x) => x.key === e.target.value)
+              if (s) chooseSize(s)
+              else setCustomOpen(true)
+            }}
+            className={SELECT}
+          >
             {LABEL_SIZES.map((s) => (
-              <button
-                key={s.key}
-                type="button"
-                onClick={() => chooseSize(s)}
-                aria-pressed={size.key === s.key}
-                className={`min-h-[44px] rounded-full px-4 text-[15px] font-bold transition ${
-                  size.key === s.key ? 'bg-brand-blue text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600'
-                }`}
-              >
+              <option key={s.key} value={s.key}>
                 {s.label}
-              </button>
+              </option>
             ))}
-          </div>
-          <div className="mt-3 flex flex-wrap items-end gap-2">
-            <label className="text-sm font-bold text-slate-600">
-              Width (in)
-              <input type="number" step="0.05" min="0.5" max="8.5" value={customW} onChange={(e) => setCustomW(e.target.value)} className="mt-1 block w-24 rounded-xl border-2 border-slate-200 px-3 py-2 text-base text-ink" />
-            </label>
-            <label className="text-sm font-bold text-slate-600">
-              Height (in)
-              <input type="number" step="0.05" min="0.5" max="11" value={customH} onChange={(e) => setCustomH(e.target.value)} className="mt-1 block w-24 rounded-xl border-2 border-slate-200 px-3 py-2 text-base text-ink" />
-            </label>
-            <button type="button" onClick={applyCustom} className="min-h-[44px] rounded-xl border-2 border-brand-blue/50 px-4 text-[15px] font-bold text-brand-blue">
-              Use this size
-            </button>
-          </div>
+            <option value="custom">{size.key.startsWith('custom:') ? size.label : 'Another size…'}</option>
+          </select>
+          <p className="mt-1 text-sm text-slate-500">
+            {setsForAll
+              ? 'Stays until someone changes it — for the whole rescue, on every phone and computer.'
+              : rescueSize
+                ? `Stays until it’s changed. The rescue’s size is ${rescueSize.label}.`
+                : 'Stays on this device until it’s changed.'}
+          </p>
+          {(customOpen || size.key.startsWith('custom:')) && (
+            <div className="mt-3 flex flex-wrap items-end gap-2">
+              <label className="text-sm font-bold text-slate-600">
+                Width (in)
+                <input type="number" step="0.05" min="0.5" max="8.5" value={customW} onChange={(e) => setCustomW(e.target.value)} className="mt-1 block w-24 rounded-xl border-2 border-slate-200 px-3 py-2 text-base text-ink" />
+              </label>
+              <label className="text-sm font-bold text-slate-600">
+                Height (in)
+                <input type="number" step="0.05" min="0.5" max="11" value={customH} onChange={(e) => setCustomH(e.target.value)} className="mt-1 block w-24 rounded-xl border-2 border-slate-200 px-3 py-2 text-base text-ink" />
+              </label>
+              <button type="button" onClick={applyCustom} className="min-h-[44px] rounded-xl border-2 border-brand-blue/50 px-4 text-[15px] font-bold text-brand-blue">
+                Use this size
+              </button>
+            </div>
+          )}
           {shop && (
             <label className="mt-3 flex min-h-[44px] items-center gap-2 text-[15px] font-bold text-slate-700">
               <input
@@ -497,23 +579,65 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
             : 'In the print dialog choose the label printer and its label size; margins are zero. “Save as PDF” works too.'}
         </p>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {(['unprinted', 'all'] as Show[]).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setShow(s)}
-              className={`min-h-[44px] rounded-full px-4 text-[15px] font-bold transition ${show === s ? 'bg-brand-blue text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600'}`}
-            >
-              {s === 'unprinted' ? `Not printed yet (${unprintedCount})` : `Everything (${items?.length ?? 0})`}
+        <div className="grid grid-cols-2 gap-2">
+          <label className="text-sm font-bold text-slate-600">
+            Show
+            <select value={view.show} onChange={(e) => setView({ show: e.target.value as ListView['show'] })} className={SELECT}>
+              {SHOW_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label} ({counts[o.value]})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm font-bold text-slate-600">
+            Added
+            <select value={view.when} onChange={(e) => setView({ when: e.target.value as ListView['when'] })} className={SELECT}>
+              {WHEN_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {kinds.length > 1 && (
+            <label className="text-sm font-bold text-slate-600">
+              {shop ? 'Type' : 'Kind'}
+              <select value={view.kind} onChange={(e) => setView({ kind: e.target.value })} className={SELECT}>
+                <option value="all">All</option>
+                {kinds.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label className="text-sm font-bold text-slate-600">
+            Sort
+            <select value={view.sort} onChange={(e) => setView({ sort: e.target.value as ListView['sort'] })} className={SELECT}>
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-2">
+          <span className="text-sm text-slate-600">
+            {shown.length} shown · {picked.size} ticked
+          </span>
+          {shown.length > 0 && (
+            <button type="button" onClick={() => setPicked((p) => new Set([...p, ...shown.map((i) => i.code)]))} className="min-h-[44px] px-2 text-[15px] font-bold text-brand-blue">
+              Tick all {shown.length}
             </button>
-          ))}
-          <button type="button" onClick={() => setPicked(new Set(shown.map((i) => i.code)))} className="min-h-[44px] px-2 text-[15px] font-bold text-brand-blue">
-            Tick all shown
-          </button>
-          <button type="button" onClick={() => setPicked(new Set())} className="min-h-[44px] px-2 text-[15px] font-bold text-brand-blue">
-            None
-          </button>
+          )}
+          {picked.size > 0 && (
+            <button type="button" onClick={() => setPicked(new Set())} className="min-h-[44px] px-2 text-[15px] font-bold text-brand-blue">
+              Untick all
+            </button>
+          )}
         </div>
         <div className="relative">
           <Icon name="search" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -531,11 +655,27 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
         {items === null && !error && <Spinner />}
         {items && shown.length === 0 && (
           <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-base text-slate-500">
-            {show === 'unprinted' ? 'Every label has been printed.' : 'Nothing to show.'}
+            {view.show === 'unprinted' && view.when === 'any' && view.kind === 'all' && !q.trim() ? 'Every label has been printed.' : 'Nothing matches. Try Any time, All, or a different search.'}
           </div>
         )}
+        {groups.map((g) => (
+          <section key={g.heading || 'all'} className="space-y-2">
+            {g.heading && (
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <h2 className="font-display text-base font-extrabold text-ink">
+                  {g.heading} <span className="font-sans text-sm font-semibold text-slate-500">· {g.rows.length}</span>
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setPicked((p) => new Set([...p, ...g.rows.map((i) => i.code)]))}
+                  className="min-h-[44px] px-2 text-[15px] font-bold text-brand-blue"
+                >
+                  Tick these {g.rows.length}
+                </button>
+              </div>
+            )}
         <ul className="space-y-2">
-          {shown.map((i) => {
+          {g.rows.map((i) => {
             const on = picked.has(i.code)
             return (
               <li key={i.key}>
@@ -603,6 +743,17 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
             )
           })}
         </ul>
+          </section>
+        ))}
+        {shown.length > limit && (
+          <button
+            type="button"
+            onClick={() => setLimit((l) => l + PAGE_SIZE)}
+            className="min-h-[48px] w-full rounded-2xl border-2 border-brand-blue/50 bg-white text-[15px] font-bold text-brand-blue"
+          >
+            Show {Math.min(PAGE_SIZE, shown.length - limit)} more ({shown.length - limit} not shown yet)
+          </button>
+        )}
       </Screen>
 
       {/* print-only: one label per page at the label's size */}
