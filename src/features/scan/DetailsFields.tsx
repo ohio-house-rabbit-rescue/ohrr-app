@@ -227,11 +227,16 @@ export function MoreDetailsFields({
   set,
   suggestions,
   show = { value: true, condition: true, category: true, location: true, notes: true },
+  // OHRR 2026-10-27: "Price for one" → "more of a starting bid or sale price".
+  priceLabel = 'Sale price or starting bid',
+  priceHint = 'if it may be sold or auctioned',
 }: {
   v: Extras
   set: (p: Partial<Extras>) => void
   suggestions: Pick<CatalogSuggestions, 'locations' | 'categories'>
   show?: { value?: boolean; size?: boolean; condition?: boolean; category?: boolean; location?: boolean; useBy?: boolean; price?: boolean; notes?: boolean }
+  priceLabel?: string
+  priceHint?: string
 }) {
   const categories = [...new Set([...suggestions.categories, ...CATEGORY_IDEAS])].slice(0, 12)
   return (
@@ -276,8 +281,8 @@ export function MoreDetailsFields({
       )}
       {show.price && (
         <div>
-          <Label hint="if it may be sold">Price for one</Label>
-          <MoneyInput value={v.price} onChange={(p) => set({ price: p })} ariaLabel="Price for one, in dollars" />
+          <Label hint={priceHint}>{v.quantity > 1 ? `${priceLabel}, each` : priceLabel}</Label>
+          <MoneyInput value={v.price} onChange={(p) => set({ price: p })} ariaLabel={`${priceLabel}, in dollars`} />
         </div>
       )}
       {show.notes && (

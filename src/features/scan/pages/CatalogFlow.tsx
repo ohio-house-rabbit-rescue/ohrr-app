@@ -1401,7 +1401,9 @@ export default function CatalogFlow() {
                         : `It’s saved for the ${draft.purpose} auction.`}
                     </p>
                   ))}
-                {draft.headedFor === 'shop' && <MoreDetailsFields v={draft} set={update} suggestions={suggestions} show={{ price: true }} />}
+                {draft.headedFor === 'shop' && (
+                  <MoreDetailsFields v={draft} set={update} suggestions={suggestions} show={{ price: true }} priceLabel="Hop Shop price" priceHint="what it sells for" />
+                )}
               </div>
             )}
           </div>
