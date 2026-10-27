@@ -72,7 +72,7 @@ function value(v: unknown, kind: ColumnKind = 'text'): unknown {
 }
 
 /** A photo shrunk to a thumbnail: JPEG bytes and its size in pixels, or null. */
-async function thumbnail(url: string): Promise<{ base64: string; w: number; h: number } | null> {
+export async function thumbnail(url: string): Promise<{ base64: string; w: number; h: number } | null> {
   try {
     const res = await fetch(url, { mode: 'cors' })
     if (!res.ok) return null

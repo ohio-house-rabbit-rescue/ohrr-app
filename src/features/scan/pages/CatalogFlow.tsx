@@ -58,7 +58,7 @@ import {
   startDropoff,
   uploadItemPhoto,
 } from '../api'
-import { BigButton, BigInput, ErrorBox, MoneyInput, StepShell } from '../ScanUI'
+import { BigButton, BigInput, ErrorBox, MoneyInput, Part, PartBadge, StepShell } from '../ScanUI'
 import { KIND_META, dollarsToCents, extrasSummary, usDate, type TaggedItem } from '../types'
 import {
   ComboField,
@@ -79,12 +79,14 @@ import { tellOthersLabelsChanged } from '../labelSync'
 import { useLabelSize } from '../useLabelSize'
 import { Explain } from '../../../components/StaffTitle'
 import BluetoothPrint from '../printer/BluetoothPrint'
+import ReceivingSummary from '../ReceivingSummary'
+import { bagKey, loadSession, saveSession, type ReceivingSession } from '../receivingSession'
 import { bluetoothAvailable } from '../printer/bluetooth'
 
 /** "$35" or "$12.50". */
 const usd = (cents: number) => (cents % 100 === 0 ? `$${cents / 100}` : `$${(cents / 100).toFixed(2)}`)
 
-type Step = 'start' | 'name' | 'saved' | 'full'
+type Step = 'start' | 'name' | 'saved' | 'full' | 'summary'
 
 // Web Speech API (Chrome, Edge, Safari). Missing inside the iPhone app's web
 // view → the mic is hidden and the keyboard's own dictation key does the job.
@@ -193,17 +195,6 @@ const nextDraft = (d: Draft): Draft => ({
 const forSilentAuction = (d: Pick<Draft, 'headedFor' | 'purpose'>) => d.headedFor === 'auction' && (!d.purpose || /bunfest/i.test(d.purpose))
 
 /**
- * A small heading over each part of receiving: A, B, C … — lettered, because
- * they are the parts of step 1 (OHRR 2026-10-27: "under number one being
- * received, then it would be subset ABCDE so that we can tell the difference").
- */
-const PartBadge = ({ n }: { n: string }) => (
-  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 border-brand-blue font-display text-sm font-black text-brand-blue">
-    {n}
-  </span>
-)
-
-/**
  * "How it works" for receiving, with the same letter badges as the parts on
  * the screen (OHRR 2026-10-27: "so that people can correlate the two").
  */
@@ -235,13 +226,7 @@ function ReceiveParts({ firstScreen = false }: { firstScreen?: boolean }) {
   )
 }
 
-const Part = ({ n, children, hint }: { n: string; children: string; hint?: string }) => (
-  <p className="flex items-center gap-2 border-b border-slate-200 pb-1 font-display text-base font-black uppercase tracking-wide text-slate-500">
-    <PartBadge n={n} />
-    {children}
-    {hint && <span className="font-sans text-sm font-bold normal-case tracking-normal text-slate-400">{hint}</span>}
-  </p>
-)
+
 
 
 /**
@@ -291,6 +276,30 @@ function CameInChoice({ value, onChange }: { value: 'donation' | 'purchase'; onC
 }
 const BOX_PARTS = ['Start a box', 'Add each item', 'Box is full', 'Print box labels']
 
+/**
+ * Who this bag is from, at the top of every item (OHRR 2026-10-27: "it says on
+ * to the next, but I don't know that I'm still the same donation piece").
+ */
+function ReceivingFrom({ bought, name, line, onChange }: { bought: boolean; name: string; line: string; onChange?: () => void }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border-2 border-brand-orange/50 bg-brand-orange-50 px-3 py-2">
+      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand-orange">
+        <Icon name={bought ? 'bag' : 'gift'} size={22} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs font-bold uppercase tracking-wide text-slate-600">{bought ? 'Bought at' : 'Receiving from'}</span>
+        <span className="block truncate font-display text-lg font-black leading-tight text-ink">{name}</span>
+        <span className="block text-sm text-slate-600">{line}</span>
+      </span>
+      {onChange && (
+        <button type="button" onClick={onChange} className="min-h-[44px] shrink-0 px-1 text-[15px] font-bold text-brand-blue">
+          Change
+        </button>
+      )}
+    </div>
+  )
+}
+
 const MORE_KEY = 'ohrr.catalog.more'
 
 function isToday(iso: string): boolean {
@@ -310,6 +319,8 @@ export default function CatalogFlow() {
   const canAuction = can('events.bunfest.manage')
   const [step, setStep] = useState<Step>('start')
   const [current, setCurrent] = useState<Current | null>(loadCurrent)
+  // Everything received on this phone today, for the summary at the end.
+  const [session, setSession] = useState<ReceivingSession>(loadSession)
   const [who, setWho] = useState({ donor: '', email: '', date: todayIso() })
   const [dropoffNote, setDropoffNote] = useState<string | null>(null)
   // The drop-off is saved in the background (the camera must open inside the tap); Save waits for it.
@@ -634,6 +645,7 @@ export default function CatalogFlow() {
     const donatedBy = wantsBoxes || bought ? '' : (current?.donor ?? '')
     const list = shots
     const packing = box
+    const bag = bagKey(snap.source, current?.donor ?? '', current?.date ?? todayIso(), snap.boughtFrom)
     recogRef.current?.stop?.()
     setError(null)
     const waiting = list.some((s) => !s.url)
@@ -714,6 +726,14 @@ export default function CatalogFlow() {
         )
         setToday((n) => (n ?? 0) + 1)
         setUnprinted((n) => (n ?? 0) + 1)
+        if (!packing) {
+          const code = item.code
+          setSession((sn) => {
+            const next = { ...sn, items: [...sn.items.filter((x) => x.code !== code), { code, bag }] }
+            saveSession(next)
+            return next
+          })
+        }
         if (donatedBy) setDonors((d) => [donatedBy, ...d.filter((x) => x.toLowerCase() !== donatedBy.toLowerCase())].slice(0, 12))
       } catch (err) {
         setSaved((s) => (s ? { ...s, phase: 'failed', error: errMessage(err) } : s))
@@ -759,8 +779,29 @@ export default function CatalogFlow() {
     setSaved(null)
   }
 
-  /** Done with this bag or box: its drop-off page (the thank-you letter), the boxes, or the items list. */
-  const finish = () => navigate(wantsBoxes ? '/staff/boxes' : current?.id ? `/staff/dropoffs/${current.id}` : '/staff/items')
+  /**
+   * I'm done: the summary of today's receiving (thank-you letters, the PDF and
+   * the spreadsheets); boxes go to Boxes.
+   */
+  const finish = () => {
+    if (wantsBoxes) navigate('/staff/boxes')
+    else if (session.items.length) setStep('summary')
+    else navigate(current?.id ? `/staff/dropoffs/${current.id}` : '/staff/items')
+  }
+
+  /** Finished for today: the list and the drop-off start again next time. */
+  const doneForToday = () => {
+    saveSession(null)
+    setSession({ day: todayIso(), items: [] })
+    newDropoff()
+    navigate('/staff/items')
+  }
+
+  // The bag being received: who it's from (or the store), and how many of its items are saved.
+  const bagNow = bagKey(draft.source, current?.donor ?? '', current?.date ?? todayIso(), draft.boughtFrom)
+  const bagCount = session.items.filter((x) => x.bag === bagNow).length
+  const bagName = draft.source === 'purchase' ? draft.boughtFrom.trim() || 'A store not named' : current?.donor || 'Someone not named'
+  const bagWord = draft.source === 'purchase' ? 'this shopping trip' : 'this drop-off'
 
   // Old "Add Hop Shop stock" links: shop items are added in Hop Shop inventory.
   if (params.get('kind') === 'stock') return <Navigate to="/staff/hopshop?add=1" replace />
@@ -775,8 +816,10 @@ export default function CatalogFlow() {
 
   let screen: React.ReactNode
 
-  /* ================================================= start */
-  if (step === 'start') {
+  /* ================================================= summary */
+  if (step === 'summary') {
+    screen = <ReceivingSummary orgId={orgId} session={session.items} onMore={() => setStep('start')} onDone={doneForToday} />
+  } else if (step === 'start') {
     screen = (
       <StepShell
         title={wantsBoxes ? 'Receive into boxes' : 'Receive items'}
@@ -947,6 +990,11 @@ export default function CatalogFlow() {
               </>
             )}
           </p>
+          {!wantsBoxes && session.items.length > 0 && (
+            <BigButton tone="plain" icon="file" onClick={() => setStep('summary')}>
+              Today’s summary ({session.items.length})
+            </BigButton>
+          )}
         </div>
       </StepShell>
     )
@@ -1009,7 +1057,13 @@ export default function CatalogFlow() {
         step={2}
         of={5}
         stepName="Label"
-        help={done ? (box ? `Print its label, put it in Box ${box.box_no}, then Next item.` : 'Next item opens the camera. Labels can also be printed all at once later.') : undefined}
+        help={
+          done
+            ? box
+              ? `A: print its label, put it in Box ${box.box_no}, then Next item.`
+              : 'A: print its label. B: the thank-you letter, now or at the end. Next item opens the camera.'
+            : undefined
+        }
         onBack={s.phase === 'failed' ? backToForm : undefined}
         backLabel="Back"
         footer={
@@ -1023,29 +1077,33 @@ export default function CatalogFlow() {
                 {done ? 'Next item' : s.phase === 'photo' ? 'Saving the photos…' : 'Saving…'}
               </BigButton>
             )}
-            <div className="grid grid-cols-2 gap-2">
-              {box ? (
+            {box ? (
+              <div className="grid grid-cols-2 gap-2">
                 <BigButton onClick={boxIsFull} disabled={(!done && s.phase !== 'failed') || !!printBusy} tone="outline" icon="check">
                   Box is full
                 </BigButton>
-              ) : btLabel ? (
-                <BigButton onClick={() => s.item && navigate(`/staff/labels?code=${encodeURIComponent(s.item.code)}`)} disabled={!done} tone="plain" icon="printer">
-                  Labels page
+                <BigButton onClick={finish} disabled={(!done && s.phase !== 'failed') || !!printBusy} tone="plain">
+                  I’m done
                 </BigButton>
-              ) : (
-                <BigButton onClick={() => s.item && navigate(`/staff/labels?code=${encodeURIComponent(s.item.code)}`)} disabled={!done} tone="outline" icon="printer">
-                  {s.auction ? 'Print the bid-sheet label' : 'Print this label'}
-                </BigButton>
-              )}
+              </div>
+            ) : (
               <BigButton onClick={finish} disabled={(!done && s.phase !== 'failed') || !!printBusy} tone="plain">
-                {current?.id && !wantsBoxes ? 'Finish this drop-off' : 'I’m done'}
+                I’m done — see today’s summary
               </BigButton>
-            </div>
+            )}
           </div>
         }
       >
         <div className="space-y-4">
           <ErrorBox>{s.phase === 'failed' ? s.error : error}</ErrorBox>
+          {!wantsBoxes && (
+            <ReceivingFrom
+              bought={draft.source === 'purchase'}
+              name={bagName}
+              line={done ? `${bagCount} item${bagCount === 1 ? '' : 's'} saved in ${bagWord} so far` : `Item ${bagCount + 1} of ${bagWord}`}
+              onChange={done || s.phase === 'failed' ? () => setStep('start') : undefined}
+            />
+          )}
           {/* Photo beside the words, so the name, donor and code all sit above the buttons. */}
           <div className="flex gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
             {main ? (
@@ -1087,6 +1145,15 @@ export default function CatalogFlow() {
               {s.boxNote}
             </div>
           )}
+          {s.previews.length > 1 && (
+            <div className="flex gap-2" aria-label="All the photos">
+              {s.previews.map((p, i) => (
+                <img key={p} src={p} alt="" className={`h-16 w-16 rounded-xl object-cover ${i === 0 ? 'ring-2 ring-brand-blue' : ''}`} />
+              ))}
+            </div>
+          )}
+          {/* OHRR 2026-10-27: the label step shows its parts in the screen, like the others. */}
+          <Part n="A">{s.auction ? 'Print its bid-sheet label' : 'Print its label'}</Part>
           {btLabel && s.item && (
             <BluetoothPrint
               labels={[
@@ -1103,22 +1170,24 @@ export default function CatalogFlow() {
               onPrinted={(_codes, msg) => void labelPrinted(s.item!.code, msg)}
             />
           )}
-          {done && !btLabel && box && (
+          {done && !btLabel && (
             <BigButton onClick={() => s.item && navigate(`/staff/labels?code=${encodeURIComponent(s.item.code)}`)} tone="outline" icon="printer">
               {s.auction ? 'Print the bid-sheet label' : 'Print this label'}
             </BigButton>
+          )}
+          {!done && s.phase !== 'failed' && <p className="text-[15px] text-slate-500">Its label is ready once it’s saved.</p>}
+          {done && (
+            <p className="text-sm text-slate-500">
+              Or print it later with the rest —{' '}
+              <Link to={btLabel ? `/staff/labels?code=${encodeURIComponent(s.item!.code)}` : '/staff/labels'} className="font-bold text-brand-blue">
+                {btLabel ? 'Labels page' : 'Print labels'}
+              </Link>
+            </p>
           )}
           {s.printed && (
             <p role="status" className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-[15px] font-bold text-green-800">
               <Icon name="check" size={18} className="shrink-0" /> {s.printed}
             </p>
-          )}
-          {s.previews.length > 1 && (
-            <div className="flex gap-2" aria-label="All the photos">
-              {s.previews.map((p, i) => (
-                <img key={p} src={p} alt="" className={`h-16 w-16 rounded-xl object-cover ${i === 0 ? 'ring-2 ring-brand-blue' : ''}`} />
-              ))}
-            </div>
           )}
           {done && s.auctionNote && (
             <div role="status" className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
@@ -1166,14 +1235,32 @@ export default function CatalogFlow() {
               </Link>
             </p>
           )}
-          {/* OHRR 2026-10-27: drop-offs and thank-you letters belong with the labels and printing, toward the end. */}
+          {/*
+            OHRR 2026-10-27: "make that a button so that it's a thank you letter that I could do for this drop off". One letter
+            covers the donor's whole drop-off and grows as items are added; I'm done lists a letter for every donor of the day.
+          */}
           {done && !wantsBoxes && s.item?.source !== 'purchase' && (
-            <p className="text-center text-[15px] text-slate-500">
-              Thank-you letters:{' '}
-              <Link to={current?.id ? `/staff/dropoffs/${current.id}` : '/staff/dropoffs'} className="font-bold text-brand-blue">
-                {current?.id ? 'this drop-off' : 'Drop-offs & thank-yous'}
+            <>
+              <Part n="B" hint="now or at the end">
+                Thank-you letter
+              </Part>
+              <Link
+                to={current?.id ? `/staff/dropoffs/${current.id}` : '/staff/dropoffs'}
+                className="flex min-h-[60px] items-center gap-3 rounded-2xl border-2 border-brand-blue bg-white px-4 py-2"
+              >
+                <Icon name="mail" size={22} className="shrink-0 text-brand-blue" />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-lg font-extrabold leading-tight text-ink">
+                    {current?.id ? `Thank-you letter for ${current.donor || 'this donor'}` : 'Drop-offs and thank-you letters'}
+                  </span>
+                  <span className="block text-sm text-slate-600">
+                    {current?.id ? `One letter for this whole drop-off (${bagCount} item${bagCount === 1 ? '' : 's'} so far) — it grows as you add more.` : 'Write the letter from the drop-off.'}
+                  </span>
+                </span>
+                <Icon name="chevron" size={18} className="shrink-0 text-slate-400" />
               </Link>
-            </p>
+              <p className="text-sm text-slate-500">When you tap I’m done, the summary has a letter for every donor of the day.</p>
+            </>
           )}
         </div>
       </StepShell>
@@ -1194,14 +1281,7 @@ export default function CatalogFlow() {
         step={1}
         of={5}
         stepName="Receive"
-        help={
-          [
-            bought ? (draft.boughtFrom.trim() ? `Bought at ${draft.boughtFrom.trim()}.` : 'Bought.') : current?.donor && !wantsBoxes ? `Gift of ${current.donor}.` : null,
-            box ? `Going in Box ${box.box_no}.` : null,
-          ]
-            .filter(Boolean)
-            .join(' ') || undefined
-        }
+        help={box ? `Going in Box ${box.box_no}.` : undefined}
         explain={<ReceiveParts />}
         explainLabel="How this goes"
         onBack={() => setStep('start')}
@@ -1213,13 +1293,14 @@ export default function CatalogFlow() {
             </BigButton>
             {draft.title.trim() && needsPlace && <p className="text-center text-[15px] font-bold text-amber-800">Say where it’s kept, then Save.</p>}
             <button type="button" onClick={finish} className="block w-full py-1 text-center text-base font-bold text-brand-blue">
-              I’m done
+              {wantsBoxes || !session.items.length ? 'I’m done' : 'I’m done — see today’s summary'}
             </button>
           </div>
         }
       >
         <div className="space-y-4">
           <ErrorBox>{error}</ErrorBox>
+          {!wantsBoxes && <ReceivingFrom bought={bought} name={bagName} line={`Item ${bagCount + 1} of ${bagWord}`} onChange={() => setStep('start')} />}
 
           <Part n="B">Photos</Part>
 

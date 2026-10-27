@@ -71,15 +71,18 @@ export default function ExportButtons({
   label = 'Spreadsheet with photos',
   simple,
   simpleLabel = 'One-page list to print',
+  pdf,
 }: {
   spec: () => SheetSpec
   label?: string
   /** A short version made to print standing up (photo, item, where it's kept, donor), offered first. */
   simple?: () => SheetSpec
   simpleLabel?: string
+  /** A PDF to print or send, offered before the spreadsheets (e.g. the receiving summary). */
+  pdf?: { label: string; title: string; filename: string; build: (progress: (msg: string) => void) => Promise<Blob> }
 }) {
   const [busy, setBusy] = useState<string | null>(null)
-  const [running, setRunning] = useState<'full' | 'simple'>('full') // which button shows the progress
+  const [running, setRunning] = useState<'full' | 'simple' | 'pdf'>('full') // which button shows the progress
   const [msg, setMsg] = useState<string | null>(null)
   const [ready, setReady] = useState<Ready | null>(null)
 
@@ -98,15 +101,34 @@ export default function ExportButtons({
       const note =
         `${n} item${n === 1 ? '' : 's'} in the spreadsheet.` +
         (missing ? ` ${missing} photo${missing === 1 ? '' : 's'} didn’t load; ${missing === 1 ? 'its' : 'their'} link is in the sheet.` : '')
-      const file = new File([blob], `${s.filename}.xlsx`, { type: blob.type })
-      if (!isNative && webCanShare(file)) {
-        // The tap that started this has expired by now; one more tap shares it.
-        setReady({ file, title: s.title, note })
-        return
-      }
-      after(await send(file, s.title), note)
+      await deliver(new File([blob], `${s.filename}.xlsx`, { type: blob.type }), s.title, note)
     } catch (e) {
       setMsg(`Couldn’t make the spreadsheet: ${errMessage(e)}`)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  /** Share or save a finished file (the tap that started it has expired on the web: one more tap shares it). */
+  const deliver = async (file: File, title: string, note: string) => {
+    if (!isNative && webCanShare(file)) {
+      setReady({ file, title, note })
+      return
+    }
+    after(await send(file, title), note)
+  }
+
+  const makePdf = async () => {
+    if (!pdf) return
+    setMsg(null)
+    setReady(null)
+    setBusy('Starting…')
+    setRunning('pdf')
+    try {
+      const blob = await pdf.build(setBusy)
+      await deliver(new File([blob], `${pdf.filename}.pdf`, { type: 'application/pdf' }), pdf.title, 'The PDF is made.')
+    } catch (e) {
+      setMsg(`Couldn’t make the PDF: ${errMessage(e)}`)
     } finally {
       setBusy(null)
     }
@@ -140,6 +162,11 @@ export default function ExportButtons({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
+        {pdf && (
+          <button type="button" onClick={() => void makePdf()} disabled={!!busy} className={`${pill} !border-brand-blue !text-brand-blue`} title="A summary to print or email">
+            <Icon name="file" size={18} /> {busy && running === 'pdf' ? busy : pdf.label}
+          </button>
+        )}
         {simple && (
           <button
             type="button"

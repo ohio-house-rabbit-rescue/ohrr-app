@@ -335,3 +335,23 @@ export function Busy({ label }: { label: string }) {
     </div>
   )
 }
+
+/**
+ * The letter over each part of a step: A, B, C … — lettered, because they are
+ * the parts of one numbered step (OHRR 2026-10-27: "under number one being
+ * received, then it would be subset ABCDE so that we can tell the difference").
+ */
+export const PartBadge = ({ n }: { n: string }) => (
+  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 border-brand-blue font-display text-sm font-black text-brand-blue">
+    {n}
+  </span>
+)
+
+/** The heading over one lettered part of a step. */
+export const Part = ({ n, children, hint }: { n: string; children: string; hint?: string }) => (
+  <p className="flex items-center gap-2 border-b border-slate-200 pb-1 font-display text-base font-black uppercase tracking-wide text-slate-500">
+    <PartBadge n={n} />
+    {children}
+    {hint && <span className="font-sans text-sm font-bold normal-case tracking-normal text-slate-400">{hint}</span>}
+  </p>
+)
