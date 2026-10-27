@@ -67,7 +67,6 @@ import {
   MoreDetailsFields,
   PurposeField,
   QuantityField,
-  ReceivedAsField,
   ValueFields,
   costCents,
   emptyExtras,
@@ -206,8 +205,54 @@ const Part = ({ n, children, hint }: { n: string; children: string; hint?: strin
   </p>
 )
 
-// The parts of step 1, Receive.
-const RECEIVE_PARTS = ['How it came in', 'Photos', 'What it is', 'Where it’s kept', 'More details']
+// The parts of step 1, Receive: A on the first screen (once per bag), B–F for each item.
+const RECEIVE_PARTS = ['How it came in', 'Photos', 'What it is', 'Where it’s kept', 'More details', 'What it’s for, if known']
+
+/**
+ * The first question, once per bag: a donation or something we bought. Two
+ * big choices with a line each (OHRR 2026-10-27: Donation / We bought it /
+ * Hop Shop on one screen was "much more confusing than it needs to be").
+ */
+function CameInChoice({ value, onChange }: { value: 'donation' | 'purchase'; onChange: (v: 'donation' | 'purchase') => void }) {
+  const choices = [
+    { v: 'donation', icon: 'gift', title: 'A donation', line: 'Someone gave it to us — we thank them.' },
+    { v: 'purchase', icon: 'bag', title: 'Something we bought', line: 'For the rescue — we keep what we paid.' },
+  ] as const
+  return (
+    <div className="space-y-2" role="group" aria-label="What came in">
+      {choices.map((c) => {
+        const on = value === c.v
+        return (
+          <button
+            key={c.v}
+            type="button"
+            onClick={() => onChange(c.v)}
+            aria-pressed={on}
+            className={`flex min-h-[68px] w-full items-center gap-3 rounded-2xl border-2 px-4 py-2 text-left transition ${
+              on ? 'border-brand-blue bg-brand-blue-50' : 'border-slate-200 bg-white'
+            }`}
+          >
+            <span
+              className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${on ? 'bg-brand-blue text-white' : 'bg-slate-100 text-slate-500'}`}
+            >
+              <Icon name={c.icon} size={22} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-display text-lg font-extrabold leading-tight text-ink">{c.title}</span>
+              <span className="block text-[15px] text-slate-600">{c.line}</span>
+            </span>
+            <span
+              aria-hidden
+              className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${on ? 'border-brand-blue bg-brand-blue text-white' : 'border-slate-300'}`}
+            >
+              {on && <Icon name="check" size={14} />}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 const BOX_PARTS = ['Start a box', 'Add each item', 'Box is full', 'Print box labels']
 
 const MORE_KEY = 'ohrr.catalog.more'
@@ -705,7 +750,7 @@ export default function CatalogFlow() {
         explain={
           wantsBoxes
             ? 'For sorting items nobody wrote down — no donor needed. Start a box, say where it will be kept and write its number on it. Add each item, print its label, put it in the box. Tap Box is full, then start the next one.'
-            : 'Receiving is step 1 of 5. A: how it came in — a donation, or something we bought. Then for each item: B photos, C what it is, D where it’s kept, E more details if you have them. Save, and its label is next (step 2). What it’s for (step 4) can be chosen now or later from Items.'
+            : 'Receiving is step 1 of 5. A, on this screen, once for the whole bag: a donation (who it’s from) or something we bought (where). Then for each item: B photos, C what it is, D where it’s kept, E more details and F what it’s for — E and F only if you know them. Save, and printing its label is step 2.'
         }
         flow={wantsBoxes ? BOX_PARTS : RECEIVE_PARTS}
         flowLetters
@@ -762,19 +807,8 @@ export default function CatalogFlow() {
           {!wantsBoxes && (
             <>
               <Part n="A">How it came in</Part>
-              <ReceivedAsField v={draft} set={update} />
-              {/* OHRR 2026-10-27: adding to Hop Shop inventory "should be part of the receiving". */}
-              {can('hopshop.products.create') && (
-                <Link
-                  to="/staff/hopshop?add=1"
-                  className="flex min-h-[52px] items-center justify-between gap-3 rounded-2xl border-2 border-dashed border-slate-300 bg-white px-4 text-[15px] font-bold text-slate-600"
-                >
-                  <span>
-                    Shop stock from a vendor? <span className="text-brand-blue">Add it in Hop Shop inventory</span>
-                  </span>
-                  <Icon name="chevron" size={18} className="shrink-0 text-slate-400" />
-                </Link>
-              )}
+              {/* Shop stock from a vendor is added in Hop Shop inventory, not here (OHRR 2026-10-27). */}
+              <CameInChoice value={draft.source} onChange={(source) => update({ source })} />
             </>
           )}
           {wantsBoxes ? null : draft.source === 'purchase' ? (
@@ -859,23 +893,23 @@ export default function CatalogFlow() {
               </div>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-brand-blue-50 p-4 text-center">
-              <p className="font-display text-3xl font-black text-brand-blue">{today ?? '–'}</p>
-              <p className="text-sm font-bold text-slate-600">added today</p>
-            </div>
-            <Link to="/staff/labels" className="rounded-2xl bg-brand-orange-50 p-4 text-center">
-              <p className="font-display text-3xl font-black text-brand-orange">{unprinted ?? '–'}</p>
-              <p className="text-sm font-bold text-slate-600">labels to print</p>
+          <p className="flex flex-wrap items-center justify-center gap-x-2 text-[15px] text-slate-600">
+            <span>
+              <span className="font-bold text-ink">{today ?? '–'}</span> added today
+            </span>
+            <span aria-hidden>·</span>
+            <Link to="/staff/labels" className="inline-flex min-h-[44px] items-center font-bold text-brand-blue">
+              {unprinted ?? '–'} labels to print
             </Link>
-          </div>
-          {!wantsBoxes && (
-            <div className="flex flex-wrap justify-center gap-x-5">
-              <Link to="/staff/items" className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue">
-                See all items
-              </Link>
-            </div>
-          )}
+            {!wantsBoxes && (
+              <>
+                <span aria-hidden>·</span>
+                <Link to="/staff/items" className="inline-flex min-h-[44px] items-center font-bold text-brand-blue">
+                  All items
+                </Link>
+              </>
+            )}
+          </p>
         </div>
       </StepShell>
     )
@@ -1131,10 +1165,10 @@ export default function CatalogFlow() {
             .filter(Boolean)
             .join(' ') || undefined
         }
-        explain="A how it came in, B photos, C what it is, D where it’s kept, E more details if you have them — then Save. What it’s for is step 4: choose it now if you know, or later from Items."
+        explain="How it came in (A) was answered on the first screen, once for the bag — Back to change it. For this item: B photos, C what it is, D where it’s kept, then Save. E more details and F what it’s for only if you know them; both can be added later from Items."
         explainLabel="How this goes"
         onBack={() => setStep('start')}
-        backLabel="Pause"
+        backLabel="Back"
         footer={
           <div className="space-y-2">
             <BigButton onClick={save} disabled={!canSave} icon="check">
@@ -1149,9 +1183,6 @@ export default function CatalogFlow() {
       >
         <div className="space-y-4">
           <ErrorBox>{error}</ErrorBox>
-
-          <Part n="A">How it came in</Part>
-          <ReceivedAsField v={draft} set={update} />
 
           <Part n="B">Photos</Part>
 
@@ -1290,20 +1321,19 @@ export default function CatalogFlow() {
               show={{ size: true, condition: true, category: true, useBy: true, price: draft.headedFor !== 'shop', notes: true }}
             />
           )}
-          {/* OHRR 2026-10-27: "we can do just step one and move to the next and then come back" — what it's for is step 4, here only if it's already known. */}
+          {/* OHRR 2026-10-27: no "Step 4" inside step 1 — what it's for is part F, only if it's already known; otherwise it's sorted later from Items. */}
+          <Part n="F" hint="if you know">
+            What it’s for
+          </Part>
           <div className="rounded-2xl border-2 border-slate-200 bg-white">
             <button
               type="button"
               onClick={() => setForOpen((o) => !o)}
               aria-expanded={forOpen}
-              className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2 text-left"
+              className="flex min-h-[52px] w-full items-center justify-between gap-3 px-4 py-2 text-left"
             >
-              <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-blue text-sm font-black text-white">4</span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-base font-bold text-ink">
-                  What it’s for{draft.purpose ? `: ${draft.purpose}` : ''}
-                </span>
-                <span className="block text-sm text-slate-500">Step 4 — choose it now if you know, or later from Items</span>
+              <span className="min-w-0 text-base font-bold text-brand-blue">
+                {draft.purpose ? `For: ${draft.purpose}` : 'Choose a use, or leave it for later'}
               </span>
               <Icon name="chevron" size={20} className={`shrink-0 text-slate-400 transition ${forOpen ? '-rotate-90' : 'rotate-90'}`} />
             </button>
