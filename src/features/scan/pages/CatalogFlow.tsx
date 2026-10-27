@@ -19,7 +19,11 @@
 // it; every item saved goes in that box and its label prints from the Saved
 // screen; "Box is full" closes it and starts the next. Box labels wait until
 // the sorting is done (the 4 × 6 roll goes in then) and print together from
-// Boxes, to stick over the number written on each box.
+// Boxes, to stick over the number written on each box. It's for sorting a
+// pile nobody wrote down ("its just a mess of items … no know donor"), so it
+// never asks who it's from and makes no drop-off; a known donor's bag goes
+// through plain Add a donation. A box left open is picked up again from the
+// Receive into boxes tile, never from plain Add a donation.
 //
 // The two hidden file inputs are rendered ONCE, outside the screens: the
 // camera's answer arrives on the element that opened it, and if that element
@@ -182,7 +186,8 @@ export default function CatalogFlow() {
   const suggestions = useCatalogSuggestions(orgId)
   // Receive into boxes: the box being filled, how many are in it, and the one just closed.
   const wantsBoxes = params.get('box') === '1'
-  const [box, setBoxState] = useState<PackingBox | null>(loadPackingBox)
+  const [packingBox, setBoxState] = useState<PackingBox | null>(loadPackingBox)
+  const box = wantsBoxes ? packingBox : null
   const [boxCount, setBoxCount] = useState<number | null>(null)
   const [boxBusy, setBoxBusy] = useState(false)
   const [fullBox, setFullBox] = useState<{ box: PackingBox; count: number | null } | null>(null)
@@ -362,7 +367,7 @@ export default function CatalogFlow() {
 
   /** Start (or keep adding to) a drop-off, then the first item. */
   const begin = () => {
-    if (!current) {
+    if (!current && !wantsBoxes) {
       if (!looksLikeEmail(who.email)) {
         setError('That email doesn’t look right. Fix it, or leave it empty.')
         return
@@ -473,7 +478,7 @@ export default function CatalogFlow() {
   const save = () => {
     const title = draft.title.trim()
     if (!title) return
-    const donatedBy = current?.donor ?? ''
+    const donatedBy = wantsBoxes ? '' : (current?.donor ?? '')
     const snap = draft
     const list = shots
     const packing = box
@@ -488,7 +493,7 @@ export default function CatalogFlow() {
       const photosFailed = settled.length - urls.length
       setSaved((s) => (s ? { ...s, phase: 'saving' } : s))
       try {
-        const dropoffId = dropoffPromise.current ? await dropoffPromise.current.catch(() => null) : null
+        const dropoffId = !wantsBoxes && dropoffPromise.current ? await dropoffPromise.current.catch(() => null) : null
         let item = await catalogNewItem(orgId, {
           title,
           kind: 'donation',
@@ -595,8 +600,8 @@ export default function CatalogFlow() {
     setSaved(null)
   }
 
-  /** Done with this bag or box: its drop-off page (the thank-you letter), or the items list. */
-  const finish = () => navigate(current?.id ? `/staff/dropoffs/${current.id}` : '/staff/items')
+  /** Done with this bag or box: its drop-off page (the thank-you letter), the boxes, or the items list. */
+  const finish = () => navigate(wantsBoxes ? '/staff/boxes' : current?.id ? `/staff/dropoffs/${current.id}` : '/staff/items')
 
   // Old "Add Hop Shop stock" links: shop items are added in Hop Shop inventory.
   if (params.get('kind') === 'stock') return <Navigate to="/staff/hopshop?add=1" replace />
@@ -613,13 +618,12 @@ export default function CatalogFlow() {
 
   /* ================================================= start */
   if (step === 'start') {
-    const boxes = wantsBoxes || !!box
     screen = (
       <StepShell
-        title={boxes ? 'Receive into boxes' : 'Add a donation'}
+        title={wantsBoxes ? 'Receive into boxes' : 'Add a donation'}
         help={
-          boxes
-            ? 'Start a box and write its number on it. Add each item, print its label, put it in the box. Tap Box is full, then start the next one.'
+          wantsBoxes
+            ? 'For sorting items nobody wrote down — no donor needed. Start a box and write its number on it. Add each item, print its label, put it in the box. Tap Box is full, then start the next one.'
             : 'Something given to OHRR: photo, name, how many, what it’s worth. Sort it later, or tick where it’s headed.'
         }
         onBack={() => navigate('/staff')}
@@ -631,7 +635,7 @@ export default function CatalogFlow() {
             </BigButton>
           ) : (
             <BigButton onClick={begin} icon="camera">
-              {current || (box && boxCount) ? 'Next item — open the camera' : 'Start — open the camera'}
+              {(wantsBoxes ? box && boxCount : current) ? 'Next item — open the camera' : 'Start — open the camera'}
             </BigButton>
           )
         }
@@ -665,15 +669,8 @@ export default function CatalogFlow() {
                 <li>When the sorting is done, put the 4 × 6 roll in the printer and print all the box labels from Boxes. Stick each one over the number.</li>
               </ol>
             </div>
-          ) : (
-            <p className="text-center text-[15px] text-slate-500">
-              Packing them into boxes as you go?{' '}
-              <button type="button" onClick={() => void startBox()} disabled={boxBusy} className="min-h-[44px] font-bold text-brand-blue">
-                {boxBusy ? 'Starting…' : 'Start a box'}
-              </button>
-            </p>
-          )}
-          {current ? (
+          ) : null}
+          {wantsBoxes ? null : current ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Adding to the drop-off from</p>
               <p className="font-display text-xl font-black text-ink">{current.donor || 'Someone not named'}</p>
@@ -749,15 +746,17 @@ export default function CatalogFlow() {
               <p className="text-sm font-bold text-slate-600">labels to print</p>
             </Link>
           </div>
-          <div className="flex flex-wrap justify-center gap-x-5">
-            <Link to="/staff/dropoffs" className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue">
-              Drop-offs & thank-yous
-            </Link>
-            <Link to="/staff/items" className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue">
-              See all items
-            </Link>
-          </div>
-          {can('hopshop.products.create') && (
+          {!wantsBoxes && (
+            <div className="flex flex-wrap justify-center gap-x-5">
+              <Link to="/staff/dropoffs" className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue">
+                Drop-offs & thank-yous
+              </Link>
+              <Link to="/staff/items" className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue">
+                See all items
+              </Link>
+            </div>
+          )}
+          {!wantsBoxes && can('hopshop.products.create') && (
             <p className="text-center text-[15px] text-slate-500">
               Something the shop carries, bought from a supplier?{' '}
               <Link to="/staff/hopshop?add=1" className="font-bold text-brand-blue">
@@ -848,7 +847,7 @@ export default function CatalogFlow() {
                 </BigButton>
               )}
               <BigButton onClick={finish} disabled={(!done && s.phase !== 'failed') || !!printBusy} tone="plain">
-                {current?.id ? 'Finish this drop-off' : 'I’m done'}
+                {current?.id && !wantsBoxes ? 'Finish this drop-off' : 'I’m done'}
               </BigButton>
             </div>
           </div>
@@ -982,7 +981,7 @@ export default function CatalogFlow() {
     screen = (
       <StepShell
         title="What is it?"
-        help={[current?.donor ? `Gift of ${current.donor}.` : null, box ? `Going in Box ${box.box_no}.` : null, 'Say or type the name, then Save.']
+        help={[current?.donor && !wantsBoxes ? `Gift of ${current.donor}.` : null, box ? `Going in Box ${box.box_no}.` : null, 'Say or type the name, then Save.']
           .filter(Boolean)
           .join(' ')}
         onBack={() => setStep('start')}
