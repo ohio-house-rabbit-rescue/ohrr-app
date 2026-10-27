@@ -205,8 +205,6 @@ const Part = ({ n, children, hint }: { n: string; children: string; hint?: strin
   </p>
 )
 
-// The parts of step 1, Receive: A on the first screen (once per bag), B–F for each item.
-const RECEIVE_PARTS = ['How it came in', 'Photos', 'What it is', 'Where it’s kept', 'More details', 'What it’s for, if known']
 
 /**
  * The first question, once per bag: a donation or something we bought. Two
@@ -752,7 +750,8 @@ export default function CatalogFlow() {
             ? 'For sorting items nobody wrote down — no donor needed. Start a box, say where it will be kept and write its number on it. Add each item, print its label, put it in the box. Tap Box is full, then start the next one.'
             : 'Receiving is step 1 of 5. A, on this screen, once for the whole bag: a donation (who it’s from) or something we bought (where). Then for each item: B photos, C what it is, D where it’s kept, E more details and F what it’s for — E and F only if you know them. Save, and printing its label is step 2.'
         }
-        flow={wantsBoxes ? BOX_PARTS : RECEIVE_PARTS}
+        // OHRR 2026-10-27: the A–F line isn't needed here; the lettered parts down the screens show the order.
+        flow={wantsBoxes ? BOX_PARTS : undefined}
         flowLetters
         onBack={() => navigate('/staff')}
         backLabel="Dashboard"
