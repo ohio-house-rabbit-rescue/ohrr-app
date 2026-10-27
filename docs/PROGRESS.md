@@ -134,6 +134,18 @@
     gets the rescue's size each time the page opens and can pick another for that device only. Same on the website
     labels page. Checked with stand-in data: owner (device 2×1 → rescue 3×2 shown; picking 2¼×1¼ saves for all) and a
     volunteer (rescue size shown, own pick not saved).
+  - **Labels page for hundreds of items, 2026-10-27** (sponsor: "this will become a problem when you have 500 donations"):
+    - Label size is a dropdown ("Another size…" opens width/height). The last size picked stays until someone changes it:
+      the newer of the rescue's size (`label_size` {wIn,hIn,at}) and this device's own pick (`pickedAt`) wins.
+    - The list: Show (Not printed yet / Printed / Everything / Ticked to print, with counts), Added (today / 7 / 30 days /
+      any time), Kind (or Type for Hop Shop), Sort (newest, oldest, name, code); kept on the device (`ohrr.labels.view`).
+      Newest/oldest come in day groups (Today, Yesterday, Sun, Oct 25) each with "Tick these N"; 50 at a time with
+      Show more; nothing is ticked to start with (it used to tick every unprinted item). Logic in `features/scan/labelList.ts`.
+    - Printed everywhere at once, no polling (sponsor: battery): after marking labels printed the page sends a Supabase
+      Realtime **broadcast** nudge on `labels:<org>` (no SQL); other open labels pages read the list again and untick
+      anything printed elsewhere, with a note. Also re-reads when the page comes back into view. `features/scan/labelSync.ts`.
+    - Checked with 120 stand-in items: groups, Tick these, a nudge from another device (5 unticked + note), Added/Kind/
+      Ticked views, name sort, Show more, size saved for all, print sends the nudge; no sideways scroll at 375 px.
   - Commits: app `ebc8da5` (+ merge `f6fa6dc`, cap sync `a94a27b`).
 
 - **Bunny bonding + installing on a phone, 2026-10-20 (v0.4.0 · rev 7).**
