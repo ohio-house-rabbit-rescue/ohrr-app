@@ -56,8 +56,10 @@ export function StepShell({
   explain,
   explainLabel,
   flow,
+  flowLetters,
   step,
   of,
+  stepName,
   onBack,
   backLabel = 'Back',
   children,
@@ -70,8 +72,12 @@ export function StepShell({
   explainLabel?: string
   /** The steps in order, shown as one short line under the title. */
   flow?: string[]
+  /** The flow is the lettered parts of one step (A, B, C …), not numbered steps. */
+  flowLetters?: boolean
   step?: number
   of?: number
+  /** Shown after "Step 1 of 5", e.g. "Receive". */
+  stepName?: string
   onBack?: () => void
   backLabel?: string
   children: ReactNode
@@ -95,6 +101,7 @@ export function StepShell({
           {step && of ? (
             <span className="flex items-center gap-2 text-sm font-bold text-slate-500" aria-label={`Step ${step} of ${of}`}>
               Step {step} of {of}
+              {stepName ? ` · ${stepName}` : ''}
               <span className="flex gap-1" aria-hidden="true">
                 {Array.from({ length: of }, (_, i) => (
                   <span key={i} className={`h-2 w-2 rounded-full ${i < step ? 'bg-brand-orange' : 'bg-slate-200'}`} />
@@ -106,7 +113,7 @@ export function StepShell({
         <h1 className="mt-2 font-display text-[26px] font-black leading-tight text-ink">{title}</h1>
         {help && <p className="mt-1.5 text-base leading-snug text-slate-600">{help}</p>}
         {explain && <Explain className="mt-2" label={explainLabel ?? 'How it works'}>{explain}</Explain>}
-        {flow && flow.length > 0 && <FlowStrip steps={flow} />}
+        {flow && flow.length > 0 && <FlowStrip steps={flow} letters={flowLetters} />}
       </div>
       <div className="flex-1 px-5 pb-6 pt-5">{children}</div>
       {footer && (

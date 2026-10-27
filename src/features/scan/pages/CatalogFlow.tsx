@@ -193,13 +193,22 @@ const nextDraft = (d: Draft): Draft => ({
 /** The Silent Auction is BunFest's: an item for another event's auction stays a donation. */
 const forSilentAuction = (d: Pick<Draft, 'headedFor' | 'purpose'>) => d.headedFor === 'auction' && (!d.purpose || /bunfest/i.test(d.purpose))
 
-/** A small heading over each part of the form. */
-const Part = ({ n, children }: { n: number; children: string }) => (
+/**
+ * A small heading over each part of receiving: A, B, C … — lettered, because
+ * they are the parts of step 1 (OHRR 2026-10-27: "under number one being
+ * received, then it would be subset ABCDE so that we can tell the difference").
+ */
+const Part = ({ n, children, hint }: { n: string; children: string; hint?: string }) => (
   <p className="flex items-center gap-2 border-b border-slate-200 pb-1 font-display text-base font-black uppercase tracking-wide text-slate-500">
-    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-blue text-sm text-white">{n}</span>
+    <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border-2 border-brand-blue text-sm text-brand-blue">{n}</span>
     {children}
+    {hint && <span className="font-sans text-sm font-bold normal-case tracking-normal text-slate-400">{hint}</span>}
   </p>
 )
+
+// The parts of step 1, Receive.
+const RECEIVE_PARTS = ['How it came in', 'Photos', 'What it is', 'Where it’s kept', 'More details']
+const BOX_PARTS = ['Start a box', 'Add each item', 'Box is full', 'Print box labels']
 
 const MORE_KEY = 'ohrr.catalog.more'
 
@@ -252,6 +261,8 @@ export default function CatalogFlow() {
   const labelSize = useLabelSize()
   const [printBusy, setPrintBusy] = useState<string | null>(null)
   // "More details" stays open or closed on this phone, as the person left it.
+  // Step 4, what it's for, stays folded unless opened; a use carried over from the last item shows on its header.
+  const [forOpen, setForOpen] = useState(false)
   const [more, setMore] = useState(() => {
     try {
       return localStorage.getItem(MORE_KEY) === '1'
@@ -688,12 +699,16 @@ export default function CatalogFlow() {
     screen = (
       <StepShell
         title={wantsBoxes ? 'Receive into boxes' : 'Receive items'}
+        step={1}
+        of={5}
+        stepName="Receive"
         explain={
           wantsBoxes
             ? 'For sorting items nobody wrote down — no donor needed. Start a box, say where it will be kept and write its number on it. Add each item, print its label, put it in the box. Tap Box is full, then start the next one.'
-            : 'First how it came in — a donation or something we bought — then each item: photo, name, how many, where it’s kept, and what it’s for.'
+            : 'Receiving is step 1 of 5. A: how it came in — a donation, or something we bought. Then for each item: B photos, C what it is, D where it’s kept, E more details if you have them. Save, and its label is next (step 2). What it’s for (step 4) can be chosen now or later from Items.'
         }
-        flow={wantsBoxes ? ['Start a box', 'Add each item', 'Box is full', 'Print box labels'] : ['Receiving', 'Where it’s kept', 'What it’s for', 'Label']}
+        flow={wantsBoxes ? BOX_PARTS : RECEIVE_PARTS}
+        flowLetters
         onBack={() => navigate('/staff')}
         backLabel="Dashboard"
         footer={
@@ -744,7 +759,24 @@ export default function CatalogFlow() {
             </Explain>
             </>
           ) : null}
-          {!wantsBoxes && <ReceivedAsField v={draft} set={update} />}
+          {!wantsBoxes && (
+            <>
+              <Part n="A">How it came in</Part>
+              <ReceivedAsField v={draft} set={update} />
+              {/* OHRR 2026-10-27: adding to Hop Shop inventory "should be part of the receiving". */}
+              {can('hopshop.products.create') && (
+                <Link
+                  to="/staff/hopshop?add=1"
+                  className="flex min-h-[52px] items-center justify-between gap-3 rounded-2xl border-2 border-dashed border-slate-300 bg-white px-4 text-[15px] font-bold text-slate-600"
+                >
+                  <span>
+                    Shop stock from a vendor? <span className="text-brand-blue">Add it in Hop Shop inventory</span>
+                  </span>
+                  <Icon name="chevron" size={18} className="shrink-0 text-slate-400" />
+                </Link>
+              )}
+            </>
+          )}
           {wantsBoxes ? null : draft.source === 'purchase' ? (
             <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
               <p className="text-base font-bold text-ink">
@@ -839,21 +871,10 @@ export default function CatalogFlow() {
           </div>
           {!wantsBoxes && (
             <div className="flex flex-wrap justify-center gap-x-5">
-              <Link to="/staff/dropoffs" className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue">
-                Drop-offs & thank-yous
-              </Link>
               <Link to="/staff/items" className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue">
                 See all items
               </Link>
             </div>
-          )}
-          {!wantsBoxes && can('hopshop.products.create') && (
-            <p className="text-center text-[15px] text-slate-500">
-              Stock the shop sells, bought from a vendor?{' '}
-              <Link to="/staff/hopshop?add=1" className="font-bold text-brand-blue">
-                Add it in Hop Shop inventory
-              </Link>
-            </p>
           )}
         </div>
       </StepShell>
@@ -914,6 +935,9 @@ export default function CatalogFlow() {
     screen = (
       <StepShell
         title={title}
+        step={2}
+        of={5}
+        stepName="Label"
         help={done ? (box ? `Print its label, put it in Box ${box.box_no}, then Next item.` : 'Next item opens the camera. Labels can also be printed all at once later.') : undefined}
         onBack={s.phase === 'failed' ? backToForm : undefined}
         backLabel="Back"
@@ -1071,6 +1095,15 @@ export default function CatalogFlow() {
               </Link>
             </p>
           )}
+          {/* OHRR 2026-10-27: drop-offs and thank-you letters belong with the labels and printing, toward the end. */}
+          {done && !wantsBoxes && s.item?.source !== 'purchase' && (
+            <p className="text-center text-[15px] text-slate-500">
+              Thank-you letters:{' '}
+              <Link to={current?.id ? `/staff/dropoffs/${current.id}` : '/staff/dropoffs'} className="font-bold text-brand-blue">
+                {current?.id ? 'this drop-off' : 'Drop-offs & thank-yous'}
+              </Link>
+            </p>
+          )}
         </div>
       </StepShell>
     )
@@ -1087,6 +1120,9 @@ export default function CatalogFlow() {
     screen = (
       <StepShell
         title="What is it?"
+        step={1}
+        of={5}
+        stepName="Receive"
         help={
           [
             bought ? (draft.boughtFrom.trim() ? `Bought at ${draft.boughtFrom.trim()}.` : 'Bought.') : current?.donor && !wantsBoxes ? `Gift of ${current.donor}.` : null,
@@ -1095,7 +1131,7 @@ export default function CatalogFlow() {
             .filter(Boolean)
             .join(' ') || undefined
         }
-        explain="First how it came in and where it’s kept, then what it’s for."
+        explain="A how it came in, B photos, C what it is, D where it’s kept, E more details if you have them — then Save. What it’s for is step 4: choose it now if you know, or later from Items."
         explainLabel="How this goes"
         onBack={() => setStep('start')}
         backLabel="Pause"
@@ -1114,8 +1150,10 @@ export default function CatalogFlow() {
         <div className="space-y-4">
           <ErrorBox>{error}</ErrorBox>
 
-          <Part n={1}>Receiving</Part>
+          <Part n="A">How it came in</Part>
           <ReceivedAsField v={draft} set={update} />
+
+          <Part n="B">Photos</Part>
 
           {/* The photos: main first, a × on each, + for another (up to four). */}
           <div>
@@ -1172,6 +1210,7 @@ export default function CatalogFlow() {
             </div>
           </div>
 
+          <Part n="C">What it is</Part>
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
               <input
@@ -1215,6 +1254,10 @@ export default function CatalogFlow() {
           )}
           <QuantityField v={draft} set={update} />
           {bought ? <CostFields v={draft} set={update} stores={suggestions.stores} /> : <ValueFields v={draft} set={update} />}
+
+          <Part n="D" hint="needed">
+            Where it’s kept
+          </Part>
           {box ? (
             <div className="rounded-2xl border-2 border-brand-orange/40 bg-brand-orange-50 px-4 py-3">
               <p className="text-[15px] font-bold text-slate-600">Where is it kept?</p>
@@ -1227,45 +1270,16 @@ export default function CatalogFlow() {
             <LocationField v={draft} set={update} places={suggestions.locations} />
           )}
 
-          <Part n={2}>What it’s for</Part>
-          <PurposeField v={draft} set={update} list={purposes} />
-          {draft.headedFor === 'auction' &&
-            (directAuction ? (
-              <div className="space-y-2 rounded-2xl border-2 border-brand-blue/20 bg-brand-blue-50/50 p-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="mb-1 text-[15px] font-bold text-slate-700">Starting bid</p>
-                    <MoneyInput value={draft.startBid} onChange={(p) => update({ startBid: p })} ariaLabel="Starting bid, in dollars" />
-                  </div>
-                  <div>
-                    <p className="mb-1 text-[15px] font-bold text-slate-700">Buy it now</p>
-                    <MoneyInput value={draft.buyNow} onChange={(p) => update({ buyNow: p })} ariaLabel="Buy it now price, in dollars" />
-                  </div>
-                </div>
-                <p className="text-sm text-slate-600">
-                  Saves it straight into the Silent Auction, ready for its bid-sheet label. Leave Buy it now empty for bids only.
-                </p>
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500">
-                {forSilentAuction(draft)
-                  ? 'It’s saved headed for the Silent Auction; someone who runs the auction moves it in and sets its prices.'
-                  : `It’s saved for the ${draft.purpose} auction.`}
-              </p>
-            ))}
-          {draft.headedFor === 'shop' && <MoreDetailsFields v={draft} set={update} suggestions={suggestions} show={{ price: true }} />}
+          <Part n="E" hint="optional">
+            More details
+          </Part>
           <button
             type="button"
             onClick={toggleMore}
             aria-expanded={more}
             className="flex min-h-[52px] w-full items-center justify-between gap-3 rounded-2xl border-2 border-slate-200 bg-white px-4 py-2 text-left"
           >
-            <span className="min-w-0">
-              <span className="block text-base font-bold text-brand-blue">More details</span>
-              <span className="block truncate text-sm text-slate-500">
-                Size, condition, sort of thing, use-by, notes
-              </span>
-            </span>
+            <span className="min-w-0 text-base font-bold text-brand-blue">Size, condition, sort of thing, use-by, notes</span>
             <Icon name="chevron" size={20} className={`shrink-0 text-slate-400 transition ${more ? 'rotate-90' : ''}`} />
           </button>
           {more && (
@@ -1276,6 +1290,54 @@ export default function CatalogFlow() {
               show={{ size: true, condition: true, category: true, useBy: true, price: draft.headedFor !== 'shop', notes: true }}
             />
           )}
+          {/* OHRR 2026-10-27: "we can do just step one and move to the next and then come back" — what it's for is step 4, here only if it's already known. */}
+          <div className="rounded-2xl border-2 border-slate-200 bg-white">
+            <button
+              type="button"
+              onClick={() => setForOpen((o) => !o)}
+              aria-expanded={forOpen}
+              className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2 text-left"
+            >
+              <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-blue text-sm font-black text-white">4</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-base font-bold text-ink">
+                  What it’s for{draft.purpose ? `: ${draft.purpose}` : ''}
+                </span>
+                <span className="block text-sm text-slate-500">Step 4 — choose it now if you know, or later from Items</span>
+              </span>
+              <Icon name="chevron" size={20} className={`shrink-0 text-slate-400 transition ${forOpen ? '-rotate-90' : 'rotate-90'}`} />
+            </button>
+            {forOpen && (
+              <div className="space-y-3 border-t border-slate-200 p-4">
+                <PurposeField v={draft} set={update} list={purposes} />
+                {draft.headedFor === 'auction' &&
+                  (directAuction ? (
+                    <div className="space-y-2 rounded-2xl border-2 border-brand-blue/20 bg-brand-blue-50/50 p-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="mb-1 text-[15px] font-bold text-slate-700">Starting bid</p>
+                          <MoneyInput value={draft.startBid} onChange={(p) => update({ startBid: p })} ariaLabel="Starting bid, in dollars" />
+                        </div>
+                        <div>
+                          <p className="mb-1 text-[15px] font-bold text-slate-700">Buy it now</p>
+                          <MoneyInput value={draft.buyNow} onChange={(p) => update({ buyNow: p })} ariaLabel="Buy it now price, in dollars" />
+                        </div>
+                      </div>
+                      <p className="text-sm text-slate-600">
+                        Saves it straight into the Silent Auction, ready for its bid-sheet label. Leave Buy it now empty for bids only.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500">
+                      {forSilentAuction(draft)
+                        ? 'It’s saved headed for the Silent Auction; someone who runs the auction moves it in and sets its prices.'
+                        : `It’s saved for the ${draft.purpose} auction.`}
+                    </p>
+                  ))}
+                {draft.headedFor === 'shop' && <MoreDetailsFields v={draft} set={update} suggestions={suggestions} show={{ price: true }} />}
+              </div>
+            )}
+          </div>
           <p className="text-sm text-slate-500">
             The name and where it’s kept are needed. Everything else can be added or changed later from the items list.
           </p>

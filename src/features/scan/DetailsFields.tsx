@@ -395,7 +395,14 @@ export function ComboField({
   )
 }
 
-/** Where it's kept: a place from the drop-down, or a new one. */
+/**
+ * Where it's kept: a drop-down of the places used so far, and "+ Add a new
+ * place…" for one that isn't there yet, which joins the list once an item is
+ * saved with it. Sponsor (2026-10-27): "on the where it's kept, let's have a
+ * drop-down list of the items as they're added in. so much like you did the
+ * what it's for … if we want to add a new location, like in a car or something
+ * like that, then we can do that."
+ */
 export function LocationField({
   v,
   set,
@@ -407,10 +414,55 @@ export function LocationField({
   places: string[]
   label?: string
 }) {
+  const list = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const p of places) {
+      const t = p.trim()
+      if (t && !seen.has(t.toLowerCase())) seen.set(t.toLowerCase(), t)
+    }
+    return [...seen.values()].sort((a, b) => a.localeCompare(b))
+  }, [places])
+  const cur = v.location.trim()
+  const listed = list.find((p) => p.toLowerCase() === cur.toLowerCase())
+  // With nothing on the list yet, the new-place box is simply open.
+  const [adding, setAdding] = useState(false)
+  const typing = adding || (list.length === 0 && !listed)
   return (
-    <div>
-      <Label hint="type a new place to add it">{label}</Label>
-      <ComboField value={v.location} onChange={(l) => set({ location: l })} options={places} placeholder="Storage shed, OHRR" ariaLabel={label} />
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      {list.length > 0 && (
+        <select
+          value={typing ? '__add' : (listed ?? cur)}
+          onChange={(e) => {
+            if (e.target.value === '__add') {
+              setAdding(true)
+              set({ location: '' })
+            } else {
+              setAdding(false)
+              set({ location: e.target.value })
+            }
+          }}
+          aria-label={label}
+          className="min-h-[56px] w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-lg font-bold text-ink outline-none focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15"
+        >
+          <option value="">Choose a place…</option>
+          {/* A place from before that isn't on the recent list (an older item's). */}
+          {cur && !listed && !typing && <option value={cur}>{cur}</option>}
+          {list.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+          <option value="__add">+ Add a new place…</option>
+        </select>
+      )}
+      {typing && (
+        <div className={list.length > 0 ? 'rounded-2xl border-2 border-brand-blue/30 bg-brand-blue-50/40 p-3' : ''}>
+          {list.length > 0 && <p className="mb-2 text-[15px] font-bold text-slate-600">The new place</p>}
+          <BigInput value={v.location} onChange={(l) => set({ location: l })} placeholder="Storage shed, OHRR" ariaLabel={`${label} — a new place`} autoFocus={adding} />
+          <p className="mt-1.5 text-sm text-slate-500">Room or building, then the shelf or bin. It joins the list when the item is saved.</p>
+        </div>
+      )}
     </div>
   )
 }

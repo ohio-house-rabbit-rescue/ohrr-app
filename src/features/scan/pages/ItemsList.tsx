@@ -12,7 +12,7 @@
 // An item opened from here carries ?back=items: once its edit is saved the
 // scan flow comes back here with "Saved: …" at the top, and the list opens
 // on the same tab, filter and search it was left on (kept for this visit).
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { PERMISSION_CATALOG } from '../../../lib/capabilities'
@@ -122,6 +122,20 @@ const SHEET_COLUMNS: SheetColumn[] = [
   { header: 'Added', width: 13, kind: 'date' },
 ]
 
+// The one-page list to print (OHRR 2026-10-27: "has the photo, has the item,
+// has the location, and has the donor … a single sheet of paper going
+// portrait"). The photo is the first column, added by the export.
+const SIMPLE_COLUMNS: SheetColumn[] = [
+  { header: 'Item', width: 34 },
+  { header: 'Where it’s kept', width: 24 },
+  { header: 'Donor', width: 24 },
+]
+
+function simpleRow(i: TaggedItem): SheetRow {
+  const from = i.source === 'purchase' ? (i.bought_from ? `Bought at ${i.bought_from}` : 'Bought') : i.donated_by
+  return { photos: itemPhotos(i), cells: [`${i.title}\n${i.code}`, i.location, from] }
+}
+
 function sheetRow(i: TaggedItem): SheetRow {
   const v = i.kind === 'donation' ? donationValues(i) : { each: null, total: i.value_cents }
   return {
@@ -154,12 +168,23 @@ function sheetRow(i: TaggedItem): SheetRow {
   }
 }
 
-// One line under the title: how an item moves through OHRR.
-const ITEMS_FLOW = ['Receive', 'Label', 'Put away', 'Sort by use', 'Sell, raffle or use']
+/** One step of the five, with its buttons beside it. */
+function StepRow({ n, name, children }: { n: number; name: string; children: ReactNode }) {
+  return (
+    <li className="flex items-start gap-3 px-3 py-2.5">
+      <span className="mt-2.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-blue text-[13px] font-extrabold text-white">{n}</span>
+      <div className="min-w-0 flex-1">
+        <p className="pt-2.5 text-[15px] font-extrabold leading-none text-ink">{name}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">{children}</div>
+      </div>
+    </li>
+  )
+}
 
 export default function ItemsList() {
   const { membership, can } = useAuth()
   const canSeeVendors = PERMISSION_CATALOG.some((p) => p.area === 'Hop Shop' && can(p.key))
+  const canCounter = can('counter.use') || can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.inventory.update')
   const orgId = membership?.orgId ?? ''
   const navigate = useNavigate()
   const location = useLocation()
@@ -293,12 +318,31 @@ export default function ItemsList() {
       rows: shown.map(sheetRow),
     }
   }
+  const simpleSheet = (): SheetSpec => {
+    const full = sheet()
+    return { ...full, filename: full.filename.replace('ohrr-items-', 'ohrr-items-list-'), columns: SIMPLE_COLUMNS, rows: shown.map(simpleRow), layout: 'print' }
+  }
+
+  // Steps 4 and 5 open their tab of the list and scroll to it.
+  const goTo = (f: Filter) => {
+    setFilter(f)
+    if (f === 'donation') setSub('waiting')
+    stopPicking()
+    requestAnimationFrame(() => document.getElementById('item-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
 
   const movable = filter === 'donation' && !picking && (sub === 'raffle' || sub === 'auction' || sub === 'shop' || sub === 'rabbits') && counts.s[sub] > 0
 
   return (
     <Screen className="space-y-4">
-      <StaffTitle title="Items" flow={ITEMS_FLOW}>
+      <StaffTitle
+        title="Items"
+        actions={
+          <Link to="/staff/scan" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-brand-blue px-4 text-[15px] font-bold text-white shadow-sm">
+            <Icon name="scan" size={18} /> Scan
+          </Link>
+        }
+      >
         <p>
           Donations to sort, auction lots and raffle prizes with a code. Tap one to update it or decide what it’s for. Things the shop carries live in{' '}
           <Link to="/staff/hopshop" className="font-bold text-brand-blue">
@@ -307,8 +351,10 @@ export default function ItemsList() {
           .
         </p>
         <p>
-          <strong>Receive items</strong> takes a photo and the name, whether it was donated (DON-00042) or we bought it (PUR-00001), and where it’s kept. Its label
-          prints next. Then sort it here by what it’s for — an event, the Hop Shop or our own use — and mark it sold, won or drawn when it goes.
+          Every item goes through five steps, each with its own buttons below. <strong>1 Receive</strong>: a photo and the name, donated (DON-00042) or
+          bought (PUR-00001), and where it’s kept. <strong>2 Label</strong>: its label prints, and donors get their thank-you letter.{' '}
+          <strong>3 Put away</strong>: on its shelf or in a box. <strong>4 Sort by use</strong>: what it’s for — an event, the Hop Shop or our own use.{' '}
+          <strong>5 Sell, raffle or use</strong>: mark it sold, won or drawn when it goes. A step can wait — receive today, sort another day.
         </p>
       </StaffTitle>
 
@@ -318,36 +364,62 @@ export default function ItemsList() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <Link to="/staff/catalog" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-brand-orange font-display text-base font-extrabold text-ink shadow-sm">
-          <Icon name="camera" size={20} /> Receive items
-        </Link>
-        <Link to="/staff/scan" className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-brand-blue font-display text-base font-extrabold text-white shadow-sm">
-          <Icon name="scan" size={20} /> Scan
-        </Link>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Link to="/staff/labels" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
-          <Icon name="printer" size={17} /> Labels
-        </Link>
-        <Link to="/staff/boxes" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
-          <Icon name="box" size={17} /> Boxes
-        </Link>
-        <Link to="/staff/dropoffs" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
-          <Icon name="mail" size={17} /> Drop-offs
-        </Link>
-        <Link to="/staff/donations/report" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
-          <Icon name="book" size={17} /> Report
-        </Link>
-        {/* Sponsor (2026-10-27): "where is the vendor potion for things tht we buy … i dont see it on the page of items and hop shop". */}
-        {canSeeVendors && (
-          <Link to="/staff/hopshop/suppliers" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
-            <Icon name="bag" size={17} /> Vendors
+      {/* OHRR 2026-10-27: "I see step one and I see step two, but what I don't see is 3, 4, and 5 in your process … people look for 3, 4, and 5". Each step is a row with its own buttons. */}
+      <ol className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white" aria-label="How an item moves through OHRR">
+        <StepRow n={1} name="Receive">
+          <Link to="/staff/catalog" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-brand-orange px-4 text-[15px] font-extrabold text-ink shadow-sm">
+            <Icon name="camera" size={18} /> Receive items
           </Link>
-        )}
-      </div>
+          <Link to="/staff/catalog?box=1" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+            <Icon name="box" size={17} /> Into boxes
+          </Link>
+          {/* Sponsor (2026-10-27): "where is the vendor potion for things tht we buy … i dont see it on the page of items and hop shop". */}
+          {canSeeVendors && (
+            <Link to="/staff/hopshop/suppliers" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+              <Icon name="bag" size={17} /> Vendors
+            </Link>
+          )}
+        </StepRow>
+        <StepRow n={2} name="Label">
+          <Link to="/staff/labels" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+            <Icon name="printer" size={17} /> Print labels
+          </Link>
+          <Link to="/staff/dropoffs" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+            <Icon name="mail" size={17} /> Thank-you letters
+          </Link>
+          <Link to="/staff/donations/report" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+            <Icon name="book" size={17} /> Report
+          </Link>
+        </StepRow>
+        <StepRow n={3} name="Put away">
+          <Link to="/staff/boxes" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+            <Icon name="box" size={17} /> Boxes
+          </Link>
+          <span className="text-sm text-slate-500">Where it’s kept shows on each item.</span>
+        </StepRow>
+        <StepRow n={4} name="Sort by use">
+          <button type="button" onClick={() => goTo('donation')} className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+            <Icon name="check" size={17} /> Donations to sort ({counts.c.donation})
+          </button>
+        </StepRow>
+        <StepRow n={5} name="Sell, raffle or use">
+          <button type="button" onClick={() => goTo('event')} className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+            <Icon name="gavel" size={17} /> Auction &amp; raffle ({counts.c.event})
+          </button>
+          {canCounter && (
+            <Link to="/staff/counter" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+              <Icon name="bag" size={17} /> Counter
+            </Link>
+          )}
+          {canSeeVendors && (
+            <Link to="/staff/hopshop" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[15px] font-bold text-slate-700">
+              <Icon name="store" size={17} /> Hop Shop
+            </Link>
+          )}
+        </StepRow>
+      </ol>
 
-      <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1" role="group" aria-label="Which items">
+      <div id="item-tabs" className="-mx-5 flex scroll-mt-20 gap-2 overflow-x-auto px-5 pb-1" role="group" aria-label="Which items">
         {(['donation', 'event', ...ITEM_KINDS, 'all'] as Filter[]).map((f) => {
           const active = f === filter
           const label =
@@ -451,7 +523,7 @@ export default function ItemsList() {
         />
       </div>
 
-      {items && shown.length > 0 && !picking && <ExportButtons spec={sheet} label={`Spreadsheet of ${shown.length} with photos`} />}
+      {items && shown.length > 0 && !picking && <ExportButtons spec={sheet} label={`Full spreadsheet of ${shown.length}`} simple={simpleSheet} />}
 
       <ErrorBox>{error}</ErrorBox>
       {note && (

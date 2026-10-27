@@ -57,10 +57,15 @@ export function Explain({ children, label = 'How this works', className = '' }: 
   )
 }
 
-/** Numbered steps on one line: 1 Receive › 2 Label › 3 Put away › 4 Use. */
-export function FlowStrip({ steps }: { steps: string[] }) {
+/**
+ * Numbered steps on one line: 1 Receive › 2 Label › 3 Put away › 4 Use. The
+ * parts inside one step are lettered instead (A How it came in › B Photos …),
+ * so they don't read as the page's own steps (OHRR 2026-10-27: "under number one
+ * being received, then it would be subset ABCDE").
+ */
+export function FlowStrip({ steps, letters = false }: { steps: string[]; letters?: boolean }) {
   return (
-    <ol aria-label="How it flows" className="mt-2 flex print:hidden flex-wrap items-center gap-x-1 gap-y-1.5 text-[13px] font-bold text-slate-600">
+    <ol aria-label={letters ? 'The parts of this step' : 'How it flows'} className="mt-2 flex print:hidden flex-wrap items-center gap-x-1 gap-y-1.5 text-[13px] font-bold text-slate-600">
       {steps.map((s, i) => (
         <li key={s} className="inline-flex items-center gap-1">
           {i > 0 && (
@@ -68,7 +73,13 @@ export function FlowStrip({ steps }: { steps: string[] }) {
               ›
             </span>
           )}
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-blue text-[11px] font-extrabold text-white">{i + 1}</span>
+          <span
+            className={`inline-flex h-5 w-5 items-center justify-center text-[11px] font-extrabold ${
+              letters ? 'rounded-md border border-brand-blue text-brand-blue' : 'rounded-full bg-brand-blue text-white'
+            }`}
+          >
+            {letters ? String.fromCharCode(65 + i) : i + 1}
+          </span>
           <span>{s}</span>
         </li>
       ))}

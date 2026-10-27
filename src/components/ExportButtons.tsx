@@ -66,19 +66,32 @@ async function send(file: File, title: string): Promise<Outcome> {
 
 const savedNote = 'Saved to Downloads — attach it to an email from there.'
 
-export default function ExportButtons({ spec, label = 'Spreadsheet with photos' }: { spec: () => SheetSpec; label?: string }) {
+export default function ExportButtons({
+  spec,
+  label = 'Spreadsheet with photos',
+  simple,
+  simpleLabel = 'One-page list to print',
+}: {
+  spec: () => SheetSpec
+  label?: string
+  /** A short version made to print standing up (photo, item, where it's kept, donor), offered first. */
+  simple?: () => SheetSpec
+  simpleLabel?: string
+}) {
   const [busy, setBusy] = useState<string | null>(null)
+  const [running, setRunning] = useState<'full' | 'simple'>('full') // which button shows the progress
   const [msg, setMsg] = useState<string | null>(null)
   const [ready, setReady] = useState<Ready | null>(null)
 
   const after = (o: Outcome, note: string) => setMsg(o === 'cancelled' ? null : o === 'saved' ? `${note} ${savedNote}` : `${note} Shared.`)
 
-  const excel = async () => {
-    const s = spec()
+  const excel = async (which: () => SheetSpec = spec) => {
+    const s = which()
     if (!s.rows.length) return
     setMsg(null)
     setReady(null)
     setBusy('Starting…')
+    setRunning(which === spec ? 'full' : 'simple')
     try {
       const { blob, missing } = await buildSheetWithPhotos(s, (done, total) => setBusy(total ? `Photos ${done} of ${total}…` : 'Making the file…'))
       const n = s.rows.length
@@ -127,8 +140,19 @@ export default function ExportButtons({ spec, label = 'Spreadsheet with photos' 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => void excel()} disabled={!!busy} className={pill} title="An Excel file with a picture of each item, to email or save">
-          <Icon name="file" size={18} /> {busy ?? label}
+        {simple && (
+          <button
+            type="button"
+            onClick={() => void excel(simple)}
+            disabled={!!busy}
+            className={pill}
+            title="Photo, item, where it’s kept and donor — fits letter paper standing up"
+          >
+            <Icon name="printer" size={18} /> {busy && running === 'simple' ? busy : simpleLabel}
+          </button>
+        )}
+        <button type="button" onClick={() => void excel()} disabled={!!busy} className={pill} title="Every detail, with a picture of each item, to email or save">
+          <Icon name="file" size={18} /> {busy && running === 'full' ? busy : label}
         </button>
         <button type="button" onClick={() => void csv()} disabled={!!busy} className={pill} title="A CSV with links to the photos">
           CSV

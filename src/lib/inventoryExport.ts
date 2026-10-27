@@ -44,6 +44,14 @@ export interface SheetSpec {
   title: string
   columns: SheetColumn[]
   rows: SheetRow[]
+  /**
+   * 'print': a short list made to print on letter paper standing up — no
+   * photo-links column, one page wide, the headings repeated on every page.
+   * OHRR (2026-10-27): "a version that is simple … has the photo, has the
+   * item, has the location, and has the donor … a single sheet of paper going
+   * portrait".
+   */
+  layout?: 'full' | 'print'
 }
 
 const THUMB_PX = 96
@@ -109,9 +117,26 @@ export async function buildSheetWithPhotos(spec: SheetSpec, onProgress?: (done: 
   const wb = new ExcelJS.Workbook()
   wb.creator = 'Ohio House Rabbit Rescue'
   wb.created = new Date()
-  const ws = wb.addWorksheet(spec.sheetName, { views: [{ state: 'frozen', ySplit: 2, xSplit: 1 }] })
+  const print = spec.layout === 'print'
+  const ws = wb.addWorksheet(spec.sheetName, {
+    views: [{ state: 'frozen', ySplit: 2, xSplit: print ? 0 : 1 }],
+    pageSetup: print
+      ? {
+          // Paper left to the printer (letter here); exceljs has no "letter" value to set.
+          orientation: 'portrait',
+          fitToPage: true,
+          fitToWidth: 1,
+          fitToHeight: 0, // as many pages down as it needs
+          horizontalCentered: true,
+          margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
+          printTitlesRow: '2:2',
+        }
+      : undefined,
+  })
 
-  const cols: SheetColumn[] = [{ header: 'Photo', width: 15 }, ...spec.columns, { header: 'Photo links', width: 50 }]
+  const cols: SheetColumn[] = print
+    ? [{ header: 'Photo', width: 15 }, ...spec.columns]
+    : [{ header: 'Photo', width: 15 }, ...spec.columns, { header: 'Photo links', width: 50 }]
   ws.columns = cols.map((c) => ({
     width: c.width ?? 16,
     style: c.kind === 'money' ? { numFmt: '"$"#,##0.00' } : c.kind === 'date' ? { numFmt: 'mmm d, yyyy' } : {},
@@ -120,6 +145,12 @@ export async function buildSheetWithPhotos(spec: SheetSpec, onProgress?: (done: 
   // Row 1: what this is. Row 2: the headings.
   ws.getCell(1, 1).value = spec.title
   ws.getCell(1, 1).font = { bold: true, size: 13 }
+  if (print) {
+    // Kept inside the page: across the table, wrapped.
+    ws.mergeCells(1, 1, 1, cols.length)
+    ws.getCell(1, 1).alignment = { wrapText: true, vertical: 'middle' }
+    ws.getRow(1).height = 36
+  }
   const head = ws.getRow(2)
   cols.forEach((c, i) => {
     const cell = head.getCell(i + 1)
@@ -129,17 +160,20 @@ export async function buildSheetWithPhotos(spec: SheetSpec, onProgress?: (done: 
     cell.alignment = { vertical: 'middle', wrapText: true }
   })
   head.height = 30
-  ws.autoFilter = { from: { row: 2, column: 1 }, to: { row: 2, column: cols.length } }
+  if (!print) ws.autoFilter = { from: { row: 2, column: 1 }, to: { row: 2, column: cols.length } }
+  else ws.headerFooter = { oddFooter: '&LOhio House Rabbit Rescue&RPage &P of &N' }
 
   spec.rows.forEach((r, i) => {
     const row = ws.getRow(i + 3)
     spec.columns.forEach((c, j) => {
       row.getCell(j + 2).value = value(r.cells[j], c.kind) as never
     })
-    const links = row.getCell(cols.length)
-    links.value = r.photos.join('\n') || null
-    if (r.photos.length === 1) links.value = { text: r.photos[0], hyperlink: r.photos[0] }
-    row.height = r.photos.length ? ROW_PT : 20
+    if (!print) {
+      const links = row.getCell(cols.length)
+      links.value = r.photos.join('\n') || null
+      if (r.photos.length === 1) links.value = { text: r.photos[0], hyperlink: r.photos[0] }
+    }
+    row.height = r.photos.length ? ROW_PT : print ? 32 : 20 // the print list's item cell has two lines
     row.alignment = { vertical: 'top', wrapText: true }
   })
 
