@@ -200,7 +200,7 @@ function SavedOnAccount() {
   const bunnies = activeBunnies(useMyBunny()).length
   const { state, problem } = useSyncStatus()
   const rows: { label: string; n: number; to: string }[] = [
-    { label: 'Favourite rabbits', n: follows, to: '/tails' },
+    { label: 'Favorite rabbits', n: follows, to: '/tails' },
     { label: 'Saved BunFest sessions', n: sessions, to: '/bunfest/schedule' },
     { label: 'My Bunny rabbits', n: bunnies, to: '/my-bunny' },
   ]

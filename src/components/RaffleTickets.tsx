@@ -180,10 +180,10 @@ export function TicketCard({ order, link = true }: { order: RaffleOrder; link?: 
                 Show this at the raffle table to pay{amount ? <strong className="font-bold text-ink"> {amount}</strong> : ''}.
               </>
             )}
-            {order.status === 'void' && 'This reservation was cancelled.'}
+            {order.status === 'void' && 'This reservation was canceled.'}
           </p>
         </div>
-        <Badge tone={order.status === 'paid' ? 'blue' : order.status === 'void' ? 'slate' : 'orange'}>{order.status === 'paid' ? 'Paid' : order.status === 'void' ? 'Cancelled' : 'Reserved'}</Badge>
+        <Badge tone={order.status === 'paid' ? 'blue' : order.status === 'void' ? 'slate' : 'orange'}>{order.status === 'paid' ? 'Paid' : order.status === 'void' ? 'Canceled' : 'Reserved'}</Badge>
       </div>
       {won.length > 0 && (
         <div className="mt-3 rounded-xl bg-white px-3 py-2 text-sm font-bold text-brand-blue">

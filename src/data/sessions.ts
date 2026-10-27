@@ -1,6 +1,6 @@
-// The Midwest BunFest education programme — the bundled fallback.
+// The Midwest BunFest education program — the bundled fallback.
 //
-// The live programme comes from `bunfest_sessions` (Staff → BunFest →
+// The live program comes from `bunfest_sessions` (Staff → BunFest →
 // Schedule); this copy is what the app shows before that first loads, or if
 // Supabase is unreachable. Transcribed from midwestbunfest.org on 2026-09-22.
 //

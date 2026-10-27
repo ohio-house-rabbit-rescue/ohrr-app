@@ -15,7 +15,7 @@ export default function Tails() {
   const [filter, setFilter] = useState<Filter>('All')
   const following = useFollowing()
   const { items: tails, source, loading } = useHappyTails()
-  // Nothing published yet: the page shows the one labelled example instead.
+  // Nothing published yet: the page shows the one labeled example instead.
   const example = source === 'seed'
 
   const list = useMemo(() => {

@@ -212,7 +212,7 @@ export function allRemindersFilename(bunnyName: string): string {
 /**
  * Google Calendar's "add event" template URL for one reminder — handy on
  * Android where a downloaded .ics may land in the Downloads folder instead of
- * opening straight away. Google honours `recur=RRULE:...`.
+ * opening straight away. Google honors `recur=RRULE:...`.
  */
 export function googleCalendarUrl(e: IcsEvent): string {
   const hour = e.hour ?? 9

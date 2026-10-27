@@ -696,7 +696,7 @@ function ProductForm({
   const [packs, setPacks] = useState<PackRow[]>(() => (kept?.packs?.length ? kept.packs : packRowsFrom(initial?.packs)))
   // Once a new item is saved, a second Save (after a pack-size error) updates it instead of adding another.
   const [savedId, setSavedId] = useState<string | null>(initial?.id ?? null)
-  // Keep the new item on the device as it's typed — until it's saved or cancelled.
+  // Keep the new item on the device as it's typed — until it's saved or canceled.
   useEffect(() => {
     if (initial || savedId) return
     const blank = JSON.stringify(draftFrom(null))

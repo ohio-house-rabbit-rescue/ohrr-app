@@ -40,7 +40,7 @@ function escapeRegExp(s: string): string {
 }
 
 /**
- * Normalise what people actually type: "My bunny is not eating!!" → "not eating",
+ * Normalize what people actually type: "My bunny is not eating!!" → "not eating",
  * "Did my bunny stop eating?" → "stop eating", "Why is Clover hiding?" → "hiding".
  * Question words, "my bunny", and the little verbs between them all go; what is
  * left is the symptom the topics are indexed on.
@@ -119,7 +119,7 @@ function tokenMatchesWord(tok: string, word: string): boolean {
 interface TopicWords {
   title: string[]
   all: string[]
-  /** normalised title + aliases, for whole-phrase matching */
+  /** normalized title + aliases, for whole-phrase matching */
   phrases: string[]
 }
 

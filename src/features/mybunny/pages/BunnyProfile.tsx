@@ -481,7 +481,7 @@ function ReminderRow({ r, bunny, today }: { r: Reminder; bunny: Bunny; today: st
     const next = markReminderDone(r.id, today)
     if (!next) return
     // Native app: if this reminder is set on the phone, move it to the new date
-    // (a one-off that's now complete has no next date, so it's cancelled).
+    // (a one-off that's now complete has no next date, so it's canceled).
     if (isUpcoming(next)) void resyncReminder(next, bunny.name)
     else void cancelReminder(next.id)
     setDoneMsg(next.intervalDays ? `Done today — next ${formatDate(next.nextDue, today)}` : 'Done — moved to Completed')

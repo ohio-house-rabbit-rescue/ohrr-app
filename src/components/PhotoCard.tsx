@@ -44,9 +44,9 @@ export function PhotoCard({
   )
 }
 
-// The icon twin of PhotoCard: same size and shape, a large line icon centred on a
+// The icon twin of PhotoCard: same size and shape, a large line icon centered on a
 // brand-tinted tile, title bottom-left like the photo tiles. The icon never
-// changes, so the card is recognisable at a glance. Two-tone (OHRR, 2026-09-28):
+// changes, so the card is recognizable at a glance. Two-tone (OHRR, 2026-09-28):
 // dark blue lines with one small orange part; `action` is the solid orange tile
 // OHRR most wants tapped (Volunteer), ink lines with a white part.
 export function IconPhotoTile({
@@ -74,7 +74,7 @@ export function IconPhotoTile({
   const accent = tone === 'blue' ? 'var(--color-brand-orange)' : tone === 'action' ? '#fff' : undefined
   return (
     <Link to={to} className={`${shape(tile)} ring-1 ring-inset ${colors}`}>
-      {/* icon: centred in the space above the label */}
+      {/* icon: centered in the space above the label */}
       <span aria-hidden="true" className={`absolute inset-0 flex items-center justify-center ${tile ? 'pb-7' : 'pb-10'}`}>
         <Icon
           name={icon}

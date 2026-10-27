@@ -2,7 +2,7 @@
 // silent fallback.
 //
 // The schedule, the vendor list, the rescue directory and the booth map were
-// all hard-coded, so publishing this year's programme meant changing code. Each
+// all hard-coded, so publishing this year's program meant changing code. Each
 // now reads its table (supabase/migrations/20260922120000_bunfest_content.sql);
 // until staff type the new year in, the app keeps showing last year's with the
 // same "2025 — this year's is announced closer to the event" note it always
@@ -77,7 +77,7 @@ function rowToPartner(r: PartnerRow, year: number): Partner {
   }
 }
 
-/** The education programme — the newest year that has published sessions. */
+/** The education program — the newest year that has published sessions. */
 export function useBunfestSessions(): Live<Session> {
   const [state, setState] = useState<Live<Session>>({ items: seedSessions, source: 'seed', loading: isSupabaseConfigured })
   useEffect(() => {

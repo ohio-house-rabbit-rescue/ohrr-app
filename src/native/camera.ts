@@ -9,7 +9,7 @@ export type PhotoSource = 'camera' | 'library'
 
 /**
  * Take a photo (source 'camera') or pick one from the library ('library').
- * Resolves to a data URL, or null when the person cancelled. Throws with a
+ * Resolves to a data URL, or null when the person canceled. Throws with a
  * friendly message when the camera/library couldn't be used (permission
  * denied, no camera, ...). Always resolves null on the web — callers should
  * check `isNative` first and use the file inputs there.

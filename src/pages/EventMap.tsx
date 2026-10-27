@@ -8,7 +8,7 @@ import { VenuePlan, ZoomBox, holderLabel, type TableColors } from '../features/b
 import { PageHeader, Screen, Card, SampleNote, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 
-// The bundled categories keep their colours; anything OHRR adds gets a stable
+// The bundled categories keep their colors; anything OHRR adds gets a stable
 // one from the same palette, so the map and the key always agree.
 const EXTRA_COLORS = ['#0669ac', '#e0950f', '#2f9e7f', '#9b6cc4', '#d9663d', '#4b7bb5', '#b5710c']
 function colorFor(category: string | null): string {

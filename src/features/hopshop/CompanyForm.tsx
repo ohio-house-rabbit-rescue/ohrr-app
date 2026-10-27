@@ -487,8 +487,8 @@ export function CompanyForm({
               </p>
             )}
             <label className={label}>
-              Vendor’s licence no.
-              <input className={staffInput} value={d.license_number} onChange={txt('license_number')} placeholder="Ohio vendor’s licence, if they have one" />
+              Vendor’s license no.
+              <input className={staffInput} value={d.license_number} onChange={txt('license_number')} placeholder="Ohio vendor’s license, if they have one" />
             </label>
           </Section>
         )}

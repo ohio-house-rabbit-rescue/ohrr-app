@@ -101,7 +101,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       { to: '/staff/dropoffs', title: 'Drop-offs and thank-yous', hint: 'Who gave what, the letter', icon: 'mail', group: 'items', show: canItems },
       { to: '/staff/donations/report', title: 'Monthly donations report', hint: 'Totals, by donor, a spreadsheet', icon: 'file', group: 'items', show: canItems },
       { to: '/staff/labels', title: 'Print labels', hint: 'Codes for items, any label size', icon: 'printer', group: 'items', show: canItems },
-      { to: '/staff/scan', title: 'Scan an item', hint: 'See, change or sort a labelled item', icon: 'scan', group: 'items', today: true, show: canItems },
+      { to: '/staff/scan', title: 'Scan an item', hint: 'See, change or sort a labeled item', icon: 'scan', group: 'items', today: true, show: canItems },
       { to: '/staff/counter', title: 'Counter', hint: 'Sell, the till, door tickets', icon: 'bag', group: 'items', today: true, show: canCounter },
 
       // Rabbits and care
@@ -172,7 +172,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
 export function placeOf(pathname: string, tiles: StaffTile[]): { group?: StaffGroup; tile?: StaffTile } {
   const g = /^\/staff\/g\/([a-z]+)/.exec(pathname)
   if (g) return { group: GROUPS.find((x) => x.key === g[1]) }
-  // Longest match wins, so /staff/sponsors/renewals isn't labelled /staff/sponsors.
+  // Longest match wins, so /staff/sponsors/renewals isn't labeled /staff/sponsors.
   const tile = tiles.filter((t) => pathname === t.to || pathname.startsWith(`${t.to}/`)).sort((a, b) => b.to.length - a.to.length)[0]
   return { tile, group: tile ? GROUPS.find((x) => x.key === tile.group) : undefined }
 }

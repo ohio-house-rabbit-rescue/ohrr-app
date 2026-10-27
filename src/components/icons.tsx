@@ -302,8 +302,8 @@ const paths: Record<IconName, ReactNode> = {
 
 // Two-tone (OHRR, 2026-09-28): on the big tiles each icon gets ONE small part
 // filled in orange, under its lines (the calendar's top, the gift's lid, the
-// pin's centre…). Icons with nothing here stay one colour.
-// Parts drawn ON TOP in the accent colour (or the icon's own colour without
+// pin's center…). Icons with nothing here stay one color.
+// Parts drawn ON TOP in the accent color (or the icon's own color without
 // one): the vet cross is solid, so it can't sit under the lines.
 const accentParts: Partial<Record<IconName, ReactNode>> = {
   vet: <path d="M9.75 6.75h4.5v3h3v4.5h-3v3h-4.5v-3h-3v-4.5h3z" fill="currentColor" strokeWidth={1.2} />,
@@ -346,7 +346,7 @@ export function Icon({
   name: IconName
   size?: number
   className?: string
-  /** Fill colour for the icon's one accent part (the big tiles); none = one colour. */
+  /** Fill color for the icon's one accent part (the big tiles); none = one color. */
   accent?: string
 }) {
   return (

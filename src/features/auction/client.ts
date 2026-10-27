@@ -512,7 +512,7 @@ export const PAYMENT_LABEL: Record<PaymentStatus, string> = {
   failed: 'Card declined',
   cash: 'Paid at the desk',
   refunded: 'Refunded',
-  void: 'Cancelled',
+  void: 'Canceled',
 }
 
 export const FULFIL_LABEL: Record<FulfilStatus, string> = {

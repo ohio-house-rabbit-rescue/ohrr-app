@@ -170,7 +170,7 @@ export function statusLabel(s: BookingStatus): string {
     case 'confirmed':
       return 'Confirmed'
     case 'cancelled':
-      return 'Cancelled'
+      return 'Canceled'
     case 'checked_in':
       return 'Checked in'
     case 'no_show':

@@ -60,7 +60,7 @@ export default function BookingCancel() {
             <p className={`text-sm font-bold ${b.status === 'cancelled' ? 'text-red-600' : 'text-brand-blue'}`}>{statusLabel(b.status)}</p>
             {(b.status === 'confirmed' || b.status === 'requested') && (
               <button type="button" onClick={() => void cancel()} disabled={busy} className={`${btn.outline} w-full border-red-300 text-red-700 hover:bg-red-50`}>
-                {busy ? 'Cancelling…' : 'Cancel this booking'}
+                {busy ? 'Canceling…' : 'Cancel this booking'}
               </button>
             )}
             {error && <p className="text-sm font-semibold text-red-600">{error}</p>}

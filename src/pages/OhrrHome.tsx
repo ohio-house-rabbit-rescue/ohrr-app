@@ -22,8 +22,8 @@ import ForYou from '../features/account/ForYou'
 // keeps BunFest's own palette + logo and shows the live event date; any other
 // slide uses the OHRR brand gradient. Its picture slot follows the sponsor rule
 // (slideVisual): an uploaded image always wins, an adopt card shows a real
-// rabbit, and every other function card shows its fixed line icon centred on
-// the tinted top area so the purpose is recognisable at a glance.
+// rabbit, and every other function card shows its fixed line icon centered on
+// the tinted top area so the purpose is recognizable at a glance.
 function HeroCard({ slide }: { slide: HeroSlide }) {
   const to = appPath(slide.ctaUrl) ?? '/'
   const isBunfest = to === '/bunfest'

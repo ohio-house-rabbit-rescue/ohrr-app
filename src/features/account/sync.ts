@@ -1,11 +1,11 @@
 // Keeping what people save on their OHRR account (update 31 — `user_saves`).
 //
-// Signed out, nothing changes: favourites, saved BunFest sessions, My Bunny and
+// Signed out, nothing changes: favorites, saved BunFest sessions, My Bunny and
 // "last looked" live on the phone exactly as before. Signed in, each of them is
 // also one JSON document on the account, so signing in on another phone brings
 // them along:
 //
-//   follows   favourite rabbits              { ids: [...] }
+//   follows   favorite rabbits              { ids: [...] }
 //   sessions  saved BunFest sessions         { ids: [...] }
 //   mybunny   My Bunny WITHOUT photos        the ohrr.mybunny.v2 JSON
 //   seen      For you's "last looked"        { volunteer: iso, … }
@@ -21,7 +21,7 @@
 //     after that a merge knows what the account held at the last sync (the
 //     "base", kept per phone), so a deletion on one phone reaches the others
 //     instead of coming back.
-//   - Every change on the phone is written through: favourites and sessions
+//   - Every change on the phone is written through: favorites and sessions
 //     after a moment, My Bunny and "last looked" after about 2 s of quiet.
 //     Before writing, the account's copy is checked; if another phone changed
 //     it since, the two are merged first.

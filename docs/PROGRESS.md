@@ -6,7 +6,7 @@
 > every work chunk, and mirror a copy to the Drive folder "02 App Design" as
 > `04-progress-log.md`.
 
-- **Last updated:** 2026-10-27 (BLUETOOTH LABELS PRINT ON THE PM-249-WF — colors were reversed, now 0 = black by default; one label size for the whole rescue; earlier: EMAIL WITH GMAIL ON A COMPUTER — every email button asks once: Gmail in the browser (filled in), the computer's email program, or copy it; app + website, no database change; before that HOP SHOP: ADD A SUPPLIER WITHOUT LEAVING THE ITEM — "+ New supplier" right in the new-item form, and a half-entered new item is kept on the device and reopens where it was; app + website, no database change; before that OHRR ONLINE AUCTION WITH SQUARE — a separate online-only auction at /auction; bidders save a card first and the winners are charged automatically when it closes; Square replaces Stripe for both auctions; Edge Function ohrr-auction DEPLOYED, update 45 WAITING in RUN-THIS after 43 and 44; never run against real Square; before that SILENT AUCTION BID-SHEET LABELS + BUY IT NOW AT THE TABLE — update 44 WAITING in RUN-THIS after 43; before that SPREADSHEETS WITH PHOTOS — Items and Hop Shop inventory as Excel with a picture per row, emailed from the phone, v0.4.2 rev 9; before that PRINT LABELS BY BLUETOOTH — "Print N labels by Bluetooth" straight to OHRR's PM-344-WF, v0.4.1 rev 8 Android builds in Drive; before that BUNNY BONDING + PHONE INSTALL — questions on any booking form, the bonding form filled in with OHRR's wording (update 43 WAITING in RUN-THIS); the website's new Bunny bonding page /adopt/bonding; the app installs from the browser on iPhone and Android (icons, Settings card), v0.4.0 rev 7 Android builds in Drive; before that ADD A DELIVERY FROM ITS INVOICE — a PDF or a photo of the paper invoice is read on the phone or laptop (no AI, no outside service), its lines matched to Hop Shop items, the stock added and the delivery kept with what shipping really cost; update 42 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 43; not yet tried on a real supplier invoice; before that ITEM NUMBERS WITH A SYSTEM — donations DON-00001, Hop Shop SKUs HAY-101-001 (type-vendor-item), product types, vendor numbers, supplier shipping, Hop Shop price labels; update 41 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 42; before that SCAN AN ITEM ON THE WEBSITE for laptop users — type or USB-scan a code, read it from a webcam or a photo, drag photos onto the item forms; before that STAFF PORTAL IN GROUPS — a Today row + 8 groups on one phone screen; the home bar takes you home, no drop-down list; before that TWO WAYS TO ADD — Add a donation + Hop Shop inventory; DONATION INTAKE: drop-offs, thank-you letters, where it's headed, value each/for all, split, baskets, monthly report — update 40 RUN BY OHRR and checked live, RUN-THIS has nothing to run, next is 41; staff portal grouping proposed; before that STAFF DASHBOARD CRASH FIXED — blank on a fresh open since 61be387; "ADD HOP SHOP STOCK" door and "Hop Shop inventory" on the app and website; before that DONATION DETAILS — how many, price, condition, sort of thing, where it's kept; update 39 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 40; Hop Shop shelf empty because no active products, not a code fault; before that FEATURE SWITCHES FOR FOUNDERS/DEVELOPERS + COVER PHOTO, PHOTO ORDER, GALLERIES — update 38 RUN BY OHRR and checked live; before that CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
+- **Last updated:** 2026-10-27 (AMERICAN ENGLISH EVERYWHERE — British spellings in the app and website text changed to American, stored values left alone, Bunny Help topics in the database still British; earlier: BLUETOOTH LABELS PRINT ON THE PM-249-WF — colors were reversed, now 0 = black by default; one label size for the whole rescue; earlier: EMAIL WITH GMAIL ON A COMPUTER — every email button asks once: Gmail in the browser (filled in), the computer's email program, or copy it; app + website, no database change; before that HOP SHOP: ADD A SUPPLIER WITHOUT LEAVING THE ITEM — "+ New supplier" right in the new-item form, and a half-entered new item is kept on the device and reopens where it was; app + website, no database change; before that OHRR ONLINE AUCTION WITH SQUARE — a separate online-only auction at /auction; bidders save a card first and the winners are charged automatically when it closes; Square replaces Stripe for both auctions; Edge Function ohrr-auction DEPLOYED, update 45 WAITING in RUN-THIS after 43 and 44; never run against real Square; before that SILENT AUCTION BID-SHEET LABELS + BUY IT NOW AT THE TABLE — update 44 WAITING in RUN-THIS after 43; before that SPREADSHEETS WITH PHOTOS — Items and Hop Shop inventory as Excel with a picture per row, emailed from the phone, v0.4.2 rev 9; before that PRINT LABELS BY BLUETOOTH — "Print N labels by Bluetooth" straight to OHRR's PM-344-WF, v0.4.1 rev 8 Android builds in Drive; before that BUNNY BONDING + PHONE INSTALL — questions on any booking form, the bonding form filled in with OHRR's wording (update 43 WAITING in RUN-THIS); the website's new Bunny bonding page /adopt/bonding; the app installs from the browser on iPhone and Android (icons, Settings card), v0.4.0 rev 7 Android builds in Drive; before that ADD A DELIVERY FROM ITS INVOICE — a PDF or a photo of the paper invoice is read on the phone or laptop (no AI, no outside service), its lines matched to Hop Shop items, the stock added and the delivery kept with what shipping really cost; update 42 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 43; not yet tried on a real supplier invoice; before that ITEM NUMBERS WITH A SYSTEM — donations DON-00001, Hop Shop SKUs HAY-101-001 (type-vendor-item), product types, vendor numbers, supplier shipping, Hop Shop price labels; update 41 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 42; before that SCAN AN ITEM ON THE WEBSITE for laptop users — type or USB-scan a code, read it from a webcam or a photo, drag photos onto the item forms; before that STAFF PORTAL IN GROUPS — a Today row + 8 groups on one phone screen; the home bar takes you home, no drop-down list; before that TWO WAYS TO ADD — Add a donation + Hop Shop inventory; DONATION INTAKE: drop-offs, thank-you letters, where it's headed, value each/for all, split, baskets, monthly report — update 40 RUN BY OHRR and checked live, RUN-THIS has nothing to run, next is 41; staff portal grouping proposed; before that STAFF DASHBOARD CRASH FIXED — blank on a fresh open since 61be387; "ADD HOP SHOP STOCK" door and "Hop Shop inventory" on the app and website; before that DONATION DETAILS — how many, price, condition, sort of thing, where it's kept; update 39 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 40; Hop Shop shelf empty because no active products, not a code fault; before that FEATURE SWITCHES FOR FOUNDERS/DEVELOPERS + COVER PHOTO, PHOTO ORDER, GALLERIES — update 38 RUN BY OHRR and checked live; before that CATALOG FIX + FOUR PHOTOS PER ITEM — update 37 RUN BY OHRR and checked live; before that OHRR-JOBS EDGE FUNCTION DEPLOYED from this PC with the Supabase CLI — phone notifications on, daily RescueGroups check live; UPDATES 35 AND 36 RUN BY OHRR and checked live — RUN-THIS has nothing to run, next is 37; before that CATALOG DONATIONS + PRINT LABELS (update 36); the silent auction is ON HOLD at OHRR's request since 2026-09-29, its database part (update 35) now in place; before that SILENT AUCTION: online bidding, Buy Now, cards on file via Stripe, pickup/shipping; payment server live at ohrr-website.pages.dev/api/auction/* awaiting OHRR's three secrets; before that updates 33 and 34 run by OHRR and checked live — RUN-THIS has nothing to run; the Saturday vet clinic is bookable; before that the board comparison PDF; Happy Tails example, Easter campaign, cost article, clinic Saturdays; persona audit fixes; page art + two-tone tiles; before that 2026-09-26: wish-list items, rabbits kept up to date from RescueGroups, phone notifications, My Bunny photos on the account; update 32 SQL applied and checked 2026-09-26; the ohrr-jobs Edge Function was NOT reachable at /functions/v1/ohrr-jobs yet; Cloudflare Web Analytics switched on by OHRR)
 - **Repo:** https://github.com/ohio-house-rabbit-rescue/ohrr-app
 - **Live site:** https://ohrr-app.pages.dev
 - **Local working tree:** `C:\Users\johns\ohrr-app` (this is the git repo; the
@@ -18,6 +18,25 @@
 ---
 
 ## Current state (at a glance)
+
+- **American English everywhere (2026-10-27, no database change).**
+  Sponsor: "We use American English not European. stop using the other." British spellings in the app and the
+  website, in page text, labels, built-in content and code comments, are now American: color, center, favorite,
+  license, gray, catalog, behavior, honor, neighbor, labeled, program, recognize, organization, normalize, fiber,
+  moldy, molting, labored, enroll, and canceled / canceling where it is only text people read. **Left alone on
+  purpose** because the database or code depends on them: the booking, raffle and auction status `cancelled`, the
+  auction `fulfil` fields, the breed list's `colours` field name, `license_number`, photo file names such as
+  `bunny-grey-lop.jpg`, Wikimedia links, the generated `database.types.ts`, and the applied SQL migrations. Bunny Help
+  search aliases keep both spellings ("diarrhoea" and "diarrhea"), so either one finds the topic; "towards" and
+  "afterwards" stay (both fine in American English). **Still British, in the database:** the Bunny Help topics
+  loaded into Supabase in September (breathing, spraying-mounting, new-bunny, bored-toys, hay-pellets, greens-fruit,
+  foods-to-avoid: "Laboured", "behaviour", "fibre", "colourful", "favourites", "mouldy") show on both sites from the
+  database, so they change only with a database update (not written) or by editing them in Staff → Bunny Help
+  topics. BunFest 2026 vendor descriptions in the database were left as the vendors wrote them. Three comment-only
+  fixes were skipped in files another session was editing at the same time (app `src/features/scan/labels.ts` and
+  `src/features/scan/pages/PrintLabels.tsx`, website `src/pages/staff/PrintLabels.tsx`). Checks: app
+  `npx tsc --noEmit -p .` and `npm run build`, website `npm run build`, all clean; browser pass on both sites' breed
+  guide and breed pages, Privacy, Found, Settings, Give and Volunteer apply showed no British spellings left.
 
 - **Email buttons on a computer: Gmail, the email program, or copy (2026-10-26, no database change).**
   Sponsor: emailing a Board-level staff invite from a PC "went to ionos for an email and the details did not carry
@@ -512,7 +531,7 @@
   - **Easter campaign** (Staff → Posts, both surfaces): plans the season's drafts from existing education cards
     (7/5/3/1 weeks before, 3/7/11 after; `source` marker `easter:<year>:<slot>`, never duplicated), painted with the Share
     kit; reminders on the queue, website dashboard and app staff home (63 days before Easter until planned).
-  - **Small fixes:** Home Explore no longer repeats quick actions/tabs; top-bar buttons labelled (Search/Help/Settings/Sign in);
+  - **Small fixes:** Home Explore no longer repeats quick actions/tabs; top-bar buttons labeled (Search/Help/Settings/Sign in);
     Vets' RHDV2 block after the list; bonded pairs one card, one photo.
   - **Update 33** (`20260928120000_rabbits_vetclinic_cost.sql`): rabbits from RescueGroups (new Mackenzie, Rachel, Tobias;
     Edmund, Leo, Monty, older Nimbus hidden with the badge), the clinic booking type, the cost article.
@@ -544,7 +563,7 @@
   bunny). `public/art/*.svg` (same files in both repos), `components/PageArt.tsx` (section by URL prefix,
   CSS mask, beside the title; website: only crumbs + title make room, so no band grows — checked at
   1300/1024/375). Tiles: dark blue lines + ONE orange part (`Icon accent`), only on the big tiles; small
-  icons stay one colour. **Volunteer is orange** (OHRR: volunteers are the top need): solid orange tile on
+  icons stay one color. **Volunteer is orange** (OHRR: volunteers are the top need): solid orange tile on
   the app's Home (quick actions + Explore), orange "See the shifts" on the website's Home. Next, if OHRR
   wants it: redraw the 43 icons in the bunny's rounder line, keeping the same orange parts.
   - **Same day, OHRR clarified:** on the website the drawing is the title band's *background* — big, faint,
@@ -590,7 +609,7 @@
     - **Sign-in for everyone and My OHRR** (`/account`, and `/staff/signin` redirects to it): name; what's
       saved on the account; email choices (six interests, consent); phone reminders; sign-in email and
       password; "Have a staff invite code?"; delete account; sign out.
-    - **Sync of saved things:** favourites, saved sessions and My Bunny (no photos; merged by id, newest
+    - **Sync of saved things:** favorites, saved sessions and My Bunny (no photos; merged by id, newest
       edit wins, nothing silently dropped, deletions carry across) go to `user_saves`.
     - **"New for you":** a home card and badge for new volunteer calls, events, rabbits and BunFest talks
       matching the person's interests.
@@ -700,7 +719,7 @@
     posted; nobody approves a post they wrote or last changed; editing an approved post sends it back; the
     rules hold in the database (status only through `set_social_post_status`).
   - **Vendors and ordering** (update 27): the company card (suppliers and BunFest vendors are one list,
-    staff-only) gains photo, socials, shop, mailing address, paperwork (agreement, insurance, licence),
+    staff-only) gains photo, socials, shop, mailing address, paperwork (agreement, insurance, license),
     booth needs, invite again?, per-year tables/fee/paid, and a "Given to OHRR" log (auction, raffle,
     goods, money, sponsorship, services; thank-you sent). Silent-auction items can name the company.
     Hop Shop products get pack sizes (single / box / case: units, cost, supplier SKU, minimum); the reorder
@@ -867,7 +886,7 @@
   - **App:** the staff header's way back to the app is now a blue 40px "App" button (`815cdba`).
 - **Website nav audit (2026-09-24; website live, commit `c9c88ab`).** Sponsor: "I'm in
   the staff and can not get back to the main site." The old staff screen had ~30 tool buttons in a
-  wrapping row, and the only way out was a small grey "View site" pill after them.
+  wrapping row, and the only way out was a small gray "View site" pill after them.
   - **Staff:** a "← Back to the website" button on every staff screen, next to Sign out (also
     on the signed-in-but-not-staff screen). The tools are grouped (Every day · Rabbits & care ·
     Volunteers · Website & outreach · Hop Shop & BunFest · Settings), shown as a left sidebar on
@@ -941,10 +960,10 @@
 - **Website audit — the older visitor, and every app capability on the website (2026-09-23; website `89b1883`, live).** Sponsor: audit the website for its age group, implement
   the app's details and design ideas on the website, make it appealing with reasons to return,
   represent every app capability including staff sign-in, and solve what's found.
-  - **Against the brief's web rules:** body text was 14px with grey-on-white labels — the
+  - **Against the brief's web rules:** body text was 14px with gray-on-white labels — the
     Tailwind text scale is moved up (text-sm 16px, text-base 18px), readable text is slate-600+,
     buttons are ≥44px, every PageHero carries "Home › … › page" (`parent` prop), phones get a
-    labelled Menu button, an **A− / A+ text-size control** in the header (localStorage, same
+    labeled Menu button, an **A− / A+ text-size control** in the header (localStorage, same
     three steps as the app's Settings → Text size), reduce-motion + visible focus + skip link.
     The hero already rotated only by hand. The footer's staff link now opens the site's own
     `/staff` (it opened the app's) and shows live hours + any notice from OHRR details.
@@ -960,7 +979,7 @@
     volunteer's own hours `/volunteer/hours[/:token]` (same RPCs and localStorage key as the app).
     Learn, Volunteer and Surrender link to them; Get the app now separates "only in the app".
   - **Staff:** Forgot your password? on sign-in + `/staff/reset` (outside the shell); Events,
-    Sponsors (full port incl. placements), Volunteers roster, Silent auction catalogue
+    Sponsors (full port incl. placements), Volunteers roster, Silent auction catalog
     (`/staff/auction`), Bunny Help topics, Features switches, Activity log — each in the nav and
     on the dashboard with its capability. The app's home-screen editor was not ported (it edits
     hero_slides, which Staff → Homepage already does).
@@ -986,7 +1005,7 @@
   page and home strip show them ("Live"), Dan's page shows Special needs + Adopted
   together with Forrest, photos load. Nothing waiting in Supabase. Sponsor: replace the demo rabbits with
   the real ones; Petfinder later. OHRR's Adoptable Bunnies page is a RescueGroups.org frame
-  (organisation 6091) — the same record feeds Petfinder and Adopt-a-Pet, so RescueGroups is
+  (organization 6091) — the same record feeds Petfinder and Adopt-a-Pet, so RescueGroups is
   the one source (its API is the natural tie-in later). `scripts/rescuegroups-rabbits.py`
   reads that public listing and writes `20260923200000_real_rabbits.sql`: 17 rabbits with
   OHRR's photos (RescueGroups CDN, 800×600), breed (RescueGroups' "Bunny Rabbit" = none
@@ -1025,7 +1044,7 @@
   - The links OHRR types in the app (`/bunfest/p/spa`, `/vets?rhdv2=1`, `/shop` …) are
     translated by `src/lib/links.ts` to this site's pages or the OHRR website.
   - Older-visitor rules: 18px body (Tailwind text scale moved up), dark on white, every menu
-    item visible (labelled Menu button on phones, Tickets button in the phone header), 48px
+    item visible (labeled Menu button on phones, Tickets button in the phone header), 48px
     targets, print styles, reduce-motion, `noindex` + `robots.txt`. Email only for OHRR — its
     number is not on this site (other rescues' and vets' numbers are theirs to publish).
   - `src/lib/floor.ts` and `src/components/VenuePlan.tsx` are copies of the app's — change
@@ -1040,7 +1059,7 @@
 - **Email, not the phone (2026-09-23).** OHRR: the phone isn't for emergencies,
   email is the primary way in, and everything runs on a very limited team of volunteers.
   OHRR then asked for it to be hard to find: it now appears ONLY on the About page (app
-  and website), as small grey print — not in the footer, not a tap-to-call link —
+  and website), as small gray print — not in the footer, not a tap-to-call link —
   and everything else points to email —
   surrender, found a rabbit, help, adopt, BunFest host card, letters, thank-yous,
   outreach, flyers. "Hurt? Call" became: OHRR can't respond to emergencies — MedVet
@@ -1179,7 +1198,7 @@
     `rescue_partners.bunfest_years` — "at BunFest" was a single yes/no, so putting
     this year's roster up meant deleting the record of last year's. Both forms
     tick years now.
-  - **`start_bunfest_year()`** copies a whole year forward — programme, festival
+  - **`start_bunfest_year()`** copies a whole year forward — program, festival
     cards, every page and both rosters — so next year starts from last year
     rather than a blank screen. Nothing already in the new year is touched.
   - **This year, typed in.** Both 2026 tracks (10 talks and a break each), nine
@@ -1207,7 +1226,7 @@
     `/accommodations.html`) and the merch link went to the Bonfire store's front
     door rather than this year's collection.
   - **Two bugs found on the way.** `/staff/bunfest/schedule` had no route, so the
-    one screen the year's programme is typed into landed on Not found. The "at the
+    one screen the year's program is typed into landed on Not found. The "at the
     festival" cards were seeded without links, so tapping one did nothing.
   - Verified: `tsc` + `build` clean in both repos; the two migrations validated
     for SQL and JSON before release; the schedule's track tabs, the new Volunteer
@@ -1286,12 +1305,12 @@
     on the phone and the website (`ohrr-website` gained the same `revision` + `src/lib/version.ts`).
     Also fixed: the commit was injected from Netlify's `COMMIT_REF`, so it had read "dev" since the
     move — it now reads `CF_PAGES_COMMIT_SHA`, then `COMMIT_REF`, then local git HEAD.
-  - **Staff Back.** The staff header's back control is now labelled **Back** (a work screen reads
+  - **Staff Back.** The staff header's back control is now labeled **Back** (a work screen reads
     better with the word), the "App" button lost its competing arrow, and `BackButton` takes an
     optional `label`. It was added yesterday and is live on pages.dev — it was missing from what
     the sponsor was looking at because that was the Netlify mirror.
   - **Settings.** Photo credits moved out of a full section into one line at the very end, opened
-    on tap (`<details>`); the licences require the credit to be available, not prominent.
+    on tap (`<details>`); the licenses require the credit to be available, not prominent.
 
 - **Audit round: consumer + staff (2026-09-22, latest).** Sponsor asked for an audit of
   "like issues" on both sides and approved every finding. **Paste `APPLY-10-BUNFEST-CONTENT.sql`
@@ -1300,7 +1319,7 @@
     shift lived only on the confirmation screen. `src/features/bookings/mine.ts` keeps every
     booking made on this device (localStorage, pruned a day after it ends, refreshed by token so
     a staff confirmation shows) and `MyBookingsCard` puts it on Home, Volunteer and Services;
-    cancelling by the private link forgets it. The website privacy policy's claim about a
+    canceling by the private link forgets it. The website privacy policy's claim about a
     "confirmation email" was corrected.
   - **Consumer — two dead ends opened up.** `/found/report` is a real report form (photo, where,
     condition, contained, contact → Inbox `found-rabbit`), linked first from Found a rabbit; a
@@ -1320,7 +1339,7 @@
     `rescue_partners`, and `suppliers.vendor_*` (category, blurb, room, booth, tables, published)
     behind `bunfest_vendors_public()`; **Staff → BunFest** (`features/bunfest/pages/StaffBunfest.tsx`,
     website `Staff → BunFest`) has Schedule / Vendors / Rescues. Schedule, Vendors, VendorDetail,
-    the event map (live booths and colours, `placeBooths()`), Partners and PartnerDetail read live
+    the event map (live booths and colors, `placeBooths()`), Partners and PartnerDetail read live
     with the 2025 seed as fallback; the BunFest **Sponsors** page now reads the `sponsors` table it
     had been ignoring.
   - **Staff — Happy Tails can be published.** `happy_tails` + `publish_happy_tail()`; the Inbox
@@ -1552,7 +1571,7 @@
     admissions, surrender policies, Be the Voice, Capital Campaign pledge) are served from
     the website's `/docs/`. Learn shows `section = 'care'` only.
   - **Still outside, on purpose:** Donate (old-site donate page → payment), Bonfire shirt
-    stores, Amazon wish list, Kroger enrolment, BunFest tickets on midwestbunfest.org,
+    stores, Amazon wish list, Kroger enrollment, BunFest tickets on midwestbunfest.org,
     Petfinder/Adopt-a-Pet, vets / partners / vendors directories, Facebook/Instagram, HRS/CHRS.
   - Also: one-line **"My bunny is…" Bunny Help search on Home** under the My Bunny strip.
   - Shared icons gained scan, gavel, camera, check, plus, minus, keyboard, printer, trash, box.
@@ -1584,7 +1603,7 @@
   - **Home → hero / featured cards** (`HeroCard` in `OhrrHome`): picture slot follows
     `slideVisual()` in `src/data/heroSlides.ts` — an uploaded `image_url` always wins →
     `/bunfest` shows the logo → `/adopt…` shows a real rabbit → every other link shows its
-    fixed icon centred on the tinted top band. `SLIDE_FALLBACK_IMAGES` now holds only the
+    fixed icon centered on the tinted top band. `SLIDE_FALLBACK_IMAGES` now holds only the
     BunFest logo and the Adopt photo; `slideIcon()` / `isAdoptSlide()` / `slideVisual()`
     mirror the website's (`ROUTE_ICONS`: silent-auction/auction/sponsors → `award`,
     bunfest/events/services/appointment/schedule → `calendar`, give/support → `gift`,
@@ -1674,7 +1693,7 @@
     (gated `content.education.edit`), both with one-tap import of the bundled seed;
     nav entries + dashboard tiles; volunteer categories now `socialization` / `buncare` /
     `vet-transport` / `field-rescue` / `events` (unknown values tolerated).
-  - **Unchanged by sponsor instruction:** adoptable rabbits stay on the labelled sample
+  - **Unchanged by sponsor instruction:** adoptable rabbits stay on the labeled sample
     data; the Petfinder function was not touched. Link-only/noindex settings untouched.
   - **Could not fetch/verify:** the Binkybunny.com "cost of a house rabbit" page (404 —
     summarized from OHRR's description only, still linked); the Columbus Rabbit Field
@@ -1826,7 +1845,7 @@
   built out as a real in-app section. "Become a volunteer" now opens an in-app
   form (Netlify `volunteer-signup`), not the OHRR website. Each way to help
   (`/volunteer/:slug`: socialization, vet-transport, events, foster) has its own
-  detail page with **template data** clearly labelled *Sample* — bunnies who need
+  detail page with **template data** clearly labeled *Sample* — bunnies who need
   socializing (with photos), open 1-hr shifts, vet-transport runs, and outreach
   events — each routing into the shared sign-up flow. Content in `src/data/volunteer.ts`.
   *(feat/inapp-polish)* Every sign-up now carries a **stable role `code`**
@@ -1839,7 +1858,7 @@
   inventory** of real rabbit products + OHRR merch (16 items across Hay & Food /
   Toys / Comfort & Litter / Apparel, with prices + In/Low stock + a category
   filter), the Hop Shop's hours & address, and a note that purchases happen in
-  person. Sample data clearly labelled; real stock will come from the planned
+  person. Sample data clearly labeled; real stock will come from the planned
   staff scan-a-product / set-quantity tool. Data in `src/data/hopshop.ts`.
 - **Settings** (`Settings`, gear icon in both top bars) — app version/build info,
   optional email identity (`src/lib/profile.ts`), and a saved-data summary.
@@ -1916,7 +1935,7 @@
   unless switched on in `/staff/settings`, and pricing comes only from
   `auction_settings` (staff-entered; nothing hard-coded).
   Post to Netlify (`spa-reservation`, `glamour-reservation`, `raffle-request`),
-  clearly labelled "pay in person until in-app payment is set up."
+  clearly labeled "pay in person until in-app payment is set up."
 - **Silent Auction gallery** (`SilentAuction`, `/bunfest/silent-auction`)
   *(feat/silent-auction)* — a browsable gallery (linked from the Raffle page) of
   auction items, each with **item number, photo, description, estimated value, and a
@@ -1944,7 +1963,7 @@
   Glamour Shots, Chillaxabun Lounge, Silent Auction, Raffle, MedVet, etc., and lays
   all 27 vendors into numbered booths (B1–B12 / E1–E15) with one or two 8-ft tables
   each (Burgundy left→right, Emerald top→bottom). **Booth positions are estimates,
-  clearly labelled** — OHRR sets the final layout. Tap a booth → vendor detail;
+  clearly labeled** — OHRR sets the final layout. Tap a booth → vendor detail;
   deep-linkable `?vendor=<id>`. Vendor list/detail show booth + room. Data in
   `src/data/floorplan.ts`. *(Source: the real 2025 map at
   midwestbunfest.org/event-map.html.)*
@@ -2118,7 +2137,7 @@ strategy doc; not yet scheduled:
   replace the outbound link with an in-app signup that uses the device profile email
   and **validates via an emailed code** entered back in the app.
 - **Swap template volunteer data for OHRR's real schedule** — the shifts, runs,
-  events, and socialization bunnies in `src/data/volunteer.ts` are clearly-labelled
+  events, and socialization bunnies in `src/data/volunteer.ts` are clearly-labeled
   samples; replace with OHRR's actual calendar (or back them with the database).
 - **Verify [VERIFY] facts with OHRR** — current hours; BunFest first year + edition
   count (matters for any anniversary feature).
@@ -2162,6 +2181,6 @@ Sponsor wants the app on phones for internal testers (Google Play internal testi
 - **Native config:** Android manifest — CAMERA (photo picker needs no storage permission, so READ_MEDIA_IMAGES deliberately not declared), POST_NOTIFICATIONS, SCHEDULE_EXACT_ALARM, RECEIVE_BOOT_COMPLETED, portrait-only; iOS Info.plist — NSCamera / NSPhotoLibrary(/Add) usage strings, portrait-only, arm64, `ITSAppUsesNonExemptEncryption=false`; versions 0.1.0 / versionCode 1 / MARKETING_VERSION 0.1.0.
 - **Icons + splash:** `scripts/make-native-assets.py` (Pillow) builds `resources/` from `public/ohrr-mark.png` — the mark in a white disc on brand blue (the mark is drawn for a white background, so no chroma-keying) — plus the Android status-bar icon `ic_stat_ohrr` (white silhouette). `npm run cap:assets` generated the adaptive/legacy launcher icons, splash drawables and the iOS AppIcon / Splash sets (committed).
 - **Android build done here:** JDK 21 + Android SDK 36 were present, so `gradlew bundleRelease` / `assembleDebug` ran: **`ohrr-0.1.0-vc1-release.aab`** (signed, `jarsigner -verify` OK) and **`ohrr-0.1.0-vc1-debug.apk`** in Drive `07-OHRR App/03 Mobile Builds/android/`. Test keystore `ohrr-test.keystore` + `README.txt` (passwords, keep-forever rule) in `…/90 Admin/Keys/`; `android/app/build.gradle` signs release when the gitignored `android/keystore.properties` exists (`keystore.properties.example` committed).
-- **Handoff:** `docs/HANDOFF.md` and Drive `07-OHRR App/03 Mobile Builds/OHRR Mobile Build Handoff.docx` (same content, generated from one source with the `docx` npm package): where things are, prerequisites (Mac: Xcode 16.4+, Node 22, no CocoaPods; Android Studio + JDK 21), numbered iPhone steps (clone → `npm install` → `npm run cap:sync` → `npm run cap:ios` → Team / bundle id → Run → Archive → TestFlight internal), Android steps (Studio or gradle → Play Console internal testing, versionCode rule, keystore rule), rebuild after a change, tester checklist, what's OFF (raffle-ticket flag, Petfinder proxy, Netlify-form posts, in-app Back up, .ics), public-release checklist (Apple org enrolment + D-U-N-S + nonprofit fee waiver, Play org verification / 14-day closed test, privacy URL after board review, remove noindex, listing text, screenshots), troubleshooting.
+- **Handoff:** `docs/HANDOFF.md` and Drive `07-OHRR App/03 Mobile Builds/OHRR Mobile Build Handoff.docx` (same content, generated from one source with the `docx` npm package): where things are, prerequisites (Mac: Xcode 16.4+, Node 22, no CocoaPods; Android Studio + JDK 21), numbered iPhone steps (clone → `npm install` → `npm run cap:sync` → `npm run cap:ios` → Team / bundle id → Run → Archive → TestFlight internal), Android steps (Studio or gradle → Play Console internal testing, versionCode rule, keystore rule), rebuild after a change, tester checklist, what's OFF (raffle-ticket flag, Petfinder proxy, Netlify-form posts, in-app Back up, .ics), public-release checklist (Apple org enrollment + D-U-N-S + nonprofit fee waiver, Play org verification / 14-day closed test, privacy URL after board review, remove noindex, listing text, screenshots), troubleshooting.
 - **Verified:** `npm run build` clean (dist works — checked at localhost:4173: web pages still show the calendar buttons and no native UI; with a fake Android bridge injected, the native "Remind me on this phone" rows render and outside links are intercepted), `npx tsc --noEmit` clean, `npx cap sync` OK, `node scripts/mybunny-check.ts` 205 checks (also fixed its stale Netlify UID expectation from the Cloudflare move).
 - Not done / for the Mac: iOS build + TestFlight (needs Xcode). Not attempted: share-sheet backup export, push notifications, a Cloudflare replacement for the Netlify form posts (pre-existing gap, documented in the handoff).

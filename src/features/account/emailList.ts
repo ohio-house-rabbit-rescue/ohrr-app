@@ -10,7 +10,7 @@
 // is what "For you" on Home goes by — signed in or not.
 //
 // Until update 31 is run the table and functions don't exist: callers get
-// `missing` back and fall back to today's behaviour.
+// `missing` back and fall back to today's behavior.
 import { useSyncExternalStore } from 'react'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
 import { submitRequest } from '../../lib/requests'

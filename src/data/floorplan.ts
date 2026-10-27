@@ -1,4 +1,4 @@
-// The colour each vendor category is drawn in on the BunFest map, so the map
+// The color each vendor category is drawn in on the BunFest map, so the map
 // and its key agree.
 //
 // The venue itself — rooms, tables, the stage, doors — used to be drawn from

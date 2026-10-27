@@ -25,7 +25,7 @@ export interface OrgProfile {
   /** Who signs volunteer-hours letters — never guessed; blank until set. */
   letter_signer_name: string
   letter_signer_title: string
-  /** Shown on letters when set — volunteer-grant programmes often ask for it. */
+  /** Shown on letters when set — volunteer-grant programs often ask for it. */
   ein: string
 }
 

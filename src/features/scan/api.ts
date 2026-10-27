@@ -316,7 +316,7 @@ export async function saveItem(orgId: string, d: ItemDraft): Promise<TaggedItem>
 }
 
 /**
- * A donation just catalogued, straight into the Silent Auction with its
+ * A donation just cataloged, straight into the Silent Auction with its
  * starting bid and Buy it now price (it keeps its DON number and photos).
  * The prices failing still leaves it in the auction; the message says so.
  */

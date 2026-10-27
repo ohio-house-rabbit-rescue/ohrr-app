@@ -772,7 +772,7 @@ export default function ScanFlow() {
     return (
       <StepShell
         title="What is it called?"
-        help="A short name people will recognise on the table."
+        help="A short name people will recognize on the table."
         step={editing ? undefined : n}
         of={editing ? undefined : of}
         onBack={() => backTo('name')}

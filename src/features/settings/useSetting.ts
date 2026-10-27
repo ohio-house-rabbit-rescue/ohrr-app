@@ -20,7 +20,7 @@ export interface SettingState<T> {
 }
 
 // Read one setting. The public app has no org context, so this reads the first
-// row for the key (the app serves one organisation). Returns the fallback
+// row for the key (the app serves one organization). Returns the fallback
 // silently on any error.
 export function useSetting<T extends Json>(key: string, fallback: T): SettingState<T> {
   const [state, setState] = useState<SettingState<T>>({ value: fallback, loading: isSupabaseConfigured })

@@ -90,7 +90,7 @@ export default function BreedGuide() {
           </div>
           {matches.length === 0 ? (
             <Card>
-              <p className="text-sm text-slate-600">No recognised breed matches all three answers — which usually means a mix. Try “Not sure” on one of them.</p>
+              <p className="text-sm text-slate-600">No recognized breed matches all three answers — which usually means a mix. Try “Not sure” on one of them.</p>
             </Card>
           ) : (
             <div className="grid grid-cols-2 gap-3">
@@ -118,7 +118,7 @@ export default function BreedGuide() {
             See who’s waiting <Icon name="chevron" size={14} />
           </Link>
         </Card>
-        <p className="px-1 text-xs leading-relaxed text-slate-400">Breed facts follow each breed’s Wikipedia article and the ARBA recognised-breeds list; photos are freely licensed Wikimedia Commons images, credited in Settings.</p>
+        <p className="px-1 text-xs leading-relaxed text-slate-400">Breed facts follow each breed’s Wikipedia article and the ARBA recognized-breeds list; photos are freely licensed Wikimedia Commons images, credited in Settings.</p>
       </Screen>
     </>
   )

@@ -149,7 +149,7 @@ export default function StaffOrgDetails() {
               <h2 className="font-display text-[15px] font-extrabold text-ink">Volunteer-hours letters</h2>
               <p className="mt-1 text-sm leading-relaxed text-slate-600">
                 Who signs the letters volunteers need for school credit, a military service award or a workplace
-                programme. Their name and title go under the signature line.
+                program. Their name and title go under the signature line.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -166,7 +166,7 @@ export default function StaffOrgDetails() {
               EIN (optional)
               <input className={staffInput} value={d.ein} onChange={txt('ein')} placeholder="00-0000000" />
               <span className="mt-1 block text-xs font-normal text-slate-500">
-                Employers’ volunteer-grant programmes often ask for it. Leave blank to leave it off.
+                Employers’ volunteer-grant programs often ask for it. Leave blank to leave it off.
               </span>
             </label>
           </Card>

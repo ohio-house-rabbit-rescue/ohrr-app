@@ -6,7 +6,7 @@
 //
 //   This year  the "at the festival" cards, the facts on Plan your visit, and
 //              "start next year" — which copies a whole year forward in one tap
-//   Schedule   the programme, including which track a talk belongs to
+//   Schedule   the program, including which track a talk belongs to
 //   Pages      Bunny Spa, Glamour Shots, the raffle, the host hotel … — their
 //              prices, times and copy, which change every year
 //   Vendors    the BunFest side of a company in the Hop Shop supplier list
@@ -134,7 +134,7 @@ export default function StaffBunfest() {
       <div className="pt-1">
         <h1 className="font-display text-2xl font-black text-ink">Midwest BunFest</h1>
         <p className="mt-1 text-sm text-slate-600">
-          The programme, the vendor tables and the rescue directory — what visitors see in the app and on the website.
+          The program, the vendor tables and the rescue directory — what visitors see in the app and on the website.
         </p>
       </div>
       <div className="grid grid-cols-3 gap-2">
@@ -261,7 +261,7 @@ function SessionsList({ orgId }: { orgId: string }) {
       {rows === null && !error && <Spinner />}
       {rows && rows.length === 0 && (
         <Card className="text-sm text-slate-600">
-          No sessions for {year} yet. Until one is published, visitors see the 2025 programme with a note that this
+          No sessions for {year} yet. Until one is published, visitors see the 2025 program with a note that this
           year’s is coming.
         </Card>
       )}
@@ -958,7 +958,7 @@ function ThisYearTab({ orgId }: { orgId: string }) {
 
 /**
  * Setting a new year up used to mean retyping everything. This copies the
- * programme, the festival cards, every activity page and both rosters into the
+ * program, the festival cards, every activity page and both rosters into the
  * new year in one tap, leaving anything already entered there untouched.
  */
 function StartNextYearCard({ orgId }: { orgId: string }) {
@@ -1001,7 +1001,7 @@ function StartNextYearCard({ orgId }: { orgId: string }) {
       <div>
         <h2 className="font-display text-[15px] font-extrabold text-ink">Start next year</h2>
         <p className="mt-1 text-sm leading-relaxed text-slate-600">
-          Copies the programme, the festival cards, every page, both rosters and the floor plan into a
+          Copies the program, the festival cards, every page, both rosters and the floor plan into a
           new year, so you edit last year’s instead of starting from a blank screen. Nothing already in
           the new year is touched — and a new venue can be designed from scratch on the Floor plan tab.
         </p>

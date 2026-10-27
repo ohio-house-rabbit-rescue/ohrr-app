@@ -1,6 +1,6 @@
 // "Given by (company)" on a silent-auction item: which company in the
 // supplier / vendor list donated it (`raffle_items.donor_supplier_id`, update
-// 27). It sits beside the free-text "Donated by" the catalogue shows, and puts
+// 27). It sits beside the free-text "Donated by" the catalog shows, and puts
 // the item on that company's card under "Given to OHRR". Staff only; saves the
 // moment a company is picked, and stays hidden until update 27 has been run.
 //

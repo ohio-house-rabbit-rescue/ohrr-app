@@ -16,7 +16,7 @@
 // Tables are numbered 1, 2, 3 … room by room, row by row, along each row, so a
 // volunteer types "7" and never "B7". Side-by-side tables of one stand are
 // drawn as ONE block with the name once; a walkway or a different row breaks
-// that, because those tables aren't neighbours on the floor.
+// that, because those tables aren't neighbors on the floor.
 //
 // Positions are in feet from the room's left wall (x) and top wall (y) as
 // drawn. This file is plain TypeScript with no app imports, so the website and

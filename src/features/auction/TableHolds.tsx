@@ -249,7 +249,7 @@ function HoldRow({ c, now, onDone }: { c: Claim; now: string; onDone: () => Prom
           <button
             type="button"
             disabled={busy}
-            onClick={() => window.confirm(`Put “${c.title}” back on sale? #${c.pickup_no} is cancelled.`) && void update({ p_payment_status: 'void' })}
+            onClick={() => window.confirm(`Put “${c.title}” back on sale? #${c.pickup_no} is canceled.`) && void update({ p_payment_status: 'void' })}
             className={danger}
           >
             Put it back

@@ -112,7 +112,7 @@ export const SEED_TOPICS: readonly SeedTopic[] = [
   },
   {
     slug: 'breathing',
-    title: 'Laboured or open-mouth breathing',
+    title: 'Labored or open-mouth breathing',
     aliases: [
       'breathing hard',
       'open mouth breathing',
@@ -126,7 +126,7 @@ export const SEED_TOPICS: readonly SeedTopic[] = [
     ],
     category: 'health',
     urgency: 'emergency',
-    summary: 'Laboured or open-mouth breathing can be life-threatening for rabbits.',
+    summary: 'Labored or open-mouth breathing can be life-threatening for rabbits.',
     what_to_do: EMERGENCY_LINE,
     article_slug: 'health',
     show_vets: true,
@@ -290,7 +290,7 @@ OHRR’s litter box guide says a sudden change in habits — especially after sp
     source: `${LITTER_GUIDE}; ${TOP_TEN} (#6)`,
   },
 
-  /* -------------------------------------------------------- behaviour */
+  /* -------------------------------------------------------- behavior */
   {
     slug: 'digging-chewing',
     title: 'Digging and chewing',
@@ -365,7 +365,7 @@ OHRR’s litter box guide says a sudden change in habits — especially after sp
 
 OHRR connects owners with experienced rabbit vets for the surgery — use Find a rabbit-savvy vet below.
 
-If your rabbit is already fixed and the behaviour is new or sudden, mention it to your vet.`,
+If your rabbit is already fixed and the behavior is new or sudden, mention it to your vet.`,
     article_slug: null,
     show_vets: true,
     hopshop_note: null,
@@ -397,7 +397,7 @@ If your rabbit is already fixed and the behaviour is new or sudden, mention it t
 - Cardboard with tape and adhesive removed: boxes with doors cut in, platforms, or boxes filled with paper or hay to dig in.
 - Toilet-paper and paper-towel rolls stuffed with hay for foraging.
 - Kraft paper and soy-ink newspaper to rip, dig, and toss.
-- Polar fleece — the only safe fabric, because its short fibres don’t cause digestive problems. Knot a blanket to chew, or make strip balls.
+- Polar fleece — the only safe fabric, because its short fibers don’t cause digestive problems. Knot a blanket to chew, or make strip balls.
 - Untreated pinecones and untreated willow baskets — check they’re untreated and animal-safe.
 - Toddler teething toys and wooden blocks.
 - Phone books only with supervision, with the covers and spine adhesive removed.
@@ -514,11 +514,11 @@ And you: playing with your rabbit is enrichment too.`,
     summary: 'Unlimited timothy hay, limited timothy pellets, and a daily salad — OHRR’s three-part diet.',
     what_to_do: `## Hay
 - Unlimited grass hay, refreshed daily. OHRR feeds Oxbow timothy; orchard grass and oat hay also work depending on your rabbit’s taste.
-- A rabbit should eat a pile of hay about the size of its body every day. Hay’s fibre keeps the gut moving and wears the teeth down.
+- A rabbit should eat a pile of hay about the size of its body every day. Hay’s fiber keeps the gut moving and wears the teeth down.
 - Alfalfa is for babies and underweight rabbits — OHRR reserves it for gaining weight, not for adults.
 
 ## Pellets
-- Plain timothy-based pellets only (OHRR suggests Oxbow or Small Pet Select). No corn, seeds, or colourful pieces.
+- Plain timothy-based pellets only (OHRR suggests Oxbow or Small Pet Select). No corn, seeds, or colorful pieces.
 - OHRR’s rule of thumb: about 1/8 cup per 4 lb of rabbit per day, and many rabbits do fine on less. Pellets are a supplement — hay is the diet.
 
 ## Water
@@ -559,7 +559,7 @@ Some rabbits have special dietary needs — work with your vet or adoption coord
     what_to_do: `## Daily greens
 - OHRR: about 1 cup of greens per 3 lb of body weight each day. Start with green leaf lettuce and add variety slowly.
 - Introduce one new green at a time and wait 24 hours before adding another (House Rabbit Society).
-- Almost all leafy greens are fine — cilantro, mint, and parsley are OHRR favourites. Skip iceberg lettuce (no nutrition). Go easy on spinach, mustard greens, and kale (high calcium), and on cabbage.
+- Almost all leafy greens are fine — cilantro, mint, and parsley are OHRR favorites. Skip iceberg lettuce (no nutrition). Go easy on spinach, mustard greens, and kale (high calcium), and on cabbage.
 
 ## Fruit and treats
 - Treats only: a raisin or craisin, a baby carrot, a small banana slice, or a strawberry. One baby carrot or banana slice a day is plenty.
@@ -602,7 +602,7 @@ Some rabbits have special dietary needs — work with your vet or adoption coord
     summary: 'OHRR’s list of foods that should never be fed to a rabbit.',
     what_to_do: `## Never feed
 - Avocado, bamboo shoots, dried or raw beans (lima, kidney, soy), bracken fern, cabbage, chocolate, coffee beans or plant, corn in any form, dog or cat food, grains, honey/seed sticks, most house plants, iceberg lettuce, meat, millet, nuts, onions, dried peas, people food, potatoes (including peels), refined sugar, rhubarb, sweet peas, sweet potatoes, tea leaves, whole seeds, yogurt drops.
-- Anything mouldy.
+- Anything moldy.
 - Nursery flowers usually carry pesticides — only organic flowers.
 
 ## If your rabbit ate something on the list
@@ -672,7 +672,7 @@ Some rabbits have special dietary needs — work with your vet or adoption coord
     urgency: 'tip',
     summary: 'OHRR’s Top Ten Tips for new bunny owners, in short.',
     what_to_do: `- A rabbit-savvy vet is your new best friend — rabbits are exotic pets with different needs from dogs and cats.
-- Get them fixed: spay/neuter cuts aggression and other unwanted behaviour and lowers cancer risk.
+- Get them fixed: spay/neuter cuts aggression and other unwanted behavior and lowers cancer risk.
 - Inside the house, not a hutch: indoors protects from disease, predators, and weather — and you’ll see their personality.
 - Housing: at least a 4×4 space on the floor with no wire bottom. An exercise pen works; some owners give a whole room.
 - Bunny-proof: secure cords, baseboards, house plants, and anything harmful.

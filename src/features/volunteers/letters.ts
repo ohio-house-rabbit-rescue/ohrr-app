@@ -3,7 +3,7 @@
 // Volunteers need proof of their hours for different people: a school giving
 // credit, a commander putting a service member forward for the Military
 // Outstanding Volunteer Service Medal, an employer's volunteer-grant
-// programme, or just "to whom it may concern". Each letter here is built from
+// program, or just "to whom it may concern". Each letter here is built from
 // the volunteer's details and the hours recorded on the day they were given —
 // nothing is typed, so nothing is guessed — and every one of them thanks the
 // volunteer.
@@ -40,8 +40,8 @@ export const LETTER_KINDS: { value: LetterKind; label: string; hint: string; ask
   },
   {
     value: 'workplace',
-    label: 'Workplace volunteer programme',
-    hint: 'For an employer’s volunteer-hours or matching-grant programme.',
+    label: 'Workplace volunteer program',
+    hint: 'For an employer’s volunteer-hours or matching-grant program.',
     ask: [
       { key: 'employer', label: 'Employer', placeholder: 'Nationwide' },
       { key: 'recipient', label: 'Addressed to (optional)', placeholder: 'Community Giving team' },
