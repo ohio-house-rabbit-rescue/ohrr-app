@@ -39,7 +39,7 @@ This document is for whoever builds and installs the OHRR app on phones for inte
 | Capacitor config | `capacitor.config.ts` (app id, name, splash / status-bar / notification settings) |
 | Native code the app uses | `src/native/` (platform.ts, camera.ts, notifications.ts, browser.ts, NativeBridge.tsx) |
 | Icon + splash sources | `resources/` (made from public/ohrr-mark.png by `scripts/make-native-assets.py`); generated into android/ and ios/ by `npm run cap:assets` |
-| Ready-made Android builds | G:\Shared drives\07-OHRR App\03 Mobile Builds\android\ — **ohrr-0.4.4-vc11-release.aab** (for Play Console), **ohrr-0.4.4-vc11-release.apk** (signed — sideload this one) and **ohrr-0.4.4-vc11-debug.apk** (developers); earlier builds are in `99 Archive/Android builds 0.1-0.2`, `0.3` and `0.4` |
+| Ready-made Android builds | G:\Shared drives\07-OHRR App\03 Mobile Builds\android\ — **ohrr-0.4.6-vc13-release.aab** (for Play Console), **ohrr-0.4.6-vc13-release.apk** (signed — sideload this one) and **ohrr-0.4.6-vc13-debug.apk** (developers); earlier builds are in `99 Archive/Android builds 0.1-0.2`, `0.3` and `0.4` |
 | Android test signing key | G:\Shared drives\07-OHRR App\90 Admin\Keys\ohrr-test.keystore + README.txt (passwords). Never in the repo. |
 | iPhone builds | G:\Shared drives\07-OHRR App\03 Mobile Builds\ios\ — empty until the Mac produces one (see section 4) |
 | This document | docs/HANDOFF.md in the repo, and G:\Shared drives\07-OHRR App\03 Mobile Builds\OHRR Mobile Build Handoff.docx |
