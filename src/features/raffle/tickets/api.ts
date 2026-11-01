@@ -36,6 +36,9 @@ export interface RaffleWinner {
   source: 'app' | 'table'
   prize_id: string | null
   prize: string | null
+  /** Update 48: when the prize was given to the winner, and by whom (null = not yet). */
+  handed_over_at?: string | null
+  handed_over_by?: string | null
   found?: boolean
 }
 export interface DeskSummary {
@@ -112,6 +115,12 @@ export async function recordBucketDraw(orgId: string, eventSlug: string, ticketN
 export async function undoDraw(ticketId: string): Promise<void> {
   const { error } = await supabase.rpc('undo_raffle_draw', { p_ticket_id: ticketId })
   if (error) throw error
+}
+/** Tick (or untick) "Handed over" on a winning ticket (update 48). */
+export async function setHandedOver(ticketId: string, handed: boolean): Promise<RaffleWinner> {
+  const { data, error } = await supabase.rpc('set_raffle_handed_over', { p_ticket_id: ticketId, p_handed: handed })
+  if (error) throw error
+  return data as unknown as RaffleWinner
 }
 export async function winners(orgId: string, eventSlug: string): Promise<RaffleWinner[]> {
   const { data, error } = await supabase.rpc('raffle_winners', { p_org: orgId, p_event: eventSlug })

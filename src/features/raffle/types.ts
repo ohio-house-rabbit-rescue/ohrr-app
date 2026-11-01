@@ -3,16 +3,19 @@
 // `auction_settings` tables (see supabase/migrations/20260917130000_raffle_items.sql).
 // The table keeps its `raffle_items` name so the OHRR website can read it too.
 import type { Database } from '../../lib/database.types'
+import { currentEvent } from '../../lib/currentEvent'
 
 export type AuctionItem = Database['public']['Tables']['raffle_items']['Row']
 export type AuctionItemInsert = Database['public']['Tables']['raffle_items']['Insert']
 export type AuctionItemUpdate = Database['public']['Tables']['raffle_items']['Update']
 export type AuctionSettings = Database['public']['Tables']['auction_settings']['Row']
 
-// The event this catalog belongs to (plain text in the table; no FK yet).
-export const AUCTION_EVENT_SLUG = 'midwest-bunfest-2026'
-// BunFest day, used to turn a staff-entered close time into a timestamptz.
-export const AUCTION_EVENT_DATE = '2026-10-25'
+// The event this catalog belongs to (plain text in the table; no FK yet). Chosen
+// on Staff → Silent Auction (update 48) and read before the app loads, so these
+// are the chosen event's from the first line — never typed into the code.
+export const AUCTION_EVENT_SLUG = currentEvent.slug
+// The event's day, used to turn a staff-entered close time into a timestamptz.
+export const AUCTION_EVENT_DATE = currentEvent.date
 export const AUCTION_EVENT_TZ = 'America/New_York'
 
 export const AUCTION_SESSIONS = [

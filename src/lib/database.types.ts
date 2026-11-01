@@ -1882,6 +1882,8 @@ export type Database = {
           prize_id: string | null
           drawn_at: string | null
           drawn_by: string | null
+          handed_over_at: string | null
+          handed_over_by: string | null
         }
         Insert: { org_id: string; event_slug: string; order_id: string; ticket_no: number }
         Update: { prize_id?: string | null }
@@ -2787,6 +2789,7 @@ export type Database = {
       draw_raffle_ticket: { Args: { p_org: string; p_event: string; p_prize_id?: string | null }; Returns: Json }
       record_bucket_draw: { Args: { p_org: string; p_event: string; p_ticket_no: number; p_prize_id?: string | null }; Returns: Json }
       undo_raffle_draw: { Args: { p_ticket_id: string }; Returns: undefined }
+      set_raffle_handed_over: { Args: { p_ticket_id: string; p_handed: boolean }; Returns: Json }
       raffle_desk: { Args: { p_org: string; p_event: string; p_query?: string | null }; Returns: Json }
       raffle_winners: { Args: { p_org: string; p_event: string }; Returns: Json }
       raffle_desk_summary: { Args: { p_org: string; p_event: string }; Returns: Json }

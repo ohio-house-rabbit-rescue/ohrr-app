@@ -3,7 +3,8 @@
 // BunFest site carry a copy (src/lib/auctionClient.ts). Keep the three in sync.
 //
 // Two auctions share it (update 45): BunFest's Silent Auction and the OHRR
-// Online Auction, told apart by their event slug.
+// Online Auction, told apart by their event slug. The BunFest one is whichever event
+// staff chose (update 48; src/lib/currentEvent.ts).
 //
 // Where things run:
 //   * reading the catalog, placing a bid, the bidder's own page → Postgres
@@ -11,8 +12,9 @@
 //   * registering (saving a card), Buy Now, changing a card, charging → the
 //     "ohrr-auction" Supabase Edge Function, which holds Square's access token
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { currentEvent } from '../../lib/currentEvent'
 
-export const AUCTION_EVENT = 'midwest-bunfest-2026'
+export const AUCTION_EVENT = currentEvent.slug
 export const ONLINE_AUCTION_EVENT = 'ohrr-online-auction'
 
 /** The payment server: the "ohrr-auction" Edge Function (Square). */

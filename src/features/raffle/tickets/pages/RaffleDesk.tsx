@@ -14,7 +14,8 @@ import { Suspense, lazy, useCallback, useEffect, useState, type FormEvent } from
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../lib/auth'
 import { errMessage, supabase } from '../../../../lib/supabase'
-import { eventDate, useBunfestEvent } from '../../../../lib/events'
+import { eventDate } from '../../../../lib/events'
+import { currentEventRecord } from '../../../../lib/currentEvent'
 import { Screen, Card, Badge, SectionLabel, btn } from '../../../../components/ui'
 import { Icon } from '../../../../components/icons'
 import { Explain, StaffTitle } from '../../../../components/StaffTitle'
@@ -23,7 +24,7 @@ import { StepButton, StepRow, StepRows, WorkingOn, pill } from '../../../../comp
 import ExportButtons from '../../../../components/ExportButtons'
 import { useOrgBits } from '../../../volunteers/orgBits'
 import { AUCTION_EVENT_SLUG, formatValue, rafflePriceLine, type AuctionSettings } from '../../types'
-import { deskOrders, deskSummary, drawTicket, money, orderByToken, recordBucketDraw, sellAtTable, setOrderStatus, ticketLabel, ticketRange, tokenFromScan, undoDraw, winners, type DeskSummary, type RaffleOrder, type RaffleWinner } from '../api'
+import { deskOrders, deskSummary, drawTicket, money, orderByToken, recordBucketDraw, sellAtTable, setHandedOver, setOrderStatus, ticketLabel, ticketRange, tokenFromScan, undoDraw, winners, type DeskSummary, type RaffleOrder, type RaffleWinner } from '../api'
 import { raffleSheet, raffleSummaryPdf, raffleTotals, type RafflePrize } from '../raffleSummary'
 
 const Scanner = lazy(() => import('../../../scan/Scanner'))
@@ -37,7 +38,7 @@ const act = (p: string) => `${p} !min-h-[44px]`
 
 export default function RaffleDesk() {
   const { membership, can } = useAuth()
-  const bunfest = useBunfestEvent()
+  const bunfest = currentEventRecord()
   const orgId = membership?.orgId ?? ''
   const [params, setParams] = useSearchParams()
   const [summary, setSummary] = useState<DeskSummary | null>(null)
@@ -512,8 +513,22 @@ function DrawTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
 }
 
 /** A drawn ticket: its number, the winner, the prize, and buttons to reach them or undo the draw. */
-function WinnerCard({ w, onUndo, reach = false }: { w: RaffleWinner; onUndo?: () => void; reach?: boolean }) {
+function WinnerCard({
+  w,
+  onUndo,
+  onHand,
+  handBusy = false,
+  reach = false,
+}: {
+  w: RaffleWinner
+  onUndo?: () => void
+  /** Step 3: tick or untick "Handed over" (stored with the ticket, update 48). */
+  onHand?: (handed: boolean) => void
+  handBusy?: boolean
+  reach?: boolean
+}) {
   const phone = (w.phone ?? '').trim()
+  const handedAt = w.handed_over_at ? new Date(w.handed_over_at) : null
   return (
     <Card className="space-y-2 !py-3">
       <div className="min-w-0">
@@ -523,6 +538,23 @@ function WinnerCard({ w, onUndo, reach = false }: { w: RaffleWinner; onUndo?: ()
         <p className="text-sm text-slate-600">{w.prize ?? 'No prize recorded'}</p>
         {phone ? <p className="text-sm font-semibold text-slate-700">{phone}</p> : reach ? <p className="text-sm text-slate-500">No phone number — ask at the table.</p> : null}
       </div>
+      {onHand &&
+        (handedAt ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-green-50 px-3 py-2">
+            <Icon name="check" size={18} className="text-green-700" />
+            <p className="min-w-0 flex-1 text-[15px] font-bold text-green-800">
+              Handed over · {handedAt.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })}
+              {w.handed_over_by ? ` · by ${w.handed_over_by}` : ''}
+            </p>
+            <button type="button" onClick={() => onHand(false)} disabled={handBusy} className={act(pill.outline)}>
+              Not handed over
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => onHand(true)} disabled={handBusy} className={`${pill.green} !min-h-[52px] w-full !text-base`}>
+            <Icon name="check" size={18} /> {handBusy ? 'Saving…' : 'Prize handed over'}
+          </button>
+        ))}
       {((reach && phone) || onUndo) && (
         <div className="flex flex-wrap items-center gap-2">
           {reach && phone && (
@@ -553,6 +585,25 @@ function WinnersTab({ orgId, summary, eventName }: { orgId: string; summary: Des
   const [prizes, setPrizes] = useState<Prize[]>([])
   const [orders, setOrders] = useState<RaffleOrder[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [handBusy, setHandBusy] = useState<string | null>(null)
+
+  const hand = async (w: RaffleWinner, handed: boolean) => {
+    setHandBusy(w.ticket_id)
+    setError(null)
+    try {
+      const next = await setHandedOver(w.ticket_id, handed)
+      setList((l) => l?.map((x) => (x.ticket_id === w.ticket_id ? { ...x, ...next } : x)) ?? l)
+    } catch (e) {
+      const m = errMessage(e)
+      setError(
+        /set_raffle_handed_over|schema cache|does not exist/i.test(m)
+          ? 'Marking a prize as handed over waits for database update 48 (the person who runs the database updates has it). Until then nothing is saved here.'
+          : m,
+      )
+    } finally {
+      setHandBusy(null)
+    }
+  }
 
   useEffect(() => {
     let alive = true
@@ -594,7 +645,7 @@ function WinnersTab({ orgId, summary, eventName }: { orgId: string; summary: Des
       {list === null && <Spinner />}
       {list && list.length === 0 && <p className="text-sm text-slate-500">No winners drawn yet. Draw them in step 2.</p>}
       {list?.map((w) => (
-        <WinnerCard key={w.ticket_id} w={w} reach />
+        <WinnerCard key={w.ticket_id} w={w} reach onHand={(h) => void hand(w, h)} handBusy={handBusy === w.ticket_id} />
       ))}
 
       <SectionLabel>I’m done</SectionLabel>
@@ -606,9 +657,11 @@ function WinnersTab({ orgId, summary, eventName }: { orgId: string; summary: Des
           </Card>
         ))}
       </div>
-      <p className="text-sm text-slate-600">The PDF has a box beside every winner to tick when their prize is handed over.</p>
+      <p className="text-sm text-slate-600">
+        {(list ?? []).filter((w) => w.handed_over_at).length} of {(list ?? []).length} prizes handed over. The summary and the spreadsheet show which ones.
+      </p>
       <ExportButtons
-        spec={() => raffleSheet(orders, eventName)}
+        spec={() => raffleSheet(orders, eventName, list ?? [])}
         label="Spreadsheet"
         pdf={{
           label: 'Summary (PDF)',

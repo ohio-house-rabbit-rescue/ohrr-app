@@ -46,7 +46,9 @@ import {
   type AuctionSettings,
 } from '../features/raffle/types'
 import { GivenByCompany } from '../features/bunfest/GivenByCompany'
-import { eventDate, useBunfestEvent } from '../lib/events'
+import { eventDate } from '../lib/events'
+import { currentEventRecord } from '../lib/currentEvent'
+import EventPicker from '../features/auction/EventPicker'
 import { auctionApi, fmtWhen, money, ONLINE_AUCTION_EVENT } from '../features/auction/client'
 import { AuctionEventProvider, BUNFEST_AUCTION, ONLINE_AUCTION, useAuctionEvent } from '../features/auction/event'
 
@@ -818,8 +820,8 @@ function SetupPanel({
   onSaved: () => void
 }) {
   const ev = useAuctionEvent()
-  // BunFest day comes from the event record, so next year's auction needs no code change.
-  const bunfest = useBunfestEvent()
+  // The event's name and day are the ones staff chose (Staff → Silent Auction), so next year's auction needs no code change.
+  const bunfest = currentEventRecord()
   const day = eventDay(bunfest.startsAt)
   const dayText = new Date(`${day}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   const [editing, setEditing] = useState(false)
@@ -1288,7 +1290,7 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
   // Goes up each time step 1 asks the setup form to open.
   const [setupSignal, setSetupSignal] = useState(0)
   // BunFest's name and day come from its event record, never from this page.
-  const bunfest = useBunfestEvent()
+  const bunfest = currentEventRecord()
   const bunfestDay = eventDate(bunfest)
   // Does the database have update 35 (online bidding)? One tiny probe on load.
   const [hasBidding, setHasBidding] = useState(false)
@@ -1441,6 +1443,8 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
             : `${ev.online ? '' : `${bunfestDay} · `}${items.length} item${items.length === 1 ? '' : 's'} · ${availableCount} available in the app`
         }
       />
+
+      {!ev.online && <EventPicker />}
 
       <StepRows label={ev.online ? 'How the Online Auction runs' : 'How the Silent Auction runs'}>
         <StepRow n={1} name="Set up the auction" done={Boolean(settings)} hint={settings ? undefined : 'close times, bidding rules'}>

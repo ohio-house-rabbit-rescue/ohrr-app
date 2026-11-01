@@ -17,7 +17,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage, supabase } from '../../../lib/supabase'
-import { useBunfestEvent } from '../../../lib/events'
+import { currentEventRecord } from '../../../lib/currentEvent'
 import { Screen, Card, Badge, btn, QuietNote } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, staffInput } from '../../../components/staffui'
@@ -88,7 +88,7 @@ function Desk() {
   const [params, setParams] = useSearchParams()
   const { membership, can } = useAuth()
   // The event's own name and date come from its record, not from this page.
-  const bunfest = useBunfestEvent()
+  const bunfest = currentEventRecord()
   const orgId = membership?.orgId ?? ''
   const allowed = can('events.bunfest.manage')
   const wanted = params.get('tab')

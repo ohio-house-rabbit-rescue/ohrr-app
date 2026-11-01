@@ -6,6 +6,7 @@
 // useAuctionEvent() for its slug, its paths and its words.
 import { createContext, useContext, type ReactNode } from 'react'
 import { AUCTION_EVENT, ONLINE_AUCTION_EVENT } from './client'
+import { currentEvent } from '../../lib/currentEvent'
 
 export interface AuctionEvent {
   slug: string
@@ -24,7 +25,7 @@ export const BUNFEST_AUCTION: AuctionEvent = {
   base: '/bunfest/auction',
   online: false,
   name: 'Silent Auction',
-  subtitle: 'Midwest BunFest 2026',
+  subtitle: currentEvent.title,
   home: { to: '/bunfest', label: 'Midwest BunFest' },
 }
 

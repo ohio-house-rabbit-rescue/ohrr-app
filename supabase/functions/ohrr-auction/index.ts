@@ -162,7 +162,7 @@ async function settingsFor(event: string): Promise<Settings> {
 }
 
 const auctionName = (s: Settings) =>
-  s.title || (s.event_slug.startsWith('midwest-bunfest') ? 'Midwest BunFest Silent Auction' : 'OHRR Online Auction')
+  s.title || (s.event_slug === 'ohrr-online-auction' ? 'OHRR Online Auction' : 'Silent Auction')
 
 // -------------------------------------------------------------
 // Square

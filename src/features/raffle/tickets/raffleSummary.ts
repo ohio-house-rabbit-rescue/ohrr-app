@@ -3,9 +3,9 @@
 // of every ticket sale. The same pattern as the volunteer call summary
 // (volunteers/callSummary.ts). Staff audit, 2026-10-27.
 //
-// There is no record of a prize being handed over (that would need a database
-// column), so the PDF prints a "Handed over" box beside every winner to tick on
-// paper, and the spreadsheet has a blank "Handed over" column.
+// Whether a prize was handed over is stored with the winning ticket (update 48,
+// ticked on the Raffle desk), so the PDF and the spreadsheet say Yes (with the
+// time) or Not yet — nothing to tick on paper.
 import type { SheetSpec } from '../../../lib/inventoryExport'
 import { money, ticketLabel, ticketRange, type DeskSummary, type RaffleOrder, type RaffleWinner } from './api'
 
@@ -36,12 +36,19 @@ export function raffleTotals(summary: DeskSummary | null, winners: RaffleWinner[
   }
 }
 
+/** "Yes, Sun 3:20 PM" / "Not yet". */
+const handedText = (w: RaffleWinner | undefined) =>
+  w?.handed_over_at
+    ? `Yes, ${new Date(w.handed_over_at).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`
+    : 'Not yet'
+
 const today = () => new Date().toLocaleDateString('en-CA')
 
 const statusWord = (s: RaffleOrder['status']) => (s === 'paid' ? 'Paid' : s === 'void' ? 'Void' : 'To pay')
 
 /** Every ticket sale, newest first, with the numbers and any winning ticket. */
-export function raffleSheet(orders: RaffleOrder[], eventName: string): SheetSpec {
+export function raffleSheet(orders: RaffleOrder[], eventName: string, winners: RaffleWinner[] = []): SheetSpec {
+  const handed = new Map(winners.map((w) => [w.no, w]))
   const rows = [...orders]
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
     .map((o) => {
@@ -58,7 +65,7 @@ export function raffleSheet(orders: RaffleOrder[], eventName: string): SheetSpec
           statusWord(o.status),
           o.source === 'table' ? 'At the table' : 'In the app',
           won.map((t) => `${ticketLabel(t.no)}${t.prize ? ` (${t.prize})` : ''}`).join(', '),
-          '',
+          won.map((t) => handedText(handed.get(t.no))).join(', '),
         ],
       }
     })
@@ -159,7 +166,7 @@ export async function raffleSummaryPdf(
   }
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(13)
-  doc.text('Winners', left, y)
+  doc.text(plain(`Winners - ${winners.filter((w) => w.handed_over_at).length} of ${winners.length} prizes handed over`), left, y)
   y += 0.08
   doc.setLineWidth(0.015)
   doc.line(left, y, right, y)
@@ -186,8 +193,8 @@ export async function raffleSummaryPdf(
     doc.text(doc.splitTextToSize(plain(win.name) || '-', 2.1)[0], cols.name, y)
     doc.text(doc.splitTextToSize(plain(win.phone) || '-', 1.4)[0], cols.phone, y)
     doc.text(doc.splitTextToSize(plain(win.prize) || '-', 1.5)[0], cols.prize, y)
-    doc.setLineWidth(0.012)
-    doc.rect(right - 0.2, y - 0.14, 0.2, 0.2)
+    doc.setFont('helvetica', win.handed_over_at ? 'bold' : 'normal')
+    doc.text(plain(handedText(win)), cols.box, y, { align: 'right' })
     y += 0.3
   })
 
