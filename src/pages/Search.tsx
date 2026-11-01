@@ -3,18 +3,14 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { searchAll, type SearchItem } from '../data/search'
 import { Screen } from '../components/ui'
 import { Icon } from '../components/icons'
-
-// Web Speech API (Chrome/Edge/Safari). Undefined where unsupported → mic hidden.
-const SpeechRecognition: any =
-  typeof window !== 'undefined' && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+import { KEYBOARD_MIC_TIP, useVoiceInput } from '../features/scan/voice'
 
 export default function Search() {
   const [params] = useSearchParams()
   const from = params.get('from') ? decodeURIComponent(params.get('from')!) : '/'
   const [query, setQuery] = useState('')
-  const [listening, setListening] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const recogRef = useRef<any>(null)
+  const voice = useVoiceInput((text) => setQuery(text))
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -29,27 +25,6 @@ export default function Search() {
     }
     return [...m.entries()]
   }, [results])
-
-  const startVoice = () => {
-    if (!SpeechRecognition) return
-    if (listening) {
-      recogRef.current?.stop()
-      return
-    }
-    const recog = new SpeechRecognition()
-    recogRef.current = recog
-    recog.lang = 'en-US'
-    recog.interimResults = false
-    recog.maxAlternatives = 1
-    recog.onresult = (e: any) => {
-      const transcript = e.results?.[0]?.[0]?.transcript ?? ''
-      setQuery(transcript)
-    }
-    recog.onend = () => setListening(false)
-    recog.onerror = () => setListening(false)
-    setListening(true)
-    recog.start()
-  }
 
   return (
     <Screen className="space-y-4">
@@ -81,13 +56,13 @@ export default function Search() {
               <Icon name="x" size={16} />
             </button>
           )}
-          {SpeechRecognition && (
+          {voice.supported && (
             <button
               type="button"
-              onClick={startVoice}
+              onClick={voice.toggle}
               aria-label="Search by voice"
               className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition ${
-                listening ? 'bg-brand-orange text-ink' : 'bg-brand-blue-50 text-brand-blue hover:bg-brand-blue hover:text-white'
+                voice.listening ? 'bg-brand-orange text-ink' : 'bg-brand-blue-50 text-brand-blue hover:bg-brand-blue hover:text-white'
               }`}
             >
               <Icon name="mic" size={15} />
@@ -96,16 +71,17 @@ export default function Search() {
         </div>
       </div>
 
-      {listening && (
+      {voice.listening && (
         <p className="px-1 text-sm font-semibold text-brand-orange">Listening… say what you’re looking for.</p>
       )}
+      {voice.message && <p className="px-1 text-sm font-semibold text-slate-700">{voice.message}</p>}
 
       {/* Empty state */}
       {!query && (
         <div className="space-y-3 pt-2">
           <p className="px-1 text-sm leading-relaxed text-slate-500">
             Search across the whole app — rabbits, care guides, vendors, volunteer roles, BunFest
-            sessions, and more. Type above{SpeechRecognition ? ' or tap the mic to speak' : ''}.
+            sessions, and more. {voice.supported ? 'Type above or tap the mic to speak.' : `Type above. ${KEYBOARD_MIC_TIP}`}
           </p>
           <div className="flex flex-wrap gap-2">
             {['Adopt', 'Bonding', 'Diet', 'Foster', 'Vendors', 'Donate'].map((s) => (

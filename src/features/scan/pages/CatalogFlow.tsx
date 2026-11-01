@@ -74,25 +74,21 @@ import {
   useItemPurposes,
   type Extras,
 } from '../DetailsFields'
-import { boxByCode, loadPackingBox, newBox, putInBox, savePackingBox, type PackingBox } from '../boxes'
+import { BOX_SIZE, boxByCode, boxLabel, listBoxes, loadPackingBox, markBoxesPrinted, newBox, putInBox, savePackingBox, type Box, type PackingBox } from '../boxes'
+import { KEYBOARD_MIC_TIP, sentenceCase, useVoiceInput } from '../voice'
 import { tellOthersLabelsChanged } from '../labelSync'
 import { useLabelSize } from '../useLabelSize'
 import { Explain } from '../../../components/StaffTitle'
 import BluetoothPrint from '../printer/BluetoothPrint'
 import ReceivingSummary from '../ReceivingSummary'
 import { bagKey, loadSession, saveSession, type ReceivingSession } from '../receivingSession'
-import { bluetoothAvailable } from '../printer/bluetooth'
+import { bluetoothAvailable, connectedPrinter } from '../printer/bluetooth'
 
 /** "$35" or "$12.50". */
 const usd = (cents: number) => (cents % 100 === 0 ? `$${cents / 100}` : `$${(cents / 100).toFixed(2)}`)
 
-type Step = 'start' | 'name' | 'saved' | 'full' | 'summary'
-
-// Web Speech API (Chrome, Edge, Safari). Missing inside the iPhone app's web
-// view → the mic is hidden and the keyboard's own dictation key does the job.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const SpeechRecognitionCtor: any =
-  typeof window !== 'undefined' && ((window as unknown as Record<string, unknown>).SpeechRecognition || (window as unknown as Record<string, unknown>).webkitSpeechRecognition)
+// Receive into boxes (?box=1) has no 'start' or 'saved' screens: it is one screen, see below.
+type Step = 'start' | 'name' | 'saved' | 'summary'
 
 interface Draft extends Extras {
   title: string
@@ -274,7 +270,6 @@ function CameInChoice({ value, onChange }: { value: 'donation' | 'purchase'; onC
     </div>
   )
 }
-const BOX_PARTS = ['Start a box', 'Add each item', 'Box is full', 'Print box labels']
 
 /**
  * Who this bag is from, at the top of every item (OHRR 2026-10-27: "it says on
@@ -317,6 +312,8 @@ export default function CatalogFlow() {
   const allowed = KIND_META.donation.caps.some((c) => can(c))
   // Runs the Silent Auction: a donation headed there goes straight in, with its prices.
   const canAuction = can('events.bunfest.manage')
+  // Receive into boxes (?box=1, OHRR 2026-10-27): one screen for the whole job.
+  const wantsBoxes = params.get('box') === '1'
   const [step, setStep] = useState<Step>('start')
   const [current, setCurrent] = useState<Current | null>(loadCurrent)
   // Everything received on this phone today, for the summary at the end.
@@ -333,16 +330,18 @@ export default function CatalogFlow() {
   const [today, setToday] = useState<number | null>(null)
   const [unprinted, setUnprinted] = useState<number | null>(null)
   const [donors, setDonors] = useState<string[]>([])
-  const [listening, setListening] = useState(false)
   const suggestions = useCatalogSuggestions(orgId)
   const purposes = useItemPurposes(orgId)
   // Receive into boxes: the box being filled, how many are in it, and the one just closed.
-  const wantsBoxes = params.get('box') === '1'
   const [packingBox, setBoxState] = useState<PackingBox | null>(loadPackingBox)
   const box = wantsBoxes ? packingBox : null
   const [boxCount, setBoxCount] = useState<number | null>(null)
   const [boxBusy, setBoxBusy] = useState(false)
-  const [fullBox, setFullBox] = useState<{ box: PackingBox; count: number | null } | null>(null)
+  // The box just closed with "Box is full" (its label can print right there), and the boxes to choose from.
+  const [closedBox, setClosedBox] = useState<{ no: number; code: string; count: number | null; box: Box | null } | null>(null)
+  const [recentBoxes, setRecentBoxes] = useState<Box[] | null>(null)
+  const [changingBox, setChangingBox] = useState(false)
+  const [boxPrinted, setBoxPrinted] = useState<string | null>(null)
   // Where the box being filled is kept (asked when it's started; its items are kept there too).
   const [boxPlace, setBoxPlace] = useState('')
   const setBox = (b: PackingBox | null) => {
@@ -377,10 +376,35 @@ export default function CatalogFlow() {
   const cameraRef = useRef<HTMLInputElement>(null)
   const libraryRef = useRef<HTMLInputElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recogRef = useRef<any>(null)
+  // The parts of the one-screen box job; each one is brought to the middle of the screen when the one before it is done.
+  const photoPartRef = useRef<HTMLDivElement>(null)
+  const namePartRef = useRef<HTMLDivElement>(null)
+  const boxPartRef = useRef<HTMLDivElement>(null)
+  const savePartRef = useRef<HTMLDivElement>(null)
+  // What was saved last, kept so a failed save can put it back on the screen.
+  const lastDraft = useRef<Draft | null>(null)
+  const lastShots = useRef<Shot[]>([])
+  const voice = useVoiceInput((text) => setDraft((d) => ({ ...d, title: sentenceCase(text) })))
 
   const update = useCallback((patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch })), [])
+
+  /**
+   * Auto-advance: bring the next part into view. A short part sits in the middle of the screen; a tall one
+   * (its choices below the heading) starts just under the top bar so the choices are on screen, clear of the footer.
+   */
+  const goTo = (ref: { current: HTMLElement | null }, focus?: boolean) => {
+    window.setTimeout(() => {
+      const el = ref.current
+      if (!el) return
+      const room = window.innerHeight - 220
+      if (el.getBoundingClientRect().height < room) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      } else {
+        window.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - 70), behavior: 'smooth' })
+      }
+      if (focus) el.querySelector<HTMLElement>('input,textarea')?.focus({ preventScroll: true })
+    }, 120)
+  }
 
   // Today's count, the unprinted-label count and the donor chips.
   useEffect(() => {
@@ -425,7 +449,18 @@ export default function CatalogFlow() {
   }, [orgId, box?.code])
 
   /* ------------------------------------------------ boxes */
-  /** A new box with the next number: write it on the box, then add items. */
+  // The boxes to choose from (newest first), read once the job opens and after a box is made.
+  const loadRecentBoxes = useCallback(() => {
+    if (!orgId) return
+    listBoxes(orgId)
+      .then((l) => setRecentBoxes(l.slice(0, 6)))
+      .catch(() => setRecentBoxes([]))
+  }, [orgId])
+  useEffect(() => {
+    if (wantsBoxes) loadRecentBoxes()
+  }, [wantsBoxes, loadRecentBoxes])
+
+  /** A new box with the next number, kept where the last one was: write the number on it. */
   const startBox = async () => {
     setBoxBusy(true)
     setError(null)
@@ -436,8 +471,9 @@ export default function CatalogFlow() {
       setBoxCount(0)
       setBoxPlace(b.location ?? place)
       update({ location: b.location ?? place })
-      setFullBox(null)
-      setStep('start')
+      setChangingBox(false)
+      loadRecentBoxes()
+      goTo(savePartRef)
     } catch (err) {
       setError(errMessage(err))
     } finally {
@@ -445,21 +481,30 @@ export default function CatalogFlow() {
     }
   }
 
-  /** The box is full: its label waits; the next box starts when they say. */
-  const boxIsFull = () => {
-    if (!box) return
-    setFullBox({ box, count: boxCount })
-    setBox(null)
-    setError(null)
-    setStep('full')
+  /** Put the items in a box that is already started. */
+  const pickBox = (b: Box) => {
+    setBox({ code: b.code, box_no: b.box_no })
+    setBoxCount(b.items.length)
+    setBoxPlace(b.location ?? '')
+    update({ location: b.location ?? '' })
+    setChangingBox(false)
+    setClosedBox(null)
+    goTo(savePartRef)
   }
 
-  /** Not full after all: carry on filling it. */
-  const reopenBox = () => {
-    if (!fullBox) return
-    setBox(fullBox.box)
-    setFullBox(null)
-    setStep('start')
+  /**
+   * "Box is full": close it and start the next one in the same place, in one tap.
+   * Its label waits for the sorting to be done (or prints now, if the 4 × 6 roll is in).
+   */
+  const boxIsFull = async () => {
+    if (!box) return
+    const done = { no: box.box_no, code: box.code, count: boxCount }
+    setClosedBox({ ...done, box: null })
+    setBoxPrinted(null)
+    boxByCode(orgId, done.code)
+      .then((b) => setClosedBox((c) => (c && c.code === done.code ? { ...c, box: b } : c)))
+      .catch(() => {})
+    await startBox()
   }
 
   /* ------------------------------------------------ photos */
@@ -493,6 +538,8 @@ export default function CatalogFlow() {
       const key = ++shotKey.current
       setShots((list) => [...list, { key, preview: URL.createObjectURL(blob), url: null, state: 'uploading' }])
       startUpload(key, blob)
+      // Auto-advance: the photo is in, so the name is next.
+      if (shots.length === 0) goTo(namePartRef, true)
     } catch (err) {
       setError(`Couldn’t use that photo: ${errMessage(err)}`)
     }
@@ -601,29 +648,6 @@ export default function CatalogFlow() {
     openCamera('camera')
   }
 
-  /* ------------------------------------------------ voice */
-  const toggleVoice = () => {
-    if (!SpeechRecognitionCtor) return
-    if (listening) {
-      recogRef.current?.stop()
-      return
-    }
-    const recog = new SpeechRecognitionCtor()
-    recogRef.current = recog
-    recog.lang = 'en-US'
-    recog.interimResults = false
-    recog.maxAlternatives = 1
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    recog.onresult = (e: any) => {
-      const said = String(e.results?.[0]?.[0]?.transcript ?? '').trim()
-      if (said) update({ title: said.charAt(0).toUpperCase() + said.slice(1) })
-    }
-    recog.onend = () => setListening(false)
-    recog.onerror = () => setListening(false)
-    setListening(true)
-    recog.start()
-  }
-
   /* ------------------------------------------------ save */
   /**
    * Every shot's URL, in order: the background upload, or one more try.
@@ -668,11 +692,18 @@ export default function CatalogFlow() {
     const list = shots
     const packing = box
     const bag = bagKey(snap.source, current?.donor ?? '', current?.date ?? todayIso(), snap.boughtFrom)
-    recogRef.current?.stop?.()
+    voice.stop()
     setError(null)
     const waiting = list.some((s) => !s.url)
+    lastDraft.current = snap
+    lastShots.current = list
     setSaved({ phase: waiting ? 'photo' : 'saving', title, donatedBy, previews: list.map((s) => s.preview), photosFailed: 0 })
-    setStep('saved')
+    if (wantsBoxes) {
+      // One screen: the form empties for the next item, the result shows above it.
+      setDraft(nextDraft)
+      setShots([])
+      goTo(photoPartRef)
+    } else setStep('saved')
     void (async () => {
       const settled = await settlePhotos(list)
       const urls = settled.filter((u): u is string => Boolean(u))
@@ -770,7 +801,7 @@ export default function CatalogFlow() {
     setPhotoRetrying(true)
     setError(null)
     try {
-      const settled = await settlePhotos(shots)
+      const settled = await settlePhotos(lastShots.current)
       const urls = settled.filter((u): u is string => Boolean(u))
       const stillFailed = settled.length - urls.length
       const updated = urls.length ? await setItemPhotos(orgId, item.code, urls) : item
@@ -797,6 +828,11 @@ export default function CatalogFlow() {
 
   /** Back to the form with everything still filled in (after a failed save). */
   const backToForm = () => {
+    // In the one-screen box job the form was emptied when Save was tapped: put it back.
+    if (wantsBoxes && lastDraft.current) {
+      setDraft(lastDraft.current)
+      setShots(lastShots.current)
+    }
     setStep('name')
     setSaved(null)
   }
@@ -836,76 +872,378 @@ export default function CatalogFlow() {
     )
   }
 
+  // The photos and the name are the same on both screens (plain Receive and the one-screen box job).
+  const full = shots.length >= MAX_ITEM_PHOTOS
+  const uploading = shots.filter((s) => s.state === 'uploading').length
+  const failed = shots.filter((s) => s.state === 'failed').length
+  const photosBlock = (
+    <div ref={photoPartRef}>
+          {/* The photos: main first, a × on each, + for another (up to four). */}
+          <div>
+            <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Photos of the item">
+              {shots.map((s, i) => (
+                <div key={s.key} className="relative shrink-0">
+                  {/* Tap a photo to make it the cover (like choosing a cover on Instagram) */}
+                  <button
+                    type="button"
+                    onClick={() => makeMain(s.key)}
+                    aria-label={i === 0 ? `Photo ${i + 1}, the cover` : `Make photo ${i + 1} the cover`}
+                    className="block"
+                  >
+                    <img src={s.preview} alt="" className={`h-24 w-24 rounded-2xl object-cover ${i === 0 ? 'ring-[3px] ring-brand-blue' : ''}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(s.key)}
+                    aria-label={`Remove photo ${i + 1}`}
+                    className="absolute -right-1.5 -top-1.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-ink text-white shadow"
+                  >
+                    <Icon name="x" size={16} />
+                  </button>
+                  {i === 0 && (
+                    <span className="pointer-events-none absolute bottom-1 left-1 rounded-full bg-brand-blue px-1.5 py-0.5 text-[11px] font-extrabold uppercase text-white">Cover</span>
+                  )}
+                  {s.state === 'failed' && <span className="absolute inset-x-0 top-1 text-center text-[11px] font-extrabold text-red-700">not saved</span>}
+                </div>
+              ))}
+              {!full && (
+                <button
+                  type="button"
+                  onClick={() => openCamera('camera')}
+                  aria-label={shots.length ? 'Add another photo' : 'Take a photo'}
+                  className="inline-flex h-24 w-24 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-slate-300 text-slate-500"
+                >
+                  <Icon name="camera" size={28} />
+                  <span className="text-xs font-bold">{shots.length ? `${shots.length} of ${MAX_ITEM_PHOTOS}` : 'Photo'}</span>
+                </button>
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <button type="button" onClick={() => openCamera('camera')} disabled={full} className="min-h-[44px] text-[15px] font-bold text-brand-blue disabled:opacity-40">
+                {shots.length ? 'Add another photo' : 'Take a photo'}
+              </button>
+              <button type="button" onClick={() => openCamera('library')} disabled={full} className="min-h-[44px] text-[15px] font-bold text-slate-600 disabled:opacity-40">
+                Choose from my photos
+              </button>
+              {shots.length > 1 && <span className="text-sm text-slate-500">Tap a photo to make it the cover.</span>}
+              {full && <span className="text-sm text-slate-500">{MAX_ITEM_PHOTOS} photos is the most.</span>}
+              {!full && uploading > 0 && <span className="text-sm text-slate-500">Saving in the background…</span>}
+              {!full && uploading === 0 && failed === 0 && shots.length > 0 && <span className="text-sm text-green-700">Photos saved.</span>}
+              {!full && uploading === 0 && failed > 0 && <span className="text-sm text-amber-700">Not saved yet — Save tries again.</span>}
+            </div>
+          </div>
+    </div>
+  )
+  const titleBlock = (
+    <div ref={namePartRef} className="space-y-2">
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <input
+            ref={titleRef}
+            type="text"
+            value={draft.title}
+            onChange={(e) => update({ title: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return
+              e.preventDefault()
+              // The box job moves on to "which box"; plain Receive saves when it can.
+              if (wantsBoxes) {
+                if (draft.title.trim()) goTo(boxPartRef)
+              } else if (draft.title.trim() && (box || draft.location.trim())) save()
+            }}
+            placeholder="Plush bunny basket"
+            aria-label="Name of the item"
+            autoComplete="off"
+            autoCapitalize="sentences"
+            enterKeyHint={wantsBoxes ? 'next' : 'done'}
+            className="w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-4 text-xl text-ink outline-none transition placeholder:text-slate-300 focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15"
+          />
+        </div>
+        {voice.supported && (
+          <button
+            type="button"
+            onClick={voice.toggle}
+            aria-pressed={voice.listening}
+            aria-label={voice.listening ? 'Stop listening' : 'Say the name'}
+            className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl transition ${
+              voice.listening ? 'animate-pulse bg-red-600 text-white' : 'bg-brand-orange text-ink'
+            }`}
+          >
+            <Icon name="mic" size={28} />
+          </button>
+        )}
+      </div>
+      {voice.message ? (
+        <p role="status" className="text-[15px] text-amber-800">
+          {voice.message}
+        </p>
+      ) : voice.listening ? (
+        <p className="text-[15px] font-bold text-red-700">Listening… say the name, then stop.</p>
+      ) : !voice.supported ? (
+        <p className="text-[15px] text-slate-600">{KEYBOARD_MIC_TIP}</p>
+      ) : null}
+    </div>
+  )
+
   let screen: React.ReactNode
 
-  /* ================================================= summary */
+  /* ================================================= receive into boxes: one screen */
+  if (wantsBoxes && step !== 'summary') {
+    const s = saved
+    const done = s?.phase === 'saved' && s.item
+    const busySaving = s?.phase === 'photo' || s?.phase === 'saving'
+    const canSaveBox = draft.title.trim().length > 0 && !!box && !busySaving && !printBusy
+    const sameRoll = labelSize.wIn === BOX_SIZE.wIn && labelSize.hIn === BOX_SIZE.hIn
+    const choosing = !box || changingBox
+    const others = (recentBoxes ?? []).filter((b) => b.code !== box?.code)
+    // Printing right after Save: only when the printer is already connected (a first connection needs its own tap).
+    const autoPrint = Boolean(connectedPrinter())
+    screen = (
+      <StepShell
+        title="Receive into boxes"
+        step={1}
+        of={5}
+        stepName="Receive"
+        explain="For sorting items nobody wrote down — no donor needed. Take a photo, say or type the name, pick the box, tap Save. The label prints and the next item is ready. When a box is full, tap Box is full and the next box starts."
+        explainLabel="How this goes"
+        onBack={() => navigate('/staff')}
+        backLabel="Dashboard"
+        footer={
+          <div className="space-y-2">
+            <BigButton onClick={save} disabled={!canSaveBox} icon="check">
+              {busySaving ? 'Saving the last one…' : box ? `Save — put it in Box ${box.box_no}` : 'Pick or start a box, then Save'}
+            </BigButton>
+            <button type="button" onClick={finish} className="block min-h-[44px] w-full py-1 text-center text-base font-bold text-brand-blue">
+              I’m done
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <ErrorBox>{error}</ErrorBox>
+
+          {closedBox && (
+            <div className="space-y-2 rounded-2xl border-2 border-green-200 bg-green-50 p-4">
+              <p className="flex items-center gap-2 font-display text-lg font-extrabold text-green-900">
+                <Icon name="check" size={20} className="shrink-0" /> Box {closedBox.no} is full{closedBox.count != null ? ` · ${closedBox.count} item${closedBox.count === 1 ? '' : 's'}` : ''}
+              </p>
+              {closedBox.box && sameRoll && bluetoothAvailable() && !boxPrinted ? (
+                <BluetoothPrint
+                  labels={[{ code: closedBox.code, item: boxLabel(closedBox.box), copies: 1 }]}
+                  size={BOX_SIZE}
+                  busy={printBusy}
+                  setBusy={setPrintBusy}
+                  onError={setError}
+                  onPrinted={(codes, msg) => {
+                    setBoxPrinted(msg)
+                    void markBoxesPrinted(orgId, codes).catch(() => {})
+                  }}
+                  compact
+                />
+              ) : boxPrinted ? (
+                <p className="text-[15px] font-bold text-green-800">{boxPrinted}</p>
+              ) : (
+                <p className="text-[15px] text-green-900">
+                  Its 4 × 6 label prints when the sorting is done — open{' '}
+                  <Link to="/staff/boxes" className="font-bold text-brand-blue">
+                    Boxes
+                  </Link>
+                  .
+                </p>
+              )}
+              <p className="text-[15px] text-green-900">Box {box?.box_no ?? 'next'} is started — keep going.</p>
+            </div>
+          )}
+
+          {s && (
+            <div role="status" className="space-y-2 rounded-2xl border-2 border-slate-200 bg-white p-4">
+              {busySaving && (
+                <p className="flex items-center gap-2 text-[15px] font-bold text-slate-600">
+                  <Icon name="clock" size={18} /> Saving {s.title}…
+                </p>
+              )}
+              {s.phase === 'failed' && (
+                <>
+                  <p className="text-[15px] font-bold text-red-700">
+                    {s.title} didn’t save: {s.error}
+                  </p>
+                  <BigButton onClick={backToForm} tone="outline">
+                    Put it back on the screen
+                  </BigButton>
+                </>
+              )}
+              {done && s.item && (
+                <>
+                  <p className="flex items-center gap-2 font-display text-lg font-extrabold text-ink">
+                    <Icon name="check" size={20} className="shrink-0 text-green-700" /> Saved · {s.title}
+                  </p>
+                  <p className="font-mono text-base font-bold tracking-widest text-slate-700">
+                    {s.item.code}
+                    {s.inBox ? ` · Box ${s.inBox.no}${s.inBox.count != null ? ` has ${s.inBox.count}` : ''}` : ''}
+                  </p>
+                  {bluetoothAvailable() ? (
+                    <BluetoothPrint
+                      key={s.item.code}
+                      labels={[{ code: s.item.code, item: { code: s.item.code, title: s.item.title, donated_by: s.item.donated_by, photo_url: s.item.photo_url, kindLabel: null }, copies: 1 }]}
+                      size={labelSize}
+                      busy={printBusy}
+                      setBusy={setPrintBusy}
+                      onError={setError}
+                      onPrinted={(_codes, msg) => void labelPrinted(s.item!.code, msg)}
+                      autoPrint={autoPrint}
+                      compact
+                    />
+                  ) : (
+                    <BigButton onClick={() => navigate(`/staff/labels?code=${encodeURIComponent(s.item!.code)}`)} tone="outline" icon="printer">
+                      Print this label
+                    </BigButton>
+                  )}
+                  {s.printed && (
+                    <p className="flex items-center gap-2 text-[15px] font-bold text-green-800">
+                      <Icon name="check" size={18} className="shrink-0" /> {s.printed}
+                    </p>
+                  )}
+                  {s.boxNote && <p className="rounded-xl bg-amber-50 px-3 py-2 text-[15px] text-amber-900">{s.boxNote}</p>}
+                  {(s.planSkipped || s.receivingSkipped || s.detailsSkipped) && (
+                    <p className="rounded-xl bg-amber-50 px-3 py-2 text-[15px] text-amber-900">The item is saved. Some of its details aren’t switched on yet — ask an admin.</p>
+                  )}
+                  {(s.photosFailed > 0 || s.photosNote) && (
+                    <p className="flex items-center gap-3 rounded-xl bg-amber-50 px-3 py-2 text-[15px] text-amber-900">
+                      <span className="min-w-0 flex-1">
+                        {s.photosFailed > 0 ? `Saved, but ${s.photosFailed === 1 ? 'a photo' : `${s.photosFailed} photos`} didn’t upload.` : s.photosNote}
+                      </span>
+                      {s.photosFailed > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => void retryPhotos()}
+                          disabled={photoRetrying}
+                          className="min-h-[44px] shrink-0 font-extrabold underline-offset-2 hover:underline disabled:opacity-50"
+                        >
+                          {photoRetrying ? 'Trying…' : 'Try again'}
+                        </button>
+                      )}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          <Part n="A">Photo</Part>
+          {photosBlock}
+
+          <Part n="B">What is it?</Part>
+          {titleBlock}
+
+          <Part n="C" hint="needed">
+            Which box?
+          </Part>
+          <div ref={boxPartRef} className="space-y-3">
+            {box && !changingBox && (
+              <div className="rounded-3xl border-2 border-brand-orange bg-brand-orange-50 p-4 text-center">
+                <p className="text-sm font-bold uppercase tracking-wide text-slate-600">Going in</p>
+                <p className="font-display text-5xl font-black leading-tight text-ink">Box {box.box_no}</p>
+                <p className="text-[15px] text-slate-600">
+                  {boxPlace ? `Kept: ${boxPlace}` : 'No place yet — add it from the box.'}
+                  {boxCount == null ? '' : ` · ${boxCount} item${boxCount === 1 ? '' : 's'} in it`}
+                </p>
+                {boxCount === 0 && <p className="mt-1 text-lg font-bold text-ink">Write {box.box_no} on the box.</p>}
+                <p ref={savePartRef} className="mt-1 text-[15px] font-bold text-brand-blue">
+                  {draft.title.trim() ? `Tap Save to put “${draft.title.trim()}” in it.` : 'Name the item, then tap Save.'}
+                </p>
+                <div className="mt-3 space-y-2">
+                  <BigButton tone="outline" icon="check" onClick={() => void boxIsFull()} disabled={boxBusy}>
+                    {boxBusy ? 'Starting the next box…' : `Box ${box.box_no} is full — next box`}
+                  </BigButton>
+                  <button type="button" onClick={() => setChangingBox(true)} className="min-h-[44px] w-full text-base font-bold text-brand-blue">
+                    Use a different box
+                  </button>
+                </div>
+              </div>
+            )}
+            {choosing && (
+              <div className="space-y-3 rounded-2xl border-2 border-slate-200 bg-white p-4">
+                {others.length > 0 && (
+                  <>
+                    <p className="text-base font-bold text-ink">Put it in a box you started</p>
+                    <ul className="space-y-2">
+                      {others.map((b) => (
+                        <li key={b.code}>
+                          <button
+                            type="button"
+                            onClick={() => pickBox(b)}
+                            className="flex min-h-[60px] w-full items-center gap-3 rounded-2xl border-2 border-slate-200 bg-white px-4 py-2 text-left active:bg-brand-blue-50"
+                          >
+                            <span className="font-display text-2xl font-black text-ink">Box {b.box_no}</span>
+                            <span className="min-w-0 flex-1 truncate text-[15px] text-slate-600">
+                              {b.location ? `${b.location} · ` : ''}
+                              {b.items.length} item{b.items.length === 1 ? '' : 's'}
+                            </span>
+                            <Icon name="chevron" size={18} className="shrink-0 text-slate-400" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-base font-bold text-ink">Or start a new one</p>
+                  </>
+                )}
+                <LocationField v={{ location: boxPlace }} set={(p) => setBoxPlace(p.location ?? '')} places={suggestions.locations} label="Where will this box be kept?" />
+                <BigButton onClick={() => void startBox()} disabled={boxBusy} icon="box">
+                  {boxBusy ? 'Starting the box…' : 'Start a new box'}
+                </BigButton>
+                {box && (
+                  <button type="button" onClick={() => setChangingBox(false)} className="min-h-[44px] w-full text-base font-bold text-brand-blue">
+                    Never mind — stay with Box {box.box_no}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <Part n="D" hint="optional">
+            More about it
+          </Part>
+          <button
+            type="button"
+            onClick={toggleMore}
+            aria-expanded={more}
+            className="flex min-h-[52px] w-full items-center justify-between gap-3 rounded-2xl border-2 border-slate-200 bg-white px-4 py-2 text-left"
+          >
+            <span className="min-w-0 text-base font-bold text-brand-blue">How many, what it’s worth, size, condition, notes</span>
+            <Icon name="chevron" size={20} className={`shrink-0 text-slate-400 transition ${more ? 'rotate-90' : ''}`} />
+          </button>
+          {more && (
+            <div className="space-y-4">
+              <QuantityField v={draft} set={update} />
+              <ValueFields v={draft} set={update} />
+              <MoreDetailsFields v={draft} set={update} suggestions={suggestions} show={{ size: true, condition: true, category: true, useBy: true, price: true, notes: true }} />
+            </div>
+          )}
+          <p className="text-sm text-slate-500">What it’s for is added later, when the boxes are sorted. Everything here can be changed from the items list.</p>
+        </div>
+      </StepShell>
+    )
+  } else
   if (step === 'summary') {
     screen = <ReceivingSummary orgId={orgId} session={session.items} onMore={() => setStep('start')} onDone={doneForToday} />
   } else if (step === 'start') {
     screen = (
       <StepShell
-        title={wantsBoxes ? 'Receive into boxes' : 'Receive items'}
+        title="Receive items"
         step={1}
         of={5}
         stepName="Receive"
-        explain={
-          wantsBoxes
-            ? 'For sorting items nobody wrote down — no donor needed. Start a box, say where it will be kept and write its number on it. Add each item, print its label, put it in the box. Tap Box is full, then start the next one.'
-            : <ReceiveParts firstScreen />
-        }
-        // OHRR 2026-10-27: the A–F line isn't needed here; the lettered parts down the screens show the order.
-        flow={wantsBoxes ? BOX_PARTS : undefined}
-        flowLetters
+        explain={<ReceiveParts firstScreen />}
         onBack={() => navigate('/staff')}
         backLabel="Dashboard"
         footer={
-          wantsBoxes && !box ? (
-            <BigButton onClick={() => void startBox()} disabled={boxBusy} icon="box">
-              {boxBusy ? 'Starting the box…' : 'Start a box'}
-            </BigButton>
-          ) : (
-            <BigButton onClick={begin} icon="camera">
-              {(wantsBoxes ? box && boxCount : current) ? 'Next item — open the camera' : 'Start — open the camera'}
-            </BigButton>
-          )
+          <BigButton onClick={begin} icon="camera">
+            {current ? 'Next item — open the camera' : 'Start — open the camera'}
+          </BigButton>
         }
       >
         <div className="space-y-4">
           <ErrorBox>{error}</ErrorBox>
-          {box ? (
-            <div className="rounded-3xl border-2 border-brand-orange bg-brand-orange-50 p-4 text-center">
-              <p className="text-sm font-bold uppercase tracking-wide text-slate-600">Filling</p>
-              <p className="font-display text-5xl font-black leading-tight text-ink">Box {box.box_no}</p>
-              <p className="mt-1 text-lg font-bold text-ink">Write {box.box_no} on the box.</p>
-              <p className="text-[15px] text-slate-600">{boxPlace ? `Kept: ${boxPlace}` : 'No place yet — add it from the box.'}</p>
-              <p className="text-[15px] text-slate-600">
-                {boxCount == null ? '' : `${boxCount} item${boxCount === 1 ? '' : 's'} in it so far · `}
-                <Link to={`/staff/boxes/${box.code}`} className="font-bold text-brand-blue">
-                  See what’s in it
-                </Link>
-              </p>
-              <div className="mt-3">
-                <BigButton tone="outline" icon="check" onClick={boxIsFull}>
-                  Box is full
-                </BigButton>
-              </div>
-            </div>
-          ) : wantsBoxes ? (
-            <>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <LocationField v={{ location: boxPlace }} set={(p) => setBoxPlace(p.location ?? '')} places={suggestions.locations} label="Where will this box be kept?" />
-                <p className="mt-1.5 text-sm text-slate-500">Everything put in the box is kept there too. It can be changed later from the box.</p>
-              </div>
-            <Explain label="How filling a box works">
-              <ol className="list-decimal space-y-1 pl-5">
-                <li>Start a box — the app gives it the next number. Write the number on the box.</li>
-                <li>For each item: photo, say the name, Save, print its label, put it in the box.</li>
-                <li>Tap Box is full, and start the next box.</li>
-                <li>When the sorting is done, put the 4 × 6 roll in the printer and print all the box labels from Boxes. Stick each one over the number.</li>
-              </ol>
-            </Explain>
-            </>
-          ) : null}
           {!wantsBoxes && (
             <>
               <Part n="A">How it came in</Part>
@@ -1020,51 +1358,6 @@ export default function CatalogFlow() {
         </div>
       </StepShell>
     )
-  } else if (step === 'full' && fullBox) {
-    /* ================================================= box is full */
-    const n = fullBox.count
-    screen = (
-      <StepShell
-        title={`Box ${fullBox.box.box_no} is full`}
-        help="Its label waits until the sorting is done."
-        onBack={reopenBox}
-        backLabel="Not full yet"
-        footer={
-          <div className="space-y-2">
-            <BigButton onClick={() => void startBox()} disabled={boxBusy} icon="box">
-              {boxBusy ? 'Starting the box…' : 'Start the next box'}
-            </BigButton>
-            <BigButton tone="plain" onClick={() => navigate('/staff/boxes')}>
-              I’m done for now
-            </BigButton>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <ErrorBox>{error}</ErrorBox>
-          <div className="rounded-3xl border border-slate-200 bg-white p-4 text-center">
-            <p className="font-display text-5xl font-black leading-tight text-ink">Box {fullBox.box.box_no}</p>
-            {n != null && (
-              <p className="text-lg font-bold text-slate-600">
-                {n} item{n === 1 ? '' : 's'} in it
-              </p>
-            )}
-            <Link to={`/staff/boxes/${fullBox.box.code}`} className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue">
-              See what’s in it
-            </Link>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <LocationField v={{ location: boxPlace }} set={(p) => setBoxPlace(p.location ?? '')} places={suggestions.locations} label="Where will the next box be kept?" />
-          </div>
-          <Explain label="When every box is done">
-            <p>
-              When every box is done, put the 4 × 6 roll in the printer, open <span className="font-bold">Boxes</span> and print all the waiting box labels at
-              once. Stick each label over the number you wrote on the box.
-            </p>
-          </Explain>
-        </div>
-      </StepShell>
-    )
   } else if (step === 'saved' && saved) {
     /* ================================================= saved */
     const s = saved
@@ -1081,9 +1374,7 @@ export default function CatalogFlow() {
         stepName="Label"
         help={
           done
-            ? box
-              ? `A: print its label, put it in Box ${box.box_no}, then Next item.`
-              : 'A: print its label. B: the thank-you letter, now or at the end. Next item opens the camera.'
+            ? 'A: print its label. B: the thank-you letter, now or at the end. Next item opens the camera.'
             : undefined
         }
         onBack={s.phase === 'failed' ? backToForm : undefined}
@@ -1099,20 +1390,9 @@ export default function CatalogFlow() {
                 {done ? 'Next item' : s.phase === 'photo' ? 'Saving the photos…' : 'Saving…'}
               </BigButton>
             )}
-            {box ? (
-              <div className="grid grid-cols-2 gap-2">
-                <BigButton onClick={boxIsFull} disabled={(!done && s.phase !== 'failed') || !!printBusy} tone="outline" icon="check">
-                  Box is full
-                </BigButton>
-                <BigButton onClick={finish} disabled={(!done && s.phase !== 'failed') || !!printBusy} tone="plain">
-                  I’m done
-                </BigButton>
-              </div>
-            ) : (
-              <BigButton onClick={finish} disabled={(!done && s.phase !== 'failed') || !!printBusy} tone="plain">
-                I’m done — see today’s summary
-              </BigButton>
-            )}
+            <BigButton onClick={finish} disabled={(!done && s.phase !== 'failed') || !!printBusy} tone="plain">
+              I’m done — see today’s summary
+            </BigButton>
           </div>
         }
       >
@@ -1290,20 +1570,16 @@ export default function CatalogFlow() {
   } else {
     /* ================================================= name */
     // Sponsor: "we need a location also" — every item says where it's kept (a box's items are kept with the box).
-    const needsPlace = !box && !draft.location.trim()
+    const needsPlace = !draft.location.trim()
     const canSave = draft.title.trim().length > 0 && !needsPlace
     const bought = draft.source === 'purchase'
     const directAuction = canAuction && forSilentAuction(draft)
-    const uploading = shots.filter((s) => s.state === 'uploading').length
-    const failed = shots.filter((s) => s.state === 'failed').length
-    const full = shots.length >= MAX_ITEM_PHOTOS
     screen = (
       <StepShell
         title="What is it?"
         step={1}
         of={5}
         stepName="Receive"
-        help={box ? `Going in Box ${box.box_no}.` : undefined}
         explain={<ReceiveParts />}
         explainLabel="How this goes"
         onBack={() => setStep('start')}
@@ -1315,7 +1591,7 @@ export default function CatalogFlow() {
             </BigButton>
             {draft.title.trim() && needsPlace && <p className="text-center text-[15px] font-bold text-amber-800">Say where it’s kept, then Save.</p>}
             <button type="button" onClick={finish} className="block w-full py-1 text-center text-base font-bold text-brand-blue">
-              {wantsBoxes || !session.items.length ? 'I’m done' : 'I’m done — see today’s summary'}
+              {!session.items.length ? 'I’m done' : 'I’m done — see today’s summary'}
             </button>
           </div>
         }
@@ -1326,97 +1602,10 @@ export default function CatalogFlow() {
 
           <Part n="B">Photos</Part>
 
-          {/* The photos: main first, a × on each, + for another (up to four). */}
-          <div>
-            <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Photos of the item">
-              {shots.map((s, i) => (
-                <div key={s.key} className="relative shrink-0">
-                  {/* Tap a photo to make it the cover (like choosing a cover on Instagram) */}
-                  <button
-                    type="button"
-                    onClick={() => makeMain(s.key)}
-                    aria-label={i === 0 ? `Photo ${i + 1}, the cover` : `Make photo ${i + 1} the cover`}
-                    className="block"
-                  >
-                    <img src={s.preview} alt="" className={`h-24 w-24 rounded-2xl object-cover ${i === 0 ? 'ring-[3px] ring-brand-blue' : ''}`} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(s.key)}
-                    aria-label={`Remove photo ${i + 1}`}
-                    className="absolute -right-1.5 -top-1.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-ink text-white shadow"
-                  >
-                    <Icon name="x" size={16} />
-                  </button>
-                  {i === 0 && (
-                    <span className="pointer-events-none absolute bottom-1 left-1 rounded-full bg-brand-blue px-1.5 py-0.5 text-[11px] font-extrabold uppercase text-white">Cover</span>
-                  )}
-                  {s.state === 'failed' && <span className="absolute inset-x-0 top-1 text-center text-[11px] font-extrabold text-red-700">not saved</span>}
-                </div>
-              ))}
-              {!full && (
-                <button
-                  type="button"
-                  onClick={() => openCamera('camera')}
-                  aria-label={shots.length ? 'Add another photo' : 'Take a photo'}
-                  className="inline-flex h-24 w-24 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-slate-300 text-slate-500"
-                >
-                  <Icon name="camera" size={28} />
-                  <span className="text-xs font-bold">{shots.length ? `${shots.length} of ${MAX_ITEM_PHOTOS}` : 'Photo'}</span>
-                </button>
-              )}
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-              <button type="button" onClick={() => openCamera('camera')} disabled={full} className="min-h-[44px] text-[15px] font-bold text-brand-blue disabled:opacity-40">
-                {shots.length ? 'Add another photo' : 'Take a photo'}
-              </button>
-              <button type="button" onClick={() => openCamera('library')} disabled={full} className="min-h-[44px] text-[15px] font-bold text-slate-600 disabled:opacity-40">
-                Choose from my photos
-              </button>
-              {shots.length > 1 && <span className="text-sm text-slate-500">Tap a photo to make it the cover.</span>}
-              {full && <span className="text-sm text-slate-500">{MAX_ITEM_PHOTOS} photos is the most.</span>}
-              {!full && uploading > 0 && <span className="text-sm text-slate-500">Saving in the background…</span>}
-              {!full && uploading === 0 && failed === 0 && shots.length > 0 && <span className="text-sm text-green-700">Photos saved.</span>}
-              {!full && uploading === 0 && failed > 0 && <span className="text-sm text-amber-700">Not saved yet — Save tries again.</span>}
-            </div>
-          </div>
+          {photosBlock}
 
           <Part n="C">What it is</Part>
-          <div className="flex items-center gap-2">
-            <div className="min-w-0 flex-1">
-              <input
-                ref={titleRef}
-                type="text"
-                value={draft.title}
-                onChange={(e) => update({ title: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && canSave) {
-                    e.preventDefault()
-                    save()
-                  }
-                }}
-                placeholder="Plush bunny basket"
-                aria-label="Name of the item"
-                autoComplete="off"
-                autoCapitalize="sentences"
-                enterKeyHint="done"
-                className="w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-4 text-xl text-ink outline-none transition placeholder:text-slate-300 focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15"
-              />
-            </div>
-            {SpeechRecognitionCtor && (
-              <button
-                type="button"
-                onClick={toggleVoice}
-                aria-pressed={listening}
-                aria-label={listening ? 'Stop listening' : 'Say the name'}
-                className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl transition ${
-                  listening ? 'animate-pulse bg-red-600 text-white' : 'bg-brand-orange text-ink'
-                }`}
-              >
-                <Icon name="mic" size={28} />
-              </button>
-            )}
-          </div>
+          {titleBlock}
 
           {dropoffNote && (
             <div role="status" className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
@@ -1429,17 +1618,7 @@ export default function CatalogFlow() {
           <Part n="D" hint="needed">
             Where it’s kept
           </Part>
-          {box ? (
-            <div className="rounded-2xl border-2 border-brand-orange/40 bg-brand-orange-50 px-4 py-3">
-              <p className="text-[15px] font-bold text-slate-600">Where is it kept?</p>
-              <p className="text-lg font-bold text-ink">
-                In Box {box.box_no}
-                {boxPlace ? ` · ${boxPlace}` : ''}
-              </p>
-            </div>
-          ) : (
-            <LocationField v={draft} set={update} places={suggestions.locations} />
-          )}
+          <LocationField v={draft} set={update} places={suggestions.locations} />
 
           <Part n="E" hint="optional">
             More details

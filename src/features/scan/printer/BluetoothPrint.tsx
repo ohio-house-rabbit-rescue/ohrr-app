@@ -7,13 +7,13 @@
 // settings hold the fixes for a first print that comes out wrong: darker or
 // lighter, plain mode (nothing prints), flip (comes out reversed), and every
 // Bluetooth device (the printer isn't in the list).
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { errMessage } from '../../../lib/supabase'
 import { isNative } from '../../../native/platform'
 import { isIphone } from '../../account/push'
 import { Icon } from '../../../components/icons'
 import { BigButton } from '../ScanUI'
-import { renderLabel, type LabelItem, type LabelSize } from '../labels'
+import { printsPhoto, renderLabel, type LabelItem, type LabelSize } from '../labels'
 import { PRINTER_DPI, buildJob, toRaster, type Darkness } from './tspl'
 import { bluetoothAvailable, choosePrinter, connectedPrinter, ensurePrinter, forgetPrinter, rememberedPrinter, sendJob } from './bluetooth'
 
@@ -54,6 +54,7 @@ export default function BluetoothPrint({
   onPrinted,
   onError,
   compact = false,
+  autoPrint = false,
 }: {
   labels: BtLabel[]
   size: LabelSize
@@ -64,10 +65,23 @@ export default function BluetoothPrint({
   onError: (msg: string | null) => void
   /** In a page's sticky footer: a shorter button, one line under it, and nothing at all where Bluetooth can't work. */
   compact?: boolean
+  /**
+   * Print as soon as this appears — used right after Save when the printer is already connected.
+   * (A first connection has to start from a tap, so it never prints by itself.)
+   */
+  autoPrint?: boolean
 }) {
   const [opts, setOpts] = useState<BtOptions>(loadOpts)
   const [open, setOpen] = useState(false)
   const [name, setName] = useState<string | null>(() => connectedPrinter()?.name ?? (isNative ? (rememberedPrinter()?.name ?? null) : null))
+
+  const autoDone = useRef(false)
+  useEffect(() => {
+    if (!autoPrint || autoDone.current || !bluetoothAvailable()) return
+    autoDone.current = true
+    void print()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPrint])
 
   if (!bluetoothAvailable()) {
     // Safari on iPhone, Firefox: no Bluetooth for web pages.
@@ -123,7 +137,7 @@ export default function BluetoothPrint({
         setBusy(`${at}: painting…`)
         const canvas = document.createElement('canvas')
         await renderLabel(canvas, l.item, size, PRINTER_DPI)
-        const dither = size.hIn >= 3 && !!l.item.photo_url
+        const dither = printsPhoto(size) && !!l.item.photo_url
         const job = buildJob(toRaster(canvas, { flip: opts.swap, dither }), { copies: l.copies, darkness: opts.darkness, plain: opts.plain, flip: opts.swap, dither })
         await sendJob(job, (f) => setBusy(`${at}: sending ${Math.round(f * 100)}%`))
         sent += l.copies

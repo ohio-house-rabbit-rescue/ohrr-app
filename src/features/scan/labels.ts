@@ -3,8 +3,9 @@
 // SKU like HAY-101-001), the item's name and who gave it — or, for a Hop Shop
 // price label, the price. Painted on a canvas at the label's exact size, so the same
 // picture prints from a phone (the printer's app or AirPrint), from a laptop
-// (any label printer driver) or as a PDF with one label per page. Tall labels
-// (3 in and up) get the photo too.
+// (any label printer driver) or as a PDF with one label per page. A tall label
+// (3 in and up) is printed with big type and no photo; "Print the photo too"
+// (Print labels → Label size) puts the item's photo across the top.
 //
 // A Silent Auction item can print as a bid-sheet label instead (update 44):
 // "SILENT AUCTION" across the top, a big QR ("Scan to buy it now — pay at the
@@ -27,7 +28,12 @@ export interface LabelSize {
   label: string
   wIn: number
   hIn: number
+  /** Tall labels only: print the item's photo too. Off unless someone ticks it. */
+  photo?: boolean
 }
+
+/** The item's photo goes on this label: a tall label, and "Print the photo too" is on. */
+export const printsPhoto = (size: LabelSize, minHeightIn = 3) => size.photo === true && size.hIn >= minHeightIn
 
 /** Common thermal label sizes. Widths from 1½ to 4 inches; custom is allowed. */
 export const LABEL_SIZES: LabelSize[] = [
@@ -37,7 +43,7 @@ export const LABEL_SIZES: LabelSize[] = [
   { key: '3x2', label: '3 × 2 in (76 × 51 mm)', wIn: 3, hIn: 2 },
   { key: '4x2', label: '4 × 2 in (102 × 51 mm)', wIn: 4, hIn: 2 },
   { key: '4x3', label: '4 × 3 in (102 × 76 mm)', wIn: 4, hIn: 3 },
-  { key: '4x6', label: '4 × 6 in shipping label, with the photo', wIn: 4, hIn: 6 },
+  { key: '4x6', label: '4 × 6 in shipping label', wIn: 4, hIn: 6 },
 ]
 export const DEFAULT_LABEL_KEY = '2.25x1.25'
 export const LABEL_DPI = 300
@@ -50,7 +56,7 @@ export function loadLabelSize(): LabelSize {
     const raw = localStorage.getItem(SIZE_KEY)
     if (raw) {
       const s = JSON.parse(raw) as LabelSize
-      if (s && s.wIn > 0.5 && s.hIn > 0.5 && s.wIn <= 8.5 && s.hIn <= 11) return s
+      if (s && s.wIn > 0.5 && s.hIn > 0.5 && s.wIn <= 8.5 && s.hIn <= 11) return { ...s, photo: s.photo === true }
     }
   } catch {
     /* private mode */
@@ -70,7 +76,7 @@ export function labelSizePickedAt(): number {
 
 export function saveLabelSize(s: LabelSize, pickedAt: number): void {
   try {
-    localStorage.setItem(SIZE_KEY, JSON.stringify({ key: s.key, label: s.label, wIn: s.wIn, hIn: s.hIn, pickedAt }))
+    localStorage.setItem(SIZE_KEY, JSON.stringify({ key: s.key, label: s.label, wIn: s.wIn, hIn: s.hIn, photo: s.photo === true, pickedAt }))
   } catch {
     /* ignore */
   }
@@ -94,7 +100,8 @@ export function labelSizeFrom(v: unknown): LabelSize | null {
   const s = v as Partial<LabelSize> | null
   if (!s || typeof s.wIn !== 'number' || typeof s.hIn !== 'number') return null
   if (!(s.wIn >= 0.5 && s.hIn >= 0.5 && s.wIn <= 8.5 && s.hIn <= 11)) return null
-  return LABEL_SIZES.find((p) => p.wIn === s.wIn && p.hIn === s.hIn) ?? customLabelSize(s.wIn, s.hIn)
+  // A copy: the presets in LABEL_SIZES are shared and never changed.
+  return { ...(LABEL_SIZES.find((p) => p.wIn === s.wIn && p.hIn === s.hIn) ?? customLabelSize(s.wIn, s.hIn)), photo: (s as { photo?: unknown }).photo === true }
 }
 
 export function customLabelSize(wIn: number, hIn: number): LabelSize {
@@ -219,6 +226,9 @@ export async function renderLabel(canvas: HTMLCanvasElement, item: LabelItem, si
   const H = Math.round(size.hIn * dpi)
   if (item.auction) return renderAuctionLabel(canvas, item, item.auction, size, dpi)
   if (item.box) return renderBoxLabel(canvas, item, item.box, size, dpi)
+  const wantsPhoto = printsPhoto(size) && !!item.photo_url
+  // A tall label without a photo is all big type (a 4 × 6 shipping label).
+  if (!wantsPhoto && size.hIn >= 3 && H >= W * 1.25) return renderTallLabel(canvas, item, size, dpi)
   canvas.width = W
   canvas.height = H
   const ctx = canvas.getContext('2d')!
@@ -227,7 +237,7 @@ export async function renderLabel(canvas: HTMLCanvasElement, item: LabelItem, si
   await ensureFonts(['800 40px "Nunito"', '900 80px "Nunito"', '600 40px "Open Sans"'])
 
   const m = Math.round(0.07 * dpi) // margin
-  const photo = size.hIn >= 3 && item.photo_url ? await loadPhoto(item.photo_url) : null
+  const photo = wantsPhoto && item.photo_url ? await loadPhoto(item.photo_url) : null
   let top = m
 
   // Tall labels: the photo across the top (about 45% of the height).
@@ -316,6 +326,105 @@ export async function renderLabel(canvas: HTMLCanvasElement, item: LabelItem, si
   ctx.textAlign = 'left'
 }
 
+/**
+ * A tall label with no photo (4 × 6): the name in big type across the top, the
+ * gift line (or the price), a big QR, then the barcode and the number as large
+ * as the width allows. Nothing is drawn small to make room for a picture.
+ */
+async function renderTallLabel(canvas: HTMLCanvasElement, item: LabelItem, size: LabelSize, dpi: number): Promise<void> {
+  const W = Math.round(size.wIn * dpi)
+  const H = Math.round(size.hIn * dpi)
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, W, H)
+  await ensureFonts(['800 40px "Nunito"', '900 80px "Nunito"', '600 40px "Open Sans"'])
+  ctx.textBaseline = 'top'
+  ctx.textAlign = 'center'
+
+  const m = Math.round(0.14 * dpi)
+  const tw = W - 2 * m
+  const cx = W / 2
+  let y = m
+
+  // The rescue (or the shop) across the top.
+  ctx.fillStyle = '#0669ac'
+  const brand = fitBlock(ctx, item.shop ? 'OHRR HOP SHOP' : 'OHIO HOUSE RABBIT RESCUE', tw, 1, Math.round(W * 0.05), (px) => `800 ${px}px "Nunito"`)
+  ctx.fillText(brand.lines[0], cx, y)
+  y += Math.round(brand.px * 1.5)
+
+  // The bottom block is fixed: barcode, then the number.
+  const barH = Math.round(H * 0.085)
+  let codePx = Math.round(Math.min(W * 0.12, H * 0.065))
+  ctx.font = `900 ${codePx}px "Courier New", monospace`
+  while (codePx > 12 && ctx.measureText(item.code).width > tw) {
+    codePx -= 2
+    ctx.font = `900 ${codePx}px "Courier New", monospace`
+  }
+  const bottomH = barH + Math.round(m / 2) + Math.round(codePx * 1.25)
+
+  // Under the name: the price on a shop label, else who it is from and what it is for.
+  const showPrice = !!item.shop && item.price_cents != null
+  const pricePx = Math.round(W * 0.16)
+  const meta = (item.shop ? [] : [item.donated_by ? `Gift of ${item.donated_by}` : null, item.kindLabel ?? null]).filter(Boolean) as string[]
+  const metaPx = Math.round(W * 0.07)
+  const metaH = showPrice ? Math.round(pricePx * 1.25) : meta.length ? Math.round(meta.length * metaPx * 1.35) : 0
+
+  const remain = H - y - m - bottomH - metaH
+  const qrSide = Math.round(Math.min(W * 0.55, remain * 0.55))
+  const titleRoom = remain - qrSide - m * 2
+
+  // The name: as big as it will go, wrapped on up to as many lines as fit.
+  ctx.fillStyle = '#0f172a'
+  const minPx = Math.round(W * 0.06)
+  let px = Math.round(Math.min(W * 0.17, titleRoom / 1.15))
+  let lines: string[] = []
+  const text = item.title || 'Untitled'
+  for (;;) {
+    ctx.font = `900 ${px}px "Nunito"`
+    lines = wrapLines(ctx, text, tw)
+    if ((lines.length * px * 1.12 <= titleRoom && lines.every((l) => ctx.measureText(l).width <= tw)) || px <= minPx) break
+    px = Math.max(minPx, Math.floor(px * 0.93))
+  }
+  const cap = Math.max(1, Math.floor(titleRoom / (px * 1.12)))
+  if (lines.length > cap) lines = [...lines.slice(0, cap - 1), ellipsize(ctx, lines.slice(cap - 1).join(' '), tw)]
+  // Centered in the room the name has.
+  y += Math.max(0, Math.round((titleRoom - lines.length * px * 1.12) / 2))
+  for (const l of lines) {
+    ctx.fillText(ellipsize(ctx, l, tw), cx, y)
+    y += Math.round(px * 1.12)
+  }
+  // The rest stacks from the foot up: meta, QR, gap, barcode block, margin.
+  y = H - m - bottomH - m - qrSide - metaH
+
+  if (showPrice) {
+    ctx.font = `900 ${pricePx}px "Nunito"`
+    ctx.fillText(priceText(item.price_cents ?? 0), cx, y)
+  } else {
+    ctx.fillStyle = '#334155'
+    ctx.font = `600 ${metaPx}px "Open Sans"`
+    let my = y
+    for (const line of meta) {
+      ctx.fillText(ellipsize(ctx, line, tw), cx, my)
+      my += Math.round(metaPx * 1.35)
+    }
+  }
+  y += metaH
+
+  // QR in the middle, barcode and number at the foot.
+  const qr = await QRCode.toDataURL(tagUrl(item.code), { errorCorrectionLevel: 'M', margin: 0, width: 600 }).then(loadImage)
+  if (qr) ctx.drawImage(qr, Math.round((W - qrSide) / 2), y, qrSide, qrSide)
+  y = H - m - bottomH
+  const bar = barcodeImage(item.code, barH)
+  const barW = Math.min(tw, Math.round(bar.width * (barH / bar.height)))
+  ctx.drawImage(bar, Math.round((W - barW) / 2), y, barW, barH)
+  ctx.fillStyle = '#0f172a'
+  ctx.font = `900 ${codePx}px "Courier New", monospace`
+  ctx.fillText(item.code, cx, y + barH + Math.round(m / 2))
+  ctx.textAlign = 'left'
+}
+
 /** "$35" or "$12.50". */
 function dollars(cents: number): string {
   return cents % 100 === 0 ? `$${(cents / 100).toLocaleString('en-US')}` : priceText(cents)
@@ -366,7 +475,7 @@ async function renderAuctionLabel(canvas: HTMLCanvasElement, item: LabelItem, a:
   let top = headH + m
 
   // A tall label (4 in and up) gets the photo under the header.
-  const photo = size.hIn >= 4 && item.photo_url ? await loadPhoto(item.photo_url) : null
+  const photo = printsPhoto(size, 4) && item.photo_url ? await loadPhoto(item.photo_url) : null
   if (photo) {
     const boxH = Math.round(H * 0.3)
     const scale = Math.min((W - 2 * m) / photo.width, boxH / photo.height)
