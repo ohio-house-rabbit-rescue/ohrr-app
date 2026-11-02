@@ -9,7 +9,7 @@
 //
 // Everything the public /book pages show comes from step 6.
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
 import { authOrigin } from '../../../lib/appUrl'
@@ -61,6 +61,14 @@ const STEPS: { tab: Tab; n: number; label: string; icon: IconName; text: string 
 ]
 const isTab = (s: string | null): s is Tab => STEPS.some((x) => x.tab === s)
 
+/**
+ * Adoptions and bookings are one thing to the people who run them (OHRR, 2026-11-02): ?scope=adopt shows only the
+ * adoption appointments and bonding sessions, ?scope=other the volunteer shifts and the vet clinic. No scope = all.
+ */
+const ADOPTION_SLUGS = ['adoption-visit', 'bonding-session']
+type Scope = 'adopt' | 'other' | 'all'
+const inScope = (scope: Scope, slug: string) => scope === 'all' || (scope === 'adopt') === ADOPTION_SLUGS.includes(slug)
+
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 /** 48px buttons for the door: check in, confirm, no show. */
@@ -74,9 +82,14 @@ export default function StaffBookings() {
   const { membership } = useAuth()
   const orgId = membership?.orgId ?? ''
   const [params, setParams] = useSearchParams()
-  const [types, setTypes] = useState<BookingType[] | null>(null)
-  const [rows, setRows] = useState<RosterRow[] | null>(null)
+  const [allTypes, setTypes] = useState<BookingType[] | null>(null)
+  const [allRows, setRows] = useState<RosterRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const scopeParam = params.get('scope')
+  const scope: Scope = scopeParam === 'adopt' || scopeParam === 'other' ? scopeParam : 'all'
+  const types = allTypes && allTypes.filter((t) => inScope(scope, t.slug))
+  const rows = allRows && allRows.filter((r) => inScope(scope, r.type_slug))
+  const keep: Record<string, string> = scope === 'all' ? {} : { scope }
 
   const reloadTypes = useCallback(async () => {
     try {
@@ -109,7 +122,9 @@ export default function StaffBookings() {
   const wanted = params.get('tab')
   const tab: Tab | null = isTab(wanted) ? wanted : null
   const step = tab ? STEPS.find((s) => s.tab === tab)! : null
-  const pick = (t: Tab) => setParams({ tab: t })
+  const pick = (t: Tab) => setParams({ ...keep, tab: t })
+  const steps = scope === 'adopt' ? STEPS.filter((s) => s.tab !== 'hours') : STEPS
+  const heading = scope === 'adopt' ? 'Adoption visits' : scope === 'other' ? 'Volunteer shifts' : 'Bookings'
 
   const act = async (r: RosterRow, status: BookingStatus) => {
     setError(null)
@@ -127,25 +142,38 @@ export default function StaffBookings() {
         <div>
           <button
             type="button"
-            onClick={() => setParams({})}
+            onClick={() => setParams(keep)}
             className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-base font-bold text-brand-blue hover:bg-brand-blue-50"
           >
-            <Icon name="arrowLeft" size={20} /> Bookings
+            <Icon name="arrowLeft" size={20} /> {heading}
           </button>
           <h1 className="font-display text-[26px] font-black leading-tight text-ink">{step.label}</h1>
         </div>
       ) : (
-        <StaffTitle title="Bookings">
-          <p>Shifts and appointments people book in the app and on the website.</p>
-          <p>Confirm requests, check people in, look ahead, add times, then set up what can be booked.</p>
-        </StaffTitle>
+        <div>
+          {scope === 'adopt' && (
+            <Link to="/staff/adoptions" className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-base font-bold text-brand-blue hover:bg-brand-blue-50">
+              <Icon name="arrowLeft" size={20} /> Adoptions
+            </Link>
+          )}
+          <StaffTitle title={heading}>
+            <p>
+              {scope === 'adopt'
+                ? 'Adoption appointments and bonding sessions people book in the app and on the website.'
+                : scope === 'other'
+                  ? 'Volunteer shifts and the vet clinic that people book in the app and on the website.'
+                  : 'Shifts and appointments people book in the app and on the website.'}
+            </p>
+            <p>Confirm requests, check people in, look ahead, add times, then set up what can be booked.</p>
+          </StaffTitle>
+        </div>
       )}
       <FormError>{error}</FormError>
       {!step && (
         <>
           <h2 className="font-display text-xl font-extrabold text-ink">What do you need to do?</h2>
           <ul className="space-y-3">
-            {STEPS.map((s) => (
+            {steps.map((s) => (
               <li key={s.tab}>
                 <ChoiceCard
                   onClick={() => pick(s.tab)}

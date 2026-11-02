@@ -30,6 +30,7 @@ import Privacy from './pages/Privacy'
 import BookPage from './features/bookings/pages/BookPage'
 import BookingCancel from './features/bookings/pages/BookingCancel'
 import StaffBookings from './features/bookings/pages/StaffBookings'
+import StaffAdoptions from './pages/StaffAdoptions'
 import ServiceLetter from './features/bookings/pages/ServiceLetter'
 import ImpactPage from './features/impact/pages/ImpactPage'
 import StaffImpact from './features/impact/pages/StaffImpact'
@@ -354,6 +355,7 @@ export default function App() {
           {/* Update 31: the supporter email list */}
           <Route path="supporters" element={<StaffSupporters />} />
           <Route path="bookings" element={<StaffBookings />} />
+          <Route path="adoptions" element={<StaffAdoptions />} />
           <Route path="hours-letter" element={<ServiceLetter />} />
           <Route path="impact" element={<StaffImpact />} />
           <Route path="guardians" element={<StaffGuardians />} />

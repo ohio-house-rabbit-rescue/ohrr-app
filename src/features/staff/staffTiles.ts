@@ -87,7 +87,7 @@ export type GroupEntry =
   | { kind: 'section'; section: StaffSection; tiles: StaffTile[]; badge: number }
 
 /** The Today row, always in this order. */
-const TODAY_ORDER = ['/staff/inbox', '/staff/bookings', '/staff/counter', '/staff/scan']
+const TODAY_ORDER = ['/staff/inbox', '/staff/adoptions', '/staff/counter', '/staff/scan']
 
 export interface StaffTiles {
   /** Every page this person may open, in group order. */
@@ -143,7 +143,8 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       { to: '/staff/donations/report', title: 'Monthly donations report', hint: 'Totals, by donor, a spreadsheet', icon: 'file', group: 'items', more: true, show: canItems },
 
       // Rabbits and care
-      { to: '/staff/adopt', title: 'Adoptable rabbits', hint: 'Rabbits, photos, adoption status', icon: 'heart', group: 'rabbits', show: canAdopt },
+      { to: '/staff/adoptions', title: 'Adoptions', hint: pendingCount > 0 ? `${pendingCount} to confirm` : 'Visits, rabbits, applications', icon: 'heart', group: 'rabbits', today: true, badge: pendingCount, show: canBookings || canAdopt },
+      { to: '/staff/adopt', title: 'Adoptable rabbits', hint: 'Rabbits, photos, adoption status', icon: 'heart', group: 'rabbits', more: true, show: canAdopt },
       { to: '/staff/tails', title: 'Happy Tails', hint: 'Adopters’ stories', icon: 'sparkles', group: 'rabbits', show: canCare || can('inbox.manage') },
       { to: '/staff/learn', title: 'Care guides and pages', hint: 'Rabbit Care articles, Give, Adopt, About', icon: 'book', group: 'rabbits', section: 'care', show: canCare },
       { to: '/staff/bunny-help', title: 'Bunny Help topics', hint: 'What “My bunny is…” answers', icon: 'help', group: 'rabbits', section: 'care', show: canCare },
@@ -151,7 +152,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
 
       // Volunteers
       { to: '/staff/calls', title: 'Volunteer calls', hint: 'Put out a need, check in, thank', icon: 'heart', group: 'volunteers', show: canVolunteer || canBookings },
-      { to: '/staff/bookings', title: 'Bookings', hint: pendingCount > 0 ? `${pendingCount} to confirm` : 'Shifts and appointments', icon: 'calendar', group: 'volunteers', today: true, badge: pendingCount, show: canBookings },
+      { to: '/staff/bookings?scope=other', title: 'Volunteer shifts', hint: 'Shifts and the vet clinic', icon: 'calendar', group: 'volunteers', show: canBookings },
       { to: '/staff/volunteers', title: 'Volunteers', hint: 'The roster and their hours', icon: 'users', group: 'volunteers', show: canVolunteer || canBookings },
       { to: '/staff/volunteer', title: 'Volunteer opportunities', hint: 'Shifts, transport runs, events', icon: 'calendar', group: 'volunteers', show: canVolunteer },
 
