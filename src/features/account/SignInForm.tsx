@@ -13,6 +13,7 @@ import { Icon } from '../../components/icons'
 import { FormError, PasswordInput, staffInput } from '../../components/staffui'
 import { authOrigin } from '../../lib/appUrl'
 import { rememberPendingName, saveMyName } from './profile'
+import { getPendingInvite } from '../../lib/pendingInvite'
 
 type Mode = 'signin' | 'signup' | 'forgot'
 
@@ -106,6 +107,13 @@ export default function SignInForm({
         <p className="text-sm leading-relaxed text-slate-600">
           We sent a confirmation link to <strong>{email}</strong>. Open it, then come back and sign in.
         </p>
+        {getPendingInvite() && (
+          <p className="rounded-xl bg-brand-orange-50 px-3 py-2 text-left text-sm leading-relaxed text-slate-700">
+            <strong>Joining the OHRR team?</strong> Your invite code is saved on this phone, and signing in takes you
+            straight to it. If you opened the confirmation link on another device, open your invite email again and tap
+            its link there.
+          </p>
+        )}
         <button
           type="button"
           onClick={() => {
@@ -190,7 +198,9 @@ export default function SignInForm({
         <p className="mt-1 text-sm leading-relaxed text-slate-600">{sub}</p>
         {mode === 'signup' && forStaff && (
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            After you create your account, you’ll enter the invite code the person bringing you on gave you.
+            {getPendingInvite()
+              ? 'After you create your account, you’ll go straight to joining the team — your invite code is already saved.'
+              : 'After you create your account, you’ll enter the invite code the person bringing you on gave you.'}
           </p>
         )}
       </div>

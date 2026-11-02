@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
@@ -6,6 +6,7 @@ import { btn, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { NotConfigured, Spinner, FormError, staffInput } from '../components/staffui'
 import { accessDate } from '../lib/staffLevels'
+import { clearPendingInvite, getPendingInvite, savePendingInvite } from '../lib/pendingInvite'
 
 export default function StaffJoin() {
   const { configured, loading, user, membership, accessEndedOn, accessOnHold, refresh } = useAuth()
@@ -13,16 +14,35 @@ export default function StaffJoin() {
   const location = useLocation()
   const [params] = useSearchParams()
   // A QR code or an emailed link carries ?code=… — nothing to type.
-  const [code, setCode] = useState(params.get('code') ?? '')
+  // The link's code, or the one kept on this phone when the link was opened before signing in.
+  const linkCode = params.get('code')
+  const [code, setCode] = useState(linkCode ?? getPendingInvite() ?? '')
   const [status, setStatus] = useState<'idle' | 'submitting'>('idle')
   const [error, setError] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
+  useEffect(() => {
+    if (linkCode) savePendingInvite(linkCode)
+  }, [linkCode])
 
   if (!configured) return <NotConfigured />
   if (loading) return <Spinner />
   // Not signed in yet: sign in (or create an account) and come straight back,
   // with a QR code's ?code=… still filled in.
-  if (!user) return <Navigate to="/staff/signin" replace state={{ from: location.pathname + location.search }} />
+  // An invite link opens on Create account (a new person has no sign-in yet), says why, and comes
+  // straight back here with the code. Someone who already has an account taps Sign in instead.
+  if (!user) {
+    if (linkCode || getPendingInvite()) {
+      const back = `/staff/join?code=${encodeURIComponent(linkCode ?? getPendingInvite() ?? '')}`
+      return (
+        <Navigate
+          to={`/account?next=${encodeURIComponent(back)}&create=1`}
+          replace
+          state={{ notice: 'You’re invited to join the OHRR team. Create your sign-in below — or tap Sign in if you already have an OHRR account. Your invite code is saved; you’ll be taken straight to it.' }}
+        />
+      )
+    }
+    return <Navigate to="/staff/signin" replace state={{ from: location.pathname + location.search }} />
+  }
   if (membership) return <Navigate to="/staff" replace />
 
   // On hold: someone put them on hold, or their end date has passed (update 30).
@@ -70,6 +90,7 @@ export default function StaffJoin() {
     try {
       const { error } = await supabase.rpc('redeem_invite_code', { p_code: code.trim() })
       if (error) throw error
+      clearPendingInvite()
       await refresh()
       navigate('/staff', { replace: true })
     } catch (err) {
@@ -84,15 +105,21 @@ export default function StaffJoin() {
         <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-orange-50 text-brand-orange">
           <Icon name="ticket" size={22} />
         </span>
-        <h1 className="mt-3 font-display text-2xl font-black text-ink">Enter your invite code</h1>
+        <h1 className="mt-3 font-display text-2xl font-black text-ink">{code ? 'Join the OHRR team' : 'Enter your invite code'}</h1>
         <p className="mt-1 text-sm leading-relaxed text-slate-600">
           Signed in as <strong>{user.email}</strong>. You’re not on the OHRR team yet — one more step.
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-slate-600">
-          Ask the person bringing you on (a founder, an admin or a lead) for an invite code — they make one in{' '}
-          <strong>Staff → Team → Invite someone</strong> — and enter it here. It joins you to the team with the
-          access they set up for you.
-        </p>
+        {code ? (
+          <p className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold leading-relaxed text-green-800">
+            Your invite code is filled in below. Tap <strong>Join the team</strong>.
+          </p>
+        ) : (
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            Ask the person bringing you on (a founder, an admin or a lead) for an invite code — they make one in{' '}
+            <strong>Staff → Team → Invite someone</strong> — and enter it here. It joins you to the team with the
+            access they set up for you.
+          </p>
+        )}
       </div>
 
       <Card>

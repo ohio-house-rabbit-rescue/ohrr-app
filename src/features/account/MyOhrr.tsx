@@ -29,6 +29,7 @@ import { useSavedSessions } from '../../lib/savedSessions'
 import { activeBunnies, useMyBunny } from '../mybunny/storage'
 import { isFullAccess, levelInfo, useMyLevel } from '../../lib/staffLevels'
 import SignInForm from './SignInForm'
+import { clearPendingInvite, getPendingInvite } from '../../lib/pendingInvite'
 import ForYou from './ForYou'
 import InterestPicker from './InterestPicker'
 import { EmailForm, PasswordForm } from './AccountForms'
@@ -356,7 +357,8 @@ const ROLE_LABEL: Record<string, string> = { owner: 'Owner', admin: 'Admin', sta
 function StaffBox() {
   const { user, membership, accessOnHold, accessEndedOn, refresh } = useAuth()
   const myLevel = useMyLevel(user?.id, membership?.orgId)
-  const [code, setCode] = useState('')
+  const pending = getPendingInvite()
+  const [code, setCode] = useState(pending ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [joined, setJoined] = useState(false)
@@ -404,6 +406,7 @@ function StaffBox() {
     try {
       const { error } = await supabase.rpc('redeem_invite_code', { p_code: code.trim() })
       if (error) throw error
+      clearPendingInvite()
       await refresh()
       setJoined(true)
       setCode('')
@@ -417,7 +420,17 @@ function StaffBox() {
   return (
     <section className="space-y-2">
       <SectionLabel>Staff?</SectionLabel>
-      <details className="group rounded-2xl border border-slate-200/80 bg-white">
+      {/* An invite link was opened on this phone: don't make them hunt for where the code goes. */}
+      {pending && (
+        <Card className="space-y-2 border-brand-orange/40 bg-brand-orange-50">
+          <p className="text-base font-bold text-ink">You have an OHRR team invite waiting</p>
+          <p className="text-sm text-slate-700">Your code is saved. One tap finishes joining.</p>
+          <Link to="/staff/join" className={`${btn.primary} w-full`}>
+            Finish joining the team
+          </Link>
+        </Card>
+      )}
+      <details open={!!pending} className="group rounded-2xl border border-slate-200/80 bg-white">
         <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold text-slate-700">
           Have a staff invite code?
           <Icon name="chevron" size={18} className="shrink-0 text-slate-300 transition group-open:rotate-90" />

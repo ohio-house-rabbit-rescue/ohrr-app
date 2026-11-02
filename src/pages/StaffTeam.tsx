@@ -486,7 +486,7 @@ function InvitePanel({
             {who.email && (
               <a
                 href={`mailto:${who.email}?subject=${encodeURIComponent('Your OHRR staff invite')}&body=${encodeURIComponent(
-                  `Hi${who.name ? ` ${who.name}` : ''},\n\nHere's your invite to the OHRR staff app${who.position ? ` for ${who.position}` : ''}. Open this link, create your sign-in, and you're in:\n\n${joinUrl(code)}\n\nOr enter the code ${code} at ${joinUrl('')}\n\nIt's single-use and expires in 14 days.${made.until ? ` Your access runs until ${accessDate(made.until)}.` : ''}\n\nOhio House Rabbit Rescue`,
+                  `Hi${who.name ? ` ${who.name}` : ''},\n\nHere's your invite to the OHRR staff app${who.position ? ` for ${who.position}` : ''}.\n\n1. Tap this link (it has your code in it):\n${joinUrl(code)}\n\n2. Create your sign-in with the email this message came to. If you already have an OHRR account, tap Sign in instead.\n\n3. Tap "Join the team". Your code is already filled in, and you're in.\n\nThe link didn't work? Open ${joinUrl('')} and type this code: ${code}\n\nThe code is single-use and expires in 14 days.${made.until ? ` Your access runs until ${accessDate(made.until)}.` : ''}\n\nOhio House Rabbit Rescue`,
                 )}`}
                 className={pill.blue}
               >
