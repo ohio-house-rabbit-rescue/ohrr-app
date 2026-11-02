@@ -356,7 +356,7 @@ export default function ScanFlow() {
       setDraft(draftFromItem(saved))
       persist(null)
       if (editing && fromList && !warned) {
-        navigate('/staff/items', { state: { saved: `${saved.title} (${saved.code})` } })
+        navigate('/staff/items?list=1', { state: { saved: `${saved.title} (${saved.code})` } })
         return
       }
       if (editing) setNote({ text: `Saved: ${saved.title}` })
@@ -548,7 +548,7 @@ export default function ScanFlow() {
       <StepShell
         title="Found it"
         help="This tag is already on an item."
-        onBack={fromList ? () => navigate('/staff/items') : startOver}
+        onBack={fromList ? () => navigate('/staff/items?list=1') : startOver}
         backLabel={fromList ? 'List' : 'Scan'}
       >
         <div className="space-y-4">
@@ -726,7 +726,7 @@ export default function ScanFlow() {
                     It’s something else
                   </StepButton>
                 )}
-                {fromList && <StepButton to="/staff/items">Back to the list</StepButton>}
+                {fromList && <StepButton to="/staff/items?list=1">Back to the list</StepButton>}
               </div>
               {toSort && (item.quantity ?? 1) > 1 && splitOpen && (
                 <div className="space-y-4 border-t border-slate-100 pt-3">

@@ -57,6 +57,65 @@ const stepTones: Record<StepTone, string> = {
   blue: 'bg-brand-blue text-white shadow-sm hover:bg-brand-blue-dark',
 }
 
+/**
+ * One big choice on a "what do you need to do?" screen (2026-11-02, sponsor: "the process must flow from
+ * decision to a decision or action. Too many options will confuse"). A whole-card tap target with a plain
+ * title, one line saying what happens, and optionally a count. Keep a screen to about five of these.
+ */
+export function ChoiceCard({
+  to,
+  onClick,
+  n,
+  icon,
+  title,
+  text,
+  badge,
+  tone = 'white',
+}: {
+  to?: string
+  onClick?: () => void
+  /** The step number, when the choices are the steps of a job. */
+  n?: number
+  icon?: IconName
+  title: string
+  text?: string
+  /** "56 waiting" */
+  badge?: string
+  tone?: 'orange' | 'white'
+}) {
+  const body = (
+    <>
+      {n != null ? (
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-blue text-lg font-extrabold text-white" aria-hidden="true">
+          {n}
+        </span>
+      ) : icon ? (
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center text-brand-blue" aria-hidden="true">
+          <Icon name={icon} size={26} />
+        </span>
+      ) : null}
+      <span className="min-w-0 flex-1">
+        <span className="block font-display text-[19px] font-extrabold leading-snug text-ink">{title}</span>
+        {text && <span className="mt-0.5 block text-[15px] leading-snug text-slate-600">{text}</span>}
+        {badge && <span className="mt-1.5 inline-block rounded-full bg-brand-orange px-2.5 py-1 text-sm font-extrabold text-ink">{badge}</span>}
+      </span>
+      <Icon name="chevron" size={20} className="shrink-0 text-slate-400" />
+    </>
+  )
+  const cls = `flex min-h-[76px] w-full items-center gap-3.5 rounded-2xl border-2 px-4 py-3 text-left shadow-sm transition active:scale-[.99] ${
+    tone === 'orange' ? 'border-brand-orange bg-brand-orange-50' : 'border-slate-200 bg-white hover:border-slate-300'
+  }`
+  return to ? (
+    <Link to={to} className={cls}>
+      {body}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} className={cls}>
+      {body}
+    </button>
+  )
+}
+
 /** A button in a step row: a link (`to`) or an action (`onClick`). Orange is the one to tap first. */
 export function StepButton({
   to,

@@ -104,7 +104,7 @@ export default function ItemPhotos() {
   const done = () => {
     if (!fromList) return back()
     const it = item && item !== 'loading' ? item : null
-    navigate('/staff/items', { state: saved && it ? { saved: `photos of ${it.title} (${it.code})` } : null })
+    navigate('/staff/items?list=1', { state: saved && it ? { saved: `photos of ${it.title} (${it.code})` } : null })
   }
 
   if (!orgId) return null
