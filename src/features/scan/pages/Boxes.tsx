@@ -222,9 +222,12 @@ export function WaitingLabels({
   boxes,
   setPrintImgs,
   onPrinted,
+  compact = false,
 }: {
   orgId: string
   boxes: Box[]
+  /** Inside another panel: just the buttons, no box of its own. */
+  compact?: boolean
   /** The labels for the print dialog, shown by the page outside its screen. */
   setPrintImgs: (imgs: string[]) => void
   onPrinted: () => void
@@ -287,11 +290,19 @@ export function WaitingLabels({
   }
 
   return (
-    <section className="space-y-3 rounded-2xl border-2 border-brand-orange bg-brand-orange-50 p-4">
-      <h2 className="font-display text-lg font-extrabold text-ink">{plural} to print</h2>
-      <p className="text-base text-slate-700">
-        {boxes.map((b) => boxTitle(b)).join(', ')}. Put the 4 × 6 roll in the printer, print them, and stick each one over the number written on its box. These are boxes that are full and not labeled yet.
-      </p>
+    <section className={compact ? 'space-y-3' : 'space-y-3 rounded-2xl border-2 border-brand-orange bg-brand-orange-50 p-4'}>
+      {compact ? (
+        <p className="text-[15px] text-green-900">
+          Put the 4 × 6 roll in the printer, print {n === 1 ? 'it' : 'them'}, and stick {n === 1 ? 'it' : 'each one'} over the number written on the box. Then put the small roll back.
+        </p>
+      ) : (
+        <>
+          <h2 className="font-display text-lg font-extrabold text-ink">{plural} to print</h2>
+          <p className="text-base text-slate-700">
+            {boxes.map((b) => boxTitle(b)).join(', ')}. Put the 4 × 6 roll in the printer, print them, and stick each one over the number written on its box. These are boxes that are full and not labeled yet.
+          </p>
+        </>
+      )}
       <ErrorBox>{error}</ErrorBox>
       <div className="grid grid-cols-2 gap-2">
         {isNative ? (

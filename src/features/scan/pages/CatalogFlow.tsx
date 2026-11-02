@@ -1105,29 +1105,18 @@ export default function CatalogFlow() {
               <p className="flex items-center gap-2 font-display text-lg font-extrabold text-green-900">
                 <Icon name="check" size={20} className="shrink-0" /> Box {closedBox.no} is full{closedBox.count != null ? ` · ${closedBox.count} item${closedBox.count === 1 ? '' : 's'}` : ''}
               </p>
-              {closedBox.box && sameRoll && bluetoothAvailable() && !boxPrinted ? (
-                <BluetoothPrint
-                  labels={[{ code: closedBox.code, item: boxLabel(closedBox.box), copies: 1 }]}
-                  size={BOX_SIZE}
-                  busy={printBusy}
-                  setBusy={setPrintBusy}
-                  onError={setError}
-                  onPrinted={(codes, msg) => {
-                    setBoxPrinted(msg)
-                    void markBoxesPrinted(orgId, codes).catch(() => {})
-                  }}
-                  compact
-                />
-              ) : boxPrinted ? (
+              {boxPrinted ? (
                 <p className="text-[15px] font-bold text-green-800">{boxPrinted}</p>
+              ) : closedBox.box ? (
+                <WaitingLabels
+                  compact
+                  orgId={orgId}
+                  boxes={[closedBox.box]}
+                  setPrintImgs={setEndImgs}
+                  onPrinted={() => setBoxPrinted(`Box ${closedBox.no}’s label is printed.`)}
+                />
               ) : (
-                <p className="text-[15px] text-green-900">
-                  Its 4 × 6 label prints when the sorting is done — open{' '}
-                  <Link to="/staff/boxes" className="font-bold text-brand-blue">
-                    Boxes
-                  </Link>
-                  .
-                </p>
+                <p className="text-[15px] text-green-900">Getting its label ready…</p>
               )}
               <p className="text-[15px] text-green-900">Box {box?.box_no ?? 'next'} is started — keep going.</p>
             </div>
@@ -1855,7 +1844,7 @@ export default function CatalogFlow() {
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} aria-label="Take a photo" />
       <input ref={libraryRef} type="file" accept="image/*" className="hidden" onChange={onFile} aria-label="Choose a photo" />
       <div className="print:hidden">{screen}</div>
-      {ending && <BoxPrintSheet images={endImgs} />}
+      {(ending || closedBox) && <BoxPrintSheet images={endImgs} />}
     </>
   )
 }
