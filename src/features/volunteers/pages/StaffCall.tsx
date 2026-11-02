@@ -332,6 +332,13 @@ function ShareTab({ call, org }: { call: Call; org: OrgBits }) {
     setTimeout(() => setNote(null), 2200)
   }
 
+  // What the picture says under the address. It has to be true where the picture is posted.
+  const PICTURE_HINT: Partial<Record<Medium, string>> = {
+    facebook: 'Scan the code, or tap the link in the post',
+    instagram: 'Scan the code to sign up',
+    story: 'Scan the code to sign up',
+  }
+
   const picture = async (format: 'square' | 'story', medium: Medium) => {
     setBusy(`${medium}-pic`)
     setError(null)
@@ -348,6 +355,7 @@ function ShareTab({ call, org }: { call: Call; org: OrgBits }) {
           footer: msg.link.replace(/^https:\/\//, '').replace(/\?.*$/, ''),
           url: msg.link,
           accent: 'orange',
+          hint: PICTURE_HINT[medium],
         },
         format,
         { logoUrl: '/ohrr-mark.png' },

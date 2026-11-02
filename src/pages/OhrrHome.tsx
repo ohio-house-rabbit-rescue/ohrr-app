@@ -17,6 +17,7 @@ import MyBunnyHomeCard from '../features/mybunny/HomeCard'
 import MyBookingsCard from '../features/bookings/MyBookingsCard'
 import HomeSearch from '../features/bunnyhelp/HomeSearch'
 import ForYou from '../features/account/ForYou'
+import HelpNeededCard from '../features/volunteers/HelpNeededCard'
 
 // One top card, in the existing "big BunFest button" styling. The BunFest slide
 // keeps BunFest's own palette + logo and shows the live event date; any other
@@ -140,6 +141,8 @@ export default function OhrrHome() {
         <EasterReminder />
         {/* Live staff-posted notices (hidden when there are none) */}
         <AnnouncementsBanner />
+        {/* Volunteers needed: only while a call is open with places left */}
+        <HelpNeededCard />
         {/* What's new for the things they checked, since they last looked (hidden when nothing is),
             and — once, for people who haven't decided — the question about volunteer notifications */}
         <ForYou notifyPrompt />

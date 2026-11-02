@@ -309,7 +309,7 @@ export function outreach(c: Call, medium: Medium, org: OrgBits): Message {
           opt(areasText(c)),
           opt(perksText(c)),
           '',
-          `Sign up: ${bare} (link in our bio too).`,
+          `Sign up: ${bare} — or scan the code on the picture.`,
           '',
           'Thank you for helping the rabbits — please share!',
           '#OhioHouseRabbitRescue #Volunteer #Columbus #HouseRabbit',

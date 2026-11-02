@@ -27,6 +27,12 @@ export interface CardData {
   url: string
   /** accent: OHRR blue by default, orange for calls to action */
   accent?: 'blue' | 'orange'
+  /**
+   * The small line under the address, beside the QR code. It must be true where the picture is
+   * posted: a Facebook post's link is in the post, Instagram's is in the bio, and a picture
+   * that could go anywhere only says to scan the code.
+   */
+  hint?: string
 }
 
 export interface CardPost {

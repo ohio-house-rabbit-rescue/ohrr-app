@@ -229,13 +229,29 @@ export async function renderCard(canvas: HTMLCanvasElement, card: CardData, form
   } catch {
     /* no QR — the URL is still printed */
   }
+  // The address and the hint stay to the left of the QR box (it starts 12px left of the code).
+  const textW = w - pad - qrSize - 12 - 28 - pad
   ctx.fillStyle = 'white'
-  ctx.font = `800 34px "${display}"`
   ctx.textBaseline = 'middle'
-  ctx.fillText(card.footer, pad, y + 70)
+  let size = 34
+  ctx.font = `800 ${size}px "${display}"`
+  while (size > 22 && ctx.measureText(card.footer).width > textW) {
+    size -= 2
+    ctx.font = `800 ${size}px "${display}"`
+  }
+  // Still too long (a long sign-up link): break it after a slash onto a second line.
+  let addr = [card.footer]
+  if (ctx.measureText(card.footer).width > textW) {
+    const cut = card.footer.lastIndexOf('/', Math.max(1, Math.floor((card.footer.length * textW) / ctx.measureText(card.footer).width)))
+    if (cut > 0) addr = [card.footer.slice(0, cut + 1), card.footer.slice(cut + 1)]
+  }
+  const lineH = size * 1.25
+  addr.forEach((line, i) => ctx.fillText(line, pad, y + 62 + i * lineH))
   ctx.font = `600 26px "${body}"`
   ctx.fillStyle = 'rgba(255,255,255,0.8)'
-  ctx.fillText('Scan or tap the link in our bio', pad, y + 116)
+  const hintLines = wrap(ctx, card.hint ?? 'Scan the code with your phone’s camera', textW).slice(0, 2)
+  const hintTop = y + 62 + (addr.length - 1) * lineH + 52
+  hintLines.forEach((line, i) => ctx.fillText(line, pad, hintTop + i * 34))
 }
 
 export function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
