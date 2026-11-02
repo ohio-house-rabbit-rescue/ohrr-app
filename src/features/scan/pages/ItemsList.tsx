@@ -136,7 +136,7 @@ function stepChoices(step: StepKey, o: { counts: Counts | null; canSeeVendors: b
       text: 'The lots and prizes that have a code.',
       badge: o.counts && o.counts.event > 0 ? String(o.counts.event) : undefined,
     },
-    ...(o.canCounter ? [{ to: '/staff/counter', icon: 'bag' as IconName, title: 'Counter', text: 'Ring up a sale.' }] : []),
+    ...(o.canCounter ? [{ to: '/staff/counter', icon: 'bag' as IconName, title: 'Register', text: 'Ring up a sale.' }] : []),
     ...(o.canSeeVendors ? [{ to: '/staff/hopshop', icon: 'store' as IconName, title: 'Hop Shop', text: 'Stock, prices and orders.' }] : []),
   ]
 }
@@ -291,7 +291,7 @@ export default function ItemsList() {
           />
         </li>
         <li>
-          <ChoiceCard n={5} title="Sell, raffle or use" text="Auction and raffle, the Counter, the Hop Shop." {...go('sell')} />
+          <ChoiceCard n={5} title="Sell, raffle or use" text="Auction and raffle, the Register, the Hop Shop." {...go('sell')} />
         </li>
       </ol>
 
@@ -333,7 +333,7 @@ function ItemsListView({
   const [note, setNote] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
-  // Basket mode: tick donations, name it, raffle or Silent Auction.
+  // Basket mode: check donations, name it, raffle or Silent Auction.
   const [picking, setPicking] = useState(false)
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [basket, setBasket] = useState({ title: '', kind: 'raffle' as 'raffle' | 'auction', description: '' })
@@ -497,7 +497,7 @@ function ItemsListView({
         <div className="space-y-3 rounded-2xl border-2 border-brand-orange bg-brand-orange-50 p-4">
           <p className="font-display text-lg font-black text-ink">Make a basket</p>
           <p className="text-[15px] text-slate-700">
-            Tick what goes in it below. {picked.size} picked
+            Check what goes in it below. {picked.size} picked
             {pickedValue > 0 ? ` · worth ${formatMoney(pickedValue)} together` : ''}.
           </p>
           <BigInput value={basket.title} onChange={(v) => setBasket((b) => ({ ...b, title: v }))} placeholder="Bunny spa basket" ariaLabel="Name of the basket" />

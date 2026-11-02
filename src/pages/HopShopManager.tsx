@@ -353,7 +353,7 @@ export default function HopShopManager() {
         <StaffTitle title="Hop Shop">
           <p>
             The shop’s job, in order: <strong>1 Order</strong> what is running low, <strong>2 Add the delivery</strong> when it arrives,{' '}
-            <strong>3 Price labels</strong>, <strong>4 On the shelf</strong> — the list of what the shop carries, and <strong>5 Sell</strong> at the Counter.
+            <strong>3 Price labels</strong>, <strong>4 On the shelf</strong> — the list of what the shop carries, and <strong>5 Sell</strong> at the Register.
             Do whichever step you need today. Everything here goes live on the public Hop Shop the moment it is saved.
           </p>
         </StaffTitle>
@@ -388,7 +388,7 @@ export default function HopShopManager() {
           <ChoiceCard n={4} title="On the shelf" text="See, change or add what the shop carries." {...go('shelf')} />
         </li>
         <li>
-          <ChoiceCard n={5} title="Sell" text="Open the Counter and ring up a sale." to="/staff/counter" />
+          <ChoiceCard n={5} title="Sell" text="Open the Register and ring up a sale." to="/staff/counter" />
         </li>
       </ol>
     </Screen>
@@ -917,7 +917,7 @@ function ProductForm({
   const printed = !!initial?.label_printed_at
   const bc = normalizeCode(d.barcode)
   const barcodeInfo = !bc
-    ? 'Scan or type it, so scanning the packet at the till finds this item. Leave it empty when there isn’t one.'
+    ? 'Scan or type it, so scanning the packet at the register finds this item. Leave it empty when there isn’t one.'
     : isOhrrCode(bc)
       ? `${bc} is an OHRR number, not the barcode on the packet.`
       : `Scanning the packet (${bc}) opens this item.`
@@ -1631,7 +1631,7 @@ function Suppliers({
     <div className="space-y-3">
       <Explain label="About companies">
         <p>
-          One list for every company OHRR deals with. Tick <strong>We buy from them</strong> for anyone we buy from and{' '}
+          One list for every company OHRR deals with. Check <strong>We buy from them</strong> for anyone we buy from and{' '}
           <strong>Sells at our events</strong> for anyone with a table at BunFest or another event — some are both. Everything on a company’s
           card is for the team only.
         </p>

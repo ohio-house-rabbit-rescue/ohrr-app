@@ -1,5 +1,5 @@
 // /staff/boxes/:code — one box (update 46): what's in it, adding items by
-// scanning their labels (the camera stays on for the next one) or ticking them
+// scanning their labels (the camera stays on for the next one) or checking them
 // in a list, and printing the 4 × 6 in box label and a letter-size packing
 // list. Scanning a box label anywhere in the app lands here.
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -37,7 +37,7 @@ interface PickRow extends ListRow {
 const SELECT =
   'mt-1 block min-h-[48px] w-full rounded-xl border-2 border-slate-200 bg-white px-3 text-base font-semibold text-ink outline-none focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15'
 
-/** What happened to one scanned or ticked item, in a sentence. */
+/** What happened to one scanned or checked item, in a sentence. */
 function resultLines(res: BoxPutResult, codes: string[]): LogLine[] {
   const out: LogLine[] = []
   for (const c of res.not_found) out.push({ ok: false, text: `No item has the code ${c}. Add it first (Receive items), then scan it again.` })
@@ -536,7 +536,7 @@ function BackLink() {
   )
 }
 
-/** Tick items to put in the box: those not in any box yet, newest first, by day. */
+/** Check items to put in the box: those not in any box yet, newest first, by day. */
 function Picker({ orgId, box, onPut, onCancel }: { orgId: string; box: Box; onPut: (codes: string[]) => Promise<void>; onCancel: () => void }) {
   const [rows, setRows] = useState<PickRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -617,7 +617,7 @@ function Picker({ orgId, box, onPut, onCancel }: { orgId: string; box: Box; onPu
         disabled={busy || picked.size === 0}
         icon="box"
       >
-        {busy ? 'Putting them in…' : picked.size === 0 ? 'Tick the items for this box' : `Put ${picked.size} in ${boxName(box.code)}`}
+        {busy ? 'Putting them in…' : picked.size === 0 ? 'Check the items for this box' : `Put ${picked.size} in ${boxName(box.code)}`}
       </BigButton>
       <ErrorBox>{error}</ErrorBox>
       {rows === null && !error && <Spinner />}
@@ -634,7 +634,7 @@ function Picker({ orgId, box, onPut, onCancel }: { orgId: string; box: Box; onPu
                 {g.heading} <span className="font-sans text-sm font-semibold text-slate-500">· {g.rows.length}</span>
               </h3>
               <button type="button" onClick={() => setPicked((p) => new Set([...p, ...g.rows.map((r) => r.code)]))} className="min-h-[44px] px-2 text-[15px] font-bold text-brand-blue">
-                Tick these {g.rows.length}
+                Check these {g.rows.length}
               </button>
             </div>
           )}

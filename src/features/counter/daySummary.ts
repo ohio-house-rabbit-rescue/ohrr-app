@@ -1,4 +1,4 @@
-// Today at the till as files: the day's totals and what sold, as a PDF to
+// Today at the register as files: the day's totals and what sold, as a PDF to
 // print or send from the phone (to check against the cash box and the card
 // reader at closing) and as a spreadsheet.
 import type { SheetSpec } from '../../lib/inventoryExport'
@@ -17,9 +17,9 @@ export const dayWords = (day: string) => new Date(`${day}T12:00:00`).toLocaleDat
 
 export function daySheet(d: CounterDay, day: string): SheetSpec {
   return {
-    filename: `ohrr-till-${day}`,
+    filename: `ohrr-register-${day}`,
     sheetName: 'Till',
-    title: `Today at the till - ${dayWords(day)}`,
+    title: `Today at the register - ${dayWords(day)}`,
     columns: [
       { header: 'Item', width: 36 },
       { header: 'How many', width: 10, kind: 'number' },
@@ -44,7 +44,7 @@ export async function dayPdf(d: CounterDay, day: string, orgName: string): Promi
   doc.setTextColor(20, 20, 20)
   y += 0.42
   doc.setFontSize(22)
-  doc.text('Today at the till', left, y)
+  doc.text('Today at the register', left, y)
   y += 0.28
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(12)
@@ -113,7 +113,7 @@ export async function dayPdf(d: CounterDay, day: string, orgName: string): Promi
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9)
     doc.setTextColor(120, 120, 120)
-    doc.text(plain(`${orgName} - till, ${day}`), left, 10.65)
+    doc.text(plain(`${orgName} - register, ${day}`), left, 10.65)
     doc.text(`Page ${p} of ${pages}`, right, 10.65, { align: 'right' })
   }
   return doc.output('blob')

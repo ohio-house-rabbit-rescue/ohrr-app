@@ -193,7 +193,7 @@ export function ValueFields({ v, set }: { v: Extras; set: (p: Partial<Extras>) =
   )
 }
 
-/** Where a donation is headed — tick one, or leave it "Not sure yet". */
+/** Where a donation is headed — check one, or leave it "Not sure yet". */
 export function HeadedForChips({ v, set }: { v: Extras; set: (p: Partial<Extras>) => void }) {
   return (
     <div>

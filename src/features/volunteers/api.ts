@@ -21,7 +21,7 @@ export const VOLUNTEER_STATUS: { value: VolunteerRow['status']; label: string }[
   { value: 'former', label: 'No longer volunteering' },
 ]
 
-/** The roles OHRR actually runs, offered as tick boxes (free text is allowed too). */
+/** The roles OHRR actually runs, offered as checkboxes (free text is allowed too). */
 export const VOLUNTEER_ROLES = [
   'Bunny Socialization',
   'Buncare',

@@ -280,7 +280,7 @@ function ItemForm({
         return
       }
       if (!draft.pickup_only && dollarsToCents(draft.ship_fee) == null) {
-        setError('Enter the shipping fee (0 is fine), or tick “Pickup only”.')
+        setError('Enter the shipping fee (0 is fine), or check “Pickup only”.')
         return
       }
     }

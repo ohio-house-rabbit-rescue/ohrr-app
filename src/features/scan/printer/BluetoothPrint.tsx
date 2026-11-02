@@ -23,7 +23,7 @@ interface BtOptions {
   darkness: Darkness
   plain: boolean
   /** Named "swap" since 2026-10-27, when 0 = black became the default: a phone
-   *  that ticked the old "flip" to fix its first print mustn't flip it back. */
+   *  that checked the old "flip" to fix its first print mustn't flip it back. */
   swap: boolean
   anyName: boolean
 }

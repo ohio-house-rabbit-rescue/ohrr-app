@@ -1,12 +1,12 @@
 // OHRR's email list (update 31 — the `mailing_list` table). One list, six
 // things to hear about; the same labels and consent line on the website.
 //
-//   not signed in  join_mailing_list(): adds the ticked interests to that
+//   not signed in  join_mailing_list(): adds the checked interests to that
 //                  address (never removes any), source 'app'
 //   signed in      save_my_email_prefs(): the account's own address, and
 //                  replaces their choices; their row reads back with a select
 //
-// Whatever someone ticks is also remembered on this phone (DEVICE_KEY), which
+// Whatever someone checks is also remembered on this phone (DEVICE_KEY), which
 // is what "For you" on Home goes by — signed in or not.
 //
 // Until update 31 is run the table and functions don't exist: callers get
@@ -28,7 +28,7 @@ export type Interest = (typeof INTERESTS)[number]['key']
 
 export const INTEREST_LABEL = Object.fromEntries(INTERESTS.map((i) => [i.key, i.label])) as Record<Interest, string>
 
-export const CONSENT_LINE = 'OHRR will email you about what you tick. Every email has a link to change this or stop.'
+export const CONSENT_LINE = 'OHRR will email you about what you check. Every email has a link to change this or stop.'
 
 export function isInterest(v: unknown): v is Interest {
   return typeof v === 'string' && INTERESTS.some((i) => i.key === v)
@@ -66,7 +66,7 @@ function loadDevice(): Interest[] {
   }
 }
 
-/** Remember what was ticked on this phone (For you goes by it). */
+/** Remember what was checked on this phone (For you goes by it). */
 export function setDeviceInterests(list: readonly Interest[]) {
   const next = cleanInterests(list)
   if (next.join() === deviceInterests.join()) return

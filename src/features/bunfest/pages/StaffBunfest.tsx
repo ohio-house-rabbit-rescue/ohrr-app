@@ -124,14 +124,14 @@ function YearChips({ value, onChange }: { value: number[]; onChange: (years: num
       </div>
       <span className="mt-1 block text-sm text-slate-600">
         {value.length === 0
-          ? 'No years ticked — they show on every year’s list until you tick one.'
-          : 'They appear on the list for the years ticked here.'}
+          ? 'No years checked — they show on every year’s list until you check one.'
+          : 'They appear on the list for the years checked here.'}
       </span>
     </div>
   )
 }
 
-/** Swap two neighbours in a hand-ordered list, then number the whole list 1, 2, 3 … */
+/** Swap two neighbors in a hand-ordered list, then number the whole list 1, 2, 3 … */
 async function moveInList<T extends { sort_order: number }>(
   list: T[],
   i: number,
@@ -664,7 +664,7 @@ function SessionsList({ orgId, year }: { orgId: string; year: number }) {
     setError(null)
     try {
       const n = await copySessions(orgId, from, year)
-      setNote(n === 0 ? `Nothing to copy from ${from}.` : `Copied ${n} sessions from ${from} — they start hidden, so edit then tick “People can see this”.`)
+      setNote(n === 0 ? `Nothing to copy from ${from}.` : `Copied ${n} sessions from ${from} — they start hidden, so edit then check “People can see this”.`)
       await load()
     } catch (e) {
       setError(errMessage(e))
@@ -973,7 +973,7 @@ function VendorsTab({ orgId, year }: { orgId: string; year: number }) {
     <div className="space-y-3">
       <Card className="space-y-2">
         <p className="text-[15px] text-slate-700">
-          Companies from the Hop Shop Suppliers list that are ticked “Vendor”.
+          Companies from the Hop Shop Suppliers list that are checked “Vendor”.
           {rows && rows.length > 0 && (
             <span className="mt-1 block font-semibold text-ink">
               {published} of {rows.length} published · {countYear} at {year}.
@@ -994,7 +994,7 @@ function VendorsTab({ orgId, year }: { orgId: string; year: number }) {
       {rows === null && !error && <Spinner />}
       {rows && rows.length === 0 && (
         <Card className="text-[15px] text-slate-700">
-          No vendors yet. Add one below, or tick “Vendor” on a company in Hop Shop → Suppliers.
+          No vendors yet. Add one below, or check “Vendor” on a company in Hop Shop → Suppliers.
         </Card>
       )}
 

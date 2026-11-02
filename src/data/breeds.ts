@@ -23,7 +23,7 @@ export interface Breed {
   /** how to tell it apart, in one or two plain sentences */
   look: string
   /** colors / markings the standard recognizes, when that is the point of the breed */
-  colours?: string
+  colors?: string
   photo: string
   /** Wikipedia article this card was checked against */
   source: string
@@ -140,7 +140,7 @@ export const BREEDS: Breed[] = [
     weight: '9–12 lb (does slightly larger)',
     origin: 'American, despite the name — the breed originated in California.',
     look: 'A big, solid rabbit with upright ears. The white with pink eyes is the classic “New Zealand White”; red, black, blue and broken are recognized too.',
-    colours: 'White, red, black, blue, broken',
+    colors: 'White, red, black, blue, broken',
     photo: '/breeds/new-zealand.jpg',
     source: `${W}New_Zealand_rabbit`,
   },
@@ -237,7 +237,7 @@ export const BREEDS: Breed[] = [
     weight: '4½–6½ lb',
     origin: 'First appeared in the Netherlands in 1898.',
     look: 'A compact, rounded rabbit with a glossy, short coat. The rich chocolate color is the classic; lilac, black, blue and broken are recognized too.',
-    colours: 'Chocolate, lilac, black, blue, broken',
+    colors: 'Chocolate, lilac, black, blue, broken',
     photo: '/breeds/havana.jpg',
     source: `${W}Havana_rabbit`,
   },
@@ -274,7 +274,7 @@ export const BREEDS: Breed[] = [
     weight: '5–8 lb',
     origin: 'England, 19th century.',
     look: 'White with a butterfly marking on the nose, eye circles, cheek spots, colored ears, a herringbone stripe down the back and a chain of spots along each side; long front legs and a curious, playful nature.',
-    colours: 'Black, blue, chocolate, lilac, tortoise, gray, gold',
+    colors: 'Black, blue, chocolate, lilac, tortoise, gray, gold',
     photo: '/breeds/english-spot.jpg',
     source: `${W}English_Spot`,
   },
@@ -299,7 +299,7 @@ export const BREEDS: Breed[] = [
     weight: '2½–4½ lb (ideal 3½)',
     origin: 'Recognized by ARBA.',
     look: 'White with colored points — black, blue, chocolate or lilac — like a Californian, but small, and posed stretched out: the only “cylindrical” body type.',
-    colours: 'White with black, blue, chocolate or lilac points',
+    colors: 'White with black, blue, chocolate or lilac points',
     photo: '/breeds/himalayan.jpg',
     source: `${W}Himalayan_rabbit`,
   },
@@ -324,7 +324,7 @@ export const BREEDS: Breed[] = [
     weight: '4–6 lb',
     origin: 'England; popular in the United States.',
     look: 'Glossy black, blue, chocolate or lilac on top with rich tan underneath — belly, chest, under the jaw, inside the ears and around the eyes.',
-    colours: 'Black, blue, chocolate, lilac — each with tan',
+    colors: 'Black, blue, chocolate, lilac — each with tan',
     photo: '/breeds/tan.jpg',
     source: `${W}Tan_rabbit`,
   },

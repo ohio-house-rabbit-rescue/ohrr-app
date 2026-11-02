@@ -522,7 +522,7 @@ function WinnerCard({
 }: {
   w: RaffleWinner
   onUndo?: () => void
-  /** Step 3: tick or untick "Handed over" (stored with the ticket, update 48). */
+  /** Step 3: check or uncheck "Handed over" (stored with the ticket, update 48). */
   onHand?: (handed: boolean) => void
   handBusy?: boolean
   reach?: boolean

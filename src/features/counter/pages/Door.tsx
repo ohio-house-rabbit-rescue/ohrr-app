@@ -66,7 +66,7 @@ export default function Door() {
   }
 
   return (
-    <StepShell title="Door tickets" help={settings.event_name} onBack={() => navigate('/staff/counter')} backLabel="Counter">
+    <StepShell title="Door tickets" help={settings.event_name} onBack={() => navigate('/staff/counter')} backLabel="Register">
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <SyncPill waiting={door.waiting} online={door.online} lastSync={door.lastSync} error={door.error} />

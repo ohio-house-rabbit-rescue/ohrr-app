@@ -55,7 +55,7 @@ export const givingOptions: GivingOption[] = [
     cta: 'Link your Kroger account',
     url: 'https://www.kroger.com/i/community/community-rewards',
     details: [
-      'Easily help out the bunnies by making us your Kroger Community Rewards partner. It takes less than a minute and each shopping trip automatically donates to our rescue rabbits at no cost to you. You’ll be able to see that it’s working by seeing our name towards the bottom of your receipt.',
+      'Easily help out the bunnies by making us your Kroger Community Rewards partner. It takes less than a minute and each shopping trip automatically donates to our rescue rabbits at no cost to you. You’ll be able to see that it’s working by seeing our name toward the bottom of your receipt.',
       'Search for Ohio House Rabbit Rescue by name or by our ID number 80631. Kroger lists charities within a certain radius of the store you choose — if you live outside of Columbus, select a store in Columbus as your main store and OHRR will still receive the benefits; you don’t have to shop at that store.',
     ],
     links: [

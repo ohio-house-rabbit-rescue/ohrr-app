@@ -42,7 +42,7 @@ export function newId(): string {
 const DEVICE_KEY = 'ohrr.counter.device.v1'
 
 export interface DeviceInfo {
-  /** "Door 1", "Hop Shop till" — shown on every entry it records. */
+  /** "Door 1", "Hop Shop register" — shown on every entry it records. */
   name: string
   /** The org this phone works for, remembered for when it can't ask. */
   orgId: string | null

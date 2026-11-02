@@ -79,7 +79,7 @@ export default function AdoptionApplication() {
 
   const submit = async () => {
     if (!certify || !returnAgree || !signature.trim()) {
-      setError('Please tick both statements and type your name as a signature.')
+      setError('Please check both statements and type your name as a signature.')
       return
     }
     setError(null)

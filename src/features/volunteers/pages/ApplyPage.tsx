@@ -3,7 +3,7 @@
 // OHRR vets new volunteers: someone applies here, staff read it in Staff →
 // Volunteers and approve them for everything or for certain kinds of
 // volunteering, and from then on the email they applied with lets them sign
-// up for those shifts. ?role=socialization (or a role's name) ticks that kind
+// up for those shifts. ?role=socialization (or a role's name) checks that kind
 // to start with — the pages that ask for approval link here with it.
 import { useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -17,7 +17,7 @@ import { APPROVAL_KINDS, applyToVolunteer, kindLabel, rememberVolunteerEmail } f
 const input =
   'mt-1 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-base text-ink outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20'
 
-/** "socialization", "Bunny Socialization" or "buncare-shift" → the kind to tick. */
+/** "socialization", "Bunny Socialization" or "buncare-shift" → the kind to check. */
 function kindsFrom(role: string | null): string[] {
   const r = (role ?? '').trim().toLowerCase()
   if (!r) return []
@@ -53,7 +53,7 @@ export default function ApplyPage() {
     setError(null)
     if (!age) return setError('Please say whether you’re 18 or older.')
     if (kinds.length === 0) return setError('Please pick at least one kind of volunteering.')
-    if (!understood) return setError('Please tick the box at the end.')
+    if (!understood) return setError('Please check the box at the end.')
     // Everything else they told us, in words staff can read as they are.
     const answers: Record<string, string> = { age: age === 'adult' ? '18 or older' : 'Under 18' }
     if (age === 'minor') {

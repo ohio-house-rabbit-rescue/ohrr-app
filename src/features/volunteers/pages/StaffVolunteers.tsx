@@ -405,7 +405,7 @@ function Decided({ v, d, onHide }: { v: VolunteerRow; d: Decision; onHide: () =>
   )
 }
 
-/** Tick the kinds of volunteering. */
+/** Check the kinds of volunteering. */
 function KindChips({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   return (
     <div className="flex flex-wrap gap-1.5">

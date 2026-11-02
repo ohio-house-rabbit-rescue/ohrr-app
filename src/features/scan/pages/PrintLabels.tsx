@@ -5,14 +5,14 @@
 //                           price (one per item in stock)
 // Step 2 of an item's job (Receive → Label → Put away → Sort → Sell) and step 3
 // of the Hop Shop's (Order → Delivery → Price labels → Shelf → Sell). Three
-// parts: A the label size (one line once set), B tick the items, C print —
+// parts: A the label size (one line once set), B check the items, C print —
 // always in the footer. Pick the items and how many copies of each, then Print — on a laptop or a phone that sees the printer —
 // or make a PDF, one label per page, to print from wherever the printer is —
 // or send them straight to OHRR's Bluetooth label printer (printer/).
-// ?code=X (repeatable) ticks just those; &copies=N sets their copies;
-// ?c=X:N (repeatable) ticks X with N copies (a delivery's labels).
+// ?code=X (repeatable) checks just those; &copies=N sets their copies;
+// ?c=X:N (repeatable) checks X with N copies (a delivery's labels).
 // Silent Auction items print as bid-sheet labels (prices, "Scan to buy it
-// now") unless "Bid-sheet labels" is unticked (update 44).
+// now") unless "Bid-sheet labels" is unchecked (update 44).
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
@@ -195,7 +195,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   const [error, setError] = useState<string | null>(null)
   const [showPrice, setShowPrice] = useState(() => loadOn(PRICE_KEY))
   const [bidSheet, setBidSheet] = useState(() => loadOn(SHEET_KEY))
-  // ?code=DON-00042 (one or more): tick just those — "Print this label" from the catalog or a product card.
+  // ?code=DON-00042 (one or more): check just those — "Print this label" from the catalog or a product card.
   const [searchParams] = useSearchParams()
   const perCode = useMemo(() => {
     const m = new Map<string, number>()
@@ -246,7 +246,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
         rows = list.map((i) => itemRow(i, i.kind === 'auction' ? prices.get(i.ref_id) : undefined))
       }
       if (again) {
-        // Printed on another phone or computer since the last look: untick them, so nothing prints twice.
+        // Printed on another phone or computer since the last look: uncheck them, so nothing prints twice.
         const before = new Map((items ?? []).map((r) => [r.code, r.label_printed_at]))
         const done = rows.filter((r) => r.label_printed_at && before.has(r.code) && !before.get(r.code)).map((r) => r.code)
         if (done.length) {
@@ -254,7 +254,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
             const gone = done.filter((c) => p.has(c))
             if (gone.length === 0) return p
             setLastMarked([])
-            setNote(`${plural(gone.length)} you had ticked ${gone.length === 1 ? 'was' : 'were'} printed by someone else, so ${gone.length === 1 ? 'it is' : 'they are'} unticked.`)
+            setNote(`${plural(gone.length)} you had checked ${gone.length === 1 ? 'was' : 'were'} printed by someone else, so ${gone.length === 1 ? 'it is' : 'they are'} unchecked.`)
             return new Set([...p].filter((c) => !gone.includes(c)))
           })
         }
@@ -271,7 +271,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
             return new Set(w)
           }
         }
-        // Nothing ticked to start with: with hundreds of items, people tick what they want.
+        // Nothing checked to start with: with hundreds of items, people check what they want.
         return new Set<string>()
       })
     } catch (e) {
@@ -313,7 +313,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   const setCopies = (code: string, n: number) => setCopyText((c) => ({ ...c, [code]: String(clampCopies(n)) }))
   const totalLabels = selected.reduce((n, i) => n + copiesOf(i.code), 0)
 
-  // A preview of the first ticked label, at the chosen size.
+  // A preview of the first checked label, at the chosen size.
   useEffect(() => {
     const first = selected[0] ?? shown[0]
     if (!first) {
@@ -465,8 +465,8 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
             <>
               <p>
                 {shop
-                  ? 'The barcode scans at the till; the QR code opens the item. '
-                  : 'The QR code opens the item, the barcode scans at the till or desk, and the number can be typed. '}
+                  ? 'The barcode scans at the register; the QR code opens the item. '
+                  : 'The QR code opens the item, the barcode scans at the register or desk, and the number can be typed. '}
                 {isNative
                   ? 'Print or share: in the share sheet choose the printer’s app — for OHRR’s Phomemo and Omezizy printers that is Labelife: PDF processing → pick the label size → Print. AirPrint works for printers that have it.'
                   : 'In the print dialog choose the label printer and its label size; margins are zero. “Save as PDF” works too.'}
@@ -485,10 +485,10 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
               <p className="flex items-center gap-2 text-sm font-bold text-slate-600">
                 <PartBadge n="C" />
                 {selected.length === 0
-                  ? 'Print — tick an item first'
+                  ? 'Print — check an item first'
                   : `Print ${plural(totalLabels)}${totalLabels !== selected.length ? ` for ${selected.length} items` : ''} · ${size.label.replace(/\s*\(.*\)\s*$/, '')}`}
               </p>
-              {/* Nothing ticked yet: just the one line above. The buttons stay mounted (the Bluetooth connection lives in them), only hidden. */}
+              {/* Nothing checked yet: just the one line above. The buttons stay mounted (the Bluetooth connection lives in them), only hidden. */}
               <div className={selected.length === 0 ? 'hidden' : 'space-y-2'}>
               <div className="grid grid-cols-2 gap-3">
                 {isNative ? (
@@ -657,10 +657,10 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
               )}
             </div>
 
-            {/* B · tick the items */}
+            {/* B · check the items */}
             <div className="space-y-3">
-              <Part n="B" hint={picked.size ? `${picked.size} ticked` : undefined}>
-                Tick the items
+              <Part n="B" hint={picked.size ? `${picked.size} checked` : undefined}>
+                Check the items
               </Part>
               <div className="relative">
                 <Icon name="search" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -679,12 +679,12 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
                 </button>
                 {shown.length > 0 && (
                   <button type="button" onClick={() => setPicked((p) => new Set([...p, ...shown.map((i) => i.code)]))} className={pill.outline}>
-                    Tick all {shown.length}
+                    Check all {shown.length}
                   </button>
                 )}
                 {picked.size > 0 && (
                   <button type="button" onClick={() => setPicked(new Set())} className={pill.outline}>
-                    Untick all
+                    Uncheck all
                   </button>
                 )}
               </div>
@@ -751,7 +751,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
                         {g.heading} <span className="font-sans text-sm font-semibold text-slate-500">· {g.rows.length}</span>
                       </h2>
                       <button type="button" onClick={() => setPicked((p) => new Set([...p, ...g.rows.map((i) => i.code)]))} className={pill.soft}>
-                        Tick these {g.rows.length}
+                        Check these {g.rows.length}
                       </button>
                     </div>
                   )}

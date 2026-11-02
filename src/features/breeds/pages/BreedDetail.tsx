@@ -43,10 +43,10 @@ export default function BreedDetail() {
           <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Grown weight</p>
           <p className="mt-1 text-sm text-slate-700">{b.weight}</p>
         </div>
-        {b.colours && (
+        {b.colors && (
           <div>
             <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Colors</p>
-            <p className="mt-1 text-sm text-slate-700">{b.colours}</p>
+            <p className="mt-1 text-sm text-slate-700">{b.colors}</p>
           </div>
         )}
         <div>

@@ -45,11 +45,11 @@ export const LEVELS: LevelInfo[] = [
   { value: 'lead', label: 'Lead', plural: 'Leads', asA: 'a lead', blurb: 'Runs an area and can share its tasks' },
   { value: 'volunteer3', label: 'Volunteer 3', plural: 'Volunteer 3', asA: 'Volunteer 3', blurb: 'A trusted volunteer; their hours count straight away' },
   { value: 'volunteer2', label: 'Volunteer 2', plural: 'Volunteer 2', asA: 'Volunteer 2', blurb: 'A few chosen tasks' },
-  { value: 'volunteer1', label: 'Volunteer 1', plural: 'Volunteer 1', asA: 'Volunteer 1', blurb: 'One job, e.g. the Counter' },
+  { value: 'volunteer1', label: 'Volunteer 1', plural: 'Volunteer 1', asA: 'Volunteer 1', blurb: 'One job, e.g. the Register' },
 ]
 
 /** Before update 30 the lowest level was 'worker' (the update makes it Volunteer 1). */
-const WORKER: LevelInfo = { value: 'worker', label: 'Volunteer', plural: 'Volunteers', asA: 'a volunteer', blurb: 'One job, e.g. the Counter' }
+const WORKER: LevelInfo = { value: 'worker', label: 'Volunteer', plural: 'Volunteers', asA: 'a volunteer', blurb: 'One job, e.g. the Register' }
 
 /** Every level the database may hand back, highest first — the ten, then the old 'worker'. */
 export const ALL_LEVELS: LevelInfo[] = [...LEVELS, WORKER]

@@ -237,7 +237,7 @@ export default function StaffGuardians() {
                 <Part n="B" hint="optional">
                   Where it sorts
                 </Part>
-                <Field label="Sort under" hint="Usually the surname; fix it if the guess is wrong.">
+                <Field label="Sort under" hint="Usually the last name; fix it if the guess is wrong.">
                   <input
                     className={staffInput}
                     value={sortUnder}

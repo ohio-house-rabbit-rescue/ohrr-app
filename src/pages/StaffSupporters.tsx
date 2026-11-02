@@ -172,7 +172,7 @@ export default function StaffSupporters() {
             />
           </label>
 
-          {/* One chip per interest, with how many (subscribed) people ticked it. */}
+          {/* One chip per interest, with how many (subscribed) people checked it. */}
           <div className="flex flex-wrap gap-2">
             <Chip on={interest === 'all'} onClick={() => setInterest('all')}>
               Everyone · {subscribed.length}
@@ -226,7 +226,7 @@ export default function StaffSupporters() {
                   <p className="text-xs text-slate-500">
                     {cleanInterests(r.interests)
                       .map((k) => INTEREST_LABEL[k])
-                      .join(' · ') || 'Nothing ticked'}
+                      .join(' · ') || 'Nothing checked'}
                   </p>
                   <p className="flex items-center gap-1 text-xs text-slate-400">
                     <Icon name="clock" size={12} /> Joined {usDate(r.created_at)}

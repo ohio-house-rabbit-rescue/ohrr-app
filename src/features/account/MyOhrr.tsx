@@ -249,7 +249,7 @@ function EmailChoices({ userId, name }: { userId: string; name: string }) {
         setState(r)
         return
       }
-      // Not on the list yet: start from what was ticked on this phone.
+      // Not on the list yet: start from what was checked on this phone.
       setInterests(r.onList ? r.interests : getDeviceInterests())
       setSubscribed(r.subscribed)
       setState('ready')
@@ -264,7 +264,7 @@ function EmailChoices({ userId, name }: { userId: string; name: string }) {
     setError(null)
     setSaved(false)
     if (subscribed && interests.length === 0) {
-      setError('Tick at least one, or turn emails off.')
+      setError('Check at least one, or turn emails off.')
       return
     }
     setBusy(true)
@@ -312,7 +312,7 @@ function EmailChoices({ userId, name }: { userId: string; name: string }) {
               <span>
                 <span className="block font-display text-[15px] font-extrabold text-ink">Get emails</span>
                 <span className="block text-sm text-slate-500">
-                  {subscribed ? 'To your sign-in email, about what you tick' : 'Off — OHRR won’t email you'}
+                  {subscribed ? 'To your sign-in email, about what you check' : 'Off — OHRR won’t email you'}
                 </span>
               </span>
               <span
@@ -332,7 +332,7 @@ function EmailChoices({ userId, name }: { userId: string; name: string }) {
                 legend="What about"
               />
             </div>
-            <p className="text-xs leading-relaxed text-slate-500">What you tick also decides what “New for you” shows on Home.</p>
+            <p className="text-xs leading-relaxed text-slate-500">What you check also decides what “New for you” shows on Home.</p>
             <FormError>{error}</FormError>
             {saved && !busy && <p className="text-sm font-bold text-green-700">Saved.</p>}
             <button type="submit" disabled={busy} className={`${btn.primary} w-full disabled:opacity-60`}>

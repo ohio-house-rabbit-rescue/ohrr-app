@@ -328,7 +328,7 @@ function Setup({ orgId, data, onSaved }: { orgId: string; data: Holds; onSaved: 
       <div className="space-y-1.5">
         <p className="text-sm font-bold text-ink">Who gets the notification</p>
         <p className="text-xs leading-relaxed text-slate-500">
-          Tick the helpers at the table. With nobody ticked, everyone who runs the desk is told.
+          Check the helpers at the table. With nobody checked, everyone who runs the desk is told.
           {!data.notifications_on && ' Phone notifications are switched off in Staff → Features, so for now new holds show only on this page.'}{' '}
           A notification reaches a phone that turned notifications on in the web app (ohrr-app.pages.dev, added to the Home Screen on an iPhone) while
           signed in; the Android app can’t receive them yet.

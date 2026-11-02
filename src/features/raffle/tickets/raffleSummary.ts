@@ -4,8 +4,8 @@
 // (volunteers/callSummary.ts). Staff audit, 2026-10-27.
 //
 // Whether a prize was handed over is stored with the winning ticket (update 48,
-// ticked on the Raffle desk), so the PDF and the spreadsheet say Yes (with the
-// time) or Not yet — nothing to tick on paper.
+// checked on the Raffle desk), so the PDF and the spreadsheet say Yes (with the
+// time) or Not yet — nothing to check on paper.
 import type { SheetSpec } from '../../../lib/inventoryExport'
 import { money, ticketLabel, ticketRange, type DeskSummary, type RaffleOrder, type RaffleWinner } from './api'
 
@@ -97,7 +97,7 @@ const plain = (s: string | null | undefined) =>
     .replace(/·/g, '-')
     .replace(/…/g, '...')
 
-/** One letter page (more when long): the totals, every winner with a box to tick, prizes not drawn yet. */
+/** One letter page (more when long): the totals, every winner with a box to check, prizes not drawn yet. */
 export async function raffleSummaryPdf(
   totals: RaffleTotals,
   winners: RaffleWinner[],

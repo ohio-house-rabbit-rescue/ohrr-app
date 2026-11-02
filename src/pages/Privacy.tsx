@@ -70,7 +70,7 @@ export default function Privacy() {
         <P>
           <strong>Notifications on your phone</strong> (My OHRR, with or without an account): if you turn them on, the
           app keeps your phone's notification address — made by your phone's browser, not your number — and what you
-          ticked, so OHRR can send them. Turning them off removes it.
+          checked, so OHRR can send them. Turning them off removes it.
         </P>
         <P>
           Only you can see what your account keeps. OHRR staff can see only the email list — the names, email

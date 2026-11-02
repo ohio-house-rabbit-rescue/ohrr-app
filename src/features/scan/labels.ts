@@ -28,7 +28,7 @@ export interface LabelSize {
   label: string
   wIn: number
   hIn: number
-  /** Tall labels only: print the item's photo too. Off unless someone ticks it. */
+  /** Tall labels only: print the item's photo too. Off unless someone checks it. */
   photo?: boolean
 }
 

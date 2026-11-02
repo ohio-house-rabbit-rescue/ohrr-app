@@ -1,5 +1,5 @@
 // "New for you" — a small card on Home (and at the top of My OHRR) listing
-// what's new since they last looked, for the things they ticked. Renders
+// what's new since they last looked, for the things they checked. Renders
 // nothing at all when there's nothing new. Tapping a line opens that page and
 // counts as having looked; "Seen them" clears the lot.
 //

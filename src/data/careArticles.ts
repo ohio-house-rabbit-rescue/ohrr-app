@@ -333,7 +333,7 @@ Looking for a vet who does rabbit spays and neuters, or a low-cost option? See F
 
 People commonly live with their house rabbits either keeping them in a 4×4 or larger pen during the day, with daily exercise time in a bunny-proofed area, or giving them permanent access to a room or portion of the house. Your living arrangement choice will dictate what tactics below are most effective — and necessary — for you.
 
-Chewing and digging are natural for rabbits. The key is to redirect the behavior away from the items you want to keep intact and towards acceptable chew and dig-ables. That takes three major steps:
+Chewing and digging are natural for rabbits. The key is to redirect the behavior away from the items you want to keep intact and toward acceptable chew and dig-ables. That takes three major steps:
 
 - Teach your rabbit what they are and aren’t allowed to chew and dig
 - Block access to areas and objects that are just too tempting to resist

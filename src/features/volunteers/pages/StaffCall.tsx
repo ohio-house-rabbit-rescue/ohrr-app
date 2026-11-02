@@ -739,7 +739,7 @@ function ThanksTab({ call, roster, org, orgId }: { call: Call; roster: RosterLin
         <Explain label="About the thank-yous">
           <p>
             Each thank-you gives their hours here, this year and in all, and links to their own hours page. Send it by
-            email or text, then tick it off. The summary lists every shift, who came and who still needs thanking.
+            email or text, then check it off. The summary lists every shift, who came and who still needs thanking.
           </p>
         </Explain>
       </Card>

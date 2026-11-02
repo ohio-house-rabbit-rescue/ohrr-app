@@ -264,7 +264,7 @@ export function CompanyForm({
     setBusy(true)
     setError(null)
     try {
-      if (!d.is_supplier && !d.is_vendor) throw new Error('Tick “We buy from them”, “Sells at our events”, or both.')
+      if (!d.is_supplier && !d.is_vendor) throw new Error('Check “We buy from them”, “Sells at our events”, or both.')
       const extras: CompanyExtras | null = ready
         ? {
             photo_url: d.photo_url,

@@ -273,7 +273,7 @@ export default function CallEditor({
         <label className="block text-sm font-semibold text-slate-700">
           Before they sign up — one per line (optional)
           <textarea className={staffInput} rows={2} value={d.requirements} onChange={txt('requirements')} placeholder="Closed-toe shoes" />
-          <span className="mt-1 block text-xs font-normal text-slate-500">People tick that they’ve read these.</span>
+          <span className="mt-1 block text-xs font-normal text-slate-500">People check that they’ve read these.</span>
         </label>
         <label className="block text-sm font-semibold text-slate-700">
           Stop taking sign-ups after (optional)

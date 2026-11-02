@@ -26,7 +26,7 @@ export default function MailingList() {
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (interests.length === 0) {
-      setError('Tick at least one.')
+      setError('Check at least one.')
       return
     }
     setStatus('submitting')

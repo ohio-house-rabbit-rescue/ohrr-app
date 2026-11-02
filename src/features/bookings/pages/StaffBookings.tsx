@@ -788,7 +788,7 @@ function TypeForm({
         <Field label={d.questions !== undefined ? 'A last question, answered in their own words' : 'A question to ask'}>
           <input className={staffInput} value={d.ask_reason ?? ''} onChange={txt('ask_reason')} placeholder="Which rabbit would you like to meet?" />
         </Field>
-        <Field label="A box they must tick">
+        <Field label="A box they must check">
           <input className={staffInput} value={d.attest_text ?? ''} onChange={txt('attest_text')} placeholder="I have completed the Buncare Orientation." />
         </Field>
         <label className="flex min-h-[44px] items-center gap-3 text-base font-semibold text-slate-700">

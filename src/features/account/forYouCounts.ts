@@ -1,4 +1,4 @@
-// "For you" — what's new since someone last looked, for the things they ticked
+// "For you" — what's new since someone last looked, for the things they checked
 // (their email interests, on the account or on this phone):
 //
 //   volunteer  new published volunteer calls that haven't happened yet
@@ -7,7 +7,7 @@
 //   bunfest    new talks on the BunFest schedule
 //
 // "New" = created after they last looked at that kind, and in the last two
-// weeks at most (someone who ticks Events today isn't told about a year of
+// weeks at most (someone who checks Events today isn't told about a year of
 // them). "Last looked" is kept per kind on this phone and, signed in, on the
 // account too (user_saves kind 'seen' — see sync.ts), so a phone that's been
 // looked at clears the badge on the others.
@@ -118,7 +118,7 @@ export function markSeen(...keys: ForYouKey[]) {
 
 /**
  * On a screen that shows everything of that kind: mark it seen when it opens.
- * Only when they ticked it — otherwise every visit to Events would sync a
+ * Only when they checked it — otherwise every visit to Events would sync a
  * timestamp nobody uses.
  */
 export function useMarkSeen(key: ForYouKey) {
@@ -212,7 +212,7 @@ export interface ForYouItem {
   icon: IconName
 }
 
-/** What's new for this person; empty when they ticked none of these, or nothing's new. */
+/** What's new for this person; empty when they checked none of these, or nothing's new. */
 export function useForYou(): { items: ForYouItem[]; total: number } {
   const interests = useDeviceInterests()
   const current = useSyncExternalStore(subscribeCounts, getCounts, getCounts)

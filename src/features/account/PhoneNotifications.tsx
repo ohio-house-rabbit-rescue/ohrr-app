@@ -118,16 +118,16 @@ function PhoneNotificationsInner({ signedIn }: { signedIn: boolean }) {
         setMsg('Off — OHRR won’t send notifications to this phone.')
         return
       }
-      if (topics.length === 0) throw new Error('Tick at least one first.')
+      if (topics.length === 0) throw new Error('Check at least one first.')
       const made = await turnOnPush(topics)
       setState({ kind: 'ready', sub: made })
-      setMsg('On — you’ll get a notification about what’s ticked.')
+      setMsg('On — you’ll get a notification about what’s checked.')
     })
 
   const tick = (k: PushTopic) => {
     const next = PUSH_TOPICS.map((t) => t.key).filter((x) => (x === k ? !topics.includes(k) : topics.includes(x)))
     if (sub && next.length === 0) {
-      setError('Tick at least one, or turn notifications off.')
+      setError('Check at least one, or turn notifications off.')
       return
     }
     setTopics(next)
@@ -161,7 +161,7 @@ function PhoneNotificationsInner({ signedIn }: { signedIn: boolean }) {
             <span>
               <span className="block font-display text-[15px] font-extrabold text-ink">Notify me on this phone</span>
               <span className="block text-sm text-slate-500">
-                {on ? 'When OHRR has news about what you tick' : 'Off — tick what you’d like, then turn this on'}
+                {on ? 'When OHRR has news about what you check' : 'Off — check what you’d like, then turn this on'}
               </span>
             </span>
             <span

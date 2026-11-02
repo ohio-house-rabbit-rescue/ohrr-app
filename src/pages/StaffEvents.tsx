@@ -218,7 +218,7 @@ function EventForm({
             checked={draft.is_published}
             onChange={(e) => setDraft((d) => ({ ...d, is_published: e.target.checked }))}
           />
-          Show in the app (untick for a draft)
+          Show in the app (uncheck for a draft)
         </label>
       </div>
     </EditorForm>

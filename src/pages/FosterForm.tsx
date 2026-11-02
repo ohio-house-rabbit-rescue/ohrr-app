@@ -37,7 +37,7 @@ export default function FosterForm() {
     window.scrollTo({ top: 0 })
   }
   const submit = async () => {
-    if (!agreed || !signature.trim()) return setError('Please tick the statement and type your name.')
+    if (!agreed || !signature.trim()) return setError('Please check the statement and type your name.')
     setStatus('submitting')
     setError(null)
     const flat: Record<string, string> = {}

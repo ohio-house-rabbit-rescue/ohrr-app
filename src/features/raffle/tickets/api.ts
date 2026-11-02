@@ -116,7 +116,7 @@ export async function undoDraw(ticketId: string): Promise<void> {
   const { error } = await supabase.rpc('undo_raffle_draw', { p_ticket_id: ticketId })
   if (error) throw error
 }
-/** Tick (or untick) "Handed over" on a winning ticket (update 48). */
+/** Check (or uncheck) "Handed over" on a winning ticket (update 48). */
 export async function setHandedOver(ticketId: string, handed: boolean): Promise<RaffleWinner> {
   const { data, error } = await supabase.rpc('set_raffle_handed_over', { p_ticket_id: ticketId, p_handed: handed })
   if (error) throw error

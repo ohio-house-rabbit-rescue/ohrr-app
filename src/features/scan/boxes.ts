@@ -1,7 +1,7 @@
 // Boxes of items (update 46, 2026-10-27). Sponsor: "i want to scan 12
 // donations. they fit in a box. i want that box to have a itemized list and
 // label." A box gets the next number (BOX-00012, "Box 12"); items go in by
-// scanning their labels or ticking them in a list; the box label lists the
+// scanning their labels or checking them in a list; the box label lists the
 // names, and scanning the box opens the full list. An item is in one box at a
 // time, so putting it in another box moves it.
 //

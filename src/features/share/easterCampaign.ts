@@ -94,7 +94,7 @@ export function easterDay(year: number): string {
   return isoDay(easterSunday(year))
 }
 
-/** The Easter being worked towards: this year's until its last post's day has gone, then next year's. */
+/** The Easter being worked toward: this year's until its last post's day has gone, then next year's. */
 export function campaignYear(today = localToday()): number {
   const year = Number(today.slice(0, 4))
   const last = Math.max(...EASTER_PLAN.map((s) => s.weeks))

@@ -140,7 +140,7 @@ export default function OhrrHome() {
         <EasterReminder />
         {/* Live staff-posted notices (hidden when there are none) */}
         <AnnouncementsBanner />
-        {/* What's new for the things they ticked, since they last looked (hidden when nothing is),
+        {/* What's new for the things they checked, since they last looked (hidden when nothing is),
             and — once, for people who haven't decided — the question about volunteer notifications */}
         <ForYou notifyPrompt />
         <PresentedBy surface="home" />

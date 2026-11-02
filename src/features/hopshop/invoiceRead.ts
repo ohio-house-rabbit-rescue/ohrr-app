@@ -53,7 +53,7 @@ function piecesToLines(pieces: TextPiece[]): string[] {
 }
 
 /** Photos and scanned pages → text, with Tesseract. */
-async function recognise(images: (Blob | HTMLCanvasElement)[], progress?: Progress): Promise<string[]> {
+async function recognize(images: (Blob | HTMLCanvasElement)[], progress?: Progress): Promise<string[]> {
   const { createWorker, PSM } = await import('tesseract.js')
   let page = 0
   progress?.('Getting the text reader ready…')
@@ -138,7 +138,7 @@ export async function readInvoiceFiles(files: File[], progress?: Progress): Prom
   }
   if (pictures.length) {
     how = 'photo'
-    lines.push(...(await recognise(pictures, progress)))
+    lines.push(...(await recognize(pictures, progress)))
   }
   return { lines: lines.filter(Boolean), how }
 }

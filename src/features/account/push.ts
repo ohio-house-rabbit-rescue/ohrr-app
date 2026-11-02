@@ -8,7 +8,7 @@
 //                 asks it to, then we look again ~3 s later (twice at most)
 //   subscribing   pushManager.subscribe() on the service worker (public/sw.js
 //                 shows the notification and opens its link), then
-//                 save_push_subscription() with the topics ticked. Works signed
+//                 save_push_subscription() with the topics checked. Works signed
 //                 out; signed in, the phone is tied to the account.
 //   topics        push_subscription_topics(endpoint) reads them back;
 //                 remove_push_subscription(endpoint) forgets the phone
@@ -50,7 +50,7 @@ const FROM_INTEREST: Partial<Record<Interest, PushTopic>> = {
   newsletter: 'news',
 }
 
-/** What's ticked to begin with: their email choices where they match, else volunteer calls. */
+/** What's checked to begin with: their email choices where they match, else volunteer calls. */
 export function defaultTopics(): PushTopic[] {
   const mine = cleanTopics(getDeviceInterests().map((i) => FROM_INTEREST[i]))
   return mine.length > 0 ? mine : ['volunteer']

@@ -254,7 +254,7 @@ function JustEmails() {
     e.preventDefault()
     setError(null)
     if (interests.length === 0) {
-      setError('Tick at least one.')
+      setError('Check at least one.')
       return
     }
     setStatus('sending')

@@ -80,7 +80,7 @@ export const BUNDLED_GUARDIANS: Guardian[] = GUARDIANS_2026.map(([display_name, 
 }))
 
 /**
- * Where a name sorts: by surname, as the live site's list does —
+ * Where a name sorts: by last name, as the live site's list does —
  * "Bob & Inger Barron" under Barron, "Barb Armitage & Robert Shapter" under
  * Armitage, "Hayes Family" under Hayes, "Susanne St. Clair" under St. Clair.
  */

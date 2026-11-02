@@ -1,4 +1,4 @@
-// The six things OHRR emails about, as tick boxes, with the consent line under
+// The six things OHRR emails about, as checkboxes, with the consent line under
 // them — the same wording on the website's form.
 import { CONSENT_LINE, INTERESTS, type Interest } from './emailList'
 

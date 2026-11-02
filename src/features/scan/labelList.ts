@@ -1,7 +1,7 @@
 // The list on the labels pages, made to work with hundreds of items
 // (2026-10-27, sponsor: "this will become a problem when you have 500
 // donations"). Show, Added, Kind and Sort narrow it down; newest-first lists
-// come in groups by the day they were added, each with its own "Tick these";
+// come in groups by the day they were added, each with its own "Check these";
 // and the page shows 50 at a time. The choices are kept on the device.
 //
 // The website has a copy in src/lib/labelList.ts — keep the two the same.
@@ -24,7 +24,7 @@ export const SHOW_OPTIONS: { value: ShowWhich; label: string }[] = [
   { value: 'unprinted', label: 'Not printed yet' },
   { value: 'printed', label: 'Printed' },
   { value: 'all', label: 'Everything' },
-  { value: 'ticked', label: 'Ticked to print' },
+  { value: 'ticked', label: 'Checked to print' },
 ]
 export const WHEN_OPTIONS: { value: AddedWhen; label: string }[] = [
   { value: 'today', label: 'Added today' },

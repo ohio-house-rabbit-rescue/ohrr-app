@@ -95,7 +95,7 @@ export interface StaffTiles {
   today: StaffTile[]
   /** The groups this person has at least one page in, with their pages. */
   groups: (StaffGroup & { tiles: StaffTile[]; badge: number; entries: GroupEntry[] })[]
-  /** A counter volunteer: the till and the door, nothing else. */
+  /** A register volunteer: the register and the door, nothing else. */
   counterOnly: boolean
   /** No tasks switched on yet (only "Me"). */
   nothingYet: boolean
@@ -138,7 +138,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       { to: '/staff/scan', title: 'Scan an item', hint: 'See, change or sort a labeled item', icon: 'scan', group: 'items', today: true, show: canItems },
       { to: '/staff/hopshop', title: 'Hop Shop', hint: 'Order, deliveries, price labels, the shelf', icon: 'store', group: 'items', show: canSeeHopShop },
       { to: '/staff/hopshop/deliveries/new', title: 'Add a delivery', hint: 'Stock from the supplier’s invoice', icon: 'box', group: 'items', more: true, show: can('hopshop.inventory.update') || can('hopshop.products.edit') || can('hopshop.products.create') },
-      { to: '/staff/counter', title: 'Counter', hint: 'Sell, the till, door tickets', icon: 'bag', group: 'items', today: true, show: canCounter },
+      { to: '/staff/counter', title: 'Register', hint: 'Sell, the register, door tickets', icon: 'bag', group: 'items', today: true, show: canCounter },
       { to: '/staff/dropoffs', title: 'Drop-offs and thank-yous', hint: 'Who gave what, the letter', icon: 'mail', group: 'items', more: true, show: canItems },
       { to: '/staff/donations/report', title: 'Monthly donations report', hint: 'Totals, by donor, a spreadsheet', icon: 'file', group: 'items', more: true, show: canItems },
 
