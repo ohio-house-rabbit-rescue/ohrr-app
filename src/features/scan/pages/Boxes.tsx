@@ -12,7 +12,8 @@ import { Spinner } from '../../../components/staffui'
 import { isNative } from '../../../native/platform'
 import { shareFileNative } from '../../../native/share'
 import { BigButton, ErrorBox } from '../ScanUI'
-import { labelDataUrl, labelsPdf } from '../labels'
+import { labelDataUrl, labelsPdf, type LabelSize } from '../labels'
+import LabelSizeLine from '../LabelSizeLine'
 import BluetoothPrint from '../printer/BluetoothPrint'
 import { BOX_SIZE, boxLabel, listBoxes, makeBoxes, markBoxesPrinted, type Box } from '../boxes'
 import { boxTitle } from '../codes'
@@ -35,7 +36,7 @@ export default function Boxes() {
   const [making, setMaking] = useState(false)
   const [fields, setFields] = useState<BoxFieldValues>({ name: '', description: '', eventId: null })
   const [count, setCount] = useState(1)
-  const [printImgs, setPrintImgs] = useState<string[]>([])
+  const [sheet, setSheet] = useState<BoxSheet | null>(null)
 
   useEffect(() => {
     if (!orgId) return
@@ -111,7 +112,7 @@ export default function Boxes() {
           </div>
         )}
 
-        {waiting.length > 0 && <WaitingLabels orgId={orgId} boxes={waiting} setPrintImgs={setPrintImgs} onPrinted={() => setReload((n) => n + 1)} />}
+        {waiting.length > 0 && <WaitingLabels orgId={orgId} boxes={waiting} setPrintImgs={setSheet} onPrinted={() => setReload((n) => n + 1)} />}
 
         <div className="grid grid-cols-2 gap-2">
           <BigButton onClick={() => navigate('/staff/catalog?box=1')} icon="camera">
@@ -211,7 +212,7 @@ export default function Boxes() {
           ))}
         </ul>
       </Screen>
-      <BoxPrintSheet images={printImgs} />
+      <BoxPrintSheet sheet={sheet} />
     </>
   )
 }
@@ -228,15 +229,18 @@ export function WaitingLabels({
   boxes: Box[]
   /** Inside another panel: just the buttons, no box of its own. */
   compact?: boolean
-  /** The labels for the print dialog, shown by the page outside its screen. */
-  setPrintImgs: (imgs: string[]) => void
+  /** The labels (and their size) for the print dialog, shown by the page outside its screen. */
+  setPrintImgs: (sheet: BoxSheet) => void
   onPrinted: () => void
 }) {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
+  // Box labels start on 4 × 6 every time; Change picks another size for this print only.
+  const [size, setSize] = useState<LabelSize>(BOX_SIZE)
   const n = boxes.length
   const plural = `${n} box label${n === 1 ? '' : 's'}`
+  const sizeWords = size.key === BOX_SIZE.key ? '4 × 6 in' : size.label
 
   const marked = async (msg: string) => {
     setNote(msg)
@@ -253,8 +257,8 @@ export function WaitingLabels({
     setError(null)
     try {
       const imgs: string[] = []
-      for (const b of boxes) imgs.push(await labelDataUrl(boxLabel(b), BOX_SIZE))
-      setPrintImgs(imgs)
+      for (const b of boxes) imgs.push(await labelDataUrl(boxLabel(b), size))
+      setPrintImgs({ images: imgs, size })
       await new Promise((r) => setTimeout(r, 150))
       window.print()
       await marked(`${plural} sent to print.`)
@@ -269,7 +273,7 @@ export function WaitingLabels({
     setBusy('Making the PDF…')
     setError(null)
     try {
-      const blob = await labelsPdf(boxes.map(boxLabel), BOX_SIZE)
+      const blob = await labelsPdf(boxes.map(boxLabel), size)
       const name = 'ohrr-box-labels.pdf'
       let ok = true
       if (isNative) ok = (await shareFileNative(blob, name, 'OHRR box labels')) !== 'cancelled'
@@ -281,7 +285,7 @@ export function WaitingLabels({
         a.click()
         setTimeout(() => URL.revokeObjectURL(url), 5000)
       }
-      if (ok) await marked(`${plural}: a 4 × 6 in PDF, one label per page.`)
+      if (ok) await marked(`${plural}: a ${sizeWords} PDF, one label per page.`)
     } catch (e) {
       setError(errMessage(e))
     } finally {
@@ -293,16 +297,17 @@ export function WaitingLabels({
     <section className={compact ? 'space-y-3' : 'space-y-3 rounded-2xl border-2 border-brand-orange bg-brand-orange-50 p-4'}>
       {compact ? (
         <p className="text-[15px] text-green-900">
-          Put the 4 × 6 roll in the printer, print {n === 1 ? 'it' : 'them'}, and stick {n === 1 ? 'it' : 'each one'} over the number written on the box. Then put the small roll back.
+          Put the {sizeWords} roll in the printer, print {n === 1 ? 'it' : 'them'}, and stick {n === 1 ? 'it' : 'each one'} over the number written on the box. Then put the small roll back.
         </p>
       ) : (
         <>
           <h2 className="font-display text-lg font-extrabold text-ink">{plural} to print</h2>
           <p className="text-base text-slate-700">
-            {boxes.map((b) => boxTitle(b)).join(', ')}. Put the 4 × 6 roll in the printer, print them, and stick each one over the number written on its box. These are boxes that are full and not labeled yet.
+            {boxes.map((b) => boxTitle(b)).join(', ')}. Put the {sizeWords} roll in the printer, print them, and stick each one over the number written on its box. These are boxes that are full and not labeled yet.
           </p>
         </>
       )}
+      <LabelSizeLine title="Box labels" size={size} onChange={setSize} />
       <ErrorBox>{error}</ErrorBox>
       <div className="grid grid-cols-2 gap-2">
         {isNative ? (
@@ -322,7 +327,7 @@ export function WaitingLabels({
       </div>
       <BluetoothPrint
         labels={boxes.map((b) => ({ code: b.code, item: boxLabel(b), copies: 1 }))}
-        size={BOX_SIZE}
+        size={size}
         busy={busy}
         setBusy={setBusy}
         onError={setError}
@@ -334,7 +339,14 @@ export function WaitingLabels({
 }
 
 /** The box labels as they print (4 × 6 in, one per page); shown only to the print dialog. */
-export function BoxPrintSheet({ images }: { images: string[] }) {
+export interface BoxSheet {
+  images: string[]
+  size: LabelSize
+}
+
+export function BoxPrintSheet({ sheet }: { sheet: BoxSheet | null }) {
+  const images = sheet?.images ?? []
+  const size = sheet?.size ?? BOX_SIZE
   return (
     <>
       {/* print-only: the box labels at 4 × 6 in */}
@@ -347,12 +359,12 @@ export function BoxPrintSheet({ images }: { images: string[] }) {
       </div>
       <style>{`
         @media print {
-          @page { size: ${BOX_SIZE.wIn}in ${BOX_SIZE.hIn}in; margin: 0; }
+          @page { size: ${size.wIn}in ${size.hIn}in; margin: 0; }
           html, body { background: white !important; margin: 0 !important; padding: 0 !important; }
           header { display: none !important; }
           [class*="max-w-[480px]"] { max-width: none !important; box-shadow: none !important; padding: 0 !important; }
-          .label-page { width: ${BOX_SIZE.wIn}in; height: ${BOX_SIZE.hIn}in; overflow: hidden; page-break-after: always; break-after: page; }
-          .label-page img { display: block; width: ${BOX_SIZE.wIn}in; height: ${BOX_SIZE.hIn}in; }
+          .label-page { width: ${size.wIn}in; height: ${size.hIn}in; overflow: hidden; page-break-after: always; break-after: page; }
+          .label-page img { display: block; width: ${size.wIn}in; height: ${size.hIn}in; }
         }
       `}</style>
     </>

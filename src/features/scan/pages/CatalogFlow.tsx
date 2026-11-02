@@ -74,7 +74,10 @@ import {
   useItemPurposes,
   type Extras,
 } from '../DetailsFields'
-import { BoxPrintSheet, WaitingLabels } from './Boxes'
+import { BoxPrintSheet, WaitingLabels, type BoxSheet } from './Boxes'
+import LabelSizeLine from '../LabelSizeLine'
+import { LABEL_SIZE_SETTING, saveLabelSize, type LabelSize } from '../labels'
+import { setSetting } from '../../settings/useSetting'
 import { BOX_SIZE, boxByCode, boxLabel, listBoxes, loadPackingBox, markBoxesPrinted, newBox, putInBox, savePackingBox, type Box, type PackingBox } from '../boxes'
 import { KEYBOARD_MIC_TIP, sentenceCase, useVoiceInput } from '../voice'
 import { tellOthersLabelsChanged } from '../labelSync'
@@ -306,7 +309,7 @@ function isToday(iso: string): boolean {
 }
 
 export default function CatalogFlow() {
-  const { membership, can } = useAuth()
+  const { membership, user, can } = useAuth()
   const orgId = membership?.orgId ?? ''
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -347,7 +350,7 @@ export default function CatalogFlow() {
   const [ending, setEnding] = useState(false)
   const [endBoxes, setEndBoxes] = useState<Box[] | null>(null)
   const [endReload, setEndReload] = useState(0)
-  const [endImgs, setEndImgs] = useState<string[]>([])
+  const [endSheet, setEndSheet] = useState<BoxSheet | null>(null)
   const [boxPrinted, setBoxPrinted] = useState<string | null>(null)
   // Plain Receive (not the box job): the box this item goes in, if any (part E), kept for the next items too.
   const [plainBox, setPlainBox] = useState<{ code: string; box_no: number; location: string | null; count: number } | null>(null)
@@ -360,6 +363,18 @@ export default function CatalogFlow() {
   }
   // The item labels print at the size in the printer; the box labels wait.
   const labelSize = useLabelSize()
+  // Changing the item label size here saves it the way Print labels does: on this device, and for
+  // everyone when this person may manage settings. Bumped so the size above is read again.
+  const [, setSizeTick] = useState(0)
+  const chooseItemSize = (sz: LabelSize) => {
+    const at = Date.now()
+    saveLabelSize(sz, at)
+    setSizeTick((n) => n + 1)
+    if (can('settings.manage') && orgId)
+      setSetting(LABEL_SIZE_SETTING, { wIn: sz.wIn, hIn: sz.hIn, at, photo: sz.photo === true }, { orgId, userId: user?.id }).catch((e) =>
+        setError(`The size is set on this device, but couldn’t be saved for everyone: ${errMessage(e)}`),
+      )
+  }
   const [printBusy, setPrintBusy] = useState<string | null>(null)
   // "More details" stays open or closed on this phone, as the person left it.
   // Step 4, what it's for, stays folded unless opened; a use carried over from the last item shows on its header.
@@ -1058,7 +1073,7 @@ export default function CatalogFlow() {
             </p>
           )}
           {waitingBoxes.length > 0 && (
-            <WaitingLabels orgId={orgId} boxes={waitingBoxes} setPrintImgs={setEndImgs} onPrinted={() => setEndReload((n) => n + 1)} />
+            <WaitingLabels orgId={orgId} boxes={waitingBoxes} setPrintImgs={setEndSheet} onPrinted={() => setEndReload((n) => n + 1)} />
           )}
         </div>
       </StepShell>
@@ -1100,6 +1115,8 @@ export default function CatalogFlow() {
         <div className="space-y-4">
           <ErrorBox>{error}</ErrorBox>
 
+          <LabelSizeLine title="Item labels" size={labelSize} onChange={chooseItemSize} hint="Each item’s label prints at this size." />
+
           {closedBox && (
             <div className="space-y-2 rounded-2xl border-2 border-green-200 bg-green-50 p-4">
               <p className="flex items-center gap-2 font-display text-lg font-extrabold text-green-900">
@@ -1112,7 +1129,7 @@ export default function CatalogFlow() {
                   compact
                   orgId={orgId}
                   boxes={[closedBox.box]}
-                  setPrintImgs={setEndImgs}
+                  setPrintImgs={setEndSheet}
                   onPrinted={() => setBoxPrinted(`Box ${closedBox.no}’s label is printed.`)}
                 />
               ) : (
@@ -1844,7 +1861,7 @@ export default function CatalogFlow() {
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} aria-label="Take a photo" />
       <input ref={libraryRef} type="file" accept="image/*" className="hidden" onChange={onFile} aria-label="Choose a photo" />
       <div className="print:hidden">{screen}</div>
-      {(ending || closedBox) && <BoxPrintSheet images={endImgs} />}
+      {(ending || closedBox) && <BoxPrintSheet sheet={endSheet} />}
     </>
   )
 }
