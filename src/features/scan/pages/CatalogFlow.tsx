@@ -76,6 +76,7 @@ import {
 } from '../DetailsFields'
 import { BoxPrintSheet, WaitingLabels, type BoxSheet } from './Boxes'
 import LabelSizeLine from '../LabelSizeLine'
+import { useCopies } from '../copies'
 import { LABEL_SIZE_SETTING, saveLabelSize, type LabelSize } from '../labels'
 import { setSetting } from '../../settings/useSetting'
 import { BOX_SIZE, boxByCode, boxLabel, listBoxes, loadPackingBox, markBoxesPrinted, newBox, putInBox, savePackingBox, type Box, type PackingBox } from '../boxes'
@@ -350,8 +351,8 @@ export default function CatalogFlow() {
   const [ending, setEnding] = useState(false)
   const [endBoxes, setEndBoxes] = useState<Box[] | null>(null)
   const [endReload, setEndReload] = useState(0)
+  const [endPrinted, setEndPrinted] = useState<string[]>([])
   const [endSheet, setEndSheet] = useState<BoxSheet | null>(null)
-  const [boxPrinted, setBoxPrinted] = useState<string | null>(null)
   // Plain Receive (not the box job): the box this item goes in, if any (part E), kept for the next items too.
   const [plainBox, setPlainBox] = useState<{ code: string; box_no: number; location: string | null; count: number } | null>(null)
   const [pickingBox, setPickingBox] = useState(false)
@@ -366,6 +367,9 @@ export default function CatalogFlow() {
   // Changing the item label size here saves it the way Print labels does: on this device, and for
   // everyone when this person may manage settings. Bumped so the size above is read again.
   const [, setSizeTick] = useState(0)
+  const [itemCopies, setItemCopies] = useCopies('item')
+  // The Labels page, with this item checked and the usual number of copies.
+  const labelsLink = (code: string) => `/staff/labels?code=${encodeURIComponent(code)}${itemCopies > 1 ? `&copies=${itemCopies}` : ''}`
   const chooseItemSize = (sz: LabelSize) => {
     const at = Date.now()
     saveLabelSize(sz, at)
@@ -555,7 +559,6 @@ export default function CatalogFlow() {
     if (!box) return
     const done = { no: box.box_no, code: box.code, count: boxCount }
     setClosedBox({ ...done, box: null })
-    setBoxPrinted(null)
     boxByCode(orgId, done.code)
       .then((b) => setClosedBox((c) => (c && c.code === done.code ? { ...c, box: b } : c)))
       .catch(() => {})
@@ -1048,7 +1051,7 @@ export default function CatalogFlow() {
   /* ================================================= receive into boxes: the end, with the box labels */
   if (wantsBoxes && ending && step !== 'summary') {
     // Boxes with something in them and no label yet, in the order the numbers were written.
-    const waitingBoxes = (endBoxes ?? []).filter((b) => !b.label_printed_at && b.items.length > 0).sort((a, b) => a.box_no - b.box_no)
+    const waitingBoxes = (endBoxes ?? []).filter((b) => (!b.label_printed_at || endPrinted.includes(b.code)) && b.items.length > 0).sort((a, b) => a.box_no - b.box_no)
     screen = (
       <StepShell
         title="Box labels"
@@ -1073,7 +1076,10 @@ export default function CatalogFlow() {
             </p>
           )}
           {waitingBoxes.length > 0 && (
-            <WaitingLabels orgId={orgId} boxes={waitingBoxes} setPrintImgs={setEndSheet} onPrinted={() => setEndReload((n) => n + 1)} />
+            <WaitingLabels orgId={orgId} boxes={waitingBoxes} setPrintImgs={setEndSheet} onPrinted={(codes) => {
+                setEndPrinted((l) => [...new Set([...l, ...codes])])
+                setEndReload((n) => n + 1)
+              }} />
           )}
         </div>
       </StepShell>
@@ -1115,22 +1121,21 @@ export default function CatalogFlow() {
         <div className="space-y-4">
           <ErrorBox>{error}</ErrorBox>
 
-          <LabelSizeLine title="Item labels" size={labelSize} onChange={chooseItemSize} hint="Each item’s label prints at this size." />
+          <LabelSizeLine title="Item labels" size={labelSize} onChange={chooseItemSize} copies={itemCopies} onCopies={setItemCopies} />
 
           {closedBox && (
             <div className="space-y-2 rounded-2xl border-2 border-green-200 bg-green-50 p-4">
               <p className="flex items-center gap-2 font-display text-lg font-extrabold text-green-900">
                 <Icon name="check" size={20} className="shrink-0" /> Box {closedBox.no} is full{closedBox.count != null ? ` · ${closedBox.count} item${closedBox.count === 1 ? '' : 's'}` : ''}
               </p>
-              {boxPrinted ? (
-                <p className="text-[15px] font-bold text-green-800">{boxPrinted}</p>
-              ) : closedBox.box ? (
+              {closedBox.box ? (
                 <WaitingLabels
+                  key={closedBox.code}
                   compact
                   orgId={orgId}
                   boxes={[closedBox.box]}
                   setPrintImgs={setEndSheet}
-                  onPrinted={() => setBoxPrinted(`Box ${closedBox.no}’s label is printed.`)}
+                  onPrinted={() => undefined}
                 />
               ) : (
                 <p className="text-[15px] text-green-900">Getting its label ready…</p>
@@ -1168,7 +1173,7 @@ export default function CatalogFlow() {
                   {bluetoothAvailable() ? (
                     <BluetoothPrint
                       key={s.item.code}
-                      labels={[{ code: s.item.code, item: { code: s.item.code, title: s.item.title, donated_by: s.item.donated_by, photo_url: s.item.photo_url, kindLabel: null }, copies: 1 }]}
+                      labels={[{ code: s.item.code, item: { code: s.item.code, title: s.item.title, donated_by: s.item.donated_by, photo_url: s.item.photo_url, kindLabel: null }, copies: itemCopies }]}
                       size={labelSize}
                       busy={printBusy}
                       setBusy={setPrintBusy}
@@ -1178,7 +1183,7 @@ export default function CatalogFlow() {
                       compact
                     />
                   ) : (
-                    <BigButton onClick={() => navigate(`/staff/labels?code=${encodeURIComponent(s.item!.code)}`)} tone="outline" icon="printer">
+                    <BigButton onClick={() => navigate(labelsLink(s.item!.code))} tone="outline" icon="printer">
                       Print this label
                     </BigButton>
                   )}
@@ -1540,13 +1545,14 @@ export default function CatalogFlow() {
           )}
           {/* OHRR 2026-10-27: the label step shows its parts in the screen, like the others. */}
           <Part n="A">{s.auction ? 'Print its bid-sheet label' : 'Print its label'}</Part>
+          <LabelSizeLine title="Labels" size={labelSize} onChange={chooseItemSize} copies={itemCopies} onCopies={setItemCopies} />
           {btLabel && s.item && (
             <BluetoothPrint
               labels={[
                 {
                   code: s.item.code,
                   item: { code: s.item.code, title: s.item.title, donated_by: s.item.donated_by, photo_url: s.item.photo_url, kindLabel: null },
-                  copies: 1,
+                  copies: itemCopies,
                 },
               ]}
               size={labelSize}
@@ -1557,7 +1563,7 @@ export default function CatalogFlow() {
             />
           )}
           {done && !btLabel && (
-            <BigButton onClick={() => s.item && navigate(`/staff/labels?code=${encodeURIComponent(s.item.code)}`)} tone="outline" icon="printer">
+            <BigButton onClick={() => s.item && navigate(labelsLink(s.item.code))} tone="outline" icon="printer">
               {s.auction ? 'Print the bid-sheet label' : 'Print this label'}
             </BigButton>
           )}
@@ -1565,7 +1571,7 @@ export default function CatalogFlow() {
           {done && (
             <p className="text-sm text-slate-500">
               Or print it later with the rest —{' '}
-              <Link to={btLabel ? `/staff/labels?code=${encodeURIComponent(s.item!.code)}` : '/staff/labels'} className="font-bold text-brand-blue">
+              <Link to={btLabel ? labelsLink(s.item!.code) : '/staff/labels'} className="font-bold text-brand-blue">
                 {btLabel ? 'Labels page' : 'Print labels'}
               </Link>
             </p>

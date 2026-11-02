@@ -14,6 +14,7 @@ import { shareFileNative } from '../../../native/share'
 import { BigButton, ErrorBox } from '../ScanUI'
 import { labelDataUrl, labelsPdf, type LabelSize } from '../labels'
 import LabelSizeLine from '../LabelSizeLine'
+import { useCopies } from '../copies'
 import BluetoothPrint from '../printer/BluetoothPrint'
 import { BOX_SIZE, boxLabel, listBoxes, makeBoxes, markBoxesPrinted, type Box } from '../boxes'
 import { boxTitle } from '../codes'
@@ -37,6 +38,8 @@ export default function Boxes() {
   const [fields, setFields] = useState<BoxFieldValues>({ name: '', description: '', eventId: null })
   const [count, setCount] = useState(1)
   const [sheet, setSheet] = useState<BoxSheet | null>(null)
+  // Boxes printed during this visit stay in the list, so Print again is one tap.
+  const [printedNow, setPrintedNow] = useState<string[]>([])
 
   useEffect(() => {
     if (!orgId) return
@@ -76,7 +79,7 @@ export default function Boxes() {
   }
 
   // Filled boxes whose label hasn't been printed, lowest number first (the order they were written on).
-  const waiting = (boxes ?? []).filter((b) => !b.label_printed_at && b.items.length > 0).sort((a, b) => a.box_no - b.box_no)
+  const waiting = (boxes ?? []).filter((b) => (!b.label_printed_at || printedNow.includes(b.code)) && b.items.length > 0).sort((a, b) => a.box_no - b.box_no)
 
   const needle = q.trim().toLowerCase()
   const shown = (boxes ?? []).filter(
@@ -112,7 +115,10 @@ export default function Boxes() {
           </div>
         )}
 
-        {waiting.length > 0 && <WaitingLabels orgId={orgId} boxes={waiting} setPrintImgs={setSheet} onPrinted={() => setReload((n) => n + 1)} />}
+        {waiting.length > 0 && <WaitingLabels orgId={orgId} boxes={waiting} setPrintImgs={setSheet} onPrinted={(codes) => {
+          setPrintedNow((l) => [...new Set([...l, ...codes])])
+          setReload((n) => n + 1)
+        }} />}
 
         <div className="grid grid-cols-2 gap-2">
           <BigButton onClick={() => navigate('/staff/catalog?box=1')} icon="camera">
@@ -231,13 +237,14 @@ export function WaitingLabels({
   compact?: boolean
   /** The labels (and their size) for the print dialog, shown by the page outside its screen. */
   setPrintImgs: (sheet: BoxSheet) => void
-  onPrinted: () => void
+  onPrinted: (codes: string[]) => void
 }) {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
   // Box labels start on 4 × 6 every time; Change picks another size for this print only.
   const [size, setSize] = useState<LabelSize>(BOX_SIZE)
+  const [copies, setCopies] = useCopies('box')
   const n = boxes.length
   const plural = `${n} box label${n === 1 ? '' : 's'}`
   const sizeWords = size.key === BOX_SIZE.key ? '4 × 6 in' : size.label
@@ -249,7 +256,7 @@ export function WaitingLabels({
     } catch {
       /* the note still stands */
     }
-    onPrinted()
+    onPrinted(boxes.map((b) => b.code))
   }
 
   const printWeb = async () => {
@@ -257,7 +264,10 @@ export function WaitingLabels({
     setError(null)
     try {
       const imgs: string[] = []
-      for (const b of boxes) imgs.push(await labelDataUrl(boxLabel(b), size))
+      for (const b of boxes) {
+        const img = await labelDataUrl(boxLabel(b), size)
+        for (let c = 0; c < copies; c++) imgs.push(img)
+      }
       setPrintImgs({ images: imgs, size })
       await new Promise((r) => setTimeout(r, 150))
       window.print()
@@ -273,7 +283,7 @@ export function WaitingLabels({
     setBusy('Making the PDF…')
     setError(null)
     try {
-      const blob = await labelsPdf(boxes.map(boxLabel), size)
+      const blob = await labelsPdf(boxes.flatMap((b) => Array.from({ length: copies }, () => boxLabel(b))), size)
       const name = 'ohrr-box-labels.pdf'
       let ok = true
       if (isNative) ok = (await shareFileNative(blob, name, 'OHRR box labels')) !== 'cancelled'
@@ -307,7 +317,7 @@ export function WaitingLabels({
           </p>
         </>
       )}
-      <LabelSizeLine title="Box labels" size={size} onChange={setSize} />
+      <LabelSizeLine title="Box labels" size={size} onChange={setSize} copies={copies} onCopies={setCopies} />
       <ErrorBox>{error}</ErrorBox>
       <div className="grid grid-cols-2 gap-2">
         {isNative ? (
@@ -326,7 +336,7 @@ export function WaitingLabels({
         )}
       </div>
       <BluetoothPrint
-        labels={boxes.map((b) => ({ code: b.code, item: boxLabel(b), copies: 1 }))}
+        labels={boxes.map((b) => ({ code: b.code, item: boxLabel(b), copies }))}
         size={size}
         busy={busy}
         setBusy={setBusy}
