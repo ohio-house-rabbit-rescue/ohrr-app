@@ -221,13 +221,57 @@ export async function forgetPrinter() {
   remember(null)
 }
 
-/** Send one job, reporting progress 0..1. A job that fails drops the connection, so the next try starts clean. */
+/**
+ * One write in the phone's own Bluetooth. Android can refuse a write straight away ("Writing characteristic
+ * failed with status code 9": busy, or the link not quite ready); that's usually over in a moment, so try
+ * again a few times before giving up.
+ */
+async function writeNative(deviceId: string, piece: Uint8Array): Promise<void> {
+  let lastError: unknown
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      await withTimeout(
+        BleClient.writeWithoutResponse(deviceId, SERVICE, PRINT_CHAR, new DataView(piece.buffer, piece.byteOffset, piece.byteLength)),
+        10000,
+        'Sending stopped',
+      )
+      return
+    } catch (e) {
+      lastError = e
+      if (!/status code|busy|failed/i.test(e instanceof Error ? e.message : String(e))) throw e
+      await new Promise((r) => setTimeout(r, 40 * (attempt + 1)))
+    }
+  }
+  throw lastError
+}
+
+/**
+ * Send one job, reporting progress 0..1. If it fails, the connection is dropped; in the apps the printer
+ * chosen before is then reconnected and the label sent once more, because the phone's link to the printer
+ * can have gone stale (the printer switched itself off, or a browser or printer app had taken it).
+ */
 export async function sendJob(job: Uint8Array, onProgress?: (done: number) => void): Promise<void> {
   try {
     await sendJobOnce(job, onProgress)
-  } catch (e) {
+    return
+  } catch (first) {
     await disconnect()
-    throw e
+    const saved = isNative ? rememberedPrinter() : null
+    if (!saved) throw first
+    try {
+      await init()
+      await open(saved)
+      // The smallest pieces every phone accepts, in case the size the phone reported was too big for it.
+      pieceSize = 20
+    } catch {
+      throw first
+    }
+  }
+  try {
+    await sendJobOnce(job, onProgress)
+  } catch (second) {
+    await disconnect()
+    throw second
   }
 }
 
@@ -239,11 +283,7 @@ async function sendJobOnce(job: Uint8Array, onProgress?: (done: number) => void)
       if (!webChar) return Promise.reject(new Error('The label printer isn’t connected.'))
       return withTimeout(webChar.writeValueWithoutResponse(piece as unknown as BufferSource), 10000, 'Sending stopped')
     }
-    return withTimeout(
-      BleClient.writeWithoutResponse(p.deviceId, SERVICE, PRINT_CHAR, new DataView(piece.buffer, piece.byteOffset, piece.byteLength)),
-      10000,
-      'Sending stopped',
-    )
+    return writeNative(p.deviceId, piece)
   }
   // A web page can write faster than the printer can take the pieces in; the ones it can't hold are dropped
   // and the printer then waits for the rest of the label for ever. Native apps are paced by the phone's own
