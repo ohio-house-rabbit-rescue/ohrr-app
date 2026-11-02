@@ -61,3 +61,23 @@ input[type='number'] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+/*
+ * The staff section reads larger (OHRR, 2026-11-02: "very small text"): nothing
+ * under 14px, body text 16px. The public app is unchanged. Unlayered, so it
+ * wins over Tailwind's size utilities without touching every page.
+ */
+.staff-big .text-xs,
+.staff-big .text-\[10px\],
+.staff-big .text-\[11px\],
+.staff-big .text-\[12px\],
+.staff-big .text-\[12\.5px\],
+.staff-big .text-\[13px\] {
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+.staff-big .text-sm,
+.staff-big .text-\[14px\] {
+  font-size: 1rem;
+  line-height: 1.45;
+}

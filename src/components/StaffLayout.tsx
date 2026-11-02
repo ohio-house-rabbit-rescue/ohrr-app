@@ -34,7 +34,7 @@ export default function StaffLayout() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <div className="relative mx-auto flex min-h-screen max-w-[480px] flex-col bg-white font-sans text-ink shadow-xl">
+      <div className="staff-big relative mx-auto flex min-h-screen max-w-[480px] flex-col bg-white font-sans text-ink shadow-xl">
         <ScrollToTop />
 
         {/* Top bar */}
