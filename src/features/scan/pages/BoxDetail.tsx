@@ -69,6 +69,7 @@ export default function BoxDetail() {
   const [busy, setBusy] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
+  const [labelOpen, setLabelOpen] = useState(false)
   const [place, setPlace] = useState('')
   const [memo, setMemo] = useState('')
   const [preview, setPreview] = useState<string | null>(null)
@@ -434,7 +435,23 @@ export default function BoxDetail() {
 
         {/* The box label */}
         {mode === 'list' && (
-          <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+          <button
+            type="button"
+            onClick={() => setLabelOpen((o) => !o)}
+            aria-expanded={labelOpen}
+            className="flex min-h-[56px] w-full items-center gap-3 rounded-2xl border-2 border-slate-200 bg-white px-4 text-left font-display text-lg font-extrabold text-ink"
+          >
+            <Icon name="printer" size={22} className="text-brand-blue" />
+            <span className="flex-1">
+              Print the box label
+              {box.label_printed_at && <span className="block text-sm font-semibold text-slate-500">Printed already</span>}
+            </span>
+            <Icon name="chevron" size={20} className={`text-slate-400 ${labelOpen ? 'rotate-90' : ''}`} />
+          </button>
+        )}
+        {/* Kept mounted when closed: the Bluetooth connection lives in it. */}
+        {mode === 'list' && (
+          <section className={`space-y-3 rounded-2xl border border-slate-200 bg-white p-4 ${labelOpen ? '' : 'hidden'}`}>
             <h2 className="font-display text-lg font-extrabold text-ink">Box label · 4 × 6 in</h2>
             {preview && <img src={preview} alt={`${name} label preview`} className="mx-auto w-full max-w-[16rem] rounded-lg border border-slate-200 shadow-sm" style={{ aspectRatio: '4 / 6' }} />}
             <label className="block text-sm font-bold text-slate-600">
