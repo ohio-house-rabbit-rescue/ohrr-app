@@ -83,7 +83,7 @@ begin
   values (v_org, 'midwest-bunfest', 2026, 'senior-support', 'Senior & Special Needs Bunnies',
     'New in 2026: supportive products and expert advice for senior and special needs rabbits.',
     'heart', 'With Borders Veterinary Services and Art by Lisa Edwards / Bunny Boyz',
-    '["New in 2026", "Ask-A-Vet: $25 for 10 minutes"]'::jsonb, null,
+    array['New in 2026', 'Ask-A-Vet: $25 for 10 minutes'], null,
     '[
       {"heading": "What you will find", "body": "A new area in the Emerald Room (near the Hop Shop, Oxbow and the Silent Auction) where you can chat and find supportive products for senior and special needs rabbits — sore hock boots, first aid kits, medical bunny wraps and more. Dr. Susan Borders and Lisa Edwards developed the senior care and special needs products."},
       {"heading": "Bunny painting and art", "body": "Lisa Edwards runs Bunny Boyz, a private sanctuary for special needs rabbits. She has bunny painting, where bunnies make abstract art from atop a plastic covering that protects them from the paint, auctions a unique piece of art, and has other pieces for sale. Proceeds from her art fundraisers benefit the rescue rabbits of Columbus House Rabbit Society, Ohio House Rabbit Rescue and Bunny Boyz."},
@@ -96,7 +96,7 @@ begin
   -- New 2026 page: the social events around the weekend.
   insert into bunfest_pages (org_id, event_slug, year, slug, title, subtitle, icon, sponsor_note, chips, note, sections, related_label, related, is_published, sort_order)
   values (v_org, 'midwest-bunfest', 2026, 'social', 'Social events', 'Mini events around BunFest weekend for the bunny community.',
-    'calendar', null, '["Saturday, Oct 24", "Sunday, Oct 25", "Monday, Oct 26"]'::jsonb,
+    'calendar', null, array['Saturday, Oct 24', 'Sunday, Oct 25', 'Monday, Oct 26'],
     'All rabbits attending the Hospitality Room must be vaccinated for RHDV2, with proof required for entry.',
     '[
       {"heading": "Hoppy Hour — Saturday, October 24, 5:00 – 7:00 PM", "body": "The pre-event get-together at the hotel bar at Embassy Suites Dublin, 5100 Upper Metro Pl, Dublin, OH 43017. Come and go as you please. Bunny-themed drinks, a full bar, appetizers and a dinner menu are available to buy. Bunnies are not permitted in food service areas."},
@@ -108,14 +108,14 @@ begin
 
   -- Toymaking: the real details (only while it still says "details to come").
   update bunfest_pages set
-    chips = '["$20", "Sunday 12:05 – 1:00 PM", "30 spots"]'::jsonb,
+    chips = array['$20', 'Sunday 12:05 – 1:00 PM', '30 spots'],
     sections = '[
       {"heading": "When and where", "body": "Sunday, October 25, upstairs in the education session area at The Makoy. Check-in and kit hand-out are at 12:05 PM; the workshop runs 12:15 – 1:00 PM. There are 30 spots."},
       {"heading": "What you get", "body": "Buttercup’s Bunny Boutique guides you in building your own custom playmat, with tips, tricks and answers to your questions. The DIY toy and playmat kit comes with shapes and sizes of materials for a range of toys and playmat designs, and extras to take home for continued fun."},
       {"heading": "How to sign up", "body": "Use the sign-up link on midwestbunfest.org, choose Sign Up, and enter your name, email and number of spots. OHRR then emails you a PayPal payment link — write “Toy Workshop” in the note. The cost is $20."},
       {"heading": "Where the money goes", "body": "Buttercup’s Bunny Boutique donates all proceeds to Ohio House Rabbit Rescue."}
     ]'::jsonb
-   where org_id = v_org and year = 2026 and slug = 'toymaking' and chips = '["Sign-up details to come"]'::jsonb;
+   where org_id = v_org and year = 2026 and slug = 'toymaking' and chips = array['Sign-up details to come'];
 
   -- Chillaxabun Lounge: where it is.
   update bunfest_pages set sections = sections || '[{"heading": "Where it is", "body": "In the Burgundy Room, behind the Glamour Shots area, near the side entrance. No sign-up or reservation — use it as needed."}]'::jsonb
