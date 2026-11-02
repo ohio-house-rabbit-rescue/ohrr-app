@@ -71,6 +71,7 @@ export function ChoiceCard({
   text,
   badge,
   tone = 'white',
+  accent = 'blue',
 }: {
   to?: string
   onClick?: () => void
@@ -82,6 +83,8 @@ export function ChoiceCard({
   /** "56 waiting" */
   badge?: string
   tone?: 'orange' | 'white'
+  /** The icon's color; the Volunteers pages are orange everywhere. */
+  accent?: 'blue' | 'orange'
 }) {
   const body = (
     <>
@@ -90,7 +93,7 @@ export function ChoiceCard({
           {n}
         </span>
       ) : icon ? (
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center text-brand-blue" aria-hidden="true">
+        <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center ${accent === 'orange' ? 'text-brand-orange-dark' : 'text-brand-blue'}`} aria-hidden="true">
           <Icon name={icon} size={26} />
         </span>
       ) : null}

@@ -36,6 +36,29 @@ export const GROUPS: StaffGroup[] = [
   { key: 'me', title: 'Me', hint: 'Your account, your hours', icon: 'user' },
 ]
 
+/**
+ * A few pages of one group that belong together, behind one card on the group
+ * page (OHRR, 2026-11-02: "too many options will confuse"). A section with a
+ * single page this person may open links straight to that page.
+ */
+export type SectionKey = 'care' | 'auction' | 'sponsors' | 'site' | 'social' | 'print'
+
+export interface StaffSection {
+  key: SectionKey
+  group: GroupKey
+  title: string
+  icon: IconName
+}
+
+export const SECTIONS: StaffSection[] = [
+  { key: 'care', group: 'rabbits', title: 'Care and guides', icon: 'book' },
+  { key: 'auction', group: 'events', title: 'Auction and raffle', icon: 'gavel' },
+  { key: 'sponsors', group: 'events', title: 'Sponsors', icon: 'award' },
+  { key: 'site', group: 'word', title: 'On the app and website', icon: 'home' },
+  { key: 'social', group: 'word', title: 'Social media', icon: 'sparkles' },
+  { key: 'print', group: 'word', title: 'Print and email', icon: 'printer' },
+]
+
 export interface StaffTile {
   to: string
   title: string
@@ -54,7 +77,14 @@ export interface StaffTile {
    * "too many options will confuse"). It stays on the dashboard search and menu.
    */
   more?: boolean
+  /** Behind its section's card on the group page (see SECTIONS). */
+  section?: SectionKey
 }
+
+/** What a group page shows, one card each: a page, or a section of pages. */
+export type GroupEntry =
+  | { kind: 'tile'; tile: StaffTile }
+  | { kind: 'section'; section: StaffSection; tiles: StaffTile[]; badge: number }
 
 /** The Today row, always in this order. */
 const TODAY_ORDER = ['/staff/inbox', '/staff/bookings', '/staff/counter', '/staff/scan']
@@ -64,7 +94,7 @@ export interface StaffTiles {
   tiles: StaffTile[]
   today: StaffTile[]
   /** The groups this person has at least one page in, with their pages. */
-  groups: (StaffGroup & { tiles: StaffTile[]; badge: number })[]
+  groups: (StaffGroup & { tiles: StaffTile[]; badge: number; entries: GroupEntry[] })[]
   /** A counter volunteer: the till and the door, nothing else. */
   counterOnly: boolean
   /** No tasks switched on yet (only "Me"). */
@@ -115,9 +145,9 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       // Rabbits and care
       { to: '/staff/adopt', title: 'Adoptable rabbits', hint: 'Rabbits, photos, adoption status', icon: 'heart', group: 'rabbits', show: canAdopt },
       { to: '/staff/tails', title: 'Happy Tails', hint: 'Adopters’ stories', icon: 'sparkles', group: 'rabbits', show: canCare || can('inbox.manage') },
-      { to: '/staff/learn', title: 'Care guides and pages', hint: 'Rabbit Care articles, Give, Adopt, About', icon: 'book', group: 'rabbits', show: canCare },
-      { to: '/staff/bunny-help', title: 'Bunny Help topics', hint: 'What “My bunny is…” answers', icon: 'help', group: 'rabbits', show: canCare },
-      { to: '/staff/vets', title: 'Vet directory', hint: 'Rabbit-savvy vets in Find a vet', icon: 'vet', group: 'rabbits', show: canCare },
+      { to: '/staff/learn', title: 'Care guides and pages', hint: 'Rabbit Care articles, Give, Adopt, About', icon: 'book', group: 'rabbits', section: 'care', show: canCare },
+      { to: '/staff/bunny-help', title: 'Bunny Help topics', hint: 'What “My bunny is…” answers', icon: 'help', group: 'rabbits', section: 'care', show: canCare },
+      { to: '/staff/vets', title: 'Vet directory', hint: 'Rabbit-savvy vets in Find a vet', icon: 'vet', group: 'rabbits', section: 'care', show: canCare },
 
       // Volunteers
       { to: '/staff/calls', title: 'Volunteer calls', hint: 'Put out a need, check in, thank', icon: 'heart', group: 'volunteers', show: canVolunteer || canBookings },
@@ -128,22 +158,22 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       // Events and BunFest
       { to: '/staff/events', title: 'Events', hint: 'BunFest and OHRR hoppenings', icon: 'calendar', group: 'events', show: canEvents },
       { to: '/staff/bunfest', title: 'BunFest content', hint: 'Schedule, vendors, rescues', icon: 'star', group: 'events', show: canEvents },
-      { to: '/staff/raffle', title: 'Silent Auction', hint: 'Auction items, photos, won', icon: 'award', group: 'events', show: canEvents },
-      { to: '/staff/raffle?auction=online', title: 'Online Auction', hint: 'Its own items, one closing time, Square', icon: 'gavel', group: 'events', show: canEvents },
-      { to: '/staff/auction-desk', title: 'Auction desk', hint: 'Close and charge, pickup, shipping', icon: 'gavel', group: 'events', show: canEvents },
-      { to: '/staff/raffle-tickets', title: 'Raffle tickets', hint: 'The raffle table, draw winners', icon: 'ticket', group: 'events', show: canEvents || can('counter.use') },
-      { to: '/staff/sponsors', title: 'Sponsors and partners', hint: 'Roster, perks, placements', icon: 'award', group: 'events', show: canEvents },
-      { to: '/staff/sponsors/renewals', title: 'Sponsor renewals', hint: 'Who to ask next', icon: 'calendar', group: 'events', show: canEvents },
+      { to: '/staff/raffle', title: 'Silent Auction', hint: 'Auction items, photos, won', icon: 'award', group: 'events', section: 'auction', show: canEvents },
+      { to: '/staff/raffle?auction=online', title: 'Online Auction', hint: 'Its own items, one closing time, Square', icon: 'gavel', group: 'events', section: 'auction', show: canEvents },
+      { to: '/staff/auction-desk', title: 'Auction desk', hint: 'Close and charge, pickup, shipping', icon: 'gavel', group: 'events', section: 'auction', show: canEvents },
+      { to: '/staff/raffle-tickets', title: 'Raffle tickets', hint: 'The raffle table, draw winners', icon: 'ticket', group: 'events', section: 'auction', show: canEvents || can('counter.use') },
+      { to: '/staff/sponsors', title: 'Sponsors and partners', hint: 'Roster, perks, placements', icon: 'award', group: 'events', section: 'sponsors', show: canEvents },
+      { to: '/staff/sponsors/renewals', title: 'Sponsor renewals', hint: 'Who to ask next', icon: 'calendar', group: 'events', section: 'sponsors', show: canEvents },
 
       // Getting the word out
-      { to: '/staff/announcements', title: 'Announcements', hint: 'Notices on the app home', icon: 'gift', group: 'word', show: canPost },
-      { to: '/staff/home-screen', title: 'Home screen', hint: 'The big cards on the app and website', icon: 'home', group: 'word', show: canPost },
-      { to: '/staff/posts', title: 'Post queue', hint: readyPosts > 0 ? `${readyPosts} ready to post` : 'Premade posts, one tap', icon: 'mail', group: 'word', badge: readyPosts, show: canPost || can('social.publish') || can('social.approve') },
-      { to: '/staff/share', title: 'Share kit', hint: 'Posts for Instagram, Facebook, TikTok', icon: 'sparkles', group: 'word', show: canPost },
-      { to: '/staff/flyers', title: 'Flyers', hint: 'QR posters to print or share', icon: 'printer', group: 'word', show: canPost },
-      { to: '/staff/outreach', title: 'Outreach letters', hint: 'Emails to vets, stores, schools', icon: 'mail', group: 'word', show: canPost },
+      { to: '/staff/announcements', title: 'Announcements', hint: 'Notices on the app home', icon: 'gift', group: 'word', section: 'site', show: canPost },
+      { to: '/staff/home-screen', title: 'Home screen', hint: 'The big cards on the app and website', icon: 'home', group: 'word', section: 'site', show: canPost },
+      { to: '/staff/posts', title: 'Post queue', hint: readyPosts > 0 ? `${readyPosts} ready to post` : 'Premade posts, one tap', icon: 'mail', group: 'word', section: 'social', badge: readyPosts, show: canPost || can('social.publish') || can('social.approve') },
+      { to: '/staff/share', title: 'Share kit', hint: 'Posts for Instagram, Facebook, TikTok', icon: 'sparkles', group: 'word', section: 'social', show: canPost },
+      { to: '/staff/flyers', title: 'Flyers', hint: 'QR posters to print or share', icon: 'printer', group: 'word', section: 'print', show: canPost },
+      { to: '/staff/outreach', title: 'Outreach letters', hint: 'Emails to vets, stores, schools', icon: 'mail', group: 'word', section: 'print', show: canPost },
       { to: '/staff/notifications', title: 'Send a notification', hint: 'To phones that asked for it', icon: 'device', group: 'word', show: can('notifications.send') },
-      { to: '/staff/impact', title: 'Impact numbers', hint: 'The year in numbers', icon: 'star', group: 'word', show: canPost },
+      { to: '/staff/impact', title: 'Impact numbers', hint: 'The year in numbers', icon: 'star', group: 'word', section: 'site', show: canPost },
 
       // Supporters and giving
       { to: '/staff/supporters', title: 'Supporters', hint: 'The email list and interests', icon: 'mail', group: 'giving', show: can('supporters.view') },
@@ -163,7 +193,22 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
     const tiles = all.filter((t) => t.show).map(({ show: _show, ...t }) => t)
     const groups = GROUPS.map((g) => {
       const list = tiles.filter((t) => t.group === g.key)
-      return { ...g, tiles: list, badge: list.reduce((n, t) => n + (t.badge ?? 0), 0) }
+      const entries: GroupEntry[] = []
+      for (const t of list) {
+        const sc = SECTIONS.find((x) => x.key === t.section)
+        if (!sc) {
+          entries.push({ kind: 'tile', tile: t })
+          continue
+        }
+        const have = entries.find((e) => e.kind === 'section' && e.section.key === sc.key)
+        if (have && have.kind === 'section') {
+          have.tiles.push(t)
+          have.badge += t.badge ?? 0
+        } else entries.push({ kind: 'section', section: sc, tiles: [t], badge: t.badge ?? 0 })
+      }
+      // A section with one page is just that page.
+      const flat = entries.map((e): GroupEntry => (e.kind === 'section' && e.tiles.length === 1 ? { kind: 'tile', tile: e.tiles[0] } : e))
+      return { ...g, tiles: list, badge: list.reduce((n, t) => n + (t.badge ?? 0), 0), entries: flat }
     }).filter((g) => g.tiles.length > 0)
     return {
       tiles,
