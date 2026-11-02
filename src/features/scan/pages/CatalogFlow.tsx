@@ -200,12 +200,13 @@ function ReceiveParts({ firstScreen = false }: { firstScreen?: boolean }) {
     ['B', 'Photos', ''],
     ['C', 'What it is', 'the name, how many, and its value or what we paid.'],
     ['D', 'Where it’s kept', 'needed before Save.'],
-    ['E', 'More details', 'only if you know them.'],
-    ['F', 'What it’s for', 'only if you know it. Otherwise it’s sorted later from Items.'],
+    ['E', 'In a box?', 'only if it goes in a box: pick one you started, or start a new one.'],
+    ['F', 'More details', 'only if you know them.'],
+    ['G', 'What it’s for', 'only if you know it. Otherwise it’s sorted later from Items.'],
   ]
   return (
     <>
-      <p>Receiving is step 1 of 5. A is answered once for the whole bag; B to F are for each item.</p>
+      <p>Receiving is step 1 of 5. A is answered once for the whole bag; B to G are for each item.</p>
       <ul className="space-y-1.5">
         {rows.map(([n, name, line]) => (
           <li key={n} className="flex items-start gap-2">
@@ -342,6 +343,9 @@ export default function CatalogFlow() {
   const [recentBoxes, setRecentBoxes] = useState<Box[] | null>(null)
   const [changingBox, setChangingBox] = useState(false)
   const [boxPrinted, setBoxPrinted] = useState<string | null>(null)
+  // Plain Receive (not the box job): the box this item goes in, if any (part E), kept for the next items too.
+  const [plainBox, setPlainBox] = useState<{ code: string; box_no: number; location: string | null; count: number } | null>(null)
+  const [pickingBox, setPickingBox] = useState(false)
   // Where the box being filled is kept (asked when it's started; its items are kept there too).
   const [boxPlace, setBoxPlace] = useState('')
   const setBox = (b: PackingBox | null) => {
@@ -457,8 +461,28 @@ export default function CatalogFlow() {
       .catch(() => setRecentBoxes([]))
   }, [orgId])
   useEffect(() => {
-    if (wantsBoxes) loadRecentBoxes()
-  }, [wantsBoxes, loadRecentBoxes])
+    if (wantsBoxes || pickingBox) loadRecentBoxes()
+  }, [wantsBoxes, pickingBox, loadRecentBoxes])
+
+  /** Plain Receive, part E: this item (and the next ones) go in this box. Its place becomes where the item is kept. */
+  const choosePlainBox = (b: Box) => {
+    setPlainBox({ code: b.code, box_no: b.box_no, location: b.location, count: b.items.length })
+    if (b.location) update({ location: b.location })
+    setPickingBox(false)
+  }
+  const startPlainBox = async () => {
+    setBoxBusy(true)
+    setError(null)
+    try {
+      const b = await newBox(orgId, draft.location.trim() || null)
+      choosePlainBox(b)
+      loadRecentBoxes()
+    } catch (err) {
+      setError(errMessage(err))
+    } finally {
+      setBoxBusy(false)
+    }
+  }
 
   /** A new box with the next number, kept where the last one was: write the number on it. */
   const startBox = async () => {
@@ -690,7 +714,7 @@ export default function CatalogFlow() {
     const bought = snap.source === 'purchase'
     const donatedBy = wantsBoxes || bought ? '' : (current?.donor ?? '')
     const list = shots
-    const packing = box
+    const packing = wantsBoxes ? box : plainBox
     const bag = bagKey(snap.source, current?.donor ?? '', current?.date ?? todayIso(), snap.boughtFrom)
     voice.stop()
     setError(null)
@@ -769,6 +793,7 @@ export default function CatalogFlow() {
             const count = r.box ? r.box.items.length : null
             inBox = { no: packing.box_no, count }
             if (count != null) setBoxCount(count)
+            if (!wantsBoxes) setPlainBox((pb) => (pb && pb.code === packing.code ? { ...pb, count: count ?? pb.count + 1 } : pb))
             item = { ...item, box: { code: packing.code, box_no: packing.box_no, location: r.box?.location ?? null } }
           } catch (err) {
             boxNote = `It’s saved, but it didn’t go in Box ${packing.box_no}: ${errMessage(err)} Put it in from the box’s page.`
@@ -779,7 +804,7 @@ export default function CatalogFlow() {
         )
         setToday((n) => (n ?? 0) + 1)
         setUnprinted((n) => (n ?? 0) + 1)
-        if (!packing) {
+        if (!wantsBoxes) {
           const code = item.code
           setSession((sn) => {
             const next = { ...sn, items: [...sn.items.filter((x) => x.code !== code), { code, bag }] }
@@ -1621,6 +1646,79 @@ export default function CatalogFlow() {
           <LocationField v={draft} set={update} places={suggestions.locations} />
 
           <Part n="E" hint="optional">
+            In a box?
+          </Part>
+          <div className="space-y-3">
+            {plainBox && !pickingBox && (
+              <div className="rounded-3xl border-2 border-brand-orange bg-brand-orange-50 p-4 text-center">
+                <p className="text-sm font-bold uppercase tracking-wide text-slate-600">Going in</p>
+                <p className="font-display text-4xl font-black leading-tight text-ink">Box {plainBox.box_no}</p>
+                <p className="text-[15px] text-slate-600">
+                  {plainBox.location ? `Kept: ${plainBox.location} · ` : ''}
+                  {plainBox.count} item{plainBox.count === 1 ? '' : 's'} in it
+                </p>
+                {plainBox.count === 0 && <p className="mt-1 text-lg font-bold text-ink">Write {plainBox.box_no} on the box.</p>}
+                <div className="mt-2 flex flex-col gap-1">
+                  <button type="button" onClick={() => setPickingBox(true)} className="min-h-[44px] w-full text-base font-bold text-brand-blue">
+                    Use a different box
+                  </button>
+                  <button type="button" onClick={() => setPlainBox(null)} className="min-h-[44px] w-full text-base font-bold text-slate-600">
+                    Not in a box
+                  </button>
+                </div>
+              </div>
+            )}
+            {!plainBox && !pickingBox && (
+              <button
+                type="button"
+                onClick={() => setPickingBox(true)}
+                className="flex min-h-[52px] w-full items-center justify-between gap-3 rounded-2xl border-2 border-slate-200 bg-white px-4 py-2 text-left"
+              >
+                <span className="min-w-0 text-base font-bold text-brand-blue">Not in a box — tap to put it in one</span>
+                <Icon name="chevron" size={20} className="shrink-0 rotate-90 text-slate-400" />
+              </button>
+            )}
+            {pickingBox && (
+              <div className="space-y-3 rounded-2xl border-2 border-slate-200 bg-white p-4">
+                {recentBoxes === null && <p className="text-[15px] text-slate-500">Looking for your boxes…</p>}
+                {recentBoxes && recentBoxes.length > 0 && (
+                  <>
+                    <p className="text-base font-bold text-ink">Put it in a box you started</p>
+                    <ul className="space-y-2">
+                      {recentBoxes.map((b) => (
+                        <li key={b.code}>
+                          <button
+                            type="button"
+                            onClick={() => choosePlainBox(b)}
+                            className="flex min-h-[60px] w-full items-center gap-3 rounded-2xl border-2 border-slate-200 bg-white px-4 py-2 text-left active:bg-brand-blue-50"
+                          >
+                            <span className="font-display text-2xl font-black text-ink">Box {b.box_no}</span>
+                            <span className="min-w-0 flex-1 truncate text-[15px] text-slate-600">
+                              {b.location ? `${b.location} · ` : ''}
+                              {b.items.length} item{b.items.length === 1 ? '' : 's'}
+                            </span>
+                            <Icon name="chevron" size={18} className="shrink-0 text-slate-400" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-base font-bold text-ink">Or start a new one</p>
+                  </>
+                )}
+                <p className="text-[15px] text-slate-600">
+                  {draft.location.trim() ? `The new box will be kept at ${draft.location.trim()}.` : 'Say where it’s kept above first, and the new box is kept there.'}
+                </p>
+                <BigButton onClick={() => void startPlainBox()} disabled={boxBusy} icon="box">
+                  {boxBusy ? 'Starting the box…' : 'Start a new box'}
+                </BigButton>
+                <button type="button" onClick={() => setPickingBox(false)} className="min-h-[44px] w-full text-base font-bold text-brand-blue">
+                  Never mind
+                </button>
+              </div>
+            )}
+          </div>
+
+          <Part n="F" hint="optional">
             More details
           </Part>
           <button
@@ -1640,8 +1738,8 @@ export default function CatalogFlow() {
               show={{ size: true, condition: true, category: true, useBy: true, price: draft.headedFor !== 'shop', notes: true }}
             />
           )}
-          {/* OHRR 2026-10-27: no "Step 4" inside step 1 — what it's for is part F, only if it's already known; otherwise it's sorted later from Items. */}
-          <Part n="F" hint="if you know">
+          {/* OHRR 2026-10-27: no "Step 4" inside step 1 — what it's for is part G, only if it's already known; otherwise it's sorted later from Items. */}
+          <Part n="G" hint="if you know">
             What it’s for
           </Part>
           <div className="rounded-2xl border-2 border-slate-200 bg-white">
