@@ -117,7 +117,7 @@ export function StepShell({
       </div>
       <div className="flex-1 px-5 pb-6 pt-5">{children}</div>
       {footer && (
-        <div className="sticky bottom-0 border-t border-slate-200 bg-white/95 px-5 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
+        <div data-keyboard-footer className="sticky bottom-0 border-t border-slate-200 bg-white/95 px-5 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
           {footer}
         </div>
       )}
