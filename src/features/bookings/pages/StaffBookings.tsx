@@ -14,9 +14,9 @@ import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
 import { authOrigin } from '../../../lib/appUrl'
 import { Screen, Card, Badge } from '../../../components/ui'
-import { Icon } from '../../../components/icons'
+import { Icon, type IconName } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
-import { CardActions, EditorForm, Field, Part, pill } from '../../../components/StaffJob'
+import { CardActions, ChoiceCard, EditorForm, Field, Part, pill } from '../../../components/StaffJob'
 import {
   deleteSlot,
   generateSlots,
@@ -51,13 +51,13 @@ import { Explain, StaffTitle } from '../../../components/StaffTitle'
 type Tab = 'confirm' | 'today' | 'coming' | 'times' | 'hours' | 'setup'
 
 /** The steps, in the order the work happens. */
-const STEPS: { tab: Tab; n: number; label: string }[] = [
-  { tab: 'confirm', n: 1, label: 'To confirm' },
-  { tab: 'today', n: 2, label: 'Today' },
-  { tab: 'coming', n: 3, label: 'Coming up' },
-  { tab: 'times', n: 4, label: 'Make times' },
-  { tab: 'hours', n: 5, label: 'Hours' },
-  { tab: 'setup', n: 6, label: 'Set up the types' },
+const STEPS: { tab: Tab; n: number; label: string; icon: IconName; text: string }[] = [
+  { tab: 'confirm', n: 1, label: 'To confirm', icon: 'check', text: 'Requests waiting for a yes.' },
+  { tab: 'today', n: 2, label: 'Today', icon: 'clock', text: 'Check people in at the door.' },
+  { tab: 'coming', n: 3, label: 'Coming up', icon: 'calendar', text: 'Who is booked in the next weeks.' },
+  { tab: 'times', n: 4, label: 'Make times', icon: 'plus', text: 'Add days and times people can book.' },
+  { tab: 'hours', n: 5, label: 'Hours', icon: 'file', text: 'Volunteer hours to approve.' },
+  { tab: 'setup', n: 6, label: 'Set up the types', icon: 'settings', text: 'What can be booked, and the questions.' },
 ]
 const isTab = (s: string | null): s is Tab => STEPS.some((x) => x.tab === s)
 
@@ -70,25 +70,10 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-/** "Step 2 of 6 · Today" over the step's content. */
-function StepLine({ n, label }: { n: number; label: string }) {
-  return (
-    <p className="flex items-center gap-2 text-sm font-bold text-slate-500" aria-label={`Step ${n} of ${STEPS.length}`}>
-      Step {n} of {STEPS.length} · {label}
-      <span className="flex gap-1" aria-hidden="true">
-        {STEPS.map((s) => (
-          <span key={s.tab} className={`h-2 w-2 rounded-full ${s.n <= n ? 'bg-brand-orange' : 'bg-slate-200'}`} />
-        ))}
-      </span>
-    </p>
-  )
-}
-
 export default function StaffBookings() {
   const { membership } = useAuth()
   const orgId = membership?.orgId ?? ''
   const [params, setParams] = useSearchParams()
-  const [picked, setPicked] = useState<Tab | null>(() => (isTab(params.get('tab')) ? (params.get('tab') as Tab) : null))
   const [types, setTypes] = useState<BookingType[] | null>(null)
   const [rows, setRows] = useState<RosterRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -119,13 +104,12 @@ export default function StaffBookings() {
   }, [orgId, reloadRows])
 
   const pending = (rows ?? []).filter((r) => r.status === 'requested').length
-  // Open on the step the day calls for: requests first, otherwise the door.
-  const tab: Tab = picked ?? (pending > 0 ? 'confirm' : 'today')
-  const step = STEPS.find((s) => s.tab === tab)!
-  const pick = (t: Tab) => {
-    setPicked(t)
-    setParams({ tab: t }, { replace: true })
-  }
+  // One decision per screen (OHRR, 2026-11-02): the address says which screen; none is the home of cards.
+  // Each pick is a step in the browser's history, so the phone's Back button returns to the cards.
+  const wanted = params.get('tab')
+  const tab: Tab | null = isTab(wanted) ? wanted : null
+  const step = tab ? STEPS.find((s) => s.tab === tab)! : null
+  const pick = (t: Tab) => setParams({ tab: t })
 
   const act = async (r: RosterRow, status: BookingStatus) => {
     setError(null)
@@ -139,32 +123,44 @@ export default function StaffBookings() {
 
   return (
     <Screen className="space-y-4">
-      <StaffTitle title="Bookings">
-        <p>Shifts and appointments people book in the app and on the website.</p>
-        <p>The steps run in the order the work happens: confirm requests, check people in, look ahead, add times, then set up what can be booked.</p>
-      </StaffTitle>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="tablist" aria-label="The steps of Bookings">
-        {STEPS.map((s) => {
-          const on = tab === s.tab
-          return (
-            <button
-              key={s.tab}
-              type="button"
-              role="tab"
-              aria-selected={on}
-              onClick={() => pick(s.tab)}
-              className={`inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-full px-2 text-sm font-bold ${on ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
-            >
-              <span className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold ${on ? 'bg-white text-brand-blue' : 'bg-brand-blue text-white'}`}>{s.n}</span>
-              {s.label}
-              {s.tab === 'confirm' && pending > 0 ? ` (${pending})` : ''}
-            </button>
-          )
-        })}
-      </div>
-      <StepLine n={step.n} label={step.label} />
+      {step ? (
+        <div>
+          <button
+            type="button"
+            onClick={() => setParams({})}
+            className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-base font-bold text-brand-blue hover:bg-brand-blue-50"
+          >
+            <Icon name="arrowLeft" size={20} /> Bookings
+          </button>
+          <h1 className="font-display text-[26px] font-black leading-tight text-ink">{step.label}</h1>
+        </div>
+      ) : (
+        <StaffTitle title="Bookings">
+          <p>Shifts and appointments people book in the app and on the website.</p>
+          <p>Confirm requests, check people in, look ahead, add times, then set up what can be booked.</p>
+        </StaffTitle>
+      )}
       <FormError>{error}</FormError>
-      {types === null && !error && <Spinner />}
+      {!step && (
+        <>
+          <h2 className="font-display text-xl font-extrabold text-ink">What do you need to do?</h2>
+          <ul className="space-y-3">
+            {STEPS.map((s) => (
+              <li key={s.tab}>
+                <ChoiceCard
+                  onClick={() => pick(s.tab)}
+                  icon={s.icon}
+                  title={s.label}
+                  text={s.text}
+                  tone={s.tab === 'confirm' && pending > 0 ? 'orange' : 'white'}
+                  badge={s.tab === 'confirm' && pending > 0 ? `${pending} waiting` : undefined}
+                />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {step && types === null && !error && <Spinner />}
       {types && (tab === 'confirm' || tab === 'today' || tab === 'coming') && (
         <Roster mode={tab} rows={rows} onAct={act} goTo={pick} />
       )}
