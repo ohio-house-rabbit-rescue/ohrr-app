@@ -26,6 +26,8 @@ import { BigButton, ErrorBox, StepShell } from '../scan/ScanUI'
 import { isNative } from '../../native/platform'
 import { pickPhoto } from '../../native/camera'
 import { dataUrlToBlob } from '../scan/api'
+import Scanner from '../scan/Scanner'
+import { normalizeCode } from '../scan/codes'
 import { fromCents, listProducts, listSuppliers, money, saveProduct, toCents, type StockCard, type Supplier } from './api'
 import { costEach, readInvoice, readLines, unitsFor, type InvoiceLine, type MatchHow, type RememberedMatch } from './invoiceParse'
 import { readInvoiceFiles } from './invoiceRead'
@@ -120,7 +122,15 @@ const qtyOf = (r: Row) => {
 const unitsOf = (r: Row) => (r.productId ? unitsFor(qtyOf(r), r.unitsPer) : 0)
 const dollars = (cents: number | null) => (cents === null ? '' : fromCents(cents))
 
-type Step = 'start' | 'reading' | 'review' | 'saving' | 'done'
+type Step = 'start' | 'scan' | 'reading' | 'review' | 'saving' | 'done'
+
+/** One thing scanned in: the code as read, the Hop Shop item it matched (if any) and how many times. */
+interface Scanned {
+  code: string
+  productId: string | null
+  name: string
+  count: number
+}
 
 // The lettered parts of this step.
 const DELIVERY_PARTS = ['The invoice', 'Check the lines', 'Add the stock']
@@ -138,7 +148,7 @@ export default function ReceiveDelivery() {
   const [products, setProducts] = useState<StockCard[] | null>(null)
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [files, setFiles] = useState<File[]>([])
-  const [readHow, setReadHow] = useState<'pdf' | 'photo' | 'typed'>('pdf')
+  const [readHow, setReadHow] = useState<'pdf' | 'photo' | 'typed' | 'scanned'>('pdf')
   const [lines, setLines] = useState<string[]>([])
   const [supplierId, setSupplierId] = useState(params.get('supplier') ?? '')
   const [invoiceNo, setInvoiceNo] = useState('')
@@ -153,6 +163,11 @@ export default function ReceiveDelivery() {
   const [result, setResult] = useState<Delivery | null>(null)
   const [madeNew, setMadeNew] = useState(0)
   const [changingSupplier, setChangingSupplier] = useState(false)
+  const [scanned, setScanned] = useState<Scanned[]>([])
+  const [scanBusy, setScanBusy] = useState(false)
+  const [scanTyping, setScanTyping] = useState(false)
+  const [typedCode, setTypedCode] = useState('')
+  const [scanSaid, setScanSaid] = useState<{ ok: boolean; text: string } | null>(null)
   const pdfRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
   const photosRef = useRef<HTMLInputElement>(null)
@@ -244,6 +259,55 @@ export default function ReceiveDelivery() {
   const typeItIn = () => {
     setReadHow('typed')
     setRows([blankRow()])
+    setStep('review')
+  }
+
+  /* ------------------------------------------------ scanning */
+  const sameCode = (a: string | null | undefined, b: string) => !!a && a.toUpperCase().replace(/[^A-Z0-9]/g, '') === b.replace(/[^A-Z0-9]/g, '')
+  const findScanned = (code: string): StockCard | null =>
+    (products ?? []).find((p) => sameCode(p.code, code) || sameCode(p.sku, code) || sameCode(p.barcode, code) || sameCode(p.supplier_sku, code)) ?? null
+
+  const handleScan = (raw: string) => {
+    const code = normalizeCode(raw)
+    if (!code) {
+      setScanSaid({ ok: false, text: 'That didn’t look like a label. Try again, or type the code.' })
+      return
+    }
+    const card = findScanned(code)
+    setScanned((list) => {
+      const hit = list.find((x) => x.code === code)
+      if (hit) return list.map((x) => (x === hit ? { ...x, count: x.count + 1 } : x))
+      return [{ code, productId: card?.id ?? null, name: card?.name ?? '', count: 1 }, ...list]
+    })
+    setScanSaid(card ? { ok: true, text: `Counted: ${card.name}` } : { ok: false, text: `${code} isn’t a Hop Shop item yet. You can pick or add it on the next screen.` })
+    // The camera looks again after a moment, so one item isn't counted twice.
+    setScanBusy(true)
+    window.setTimeout(() => setScanBusy(false), 1200)
+  }
+  const stepCount = (code: string, by: number) =>
+    setScanned((list) => list.map((x) => (x.code === code ? { ...x, count: x.count + by } : x)).filter((x) => x.count > 0))
+
+  const doneScanning = () => {
+    if (!scanned.length) return
+    const made = scanned.map((l): Row => {
+      const p = l.productId ? byId.get(l.productId) : undefined
+      return {
+        ...blankRow(),
+        readAs: l.code,
+        description: p?.name ?? '',
+        qty: String(l.count),
+        productId: p?.id ?? '',
+        cost: p?.cost_cents != null ? fromCents(p.cost_cents) : '',
+        how: p ? 'barcode' : null,
+        sure: !!p,
+        matchKey: l.code.toLowerCase(),
+        include: !!p,
+      }
+    })
+    setReadHow('scanned')
+    setLines([])
+    setRows(made)
+    setError(null)
     setStep('review')
   }
 
@@ -385,6 +449,9 @@ export default function ReceiveDelivery() {
     setDupAsked(false)
     setResult(null)
     setError(null)
+    setScanned([])
+    setScanSaid(null)
+    setScanTyping(false)
     void listProducts(orgId).then(setProducts).catch(() => undefined)
   }
 
@@ -438,8 +505,8 @@ export default function ReceiveDelivery() {
       <div className="space-y-5">
         {supplierBar}
         <section className="space-y-3">
-          <Part n="A" hint="needed">
-            The invoice
+          <Part n="A" hint="pick one">
+            What came in
           </Part>
           <div className="grid gap-3">
             <BigButton tone={files.length ? 'outline' : 'blue'} icon="mail" onClick={() => pdfRef.current?.click()}>
@@ -447,6 +514,9 @@ export default function ReceiveDelivery() {
             </BigButton>
             <BigButton tone={files.length ? 'outline' : 'blue'} icon="camera" onClick={() => void takePhoto()}>
               Photograph a paper invoice
+            </BigButton>
+            <BigButton tone={files.length ? 'outline' : 'blue'} icon="scan" onClick={() => setStep('scan')} disabled={!products}>
+              No invoice — scan the items
             </BigButton>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -490,6 +560,77 @@ export default function ReceiveDelivery() {
         </BigButton>
       )
     }
+  } else if (step === 'scan') {
+    const total = scanned.reduce((n, l) => n + l.count, 0)
+    body = (
+      <div className="space-y-5">
+        {supplierBar}
+        <section className="space-y-3">
+          <Part n="A" hint={total ? `${total} counted` : 'none yet'}>
+            Scan the items
+          </Part>
+          <div className="space-y-3 rounded-2xl border-2 border-brand-orange/60 bg-white p-3">
+            <p className="font-display text-lg font-extrabold text-ink">Scan each item as you unpack it</p>
+            {!scanTyping ? (
+              <Scanner onResult={handleScan} onTypeInstead={() => setScanTyping(true)} paused={scanBusy} />
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  const t = typedCode
+                  setTypedCode('')
+                  handleScan(t)
+                }}
+                className="flex gap-2"
+              >
+                <input value={typedCode} onChange={(e) => setTypedCode(e.target.value)} placeholder="Item number or barcode" aria-label="Item code" autoFocus autoCapitalize="characters" className={`${staffInput} font-mono`} />
+                <button type="submit" disabled={!typedCode.trim()} className="min-h-[48px] shrink-0 rounded-xl bg-brand-blue px-4 font-bold text-white disabled:opacity-40">
+                  Add
+                </button>
+              </form>
+            )}
+            {scanTyping && (
+              <StepButton icon="scan" onClick={() => setScanTyping(false)}>
+                Use the camera
+              </StepButton>
+            )}
+            {scanSaid && (
+              <p aria-live="polite" className={`flex items-start gap-2 rounded-xl px-3 py-2 text-[15px] font-semibold ${scanSaid.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900'}`}>
+                <Icon name={scanSaid.ok ? 'check' : 'x'} size={18} className="mt-0.5 shrink-0" />
+                {scanSaid.text}
+              </p>
+            )}
+          </div>
+          {scanned.length > 0 && (
+            <ul className="space-y-2">
+              {scanned.map((l) => (
+                <li key={l.code}>
+                  <Card className="flex items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-base font-bold text-ink">{l.name || 'Not a Hop Shop item yet'}</p>
+                      <p className="truncate font-mono text-sm text-slate-600">{l.code}</p>
+                    </div>
+                    <button type="button" onClick={() => stepCount(l.code, -1)} aria-label={`One fewer ${l.name || l.code}`} className={`${pill.outline} !min-h-[48px] !min-w-[48px]`}>
+                      −
+                    </button>
+                    <span className="w-8 text-center text-lg font-extrabold text-ink">{l.count}</span>
+                    <button type="button" onClick={() => stepCount(l.code, 1)} aria-label={`One more ${l.name || l.code}`} className={`${pill.outline} !min-h-[48px] !min-w-[48px]`}>
+                      +
+                    </button>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="text-base text-slate-700">Scan each one. Scanning the same item again adds one. You check the list before anything is added to stock.</p>
+        </section>
+      </div>
+    )
+    footer = (
+      <BigButton onClick={doneScanning} disabled={!scanned.length} icon="check">
+        Done scanning
+      </BigButton>
+    )
   } else if (busyScreen) {
     body = (
       <Card className="py-8 text-center">
@@ -532,7 +673,7 @@ export default function ReceiveDelivery() {
             Check the lines
           </Part>
           <p className="text-base text-slate-700">
-            {readHow === 'typed' ? 'Add each line of the delivery.' : `Read from the ${readHow === 'pdf' ? 'PDF' : files.length > 1 ? 'photos' : 'photo'}.`} Fix any line that didn’t match; uncheck one that isn’t stock.
+            {readHow === 'typed' ? 'Add each line of the delivery.' : readHow === 'scanned' ? 'Counted from your scans.' : `Read from the ${readHow === 'pdf' ? 'PDF' : files.length > 1 ? 'photos' : 'photo'}.`} Fix any line that didn’t match; uncheck one that isn’t stock.
           </p>
           <ul className="space-y-3">
             {rows.map((r) => (
@@ -654,8 +795,10 @@ export default function ReceiveDelivery() {
         title={step === 'done' ? 'Delivery added' : 'Add the delivery'}
         help={
           step === 'start'
-            ? 'From the supplier’s invoice: the PDF from their email, or photos of a paper one.'
-            : step === 'review'
+            ? 'From the supplier’s invoice: the PDF from their email, or photos of a paper one. No invoice? Scan the items as you unpack them.'
+            : step === 'scan'
+              ? 'Scan each item. Same item again adds one.'
+              : step === 'review'
               ? 'Check each line before anything changes.'
               : undefined
         }
@@ -672,8 +815,8 @@ export default function ReceiveDelivery() {
         stepName="Add the delivery"
         flow={step === 'start' || step === 'review' ? DELIVERY_PARTS : undefined}
         flowLetters
-        onBack={() => navigate('/staff/hopshop')}
-        backLabel="Hop Shop"
+        onBack={step === 'scan' ? () => setStep('start') : () => navigate('/staff/hopshop')}
+        backLabel={step === 'scan' ? 'Back' : 'Hop Shop'}
         footer={footer}
       >
         {body}

@@ -24,6 +24,42 @@ const SECTIONS: { value: Section; label: string }[] = [
   { value: 'about', label: 'About page' },
 ]
 
+// What each mark on this page means, shown inside "How it works".
+function IconLegend() {
+  const marks: { mark: React.ReactNode; text: string }[] = [
+    { mark: <Icon name="book" size={20} className="text-brand-blue" />, text: 'The small picture before a guide’s title. It is the picture shown beside the guide in the app. Change it under “Icon” when you edit the guide.' },
+    { mark: <Badge tone="blue">Shown</Badge>, text: 'Visitors can see this guide now.' },
+    { mark: <Badge tone="slate">Hidden</Badge>, text: 'A draft. Only staff see it, and nobody else until you tap Show.' },
+    { mark: <Badge tone="orange">Give</Badge>, text: 'An orange tag names the page the text appears on (Give, Adopt, Volunteer or About). With no orange tag, the guide is in Learn.' },
+    { mark: <Icon name="eye" size={20} />, text: 'Show: makes a hidden guide visible to everyone.' },
+    { mark: <Icon name="eyeOff" size={20} />, text: 'Hide: takes a shown guide off the app without deleting it.' },
+    { mark: <Icon name="trash" size={20} className="text-red-600" />, text: 'Remove: deletes the guide. It asks first, and it can’t be undone.' },
+    { mark: <Icon name="plus" size={20} />, text: 'Add a guide: starts a new one.' },
+  ]
+  return (
+    <div className="space-y-2">
+      <p className="font-bold text-ink">What the marks mean</p>
+      <ul className="space-y-2">
+        {marks.map((m, i) => (
+          <li key={i} className="flex items-start gap-3">
+            <span className="flex min-h-[28px] w-20 shrink-0 items-center justify-center">{m.mark}</span>
+            <span className="min-w-0 flex-1">{m.text}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="pt-1 font-bold text-ink">The pictures you can choose for a guide</p>
+      <ul className="grid grid-cols-2 gap-x-3 gap-y-1">
+        {CARE_ICONS.map((ic) => (
+          <li key={ic} className="flex items-center gap-2">
+            <Icon name={ic} size={20} className="shrink-0 text-brand-blue" />
+            <span>{ic}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 interface Draft {
   section: Section
   title: string
@@ -340,6 +376,7 @@ export default function StaffLearn() {
           The Rabbit Care articles shown in Learn, and the text on the Give, Adopt, Volunteer and About pages. They show
           in the order below; use Move up and Move down to change it.
         </p>
+        <IconLegend />
       </StaffTitle>
 
       {!creating && (
