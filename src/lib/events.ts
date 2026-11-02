@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase, isSupabaseConfigured } from './supabase'
 import type { Database } from './database.types'
-import { seedEvents, BUNFEST_EVENT_SLUG, type EventItem } from '../data/events'
+import { seedEvents, BUNFEST_EVENT_SLUG, isBunfestSlug, type EventItem } from '../data/events'
 
 export {
   eventDate,
@@ -84,10 +84,20 @@ export function useEvents(): EventsResult {
 
 // The Midwest BunFest event record — live if present, else the seed — so the
 // BunFest sub-app's date / time / venue / theme are never stale.
+//
+// No year is written in the code: of the published events whose slug names
+// BunFest ("midwest-bunfest-2026", "midwest-bunfest-2027"…), it is the next one
+// still to come, or the latest one once they have all passed — the same rule
+// the website uses. So publishing next year's event in Staff → Events moves the
+// whole BunFest section (and its year's schedule, vendors and pages) to it.
+export function pickBunfestEvent(events: EventItem[], now = Date.now()): EventItem | undefined {
+  const all = events
+    .filter((e) => isBunfestSlug(e.slug))
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+  return all.find((e) => new Date(e.endsAt ?? e.startsAt).getTime() >= now) ?? all[all.length - 1]
+}
+
 export function useBunfestEvent(): EventItem {
   const { events } = useEvents()
-  return (
-    events.find((e) => e.slug === BUNFEST_EVENT_SLUG) ??
-    seedEvents.find((e) => e.slug === BUNFEST_EVENT_SLUG)!
-  )
+  return pickBunfestEvent(events) ?? seedEvents.find((e) => e.slug === BUNFEST_EVENT_SLUG)!
 }

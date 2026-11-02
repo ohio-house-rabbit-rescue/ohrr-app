@@ -10,7 +10,7 @@ import {
   isUpcoming,
   mapsUrl,
 } from '../lib/events'
-import { BUNFEST_EVENT_SLUG, type EventItem } from '../data/events'
+import { isBunfestSlug, type EventItem } from '../data/events'
 import { ohrr } from '../data/ohrr'
 import PresentedBy from '../features/sponsors/PresentedBy'
 import AddEventToCalendar from '../components/AddEventToCalendar'
@@ -18,7 +18,7 @@ import { useMarkSeen } from '../features/account/forYouCounts'
 
 function EventCard({ event: e, past = false }: { event: EventItem; past?: boolean }) {
   const [open, setOpen] = useState(false)
-  const isBunfest = e.slug === BUNFEST_EVENT_SLUG
+  const isBunfest = isBunfestSlug(e.slug)
   const day = new Date(e.startsAt)
   return (
     <Card className={past ? 'opacity-75' : ''}>

@@ -32,6 +32,9 @@ export interface EventItem {
 // The stable slug the BunFest sub-app looks up to keep its date/venue/theme live.
 export const BUNFEST_EVENT_SLUG = 'midwest-bunfest-2026'
 
+/** Any year's BunFest event: "midwest-bunfest-2026", "midwest-bunfest-2027"… */
+export const isBunfestSlug = (slug: string) => /^midwest-bunfest(-|$)/.test(slug)
+
 export const seedEvents: EventItem[] = [
   {
     id: BUNFEST_EVENT_SLUG,

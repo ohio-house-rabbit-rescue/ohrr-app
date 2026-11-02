@@ -206,8 +206,9 @@ function EventForm({
         </Field>
         <Explain label="About the BunFest event">
           <p>
-            Keep <code>midwest-bunfest-2026</code> for the BunFest event — the BunFest section reads its date, venue and theme
-            from that record.
+            Name each year’s BunFest like <code>midwest-bunfest-2027</code> — the BunFest section reads its date, venue and theme
+            from the next one that is shown (or the latest, once they have all passed). Showing next year’s moves the whole
+            section to it.
           </p>
         </Explain>
         <label className="flex min-h-[44px] items-center gap-3 text-base font-semibold text-slate-700">
@@ -414,7 +415,7 @@ export default function StaffEvents() {
       >
         <p>Shown on the app’s Events screen and the website.</p>
         <p>
-          The BunFest section reads its date, venue and theme from the <code>midwest-bunfest-2026</code> record.
+          The BunFest section reads its date, venue and theme from the next shown event named like <code>midwest-bunfest-2027</code>.
         </p>
       </StaffTitle>
 

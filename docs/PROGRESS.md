@@ -2317,3 +2317,9 @@ Sponsor wants the app on phones for internal testers (Google Play internal testi
 - **Raffle handed over:** `raffle_tickets.handed_over_at/by`, `set_raffle_handed_over(ticket, bool)`, shown on the winner card (big green button, undo), in the summary PDF and spreadsheet. `undo_raffle_draw` clears it.
 - **SQL:** `supabase/migrations/20261101100000_event_choice_and_handed_over.sql` (update 48; also generalizes `auction_public_on` / `auction_move_item`). Tested in PGlite (all checks true). Copy in Drive RUN-THIS-IN-SUPABASE.sql. Edge function `ohrr-auction` title fallback no longer names BunFest.
 - Version 0.4.6 → rev 14 (web). Android APK 0.4.7 vc14 (web rev 15) built 2026-11-02 carries it.
+
+## 2026-11-02 — Update 49: finished 2026 BunFest + 2027 draft
+- Re-read all of midwestbunfest.org (2026 pages) against the live database. Gaps fixed by `supabase/migrations/20261102100000_bunfest_2026_final_and_2027_draft.sql` (update 49): vendor Stitches Abound added, Bunny Beds and Beyond off 2026; sponsors Bunny Cafe San Francisco + Lafeber added; Friends of Rabbits marked a 2026 partner; new pages Senior & Special Needs Bunnies (Ask-A-Vet) and Social events (+ cards); Toymaking/Lounge/Spa details filled in (only where still the September wording).
+- 2027: event `midwest-bunfest-2027` (Sun Oct 24, 2027, 10–4, venue "To be announced"), HIDDEN; talks/pages/cards copied hidden, vendors + rescue partners carried as 2027 to confirm; table plan and auction not copied. Tested in PGlite (twice-run safe).
+- App: `useBunfestEvent` no longer pins 2026 — it picks the next shown `midwest-bunfest-*` event (else the latest), like the website already does; `isBunfestSlug` in data/events.ts. So showing the 2027 event in Staff → Events moves the BunFest section. Auction/raffle event stays on its own setting (Staff → Silent Auction).
+- Web rev 16.
