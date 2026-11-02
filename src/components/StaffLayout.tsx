@@ -55,9 +55,9 @@ export default function StaffLayout() {
                 </span>
                 {/* Beside the Back button there's only room for the badge; the name shows on the dashboard. */}
                 <span className={`min-w-0 leading-tight ${pathname !== '/staff' ? 'hidden' : ''}`}>
-                  <span className="block truncate font-display text-sm font-extrabold text-ink">OHRR Staff</span>
+                  <span className="block truncate font-display text-base font-extrabold text-ink">OHRR Staff</span>
                   {membership && (
-                    <span className="block text-[11px] font-semibold text-slate-400">
+                    <span className="block text-[13px] font-semibold text-slate-500">
                       {myLevel.level ? levelInfo(myLevel.level).label : roleLabel(membership.role)}
                     </span>
                   )}
@@ -78,7 +78,7 @@ export default function StaffLayout() {
                 <button
                   type="button"
                   onClick={onSignOut}
-                  className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-50"
+                  className="rounded-full border border-slate-200 min-h-10 px-3 py-1.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
                 >
                   Sign out
                 </button>
@@ -121,7 +121,7 @@ export default function StaffLayout() {
         </main>
 
         {/* Which update this is — so a volunteer can report "rev 5" and mean it. */}
-        <p className="px-4 pb-4 text-center text-[11px] text-slate-400">
+        <p className="px-4 pb-4 text-center text-xs text-slate-500">
           OHRR staff tools · {buildLabel}
         </p>
       </div>

@@ -75,10 +75,7 @@ export default function StaffGroup() {
   return (
     <Screen className="space-y-4">
       <div>
-        <Link to="/staff" className={backLink}>
-          <Icon name="arrowLeft" size={20} /> Staff
-        </Link>
-        <h1 className="font-display text-[26px] font-black leading-tight text-ink">{g.title}</h1>
+        <h1 className="pt-1 font-display text-[26px] font-black leading-tight text-ink">{g.title}</h1>
         {g.key === 'me' && user?.email && <p className="mt-1 break-all text-base text-slate-600">Signed in as {user.email}</p>}
         {g.key !== 'me' && <p className="mt-1 text-lg text-slate-700">What would you like to open?</p>}
       </div>
