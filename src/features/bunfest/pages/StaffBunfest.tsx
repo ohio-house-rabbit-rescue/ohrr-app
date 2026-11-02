@@ -21,7 +21,7 @@ import { eventDate, eventIsoDay, useBunfestEvent } from '../../../lib/events'
 import { Screen, Card, Badge } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
-import { CardActions, EditorForm, Field, Part, WorkingOn, pill } from '../../../components/StaffJob'
+import { CardActions, ChoiceCard, EditorForm, Field, Part, WorkingOn, pill } from '../../../components/StaffJob'
 import { BigButton } from '../../scan/ScanUI'
 import { listSuppliers, type Supplier } from '../../hopshop/api'
 import { giftTotals, type GiftTotals } from '../../hopshop/companies'
@@ -65,14 +65,16 @@ import {
 } from '../api'
 import { Explain, StaffTitle } from '../../../components/StaffTitle'
 
-type Tab = 'schedule' | 'vendors' | 'partners' | 'year' | 'pages' | 'floor'
+const backLink = '-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-base font-bold text-brand-blue hover:bg-brand-blue-50'
+
+type Tab = 'home' | 'people' | 'schedule' | 'vendors' | 'partners' | 'year' | 'pages' | 'floor'
 
 /** The steps, in the order the work happens. `tabs` are the addresses that belong to the step. */
 const STEPS: { n: number; label: string; path: string; tabs: Tab[] }[] = [
-  { n: 1, label: 'Start this year', path: '/staff/bunfest', tabs: ['year'] },
+  { n: 1, label: 'Start this year', path: '/staff/bunfest/start', tabs: ['year'] },
   { n: 2, label: 'Venue and floor', path: '/staff/bunfest/floor', tabs: ['floor'] },
   { n: 3, label: 'Schedule and speakers', path: '/staff/bunfest/schedule', tabs: ['schedule'] },
-  { n: 4, label: 'Vendors and partners', path: '/staff/bunfest/vendors', tabs: ['vendors', 'partners'] },
+  { n: 4, label: 'Vendors and rescues', path: '/staff/bunfest/people', tabs: ['people', 'vendors', 'partners'] },
   { n: 5, label: 'Pages and check', path: '/staff/bunfest/pages', tabs: ['pages'] },
 ]
 
@@ -181,7 +183,11 @@ export default function StaffBunfest() {
           ? 'floor'
           : pathname.endsWith('/pages')
             ? 'pages'
-            : 'year'
+            : pathname.endsWith('/start')
+              ? 'year'
+              : pathname.endsWith('/people')
+                ? 'people'
+                : 'home'
   const step = STEPS.find((s) => s.tabs.includes(tab)) ?? STEPS[0]
 
   // The year, asked once: the address first (so a link or a refresh keeps it),
@@ -199,6 +205,7 @@ export default function StaffBunfest() {
   }, [year])
 
   const go = (path: string, y = year) => navigate(`${path}?year=${y}`)
+  const withYear = (path: string) => `${path}?year=${year}`
 
   // Years that already have content, and the event records (for the date).
   const [known, setKnown] = useState<number[] | null>(null)
@@ -247,7 +254,7 @@ export default function StaffBunfest() {
   )
   const started = (known ?? []).includes(year) || startedHere.includes(year)
   const next = STEPS.find((s) => s.n === step.n + 1)
-  const back = STEPS.find((s) => s.n === step.n - 1)
+  const backTo = tab === 'vendors' || tab === 'partners' ? { path: '/staff/bunfest/people', label: 'Vendors and rescues' } : { path: '/staff/bunfest', label: 'BunFest' }
 
   return (
     <Screen className="space-y-4">
@@ -300,70 +307,72 @@ export default function StaffBunfest() {
             setStartedHere((s) => [...s, year])
             setStartNote(note)
             await reloadKnown()
-            go('/staff/bunfest')
+            go('/staff/bunfest/start')
           }}
         />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="tablist" aria-label="The steps of BunFest content">
-            {STEPS.map((s) => {
-              const on = s.n === step.n
-              return (
-                <button
-                  key={s.n}
-                  type="button"
-                  role="tab"
-                  aria-selected={on}
-                  onClick={() => go(s.path)}
-                  className={`inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-full px-2 text-sm font-bold ${on ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
-                >
-                  <span className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold ${on ? 'bg-white text-brand-blue' : 'bg-brand-blue text-white'}`}>{s.n}</span>
-                  {s.label}
-                </button>
-              )
-            })}
-          </div>
-          <p className="flex items-center gap-2 text-sm font-bold text-slate-500" aria-label={`Step ${step.n} of ${STEPS.length}`}>
-            Step {step.n} of {STEPS.length} · {step.label}
-            <span className="flex gap-1" aria-hidden="true">
-              {STEPS.map((s) => (
-                <span key={s.n} className={`h-2 w-2 rounded-full ${s.n <= step.n ? 'bg-brand-orange' : 'bg-slate-200'}`} />
-              ))}
-            </span>
-          </p>
+          {tab === 'home' ? (
+            <>
+              <h2 className="font-display text-xl font-extrabold text-ink">What do you need to do?</h2>
+              <ol className="space-y-3" aria-label="The steps">
+                <li>
+                  <ChoiceCard n={1} title="Start this year" text="Copy last year’s, see what is ready." to={withYear('/staff/bunfest/start')} />
+                </li>
+                <li>
+                  <ChoiceCard n={2} title="Venue and floor" text="The place, the map and the table layout." to={withYear('/staff/bunfest/floor')} />
+                </li>
+                <li>
+                  <ChoiceCard n={3} title="Schedule and speakers" text="The sessions and who gives them." to={withYear('/staff/bunfest/schedule')} />
+                </li>
+                <li>
+                  <ChoiceCard n={4} title="Vendors and rescues" text="Who has a table, who is coming." to={withYear('/staff/bunfest/people')} />
+                </li>
+                <li>
+                  <ChoiceCard n={5} title="Pages and check" text="The info pages, and a last look at what visitors see." to={withYear('/staff/bunfest/pages')} />
+                </li>
+              </ol>
+            </>
+          ) : (
+            <>
+              <Link to={withYear(backTo.path)} className={backLink}>
+                <Icon name="arrowLeft" size={20} /> {backTo.label}
+              </Link>
+              {tab === 'year' && (
+                <YearStep orgId={orgId} year={year} known={known} record={record} note={startNote} onCopied={reloadKnown} go={go} />
+              )}
+              {tab === 'floor' && <StaffFloor orgId={orgId} year={year} />}
+              {tab === 'schedule' && <ScheduleTab orgId={orgId} year={year} />}
+              {tab === 'people' && (
+                <>
+                  <div>
+                    <p className="text-sm font-extrabold uppercase tracking-wide text-slate-500">Step 4</p>
+                    <h2 className="font-display text-[26px] font-black leading-tight text-ink">Vendors and rescues</h2>
+                    <p className="mt-1 text-lg text-slate-700">What would you like to work on?</p>
+                  </div>
+                  <ul className="space-y-3">
+                    <li>
+                      <ChoiceCard icon="store" title="Vendors" text="The tables selling things." to={withYear('/staff/bunfest/vendors')} />
+                    </li>
+                    <li>
+                      <ChoiceCard icon="heart" title="Rescues" text="The rescues coming to the event." to={withYear('/staff/bunfest/partners')} />
+                    </li>
+                  </ul>
+                </>
+              )}
+              {tab === 'vendors' && <VendorsTab orgId={orgId} year={year} />}
+              {tab === 'partners' && <PartnersTab orgId={orgId} year={year} />}
+              {tab === 'pages' && <PagesStep orgId={orgId} year={year} />}
 
-          {tab === 'year' && (
-            <YearStep orgId={orgId} year={year} known={known} record={record} note={startNote} onCopied={reloadKnown} go={go} />
+              {next && tab !== 'people' && tab !== 'pages' && tab !== 'year' && (
+                <div className="border-t border-slate-100 pt-4">
+                  <button type="button" onClick={() => go(next.path)} className={pill.orange}>
+                    Next: {next.label}
+                  </button>
+                </div>
+              )}
+            </>
           )}
-          {tab === 'floor' && <StaffFloor orgId={orgId} year={year} />}
-          {tab === 'schedule' && <ScheduleTab orgId={orgId} year={year} />}
-          {(tab === 'vendors' || tab === 'partners') && (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                <button type="button" aria-pressed={tab === 'vendors'} onClick={() => go('/staff/bunfest/vendors')} className={tab === 'vendors' ? pill.blue : pill.outline}>
-                  Vendors
-                </button>
-                <button type="button" aria-pressed={tab === 'partners'} onClick={() => go('/staff/bunfest/partners')} className={tab === 'partners' ? pill.blue : pill.outline}>
-                  Rescues
-                </button>
-              </div>
-              {tab === 'vendors' ? <VendorsTab orgId={orgId} year={year} /> : <PartnersTab orgId={orgId} year={year} />}
-            </div>
-          )}
-          {tab === 'pages' && <PagesStep orgId={orgId} year={year} />}
-
-          <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-            {back && (
-              <button type="button" onClick={() => go(back.path)} className={pill.outline}>
-                <Icon name="arrowLeft" size={16} /> Back: {back.label}
-              </button>
-            )}
-            {next && (
-              <button type="button" onClick={() => go(next.path)} className={pill.orange}>
-                Next: {next.label}
-              </button>
-            )}
-          </div>
         </>
       )}
     </Screen>
