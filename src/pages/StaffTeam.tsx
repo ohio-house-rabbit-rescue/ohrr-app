@@ -192,7 +192,7 @@ function HowAccessWorks({ tiersReady }: { tiersReady: boolean }) {
         </p>
         <p>
           <strong className="text-ink">Volunteers don’t need an account</strong> to sign up for shifts and log hours —
-          they use their private volunteer link. Only people who work in the staff area (the Register, check-in,
+          they use their private volunteer link. Only people who work in the staff area (selling, check-in,
           editing) need one.
         </p>
         {!tiersReady && <p className="text-sm text-slate-600">The ten levels and end dates aren’t switched on yet — ask an admin.</p>}
@@ -848,7 +848,7 @@ function CertForm({
       </div>
       <label className="block text-sm font-semibold text-slate-700">
         Notes <span className="font-normal text-slate-400">(optional)</span>
-        <input className={staffInput} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Trained by Bev on the new register" />
+        <input className={staffInput} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Trained by Bev on selling" />
       </label>
       {renewing && <p className="text-sm text-slate-600">They already have this one — saving renews it with these dates.</p>}
       <FormError>{error}</FormError>

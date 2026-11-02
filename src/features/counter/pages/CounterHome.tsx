@@ -38,23 +38,23 @@ export default function CounterHome() {
   const tiles: { to: string; title: string; sub: string; icon: IconName; tone: 'orange' | 'blue' }[] =
     mode === 'shop'
       ? [
-          { to: '/staff/counter/sell', title: 'Sell', sub: 'Scan or tap what they’re buying, then take the money', icon: 'bag', tone: 'orange' },
+          { to: '/staff/counter/sell', title: 'Ring up a sale', sub: 'Scan or tap what they’re buying, then take the money', icon: 'bag', tone: 'orange' },
           // New shop items are added in one place: Hop Shop inventory (supplier, price, barcode).
           ...(can('hopshop.products.create')
             ? [{ to: '/staff/hopshop?add=1', title: 'Add an item to the shop', sub: 'A photo, the price and how many', icon: 'plus' as IconName, tone: 'blue' as const }]
             : []),
-          { to: '/staff/counter/today', title: 'Today at the register', sub: 'What sold, and the cash and card totals', icon: 'box', tone: 'blue' },
+          { to: '/staff/counter/today', title: 'Today’s sales', sub: 'What sold, and the cash and card totals', icon: 'box', tone: 'blue' },
         ]
       : [
           { to: '/staff/counter/door', title: 'Door tickets', sub: 'Check receipts, and sell tickets at the door', icon: 'ticket', tone: 'orange' },
-          { to: '/staff/counter/sell', title: 'Sell', sub: 'Hop Shop table — scan or tap, then take the money', icon: 'bag', tone: 'blue' },
+          { to: '/staff/counter/sell', title: 'Ring up a sale', sub: 'Hop Shop table — scan or tap, then take the money', icon: 'bag', tone: 'blue' },
           { to: '/staff/raffle-tickets', title: 'Raffle tickets', sub: 'Sell at the table, and take payment for reservations', icon: 'award', tone: 'blue' },
         ]
 
   return (
     <div className="space-y-5 px-5 py-5">
       <div>
-        <h1 className="font-display text-2xl font-black text-ink">Register</h1>
+        <h1 className="font-display text-2xl font-black text-ink">Sell</h1>
         {offline && (
           <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
             No signal right now. Selling and the door still work — everything is kept on this phone and sent when the signal is back.

@@ -136,7 +136,7 @@ function stepChoices(step: StepKey, o: { counts: Counts | null; canSeeVendors: b
       text: 'The lots and prizes that have a code.',
       badge: o.counts && o.counts.event > 0 ? String(o.counts.event) : undefined,
     },
-    ...(o.canCounter ? [{ to: '/staff/counter', icon: 'bag' as IconName, title: 'Register', text: 'Ring up a sale.' }] : []),
+    ...(o.canCounter ? [{ to: '/staff/counter', icon: 'bag' as IconName, title: 'Sell', text: 'Ring up a sale.' }] : []),
     ...(o.canSeeVendors ? [{ to: '/staff/hopshop', icon: 'store' as IconName, title: 'Hop Shop', text: 'Stock, prices and orders.' }] : []),
   ]
 }
@@ -291,7 +291,7 @@ export default function ItemsList() {
           />
         </li>
         <li>
-          <ChoiceCard n={5} title="Sell, raffle or use" text="Auction and raffle, the Register, the Hop Shop." {...go('sell')} />
+          <ChoiceCard n={5} title="Sell, raffle or use" text="Auction and raffle, ringing up sales, the Hop Shop." {...go('sell')} />
         </li>
       </ol>
 

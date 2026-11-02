@@ -353,7 +353,7 @@ export default function HopShopManager() {
         <StaffTitle title="Hop Shop">
           <p>
             The shop’s job, in order: <strong>1 Order</strong> what is running low, <strong>2 Add the delivery</strong> when it arrives,{' '}
-            <strong>3 Price labels</strong>, <strong>4 On the shelf</strong> — the list of what the shop carries, and <strong>5 Sell</strong> at the Register.
+            <strong>3 Price labels</strong>, <strong>4 On the shelf</strong> — the list of what the shop carries, and <strong>5 Sell</strong> at the shop.
             Do whichever step you need today. Everything here goes live on the public Hop Shop the moment it is saved.
           </p>
         </StaffTitle>
@@ -388,7 +388,7 @@ export default function HopShopManager() {
           <ChoiceCard n={4} title="On the shelf" text="See, change or add what the shop carries." {...go('shelf')} />
         </li>
         <li>
-          <ChoiceCard n={5} title="Sell" text="Open the Register and ring up a sale." to="/staff/counter" />
+          <ChoiceCard n={5} title="Sell" text="Ring up a sale at the shop." to="/staff/counter" />
         </li>
       </ol>
     </Screen>
@@ -917,7 +917,7 @@ function ProductForm({
   const printed = !!initial?.label_printed_at
   const bc = normalizeCode(d.barcode)
   const barcodeInfo = !bc
-    ? 'Scan or type it, so scanning the packet at the register finds this item. Leave it empty when there isn’t one.'
+    ? 'Scan or type it, so scanning the packet at checkout finds this item. Leave it empty when there isn’t one.'
     : isOhrrCode(bc)
       ? `${bc} is an OHRR number, not the barcode on the packet.`
       : `Scanning the packet (${bc}) opens this item.`

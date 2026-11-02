@@ -295,11 +295,11 @@ export default function App() {
         <Route path="reset" element={<StaffResetPassword />} />
         <Route path="start" element={<StaffOnboard />} />
         <Route path="join" element={<StaffJoin />} />
-        {/* The Register keeps working with no signal, so it has its own gate (CounterShell.tsx). */}
+        {/* Selling keeps working with no signal, so it has its own gate (CounterShell.tsx). */}
         <Route element={<Suspense fallback={null}><CounterGate /></Suspense>}>
           <Route path="counter" element={<Suspense fallback={null}><CounterHome /></Suspense>} />
           <Route path="counter/sell" element={<Suspense fallback={null}><CounterSell /></Suspense>} />
-          {/* New shop items: Hop Shop inventory's form (the Register's own add screen is gone). */}
+          {/* New shop items: Hop Shop inventory's form (the Sell screen's own add screen is gone). */}
           <Route path="counter/add" element={<Navigate to="/staff/hopshop?add=1" replace />} />
           <Route path="counter/today" element={<Suspense fallback={null}><CounterToday /></Suspense>} />
           <Route path="counter/door" element={<Suspense fallback={null}><CounterDoor /></Suspense>} />

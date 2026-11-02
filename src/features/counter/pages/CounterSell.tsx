@@ -130,7 +130,7 @@ export default function CounterSell() {
   }
 
   const pay = (method: PayMethod) => {
-    const sale = { id: newId(), sold_at: new Date().toISOString(), method, device: getDevice().name || 'Register', lines: lines.map(priced) }
+    const sale = { id: newId(), sold_at: new Date().toISOString(), method, device: getDevice().name || 'Sales', lines: lines.map(priced) }
     till.recordSale(sale)
     const g = toCents(given)
     setLast({ total, method, change: method === 'cash' && g !== null && g >= total ? g - total : null })
@@ -213,7 +213,7 @@ export default function CounterSell() {
       <StepShell
         title="Sale recorded"
         onBack={() => navigate('/staff/counter')}
-        backLabel="Register"
+        backLabel="Sell"
         footer={
           <BigButton onClick={() => setStep('basket')} icon="plus">
             Next customer
@@ -238,7 +238,7 @@ export default function CounterSell() {
     <StepShell
       title="Sell"
       onBack={() => navigate('/staff/counter')}
-      backLabel="Register"
+      backLabel="Sell"
       footer={
         <BigButton onClick={() => setStep('pay')} disabled={lines.length === 0}>
           {lines.length ? `Take payment · ${money(total)}` : 'Add something first'}

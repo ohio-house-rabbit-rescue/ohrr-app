@@ -465,8 +465,8 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
             <>
               <p>
                 {shop
-                  ? 'The barcode scans at the register; the QR code opens the item. '
-                  : 'The QR code opens the item, the barcode scans at the register or desk, and the number can be typed. '}
+                  ? 'The barcode scans at checkout; the QR code opens the item. '
+                  : 'The QR code opens the item, the barcode scans at checkout or the desk, and the number can be typed. '}
                 {isNative
                   ? 'Print or share: in the share sheet choose the printer’s app — for OHRR’s Phomemo and Omezizy printers that is Labelife: PDF processing → pick the label size → Print. AirPrint works for printers that have it.'
                   : 'In the print dialog choose the label printer and its label size; margins are zero. “Save as PDF” works too.'}
