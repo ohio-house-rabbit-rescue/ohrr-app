@@ -2316,4 +2316,4 @@ Sponsor wants the app on phones for internal testers (Google Play internal testi
 - **Not changed:** BunFest section/door counter (own event constants), website and BunFest sample (still hard-code `midwest-bunfest-2026` in auction/raffle pages — follow-up before the next event).
 - **Raffle handed over:** `raffle_tickets.handed_over_at/by`, `set_raffle_handed_over(ticket, bool)`, shown on the winner card (big green button, undo), in the summary PDF and spreadsheet. `undo_raffle_draw` clears it.
 - **SQL:** `supabase/migrations/20261101100000_event_choice_and_handed_over.sql` (update 48; also generalizes `auction_public_on` / `auction_move_item`). Tested in PGlite (all checks true). Copy in Drive RUN-THIS-IN-SUPABASE.sql. Edge function `ohrr-auction` title fallback no longer names BunFest.
-- Version 0.4.6 → rev 14 (web). Android APK still 0.4.6 vc13 — rebuild needed to carry this.
+- Version 0.4.6 → rev 14 (web). Android APK 0.4.7 vc14 (web rev 15) built 2026-11-02 carries it.
