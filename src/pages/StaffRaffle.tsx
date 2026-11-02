@@ -25,7 +25,7 @@ import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen, SectionLabel } from '../components/ui'
 import { Icon } from '../components/icons'
 import { StaffTitle } from '../components/StaffTitle'
-import { Field, NotOnYet, Optional, Part, StepButton, StepRow, StepRows, WorkingOn, pill } from '../components/StaffJob'
+import { ChoiceCard, Field, NotOnYet, Optional, Part, StepButton, StepRow, StepRows, WorkingOn, pill } from '../components/StaffJob'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { RafflePhoto } from '../features/raffle/RafflePhoto'
 import { uploadAuctionPhoto } from '../features/raffle/photoUpload'
@@ -1281,6 +1281,16 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
   const orgId = membership?.orgId ?? ''
   const userId = user?.id ?? ''
   const allowed = can('events.bunfest.manage')
+  // The item list is its own screen (?show=items): the steps first, the long list one tap away.
+  const [sp, setSp] = useSearchParams()
+  const showItems = sp.get('show') === 'items'
+  const openItems = (on: boolean) =>
+    setSp((prev) => {
+      const n = new URLSearchParams(prev)
+      if (on) n.set('show', 'items')
+      else n.delete('show')
+      return n
+    })
 
   const [items, setItems] = useState<AuctionItem[]>([])
   const [settings, setSettings] = useState<AuctionSettings | null>(null)
@@ -1392,6 +1402,39 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
   }
   const openSetup = () => setSetupSignal((n) => n + 1)
   const noDesk = 'Online bidding isn’t switched on yet — ask an admin. Until then, mark items won on each item.'
+
+  if (showItems && !loading && items.length > 0) {
+    return (
+      <Screen className="space-y-4">
+        <button
+          type="button"
+          onClick={() => openItems(false)}
+          className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-base font-bold text-brand-blue hover:bg-brand-blue-50"
+        >
+          <Icon name="arrowLeft" size={20} /> {ev.online ? settings?.title || ev.name : ev.name}
+        </button>
+        <h1 className="font-display text-[26px] font-black leading-tight text-ink">The items</h1>
+        <FormError>{error}</FormError>
+        <SectionLabel>
+          {items.length} total · {availableCount} available in the app
+        </SectionLabel>
+        <div className="grid grid-cols-1 gap-3">
+          {items.map((item, i) => (
+            <ItemCard
+              key={item.id}
+              item={item}
+              orgId={orgId}
+              isFirst={i === 0}
+              isLast={i === items.length - 1}
+              hasBidding={hasBidding}
+              onChanged={load}
+              onMove={(dir) => move(item.id, dir)}
+            />
+          ))}
+        </div>
+      </Screen>
+    )
+  }
 
   return (
     <Screen className="space-y-5">
@@ -1546,25 +1589,13 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
           </p>
         </Card>
       ) : (
-        <section className="space-y-2.5">
-          <SectionLabel>
-            Items · {items.length} total · {availableCount} available in the app
-          </SectionLabel>
-          <div className="grid grid-cols-1 gap-3">
-            {items.map((item, i) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                orgId={orgId}
-                isFirst={i === 0}
-                isLast={i === items.length - 1}
-                hasBidding={hasBidding}
-                onChanged={load}
-                onMove={(dir) => move(item.id, dir)}
-              />
-            ))}
-          </div>
-        </section>
+        <ChoiceCard
+          icon="bag"
+          title="See and change the items"
+          text="Photos, prices, order, published or hidden."
+          badge={`${items.length} item${items.length === 1 ? '' : 's'} · ${availableCount} in the app`}
+          onClick={() => openItems(true)}
+        />
       )}
     </Screen>
   )
