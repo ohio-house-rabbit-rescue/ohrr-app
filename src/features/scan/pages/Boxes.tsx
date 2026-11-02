@@ -211,30 +211,13 @@ export default function Boxes() {
           ))}
         </ul>
       </Screen>
-      {/* print-only: the box labels at 4 × 6 in */}
-      <div className="hidden print:block">
-        {printImgs.map((src, i) => (
-          <div key={i} className="label-page">
-            <img src={src} alt="" />
-          </div>
-        ))}
-      </div>
-      <style>{`
-        @media print {
-          @page { size: ${BOX_SIZE.wIn}in ${BOX_SIZE.hIn}in; margin: 0; }
-          html, body { background: white !important; margin: 0 !important; padding: 0 !important; }
-          header { display: none !important; }
-          [class*="max-w-[480px]"] { max-width: none !important; box-shadow: none !important; padding: 0 !important; }
-          .label-page { width: ${BOX_SIZE.wIn}in; height: ${BOX_SIZE.hIn}in; overflow: hidden; page-break-after: always; break-after: page; }
-          .label-page img { display: block; width: ${BOX_SIZE.wIn}in; height: ${BOX_SIZE.hIn}in; }
-        }
-      `}</style>
+      <BoxPrintSheet images={printImgs} />
     </>
   )
 }
 
 /** Every waiting box label at once: the 4 × 6 roll in, then Print, a PDF or Bluetooth. */
-function WaitingLabels({
+export function WaitingLabels({
   orgId,
   boxes,
   setPrintImgs,
@@ -336,5 +319,31 @@ function WaitingLabels({
       />
       {note && <p className="rounded-xl bg-white px-3 py-2 text-[15px] text-slate-600">{note}</p>}
     </section>
+  )
+}
+
+/** The box labels as they print (4 × 6 in, one per page); shown only to the print dialog. */
+export function BoxPrintSheet({ images }: { images: string[] }) {
+  return (
+    <>
+      {/* print-only: the box labels at 4 × 6 in */}
+      <div className="hidden print:block">
+        {images.map((src, i) => (
+          <div key={i} className="label-page">
+            <img src={src} alt="" />
+          </div>
+        ))}
+      </div>
+      <style>{`
+        @media print {
+          @page { size: ${BOX_SIZE.wIn}in ${BOX_SIZE.hIn}in; margin: 0; }
+          html, body { background: white !important; margin: 0 !important; padding: 0 !important; }
+          header { display: none !important; }
+          [class*="max-w-[480px]"] { max-width: none !important; box-shadow: none !important; padding: 0 !important; }
+          .label-page { width: ${BOX_SIZE.wIn}in; height: ${BOX_SIZE.hIn}in; overflow: hidden; page-break-after: always; break-after: page; }
+          .label-page img { display: block; width: ${BOX_SIZE.wIn}in; height: ${BOX_SIZE.hIn}in; }
+        }
+      `}</style>
+    </>
   )
 }

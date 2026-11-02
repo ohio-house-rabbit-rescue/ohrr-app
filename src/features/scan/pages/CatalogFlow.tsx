@@ -74,6 +74,7 @@ import {
   useItemPurposes,
   type Extras,
 } from '../DetailsFields'
+import { BoxPrintSheet, WaitingLabels } from './Boxes'
 import { BOX_SIZE, boxByCode, boxLabel, listBoxes, loadPackingBox, markBoxesPrinted, newBox, putInBox, savePackingBox, type Box, type PackingBox } from '../boxes'
 import { KEYBOARD_MIC_TIP, sentenceCase, useVoiceInput } from '../voice'
 import { tellOthersLabelsChanged } from '../labelSync'
@@ -342,6 +343,11 @@ export default function CatalogFlow() {
   const [closedBox, setClosedBox] = useState<{ no: number; code: string; count: number | null; box: Box | null } | null>(null)
   const [recentBoxes, setRecentBoxes] = useState<Box[] | null>(null)
   const [changingBox, setChangingBox] = useState(false)
+  // "I'm done" in the box job: the box labels print right there, not on another screen.
+  const [ending, setEnding] = useState(false)
+  const [endBoxes, setEndBoxes] = useState<Box[] | null>(null)
+  const [endReload, setEndReload] = useState(0)
+  const [endImgs, setEndImgs] = useState<string[]>([])
   const [boxPrinted, setBoxPrinted] = useState<string | null>(null)
   // Plain Receive (not the box job): the box this item goes in, if any (part E), kept for the next items too.
   const [plainBox, setPlainBox] = useState<{ code: string; box_no: number; location: string | null; count: number } | null>(null)
@@ -463,6 +469,16 @@ export default function CatalogFlow() {
   useEffect(() => {
     if (wantsBoxes || pickingBox) loadRecentBoxes()
   }, [wantsBoxes, pickingBox, loadRecentBoxes])
+  useEffect(() => {
+    if (!ending || !orgId) return
+    let live = true
+    listBoxes(orgId)
+      .then((l) => live && setEndBoxes(l))
+      .catch(() => live && setEndBoxes([]))
+    return () => {
+      live = false
+    }
+  }, [ending, orgId, endReload])
 
   /** Plain Receive, part E: this item (and the next ones) go in this box. Its place becomes where the item is kept. */
   const choosePlainBox = (b: Box) => {
@@ -867,8 +883,10 @@ export default function CatalogFlow() {
    * the spreadsheets); boxes go to Boxes.
    */
   const finish = () => {
-    if (wantsBoxes) navigate('/staff/boxes')
-    else if (session.items.length) setStep('summary')
+    if (wantsBoxes) {
+      setEndBoxes(null)
+      setEnding(true)
+    } else if (session.items.length) setStep('summary')
     else navigate(current?.id ? `/staff/dropoffs/${current.id}` : '/staff/items')
   }
 
@@ -1011,6 +1029,41 @@ export default function CatalogFlow() {
   )
 
   let screen: React.ReactNode
+
+  /* ================================================= receive into boxes: the end, with the box labels */
+  if (wantsBoxes && ending && step !== 'summary') {
+    // Boxes with something in them and no label yet, in the order the numbers were written.
+    const waitingBoxes = (endBoxes ?? []).filter((b) => !b.label_printed_at && b.items.length > 0).sort((a, b) => a.box_no - b.box_no)
+    screen = (
+      <StepShell
+        title="Box labels"
+        step={5}
+        of={5}
+        stepName="Label the boxes"
+        explain="Put the 4 × 6 roll in the printer, print the box labels, and stick each one over the number written on its box. Each label lists what is inside."
+        explainLabel="How this goes"
+        onBack={() => setEnding(false)}
+        backLabel="Keep packing"
+        footer={
+          <BigButton onClick={() => navigate('/staff/boxes')} tone={waitingBoxes.length ? 'outline' : 'blue'} icon="check">
+            {waitingBoxes.length ? 'Done — print them later from Boxes' : 'Done — go to Boxes'}
+          </BigButton>
+        }
+      >
+        <div className="space-y-4">
+          {endBoxes === null && <p className="text-base text-slate-600">Looking at your boxes…</p>}
+          {endBoxes !== null && waitingBoxes.length === 0 && (
+            <p className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-base font-bold text-green-900">
+              <Icon name="check" size={20} className="shrink-0" /> Every box with something in it has its label printed.
+            </p>
+          )}
+          {waitingBoxes.length > 0 && (
+            <WaitingLabels orgId={orgId} boxes={waitingBoxes} setPrintImgs={setEndImgs} onPrinted={() => setEndReload((n) => n + 1)} />
+          )}
+        </div>
+      </StepShell>
+    )
+  } else
 
   /* ================================================= receive into boxes: one screen */
   if (wantsBoxes && step !== 'summary') {
@@ -1801,7 +1854,8 @@ export default function CatalogFlow() {
     <>
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} aria-label="Take a photo" />
       <input ref={libraryRef} type="file" accept="image/*" className="hidden" onChange={onFile} aria-label="Choose a photo" />
-      {screen}
+      <div className="print:hidden">{screen}</div>
+      {ending && <BoxPrintSheet images={endImgs} />}
     </>
   )
 }
