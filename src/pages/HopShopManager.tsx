@@ -12,10 +12,10 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
-import { Icon } from '../components/icons'
+import { Icon, type IconName } from '../components/icons'
 import { Explain, StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
-import { EditorForm, Field, Optional, Part, StepButton, StepRow, StepRows, pill } from '../components/StaffJob'
+import { ChoiceCard, EditorForm, Field, Optional, Part, StepButton, pill } from '../components/StaffJob'
 import { isNative } from '../native/platform'
 import { pickPhoto, type PhotoSource } from '../native/camera'
 import { dataUrlToBlob, itemPhotos, uploadItemPhoto } from '../features/scan/api'
@@ -153,79 +153,48 @@ function usePacksReady(): boolean | null {
 
 type Tab = 'items' | 'reorder' | 'suppliers' | 'types'
 
-const TABS: [Tab, string][] = [
-  ['items', 'Inventory'],
-  ['reorder', 'Reorder'],
-  ['suppliers', 'Suppliers'],
-  ['types', 'Types'],
-]
-
-/**
- * The Hop Shop's job, where it starts: Order → Add the delivery → Price labels →
- * On the shelf → Sell, each with its own buttons (the Receive items rule: step
- * numbers where the job starts).
+/*
+ * One decision per screen (OHRR, 2026-11-02: "too many options will confuse"):
+ *   /staff/hopshop                  "What do you need to do?" — the five steps, one big card each
+ *   /staff/hopshop?do=order|delivery|shelf   a step with two or three choices
+ *   /staff/hopshop?show=list        the shelf list (also ?add=1, the new-item form)
+ *   /staff/hopshop/reorder|suppliers|types   the old tabs, each now a screen of its own
  */
-function JobSteps({
-  canOrder,
-  canAdd,
-  onAdd,
-  low,
-  unprinted,
-  onList,
-}: {
-  /** May add deliveries and print labels. */
-  canOrder: boolean
-  canAdd?: boolean
-  /** Opens the new-item form (the inventory tab). */
-  onAdd?: () => void
-  low?: number
-  unprinted?: number
-  /** On the Reorder tab, step 4 goes back to the list. */
-  onList?: boolean
-}) {
-  return (
-    <StepRows label="The Hop Shop job, step by step">
-      <StepRow n={1} name="Order" hint={low ? `${low} running low` : undefined}>
-        <StepButton to="/staff/hopshop/reorder" icon="file" tone={low ? 'orange' : 'outline'}>
-          Reorder list
-        </StepButton>
-      </StepRow>
-      <StepRow n={2} name="Add the delivery">
-        {canOrder && (
-          <StepButton to="/staff/hopshop/deliveries/new" icon="box">
-            Add a delivery
-          </StepButton>
-        )}
-        <StepButton to="/staff/hopshop/deliveries" icon="clock">
-          Past deliveries
-        </StepButton>
-      </StepRow>
-      <StepRow n={3} name="Price labels">
-        {canOrder && (
-          <StepButton to="/staff/hopshop/labels" icon="printer" count={unprinted}>
-            Print price labels
-          </StepButton>
-        )}
-      </StepRow>
-      <StepRow n={4} name="On the shelf" hint={onList ? undefined : 'this list'}>
-        {onAdd && canAdd && (
-          <StepButton onClick={onAdd} icon="plus">
-            Add an item
-          </StepButton>
-        )}
-        {onList && (
-          <StepButton to="/staff/hopshop" icon="bag">
-            See the list
-          </StepButton>
-        )}
-      </StepRow>
-      <StepRow n={5} name="Sell">
-        <StepButton to="/staff/counter" icon="store">
-          Open the Counter
-        </StepButton>
-      </StepRow>
-    </StepRows>
-  )
+const backLink = '-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-base font-bold text-brand-blue hover:bg-brand-blue-50'
+
+type DoStep = 'order' | 'delivery' | 'shelf'
+
+const STEP_INFO: Record<DoStep, { n: number; title: string }> = {
+  order: { n: 1, title: 'Order' },
+  delivery: { n: 2, title: 'Add the delivery' },
+  shelf: { n: 4, title: 'On the shelf' },
+}
+
+interface Choice {
+  to: string
+  icon: IconName
+  title: string
+  text: string
+  badge?: string
+}
+
+/** What a step offers this person — only what they may do, so no step screen is ever empty. */
+function stepChoices(step: DoStep, o: { canLabel: boolean; canAdd: boolean; low: number; count: number | null }): Choice[] {
+  if (step === 'order')
+    return [
+      { to: '/staff/hopshop/reorder', icon: 'file', title: 'Reorder list', text: 'What is running low, by supplier.', badge: o.low > 0 ? `${o.low} running low` : undefined },
+      { to: '/staff/hopshop/suppliers', icon: 'store', title: 'Suppliers', text: 'Who we buy from, and how to reach them.' },
+    ]
+  if (step === 'delivery')
+    return [
+      ...(o.canLabel ? [{ to: '/staff/hopshop/deliveries/new', icon: 'box' as IconName, title: 'Add a delivery', text: 'Read the supplier’s invoice and add the stock.' }] : []),
+      { to: '/staff/hopshop/deliveries', icon: 'clock', title: 'Past deliveries', text: 'What came in before.' },
+    ]
+  return [
+    { to: '/staff/hopshop?show=list', icon: 'bag', title: 'See the shelf', text: o.count != null ? `${o.count} item${o.count === 1 ? '' : 's'}: photo, price, how many.` : 'Every item: photo, price, how many.' },
+    ...(o.canAdd ? [{ to: '/staff/hopshop?add=1', icon: 'plus' as IconName, title: 'Add an item', text: 'A photo, its type and the price.' }] : []),
+    { to: '/staff/hopshop/types', icon: 'settings' as IconName, title: 'Item types', text: 'The letters that start every SKU.' },
+  ]
 }
 
 export default function HopShopManager() {
@@ -233,15 +202,15 @@ export default function HopShopManager() {
   const orgId = membership?.orgId ?? ''
   const userId = user?.id ?? ''
   const { pathname } = useLocation()
-  const navigate = useNavigate()
+  const [params] = useSearchParams()
   const tab: Tab = pathname.endsWith('/suppliers') ? 'suppliers' : pathname.endsWith('/reorder') ? 'reorder' : pathname.endsWith('/types') ? 'types' : 'items'
-  const setTab = (t: Tab) => navigate(t === 'items' ? '/staff/hopshop' : `/staff/hopshop/${t}`)
 
   const canCreate = can('hopshop.products.create')
   const canEdit = can('hopshop.products.edit')
   const canDelete = can('hopshop.products.delete')
   const canInventory = can('hopshop.inventory.update')
   const readOnly = !canCreate && !canEdit && !canDelete && !canInventory
+  const canLabel = canCreate || canEdit || canInventory
 
   const [suppliers, setSuppliers] = useState<Supplier[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -271,48 +240,157 @@ export default function HopShopManager() {
     void reloadTypes()
   }, [reloadTypes])
 
-  return (
-    <Screen className="space-y-4">
-      <div>
-        <Link to="/staff/items" className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-base font-bold text-brand-blue hover:bg-brand-blue-50">
-          <Icon name="arrowLeft" size={20} /> Items
-        </Link>
-        <StaffTitle title="Hop Shop">
-          {!readOnly && <p>Stock, prices and photos go live on the shelf as you save. Set a reorder point on an item and the Reorder tab tells you what to buy.</p>}
-        </StaffTitle>
-      </div>
-      {readOnly && <p className="text-[15px] text-slate-600">View-only — ask an owner or admin for edit access.</p>}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist" aria-label="Hop Shop">
-        {TABS.map(([t, label]) => (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
-            className={`inline-flex min-h-[48px] items-center justify-center rounded-full px-2 text-sm font-bold ${tab === t ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <FormError>{error}</FormError>
-      {tab === 'items' && (
+  // The shelf, loaded once: the first screen's counts and the list both read it.
+  const [rows, setRows] = useState<StockCard[] | null>(null)
+  const load = useCallback(async () => {
+    if (!orgId) return
+    try {
+      setRows(await listProducts(orgId))
+    } catch (e) {
+      setError(errMessage(e))
+    }
+  }, [orgId])
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const low = (rows ?? []).filter(isLow).length
+  const unprinted = (rows ?? []).filter((p) => (p.code || p.sku) && !p.label_printed_at).length
+  const choiceOpts = { canLabel, canAdd: canCreate, low, count: rows ? rows.length : null }
+
+  // ---------------------------------------------------------------- the old tabs, one screen each
+  if (tab !== 'items') {
+    const sub = {
+      reorder: { title: 'Reorder list', back: '/staff/hopshop?do=order', backName: 'Order' },
+      suppliers: { title: 'Suppliers and companies', back: '/staff/hopshop?do=order', backName: 'Order' },
+      types: { title: 'Item types', back: '/staff/hopshop?do=shelf', backName: 'On the shelf' },
+    }[tab]
+    return (
+      <Screen className="space-y-4">
+        <div>
+          <Link to={sub.back} className={backLink}>
+            <Icon name="arrowLeft" size={20} /> {sub.backName}
+          </Link>
+          <StaffTitle title={sub.title} />
+        </div>
+        {readOnly && <p className="text-[15px] text-slate-600">View-only — ask an owner or admin for edit access.</p>}
+        <FormError>{error}</FormError>
+        {tab === 'reorder' && <Reorder orgId={orgId} suppliers={suppliers ?? []} canAct={canInventory || canEdit} />}
+        {tab === 'suppliers' && (
+          <Suppliers orgId={orgId} suppliers={suppliers} canWrite={canEdit || canCreate} canDelete={canDelete} onChanged={reloadSuppliers} />
+        )}
+        {tab === 'types' && <TypesPanel orgId={orgId} types={types} canWrite={canEdit || canCreate} onChanged={reloadTypes} />}
+      </Screen>
+    )
+  }
+
+  // ---------------------------------------------------------------- the shelf list (and the new-item form)
+  if (params.get('show') === 'list' || params.get('add') === '1') {
+    return (
+      <Screen className="space-y-4">
+        <div>
+          <Link to="/staff/hopshop" className={backLink}>
+            <Icon name="arrowLeft" size={20} /> Hop Shop
+          </Link>
+          <StaffTitle title="On the shelf">
+            {!readOnly && <p>Stock, prices and photos go live on the shelf as you save. Set a reorder point on an item and the Reorder list tells you what to buy.</p>}
+          </StaffTitle>
+        </div>
+        {readOnly && <p className="text-[15px] text-slate-600">View-only — ask an owner or admin for edit access.</p>}
+        <FormError>{error}</FormError>
         <Items
           orgId={orgId}
           userId={userId}
+          rows={rows}
+          load={load}
           suppliers={suppliers ?? []}
           types={types}
           perms={{ canCreate, canEdit, canDelete, canInventory }}
           onSuppliersChanged={reloadSuppliers}
           onTypesChanged={reloadTypes}
         />
+      </Screen>
+    )
+  }
+
+  // ---------------------------------------------------------------- a step with a few choices
+  const doStep = params.get('do') as DoStep | null
+  if (doStep && doStep in STEP_INFO) {
+    const info = STEP_INFO[doStep]
+    return (
+      <Screen className="space-y-4">
+        <Link to="/staff/hopshop" className={backLink}>
+          <Icon name="arrowLeft" size={20} /> Hop Shop
+        </Link>
+        <div>
+          <p className="text-sm font-extrabold uppercase tracking-wide text-slate-500">Step {info.n}</p>
+          <h1 className="font-display text-[26px] font-black leading-tight text-ink">{info.title}</h1>
+          <p className="mt-1 text-lg text-slate-700">What would you like to do?</p>
+        </div>
+        <ul className="space-y-3">
+          {stepChoices(doStep, choiceOpts).map((c) => (
+            <li key={c.to}>
+              <ChoiceCard {...c} />
+            </li>
+          ))}
+        </ul>
+      </Screen>
+    )
+  }
+
+  // ---------------------------------------------------------------- the first screen
+  const go = (s: DoStep): { to: string } => {
+    const c = stepChoices(s, choiceOpts)
+    return { to: c.length === 1 ? c[0].to : `/staff/hopshop?do=${s}` }
+  }
+  const draft = canCreate && orgId ? readNewItemDraft(orgId) : null
+  return (
+    <Screen className="space-y-4">
+      <div>
+        <Link to="/staff/items" className={backLink}>
+          <Icon name="arrowLeft" size={20} /> Items
+        </Link>
+        <StaffTitle title="Hop Shop">
+          <p>
+            The shop’s job, in order: <strong>1 Order</strong> what is running low, <strong>2 Add the delivery</strong> when it arrives,{' '}
+            <strong>3 Price labels</strong>, <strong>4 On the shelf</strong> — the list of what the shop carries, and <strong>5 Sell</strong> at the Counter.
+            Do whichever step you need today. Everything here goes live on the public Hop Shop the moment it is saved.
+          </p>
+        </StaffTitle>
+      </div>
+      {readOnly && <p className="text-[15px] text-slate-600">View-only — ask an owner or admin for edit access.</p>}
+      <FormError>{error}</FormError>
+
+      {draft !== null && (
+        <ChoiceCard icon="plus" tone="orange" title="Finish the item you started" text="It was saved on this device. Pick up where you left off." to="/staff/hopshop?show=list" />
       )}
-      {tab === 'reorder' && <Reorder orgId={orgId} suppliers={suppliers ?? []} canAct={canInventory || canEdit} />}
-      {tab === 'suppliers' && (
-        <Suppliers orgId={orgId} suppliers={suppliers} canWrite={canEdit || canCreate} canDelete={canDelete} onChanged={reloadSuppliers} />
-      )}
-      {tab === 'types' && <TypesPanel orgId={orgId} types={types} canWrite={canEdit || canCreate} onChanged={reloadTypes} />}
+
+      <h2 className="font-display text-xl font-extrabold text-ink">What do you need to do?</h2>
+      <ol className="space-y-3" aria-label="The steps">
+        <li>
+          <ChoiceCard n={1} title="Order" text="What is running low, and who to order from." badge={low > 0 ? `${low} running low` : undefined} {...go('order')} />
+        </li>
+        <li>
+          <ChoiceCard n={2} title="Add the delivery" text="Stock has arrived from a supplier." {...go('delivery')} />
+        </li>
+        {canLabel && (
+          <li>
+            <ChoiceCard
+              n={3}
+              title="Price labels"
+              text="Print the labels for the shelf."
+              badge={unprinted > 0 ? `${unprinted} to print` : undefined}
+              to="/staff/hopshop/labels"
+            />
+          </li>
+        )}
+        <li>
+          <ChoiceCard n={4} title="On the shelf" text="See, change or add what the shop carries." {...go('shelf')} />
+        </li>
+        <li>
+          <ChoiceCard n={5} title="Sell" text="Open the Counter and ring up a sale." to="/staff/counter" />
+        </li>
+      </ol>
     </Screen>
   )
 }
@@ -329,6 +407,8 @@ interface Perms {
 function Items({
   orgId,
   userId,
+  rows,
+  load,
   suppliers,
   types,
   perms,
@@ -337,13 +417,14 @@ function Items({
 }: {
   orgId: string
   userId: string
+  rows: StockCard[] | null
+  load: () => Promise<void>
   suppliers: Supplier[]
   types: ProductType[]
   perms: Perms
   onSuppliersChanged: () => Promise<void>
   onTypesChanged: () => Promise<void>
 }) {
-  const [rows, setRows] = useState<StockCard[] | null>(null)
   // The item just added, with its new SKU — and a way to print its labels.
   const [justAdded, setJustAdded] = useState<StockCard | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -361,6 +442,8 @@ function Items({
     const next = new URLSearchParams(params)
     next.delete('add')
     next.delete('code')
+    // The form stays open on the list screen once ?add=1 is gone.
+    next.set('show', 'list')
     setParams(next, { replace: true })
     if (creating) {
       window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
@@ -371,18 +454,6 @@ function Items({
   }, [])
   const [q, setQ] = useState('')
 
-  const load = useCallback(async () => {
-    if (!orgId) return
-    try {
-      setRows(await listProducts(orgId))
-    } catch (e) {
-      setError(errMessage(e))
-    }
-  }, [orgId])
-  useEffect(() => {
-    void load()
-  }, [load])
-
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase()
     if (!t) return rows ?? []
@@ -392,12 +463,15 @@ function Items({
   }, [rows, q])
 
   const low = (rows ?? []).filter(isLow).length
-  const unprinted = (rows ?? []).filter((p) => (p.code || p.sku) && !p.label_printed_at).length
-  const canLabel = perms.canCreate || perms.canEdit || perms.canInventory
+  const [exportOpen, setExportOpen] = useState(false)
 
   return (
     <div className="space-y-4">
-      <JobSteps canOrder={canLabel} canAdd={perms.canCreate && !creating} onAdd={() => setCreating(true)} low={low} unprinted={unprinted} />
+      {perms.canCreate && !creating && (
+        <button type="button" onClick={() => setCreating(true)} className={`${pill.orange} !min-h-[52px] w-full`}>
+          <Icon name="plus" size={18} /> Add an item
+        </button>
+      )}
 
       {creating && (
         <div ref={formTop} tabIndex={-1} className="outline-none">
@@ -444,10 +518,12 @@ function Items({
           className="min-h-[48px] w-full rounded-full border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-base text-ink outline-none focus:border-brand-blue"
         />
       </div>
-      {shown.length > 0 && <ExportButtons spec={() => sheetSpec(shown, q)} label={`Spreadsheet of ${shown.length} with photos`} />}
       {low > 0 && (
         <p className="text-[15px] font-bold text-brand-orange-dark">
-          {low} item{low === 1 ? ' is' : 's are'} at or below the reorder point — see step 1, Order.
+          {low} item{low === 1 ? ' is' : 's are'} at or below the reorder point.{' '}
+          <Link to="/staff/hopshop/reorder" className="underline">
+            See the reorder list
+          </Link>
         </p>
       )}
 
@@ -456,7 +532,7 @@ function Items({
       {rows && rows.length === 0 && !creating && (
         <Card className="border-slate-200 bg-slate-50/80 text-center">
           <p className="text-base leading-relaxed text-slate-600">
-            No items yet.{perms.canCreate ? ' Tap “Add an item” in step 4 — take a photo, pick its type, set the price. It gets a SKU when you save.' : ''}
+            No items yet.{perms.canCreate ? ' Tap “Add an item” — take a photo, pick its type, set the price. It gets a SKU when you save.' : ''}
           </p>
         </Card>
       )}
@@ -464,6 +540,19 @@ function Items({
       {shown.map((p) => (
         <ProductCard key={p.id} p={p} orgId={orgId} userId={userId} suppliers={suppliers} types={types} perms={perms} onSuppliersChanged={onSuppliersChanged} onTypesChanged={onTypesChanged} onChanged={load} />
       ))}
+      {shown.length > 0 && !creating && (
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setExportOpen((o) => !o)}
+            aria-expanded={exportOpen}
+            className="inline-flex min-h-[44px] items-center gap-1.5 text-[15px] font-bold text-brand-blue"
+          >
+            <Icon name="file" size={18} /> Print or save this list ({shown.length})
+          </button>
+          {exportOpen && <ExportButtons spec={() => sheetSpec(shown, q)} label={`Spreadsheet of ${shown.length} with photos`} />}
+        </div>
+      )}
     </div>
   )
 }
@@ -1211,7 +1300,6 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
 
   return (
     <div className="space-y-4">
-      <JobSteps canOrder={canAct} low={(items ?? []).filter((p) => p.on_order_qty === 0).length} onList />
       <FormError>{error}</FormError>
       {note && <p className="text-[15px] font-bold text-green-700">{note}</p>}
       {arrived && (
