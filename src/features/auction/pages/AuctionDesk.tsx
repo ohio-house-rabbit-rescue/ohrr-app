@@ -38,7 +38,7 @@ import {
 } from '../client'
 import TableHolds from '../TableHolds'
 import { Explain, StaffTitle } from '../../../components/StaffTitle'
-import { WorkingOn } from '../../../components/StaffJob'
+import { ChoiceCard, WorkingOn } from '../../../components/StaffJob'
 import ExportButtons from '../../../components/ExportButtons'
 import { useOrgBits } from '../../volunteers/orgBits'
 import {
@@ -55,9 +55,12 @@ import {
 
 const DESK_POLL_MS = 20_000
 
-type Tab = 'items' | 'bidders' | 'done'
-const TABS: readonly Tab[] = ['items', 'bidders', 'done']
-const tabPill = (active: boolean) => `min-h-[44px] flex-1 rounded-full px-2 text-[15px] font-bold ${active ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-600'}`
+// One decision per screen (OHRR, 2026-11-02): the desk opens on five big cards, each
+// its own screen (?tab=). `home` is no tab at all; ?tab=done is still the address
+// the Silent Auction screen links to.
+type Tab = 'home' | 'close' | 'holds' | 'items' | 'bidders' | 'done'
+const TABS: readonly Tab[] = ['close', 'holds', 'items', 'bidders', 'done']
+const backLink = '-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-base font-bold text-brand-blue hover:bg-brand-blue-50'
 const small = 'inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 text-[15px] font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60'
 const danger = 'inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-red-200 bg-white px-4 text-[15px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-60'
 const mainBtn = `${btn.primary} min-h-[44px] !py-2 disabled:opacity-60`
@@ -85,19 +88,20 @@ export default function AuctionDesk() {
 
 function Desk() {
   const ev = useAuctionEvent()
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
   const { membership, can } = useAuth()
   // The event's own name and date come from its record, not from this page.
   const bunfest = currentEventRecord()
   const orgId = membership?.orgId ?? ''
   const allowed = can('events.bunfest.manage')
   const wanted = params.get('tab')
-  const tab: Tab = TABS.includes(wanted as Tab) ? (wanted as Tab) : 'items'
-  const setTab = (t: Tab) => {
-    const next = new URLSearchParams(params)
-    if (t === 'items') next.delete('tab')
-    else next.set('tab', t)
-    setParams(next, { replace: true })
+  const tab: Tab = TABS.includes(wanted as Tab) ? (wanted as Tab) : 'home'
+  const deskTo = (t?: Tab) => {
+    const next = new URLSearchParams()
+    if (ev.online) next.set('auction', 'online')
+    if (t && t !== 'home') next.set('tab', t)
+    const qs = next.toString()
+    return `/staff/auction-desk${qs ? `?${qs}` : ''}`
   }
   const [data, setData] = useState<DeskData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -171,8 +175,6 @@ function Desk() {
         }
       />
 
-      {orgId && !ev.online && <TableHolds orgId={orgId} onChange={refresh} />}
-
       {error && !data && (
         <Card className="space-y-2 border-amber-200 bg-amber-50/60">
           <p className="font-display text-base font-extrabold text-ink">The desk isn’t ready yet</p>
@@ -191,27 +193,49 @@ function Desk() {
       )}
       {!error && !data && <Spinner label="Loading the desk…" />}
 
-      {data && (
+      {data && tab === 'home' && (
         <>
           <Totals t={data.totals} />
-          <CloseAndCharge orgId={orgId} data={data} onDone={refresh} />
-          {data.settings?.auto_charge && (
-            // Kept in view, not folded: it is about charging cards.
-            <p className="text-sm text-slate-600">Winners are charged automatically within about 5 minutes of an item closing. Use Close &amp; charge only if you don’t want to wait.</p>
-          )}
           {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
-          <div className="flex gap-2" role="tablist" aria-label="Desk views">
-            <button type="button" role="tab" aria-selected={tab === 'items'} className={tabPill(tab === 'items')} onClick={() => setTab('items')}>
-              Items · {data.items.length}
-            </button>
-            <button type="button" role="tab" aria-selected={tab === 'bidders'} className={tabPill(tab === 'bidders')} onClick={() => setTab('bidders')}>
-              Bidders · {data.bidders.length}
-            </button>
-            <button type="button" role="tab" aria-selected={tab === 'done'} className={tabPill(tab === 'done')} onClick={() => setTab('done')}>
-              I’m done
-            </button>
-          </div>
-          {tab !== 'done' && (
+          <h2 className="font-display text-xl font-extrabold text-ink">What do you need to do?</h2>
+          <ul className="space-y-3">
+            <li>
+              <ChoiceCard to={deskTo('close')} icon="gavel" title="Close and charge" text="End bidding on items and charge the winners." />
+            </li>
+            {!ev.online && (
+              <li>
+                <ChoiceCard to={deskTo('holds')} icon="ticket" title="Table sales and holds" text="Buy it now at the table: who is holding what." />
+              </li>
+            )}
+            <li>
+              <ChoiceCard to={deskTo('items')} icon="bag" title="Items" text="Who won, pickup or shipping, paid." badge={`${data.items.length} item${data.items.length === 1 ? '' : 's'}`} />
+            </li>
+            <li>
+              <ChoiceCard to={deskTo('bidders')} icon="users" title="Bidders" text="Find someone, their cards and what they owe." badge={`${data.bidders.length} bidder${data.bidders.length === 1 ? '' : 's'}`} />
+            </li>
+            <li>
+              <ChoiceCard to={deskTo('done')} icon="file" title="I’m done" text="A summary to print or save, and the last checks." />
+            </li>
+          </ul>
+        </>
+      )}
+
+      {data && tab !== 'home' && (
+        <>
+          <Link to={deskTo()} className={backLink}>
+            <Icon name="arrowLeft" size={20} /> Auction desk
+          </Link>
+          {tab === 'close' && (
+            <>
+              <CloseAndCharge orgId={orgId} data={data} onDone={refresh} />
+              {data.settings?.auto_charge && (
+                // Kept in view, not folded: it is about charging cards.
+                <p className="text-sm text-slate-600">Winners are charged automatically within about 5 minutes of an item closing. Use Close &amp; charge only if you don’t want to wait.</p>
+              )}
+            </>
+          )}
+          {tab === 'holds' && !ev.online && orgId && <TableHolds orgId={orgId} onChange={refresh} />}
+          {(tab === 'items' || tab === 'bidders') && (
             <input
               className={`${staffInput} !mt-0`}
               placeholder={tab === 'items' ? 'Search items or bidders' : 'Search bidders'}
