@@ -132,6 +132,10 @@ export interface BoxLabel {
   items: { code: string; title: string }[]
   /** Where the box is kept. */
   location?: string | null
+  /** "green tote" (update 50). */
+  description?: string | null
+  /** The event it goes to. */
+  event?: string | null
 }
 
 export interface AuctionLabel {
@@ -625,7 +629,7 @@ async function renderBoxLabel(canvas: HTMLCanvasElement, item: LabelItem, box: B
   const brand = fitBlock(ctx, 'OHIO HOUSE RABBIT RESCUE', tw, 1, Math.round(Math.max(0.08 * dpi, qrSide * 0.09)), (px) => `800 ${px}px "Nunito"`)
   ctx.fillText(brand.lines[0], tx, y)
   y += Math.round(brand.px * 1.3)
-  const name = boxName(item.code).toUpperCase()
+  const name = (item.title || boxName(item.code)).toUpperCase()
   let namePx = Math.round(qrSide * 0.42)
   ctx.font = `900 ${namePx}px "Nunito"`
   while (namePx > 14 && ctx.measureText(name).width > tw) {
@@ -637,7 +641,7 @@ async function renderBoxLabel(canvas: HTMLCanvasElement, item: LabelItem, box: B
   const infoPx = Math.round(Math.max(0.08 * dpi, qrSide * 0.1))
   ctx.font = `600 ${infoPx}px "Open Sans"`
   const count = `${box.items.length} item${box.items.length === 1 ? '' : 's'}`
-  for (const line of [box.location ? box.location : null, count].filter(Boolean) as string[]) {
+  for (const line of [box.description ?? null, box.event ? `For ${box.event}` : null, box.location ? box.location : null, count].filter(Boolean) as string[]) {
     if (y + infoPx > top + qrSide) break
     ctx.fillText(ellipsize(ctx, line, tw), tx, y)
     y += Math.round(infoPx * 1.3)

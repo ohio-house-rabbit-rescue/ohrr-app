@@ -62,6 +62,12 @@ export function boxName(code: string): string {
   return isBoxCode(code) ? `Box ${parseInt(code.slice(BOX_PREFIX.length), 10)}` : code
 }
 
+/** A box's name as people read it: "Raffle box · 1 of 4", or "Box 12" when it has no name of its own (update 50). */
+export function boxTitle(b: { code: string; name?: string | null; part_no?: number | null; part_of?: number | null }): string {
+  const base = b.name?.trim() || boxName(b.code)
+  return b.part_no && b.part_of ? `${base} · ${b.part_no} of ${b.part_of}` : base
+}
+
 /** HAY-101-001: a Hop Shop product. */
 export function isSku(code: string): boolean {
   return SKU_RE.test(code)

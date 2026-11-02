@@ -14,7 +14,9 @@ import { shareFileNative } from '../../../native/share'
 import { BigButton, ErrorBox } from '../ScanUI'
 import { labelDataUrl, labelsPdf } from '../labels'
 import BluetoothPrint from '../printer/BluetoothPrint'
-import { BOX_SIZE, boxLabel, listBoxes, markBoxesPrinted, newBox, type Box } from '../boxes'
+import { BOX_SIZE, boxLabel, listBoxes, makeBoxes, markBoxesPrinted, type Box } from '../boxes'
+import { boxTitle } from '../codes'
+import BoxFields, { type BoxFieldValues } from '../BoxFields'
 import { StaffTitle } from '../../../components/StaffTitle'
 
 export default function Boxes() {
@@ -23,12 +25,16 @@ export default function Boxes() {
   const navigate = useNavigate()
   const location = useLocation()
   // "Saved: Box 12 · Storage shed" after a box's details were saved.
-  const [saved] = useState<string | null>(() => (location.state as { saved?: string } | null)?.saved ?? null)
+  const [saved, setSaved] = useState<string | null>(() => (location.state as { saved?: string } | null)?.saved ?? null)
   const [boxes, setBoxes] = useState<Box[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [q, setQ] = useState('')
   const [reload, setReload] = useState(0)
+  // "Name this box": the form behind "Start an empty box" (update 50).
+  const [making, setMaking] = useState(false)
+  const [fields, setFields] = useState<BoxFieldValues>({ name: '', description: '', eventId: null })
+  const [count, setCount] = useState(1)
   const [printImgs, setPrintImgs] = useState<string[]>([])
 
   useEffect(() => {
@@ -47,12 +53,21 @@ export default function Boxes() {
     }
   }, [orgId, reload])
 
-  const start = async () => {
+  const make = async () => {
     setBusy(true)
     setError(null)
     try {
-      const b = await newBox(orgId)
-      navigate(`/staff/boxes/${b.code}?scan=1`)
+      const made = await makeBoxes(orgId, { count, name: fields.name, description: fields.description, eventId: fields.eventId })
+      if (made.length === 1) {
+        navigate(`/staff/boxes/${made[0].code}?scan=1`)
+        return
+      }
+      setSaved(`${made.length} boxes made: ${made.map((b) => boxTitle(b)).join(', ')}`)
+      setMaking(false)
+      setFields({ name: '', description: '', eventId: null })
+      setCount(1)
+      setReload((n) => n + 1)
+      setBusy(false)
     } catch (e) {
       setError(errMessage(e))
       setBusy(false)
@@ -70,6 +85,9 @@ export default function Boxes() {
       String(b.box_no) === needle.replace(/^box\s*/, '') ||
       b.code.toLowerCase().includes(needle) ||
       (b.location ?? '').toLowerCase().includes(needle) ||
+      boxTitle(b).toLowerCase().includes(needle) ||
+      (b.description ?? '').toLowerCase().includes(needle) ||
+      (b.event_title ?? '').toLowerCase().includes(needle) ||
       b.items.some((i) => i.title.toLowerCase().includes(needle) || i.code.toLowerCase().includes(needle)),
   )
 
@@ -82,7 +100,7 @@ export default function Boxes() {
           </Link>
           <StaffTitle title="Boxes">
             <p>
-              Numbered boxes and what’s in them. “Pack a box” adds new items straight into a box. “Start an empty box” is for items that already have labels — scan them in. Scanning a box label opens its full list.
+              Numbered boxes and what’s in them. “Pack a box” adds new items straight into a box. “Start an empty box” is for items that already have labels — scan them in. Give a box a name, a description (“green tote”) and the event it goes to, or make a whole set at once (“Raffle box 1 of 4”). Scanning a box label opens its full list.
             </p>
           </StaffTitle>
         </div>
@@ -99,10 +117,40 @@ export default function Boxes() {
           <BigButton onClick={() => navigate('/staff/catalog?box=1')} icon="camera">
             Pack a box
           </BigButton>
-          <BigButton tone="outline" onClick={() => void start()} disabled={busy || !orgId} icon="plus">
-            {busy ? 'Starting…' : 'Start an empty box'}
+          <BigButton tone="outline" onClick={() => setMaking((m) => !m)} disabled={busy || !orgId} icon="plus">
+            Start an empty box
           </BigButton>
         </div>
+
+        {making && (
+          <div className="space-y-3 rounded-2xl border-2 border-brand-orange/60 bg-white p-4">
+            <p className="font-display text-lg font-extrabold text-ink">A new box</p>
+            <BoxFields orgId={orgId} value={fields} onChange={(patch) => setFields((f) => ({ ...f, ...patch }))} />
+            <label className="block text-base font-bold text-ink">
+              How many boxes like this?
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={50}
+                value={count}
+                onChange={(e) => setCount(Math.max(1, Math.min(50, Math.floor(Number(e.target.value)) || 1)))}
+                className="mt-1 w-28 rounded-xl border-2 border-slate-200 bg-white px-3 py-2.5 text-base text-ink outline-none focus:border-brand-blue"
+              />
+              <span className="mt-1 block text-sm font-normal text-slate-600">
+                {count > 1 ? `Makes a set: ${boxTitle({ code: 'BOX-00000', name: fields.name || 'Box', part_no: 1, part_of: count })} up to ${count} of ${count}.` : 'Just this one.'}
+              </span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <BigButton tone="blue" onClick={() => void make()} disabled={busy}>
+                {busy ? 'Making…' : count > 1 ? `Make ${count} boxes` : 'Make the box'}
+              </BigButton>
+              <BigButton tone="plain" onClick={() => setMaking(false)}>
+                Cancel
+              </BigButton>
+            </div>
+          </div>
+        )}
 
         {boxes && boxes.length > 0 && (
           <div className="relative">
@@ -138,9 +186,12 @@ export default function Boxes() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-display text-base font-extrabold text-ink">
-                    Box {b.box_no}
+                    {boxTitle(b)}
                     {b.location ? <span className="font-sans text-sm font-semibold text-slate-600"> · {b.location}</span> : null}
                   </span>
+                  {(b.description || b.event_title) && (
+                    <span className="block text-sm font-semibold text-slate-700">{[b.description, b.event_title ? `For ${b.event_title}` : null].filter(Boolean).join(' · ')}</span>
+                  )}
                   <span className="block text-sm text-slate-600">
                     {b.items.length} item{b.items.length === 1 ? '' : 's'} · {b.label_printed_at ? 'label printed' : 'label not printed yet'}
                   </span>
@@ -256,7 +307,7 @@ function WaitingLabels({
     <section className="space-y-3 rounded-2xl border-2 border-brand-orange bg-brand-orange-50 p-4">
       <h2 className="font-display text-lg font-extrabold text-ink">{plural} to print</h2>
       <p className="text-base text-slate-700">
-        Box {boxes.map((b) => b.box_no).join(', ')}. Put the 4 × 6 roll in the printer, print them, and stick each one over the number written on its box. These are boxes that are full and not labeled yet.
+        {boxes.map((b) => boxTitle(b)).join(', ')}. Put the 4 × 6 roll in the printer, print them, and stick each one over the number written on its box. These are boxes that are full and not labeled yet.
       </p>
       <ErrorBox>{error}</ErrorBox>
       <div className="grid grid-cols-2 gap-2">

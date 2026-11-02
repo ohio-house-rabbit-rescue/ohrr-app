@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { Icon, type IconName } from '../../components/icons'
 import { itemPhotos } from './api'
 import PhotoGallery from '../../components/PhotoGallery'
-import { boxName } from './codes'
+import { boxTitle } from './codes'
 import { KIND_META, extrasSummary, formatMoney, kindLabel, statusLabel, type TaggedItem } from './types'
 import { Explain, FlowStrip } from '../../components/StaffTitle'
 
@@ -199,7 +199,7 @@ export function ItemCard({ item, big = false }: { item: TaggedItem; big?: boolea
         {extrasSummary(item) && <p className="text-[15px] text-slate-600">{extrasSummary(item)}</p>}
         {item.box && (
           <p className="text-[15px] font-semibold text-slate-600">
-            In {boxName(item.box.code)}
+            In {boxTitle(item.box)}
             {item.box.location ? ` · ${item.box.location}` : ''}
           </p>
         )}

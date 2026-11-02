@@ -8,7 +8,7 @@
 // Every call is an RPC (SECURITY DEFINER, checked in the database); before
 // update 46 they answer "This needs database update 46."
 import { supabase } from '../../lib/supabase'
-import { boxName } from './codes'
+import { boxTitle } from './codes'
 import { LABEL_SIZES, type LabelItem } from './labels'
 import type { ItemKind } from './types'
 
@@ -27,6 +27,16 @@ export interface Box {
   box_no: number
   location: string | null
   note: string | null
+  /** Its own name ("Raffle box"); none = "Box 12" (update 50). */
+  name?: string | null
+  /** "green tote". */
+  description?: string | null
+  /** The event it goes to, from the events list. */
+  event_id?: string | null
+  event_title?: string | null
+  /** "1 of 4": its place in a set. */
+  part_no?: number | null
+  part_of?: number | null
   label_printed_at: string | null
   created_at: string
   updated_at: string
@@ -46,7 +56,11 @@ export interface BoxPutResult {
 export const BOX_SIZE = LABEL_SIZES.find((s) => s.key === '4x6')!
 
 export function boxLabel(box: Box): LabelItem {
-  return { code: box.code, title: boxName(box.code), box: { items: box.items.map((i) => ({ code: i.code, title: i.title })), location: box.location } }
+  return {
+    code: box.code,
+    title: boxTitle(box),
+    box: { items: box.items.map((i) => ({ code: i.code, title: i.title })), location: box.location, description: box.description ?? null, event: box.event_title ?? null },
+  }
 }
 
 /**
@@ -80,8 +94,9 @@ export function savePackingBox(b: PackingBox | null): void {
 }
 
 export const NEEDS_46 = 'Boxes need database update 46 — it is in RUN-THIS-IN-SUPABASE.sql.'
+export const NEEDS_50 = 'Naming boxes needs database update 50 — it is in RUN-THIS-IN-SUPABASE.sql.'
 
-type BoxFn = 'new_box' | 'box_by_code' | 'list_boxes' | 'box_items_set' | 'save_box' | 'delete_box' | 'mark_boxes_printed'
+type BoxFn = 'new_box' | 'box_by_code' | 'list_boxes' | 'box_items_set' | 'save_box' | 'delete_box' | 'mark_boxes_printed' | 'make_boxes' | 'set_box_details'
 
 async function call<T>(fn: BoxFn, args: Record<string, unknown>): Promise<T> {
   const rpc = supabase.rpc.bind(supabase) as unknown as (
@@ -90,7 +105,7 @@ async function call<T>(fn: BoxFn, args: Record<string, unknown>): Promise<T> {
   ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>
   const { data, error } = await rpc(fn, args)
   if (error) {
-    if (error.code === 'PGRST202' || /could not find the function/i.test(error.message ?? '')) throw new Error(NEEDS_46)
+    if (error.code === 'PGRST202' || /could not find the function/i.test(error.message ?? '')) throw new Error(fn === 'make_boxes' || fn === 'set_box_details' ? NEEDS_50 : NEEDS_46)
     throw error
   }
   return data as T
@@ -101,6 +116,40 @@ const blank = (s: string | null | undefined) => (s ?? '').trim() || null
 /** A new box with the next number. */
 export async function newBox(orgId: string, location?: string | null, note?: string | null): Promise<Box> {
   return call<Box>('new_box', { p_org: orgId, p_location: blank(location), p_note: blank(note) })
+}
+
+export interface BoxDetails {
+  name: string
+  description: string
+  eventId: string | null
+  /** Both, or neither: "1 of 4". */
+  partNo: number | null
+  partOf: number | null
+}
+
+/** One box, or a set of them ("Raffle box · 1 of 4" … "4 of 4"), with the same name, description and event. */
+export async function makeBoxes(orgId: string, o: { count: number; name: string; description: string; eventId: string | null; location?: string | null }): Promise<Box[]> {
+  return ((await call<Box[] | null>('make_boxes', {
+    p_org: orgId,
+    p_count: o.count,
+    p_name: blank(o.name),
+    p_description: blank(o.description),
+    p_event_id: o.eventId,
+    p_location: blank(o.location),
+  })) ?? []).filter(Boolean)
+}
+
+/** Rename a box, describe it, point it at an event, and set its place in a set. */
+export async function setBoxDetails(orgId: string, code: string, d: BoxDetails): Promise<Box> {
+  return call<Box>('set_box_details', {
+    p_org: orgId,
+    p_code: code,
+    p_name: blank(d.name),
+    p_description: blank(d.description),
+    p_event_id: d.eventId,
+    p_part_no: d.partNo,
+    p_part_of: d.partOf,
+  })
 }
 
 /** A box and what's in it; null when no box has that code. */
@@ -145,7 +194,7 @@ export async function markBoxesPrinted(orgId: string, codes: string[], printed =
 export async function packingListPdf(box: Box): Promise<Blob> {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ unit: 'in', format: 'letter', orientation: 'portrait' })
-  const name = `Box ${box.box_no}`
+  const name = boxTitle(box)
   const left = 0.75
   const right = 8.5 - 0.75
   let y = 0.9
@@ -162,7 +211,7 @@ export async function packingListPdf(box: Box): Promise<Blob> {
     y += 0.3
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(12)
-    const facts = [box.location ? `Kept: ${box.location}` : null, `${box.items.length} item${box.items.length === 1 ? '' : 's'}`].filter(Boolean).join('  ·  ')
+    const facts = [box.description, box.event_title ? `For ${box.event_title}` : null, box.location ? `Kept: ${box.location}` : null, `${box.items.length} item${box.items.length === 1 ? '' : 's'}`].filter(Boolean).join('  ·  ')
     doc.text(facts, left, y)
     y += 0.2
     if (box.note) {

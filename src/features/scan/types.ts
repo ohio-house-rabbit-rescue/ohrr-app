@@ -128,7 +128,7 @@ export interface TaggedItem {
   /** A donation in a basket: the basket it's in. */
   in_basket?: { code: string; kind: ItemKind; title: string } | null
   /** The box it's packed in (update 46; missing before it). */
-  box?: { code: string; box_no: number; location: string | null } | null
+  box?: { code: string; box_no: number; location: string | null; name?: string | null; part_no?: number | null; part_of?: number | null } | null
   /** A basket (raffle prize or auction lot): the donations in it. */
   contents?: { code: string | null; title: string; quantity: number; size: string | null; donated_by: string | null; value_total_cents: number | null }[] | null
   /** Client only: headed for / size / use-by / drop-off couldn't be saved yet (update 40 not run). */

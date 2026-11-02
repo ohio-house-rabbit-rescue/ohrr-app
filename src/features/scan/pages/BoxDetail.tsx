@@ -14,12 +14,13 @@ import { shareFileNative } from '../../../native/share'
 import Scanner from '../Scanner'
 import { BigButton, ErrorBox } from '../ScanUI'
 import { listItems } from '../api'
-import { boxName, isBoxCode, normalizeCode } from '../codes'
+import { boxName, boxTitle, isBoxCode, normalizeCode } from '../codes'
+import BoxFields, { type BoxFieldValues } from '../BoxFields'
 import { labelDataUrl, labelsPdf } from '../labels'
 import { PAGE_SIZE, filterRows, groupByDay, type ListRow } from '../labelList'
 import BluetoothPrint from '../printer/BluetoothPrint'
 import { KIND_META, kindLabel, type TaggedItem } from '../types'
-import { BOX_SIZE, boxByCode, boxLabel, deleteBox, markBoxesPrinted, packingListPdf, putInBox, saveBox, takeOutOfBox, type Box, type BoxPutResult } from '../boxes'
+import { BOX_SIZE, boxByCode, boxLabel, deleteBox, markBoxesPrinted, packingListPdf, putInBox, saveBox, setBoxDetails, takeOutOfBox, type Box, type BoxPutResult } from '../boxes'
 import { Explain } from '../../../components/StaffTitle'
 
 type Mode = 'list' | 'scan' | 'type' | 'pick'
@@ -72,6 +73,10 @@ export default function BoxDetail() {
   const [labelOpen, setLabelOpen] = useState(false)
   const [place, setPlace] = useState('')
   const [memo, setMemo] = useState('')
+  // Name, description, event and place in a set (update 50).
+  const [fields, setFields] = useState<BoxFieldValues>({ name: '', description: '', eventId: null })
+  const [partNo, setPartNo] = useState('')
+  const [partOf, setPartOf] = useState('')
   const [preview, setPreview] = useState<string | null>(null)
   const [printImgs, setPrintImgs] = useState<string[]>([])
   const [copies, setCopies] = useState(1)
@@ -163,9 +168,21 @@ export default function BoxDetail() {
     setBusy('Saving…')
     setError(null)
     try {
-      const b = await saveBox(orgId, box.code, place, memo)
+      let b = await saveBox(orgId, box.code, place, memo)
+      const no = Number.parseInt(partNo, 10)
+      const of = Number.parseInt(partOf, 10)
+      const hasSet = Number.isFinite(no) && Number.isFinite(of)
+      if ((partNo.trim() || partOf.trim()) && !hasSet) throw new Error('For “1 of 4”, fill in both numbers — or leave both empty.')
+      const next = { name: fields.name.trim(), description: fields.description.trim(), eventId: fields.eventId, partNo: hasSet ? no : null, partOf: hasSet ? of : null }
+      const same =
+        next.name === (box.name ?? '') &&
+        next.description === (box.description ?? '') &&
+        next.eventId === (box.event_id ?? null) &&
+        next.partNo === (box.part_no ?? null) &&
+        next.partOf === (box.part_of ?? null)
+      if (!same) b = await setBoxDetails(orgId, box.code, next)
       // Saved: back to the boxes, which say so.
-      navigate('/staff/boxes', { state: { saved: `${boxName(b.code)}${b.location ? ` · ${b.location}` : ''}` } })
+      navigate('/staff/boxes', { state: { saved: `${boxTitle(b)}${b.location ? ` · ${b.location}` : ''}` } })
     } catch (e) {
       setError(errMessage(e))
     } finally {
@@ -273,7 +290,7 @@ export default function BoxDetail() {
     )
   }
 
-  const name = boxName(box.code)
+  const name = boxTitle(box)
   return (
     <>
       <Screen className="space-y-4 print:hidden">
@@ -292,19 +309,36 @@ export default function BoxDetail() {
                 onClick={() => {
                   setPlace(box.location ?? '')
                   setMemo(box.note ?? '')
+                  setFields({ name: box.name ?? '', description: box.description ?? '', eventId: box.event_id ?? null })
+                  setPartNo(box.part_no ? String(box.part_no) : '')
+                  setPartOf(box.part_of ? String(box.part_of) : '')
                   setEditing(true)
                 }}
                 className="min-h-[44px] font-bold text-brand-blue"
               >
-                {box.location || box.note ? 'Change' : 'Where is it kept?'}
+                {box.location || box.note || box.name || box.description ? 'Change' : 'Name it, or say where it is kept'}
               </button>
             </p>
           ) : null}
+          {!editing && (box.description || box.event_title) && (
+            <p className="text-base font-semibold text-slate-700">{[box.description, box.event_title ? `For ${box.event_title}` : null].filter(Boolean).join(' · ')}</p>
+          )}
           {!editing && box.note && <p className="text-base text-slate-500">{box.note}</p>}
         </div>
 
         {editing && (
           <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+            <BoxFields orgId={orgId} value={fields} onChange={(patch) => setFields((f) => ({ ...f, ...patch }))} />
+            <div>
+              <p className="text-base font-bold text-ink">
+                Part of a set <span className="font-normal text-slate-500">(optional)</span>
+              </p>
+              <div className="mt-1 flex items-center gap-2 text-base text-ink">
+                <input type="number" inputMode="numeric" min={1} value={partNo} onChange={(e) => setPartNo(e.target.value)} aria-label="This box’s number in the set" className="w-20 rounded-xl border-2 border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-brand-blue" />
+                of
+                <input type="number" inputMode="numeric" min={1} value={partOf} onChange={(e) => setPartOf(e.target.value)} aria-label="How many boxes in the set" className="w-20 rounded-xl border-2 border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-brand-blue" />
+              </div>
+            </div>
             <label className="block text-base font-bold text-ink">
               Where it’s kept
               <input value={place} onChange={(e) => setPlace(e.target.value)} maxLength={120} placeholder="e.g. Garage shelf B" className={`mt-1 ${staffInput}`} />
