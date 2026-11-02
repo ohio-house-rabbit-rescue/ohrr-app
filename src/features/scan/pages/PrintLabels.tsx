@@ -14,7 +14,7 @@
 // Silent Auction items print as bid-sheet labels (prices, "Scan to buy it
 // now") unless "Bid-sheet labels" is unticked (update 44).
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage, supabase } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
@@ -46,7 +46,7 @@ import { setSetting, useSetting } from '../../settings/useSetting'
 import type { Json } from '../../../lib/database.types'
 import { AUCTION_EVENT_SLUG } from '../../raffle/types'
 import BluetoothPrint from '../printer/BluetoothPrint'
-import { Part, PartBadge, StepButton, pill } from '../../../components/StaffJob'
+import { Part, PartBadge, pill } from '../../../components/StaffJob'
 
 type Mode = 'items' | 'shop'
 
@@ -488,6 +488,8 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
                   ? 'Print — tick an item first'
                   : `Print ${plural(totalLabels)}${totalLabels !== selected.length ? ` for ${selected.length} items` : ''} · ${size.label.replace(/\s*\(.*\)\s*$/, '')}`}
               </p>
+              {/* Nothing ticked yet: just the one line above. The buttons stay mounted (the Bluetooth connection lives in them), only hidden. */}
+              <div className={selected.length === 0 ? 'hidden' : 'space-y-2'}>
               <div className="grid grid-cols-2 gap-3">
                 {isNative ? (
                   <BigButton onClick={() => void pdf()} disabled={!!busy || selected.length === 0} icon="printer" className="col-span-2">
@@ -516,6 +518,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
                 }}
                 compact
               />
+              </div>
               {note && (
                 <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
                   <span className="flex-1">{note}</span>
@@ -530,11 +533,12 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
           }
         >
           <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              <StepButton to={shop ? '/staff/labels' : '/staff/hopshop/labels'} icon="printer">
-                {shop ? 'Donation labels instead' : 'Hop Shop price labels instead'}
-              </StepButton>
-            </div>
+            <p className="text-[15px] text-slate-600">
+              {shop ? 'Not for the shop? ' : 'Printing for the Hop Shop? '}
+              <Link to={shop ? '/staff/labels' : '/staff/hopshop/labels'} className="inline-flex min-h-[44px] items-center font-bold text-brand-blue underline">
+                {shop ? 'Donation labels' : 'Hop Shop price labels'}
+              </Link>
+            </p>
 
             {/* A · the label size: one line once it's set, the full choice behind Change */}
             <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
