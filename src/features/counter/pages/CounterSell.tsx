@@ -50,6 +50,9 @@ export default function CounterSell() {
   const [pricing, setPricing] = useState<{ i: number; price: string; mode: 'each' | 'all' } | null>(null)
 
   const cashRef = useRef<HTMLDivElement>(null)
+  // The basket is capped to part of the screen and scrolls inside itself, so the item tiles below it only move a little
+  // as lines are added; the newest line is kept in view.
+  const basketRef = useRef<HTMLDivElement>(null)
   // Each screen (basket, scan, pay, done) starts at the top, so the total and the next button are what is seen.
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
@@ -59,6 +62,12 @@ export default function CounterSell() {
   useEffect(() => {
     if (pricingLine !== null) bringIntoView(document.getElementById('sell-price-panel'), { align: 'top', keyboard: 'keep', delay: 300 })
   }, [pricingLine])
+
+  const lineCount = lines.length
+  useEffect(() => {
+    const el = basketRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [lineCount])
 
   const total = saleTotal(lines.map(priced))
   const count = lines.reduce((n, l) => n + l.qty, 0)
@@ -277,7 +286,7 @@ export default function CounterSell() {
         <ErrorBox>{error}</ErrorBox>
 
         {lines.length > 0 && (
-          <div className="divide-y divide-slate-100 rounded-2xl border-2 border-brand-orange/40 bg-white">
+          <div ref={basketRef} className="max-h-[34vh] divide-y divide-slate-100 overflow-y-auto rounded-2xl border-2 border-brand-orange/40 bg-white">
             {lines.map((l, i) => {
               const editing = pricing?.i === i ? pricing : null
               const typed = editing ? toCents(editing.price) : null

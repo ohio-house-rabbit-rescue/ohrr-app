@@ -13,11 +13,15 @@ import { CardActions, EditorForm, Field, Part, pill } from '../../../components/
 import StaffImageField from '../../../components/StaffImageField'
 import { deletePresenter, listPresenters, savePresenter, type PresenterRow } from '../api'
 import { Explain } from '../../../components/StaffTitle'
+import { StatusNote } from '../../scan/ScanUI'
+import { showRow } from '../../../lib/staffScroll'
 
 export default function StaffSpeakers({ orgId }: { orgId: string }) {
   const [rows, setRows] = useState<PresenterRow[] | null>(null)
   const [editing, setEditing] = useState<string | 'new' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // What just happened, shown (and scrolled to) right under the list: an add or a delete.
+  const [note, setNote] = useState<{ text: string; n: number } | null>(null)
 
   const load = useCallback(async () => {
     if (!orgId) return
@@ -31,9 +35,20 @@ export default function StaffSpeakers({ orgId }: { orgId: string }) {
     void load()
   }, [load])
 
-  const done = async () => {
+  // After a save the card is shown again where it was; after an add or a delete a note says so.
+  const done = async (removed?: string) => {
+    const was = editing
     setEditing(null)
     await load()
+    if (removed) setNote((cur) => ({ text: `Deleted ${removed}.`, n: (cur?.n ?? 0) + 1 }))
+    else if (was === 'new') setNote((cur) => ({ text: 'Added — they are in the list above.', n: (cur?.n ?? 0) + 1 }))
+    else if (was) showRow(was, { align: 'auto' })
+  }
+
+  const cancel = () => {
+    const was = editing
+    setEditing(null)
+    if (was) showRow(was, { align: 'auto' })
   }
 
   // A–Z by name: a reference list.
@@ -51,11 +66,12 @@ export default function StaffSpeakers({ orgId }: { orgId: string }) {
       <FormError>{error}</FormError>
       {rows === null && !error && <Spinner />}
 
-      {sorted.map((p) =>
-        editing === p.id ? (
-          <SpeakerForm key={p.id} orgId={orgId} initial={p} onDone={done} onCancel={() => setEditing(null)} />
+      {sorted.map((p) => (
+        <div key={p.id} data-row={p.id}>
+        {editing === p.id ? (
+          <SpeakerForm orgId={orgId} initial={p} onDone={done} onCancel={cancel} />
         ) : (
-          <Card key={p.id} className="space-y-2">
+          <Card className="space-y-2">
             <div className="flex items-start gap-3">
               {p.photo_url ? (
                 <img src={p.photo_url} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover" />
@@ -76,21 +92,43 @@ export default function StaffSpeakers({ orgId }: { orgId: string }) {
               </span>
             </div>
             <CardActions>
-              <button type="button" onClick={() => setEditing(p.id)} className={pill.blue}>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(p.id)
+                  showRow(p.id, { align: 'top' })
+                }}
+                className={pill.blue}
+              >
                 Edit
               </button>
             </CardActions>
           </Card>
-        ),
-      )}
+        )}
+        </div>
+      ))}
 
-      {editing === 'new' ? (
-        <SpeakerForm orgId={orgId} initial={null} onDone={done} onCancel={() => setEditing(null)} />
-      ) : (
-        <button type="button" onClick={() => setEditing('new')} className={pill.orange}>
-          <Icon name="plus" size={16} /> Add a speaker
-        </button>
+      {note && (
+        <StatusNote key={note.n} className="text-[15px] font-bold text-green-700">
+          {note.text}
+        </StatusNote>
       )}
+      <div data-row="new">
+        {editing === 'new' ? (
+          <SpeakerForm orgId={orgId} initial={null} onDone={done} onCancel={cancel} />
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setEditing('new')
+              showRow('new', { align: 'top' })
+            }}
+            className={pill.orange}
+          >
+            <Icon name="plus" size={16} /> Add a speaker
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -103,7 +141,7 @@ function SpeakerForm({
 }: {
   orgId: string
   initial: PresenterRow | null
-  onDone: () => Promise<void>
+  onDone: (removed?: string) => Promise<void>
   onCancel: () => void
 }) {
   const { user } = useAuth()
@@ -159,7 +197,7 @@ function SpeakerForm({
           ? {
               label: 'Delete this speaker',
               confirm: `Delete ${initial.name}? Sessions that listed them keep the line of text but lose the link to a bio.`,
-              onRemove: () => deletePresenter(initial.id).then(onDone).catch((e) => setError(errMessage(e))),
+              onRemove: () => deletePresenter(initial.id).then(() => onDone(initial.name)).catch((e) => setError(errMessage(e))),
             }
           : undefined
       }

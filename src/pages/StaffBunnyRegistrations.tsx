@@ -100,6 +100,10 @@ export default function StaffBunnyRegistrations() {
   const [eventId, setEventId] = useState<string>(ALL_EVENTS)
   const [busy, setBusy] = useState<string | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
+  // A bunny just checked (or un-checked) stays in the list it was in, with its Undo button, until the list is changed;
+  // otherwise the next row would slide up under the finger.
+  const [kept, setKept] = useState<Set<string>>(new Set())
+  useEffect(() => setKept(new Set()), [filter, eventId, query])
 
   const load = useCallback(async () => {
     if (!orgId) return
@@ -136,14 +140,16 @@ export default function StaffBunnyRegistrations() {
       .map((r) => {
         const ownerHit = !q || r.owner_name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q) || (r.phone ?? '').replace(/\D/g, '').includes(q.replace(/\D/g, '') || '\u0000')
         const bunnies = r.bunnies.filter((b) => {
-          if (filter === 'Still to check' && b.proof_checked_at) return false
-          if (filter === 'Checked' && !b.proof_checked_at) return false
+          if (!kept.has(b.id)) {
+            if (filter === 'Still to check' && b.proof_checked_at) return false
+            if (filter === 'Checked' && !b.proof_checked_at) return false
+          }
           return ownerHit || b.name.toLowerCase().includes(q)
         })
         return { ...r, bunnies }
       })
       .filter((r) => r.bunnies.length > 0)
-  }, [rows, query, filter, eventId])
+  }, [rows, query, filter, eventId, kept])
 
   const totals = useMemo(() => {
     const inEvent = (rows ?? []).filter((r) => eventId === ALL_EVENTS || r.event_id === eventId)
@@ -168,6 +174,7 @@ export default function StaffBunnyRegistrations() {
     setBusy(b.id)
     try {
       await setProofChecked(b.id, !b.proof_checked_at)
+      setKept((k) => new Set(k).add(b.id))
       await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'That didn’t save.')

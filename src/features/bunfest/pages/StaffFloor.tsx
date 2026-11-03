@@ -13,7 +13,7 @@
 // Tables are numbered from the SAVED venue, because that's what the database
 // checks a table number against. So the design is saved first, then the
 // tables are given out.
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { errMessage } from '../../../lib/supabase'
 import { Card, Badge } from '../../../components/ui'
 import { pill } from '../../../components/StaffJob'
@@ -37,6 +37,8 @@ import {
 import { VenuePlan, ZoomBox } from '../VenuePlan'
 import StaffVenue from './StaffVenue'
 import { Explain } from '../../../components/StaffTitle'
+import { StatusNote } from '../../scan/ScanUI'
+import { bringIntoView, putKeyboardAway } from '../../../lib/bringIntoView'
 
 const clone = (v: Venue): Venue => JSON.parse(JSON.stringify(v))
 
@@ -52,6 +54,12 @@ export default function StaffFloor({ orgId, year }: { orgId: string; year: numbe
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
   const [selected, setSelected] = useState<number | undefined>()
+  // The two buttons at the top: when a button further down switches the view, the screen goes back up to them.
+  const topRef = useRef<HTMLDivElement>(null)
+  const switchView = (v: 'assign' | 'design') => {
+    setView(v)
+    bringIntoView(topRef.current, { align: 'top' })
+  }
 
   const load = useCallback(
     async (keepEdits = false) => {
@@ -154,6 +162,7 @@ export default function StaffFloor({ orgId, year }: { orgId: string; year: numbe
 
   return (
     <div className="space-y-3">
+      <div ref={topRef}>
       <Card className="space-y-3">
         <div className="grid grid-cols-2 gap-2">
           {(
@@ -180,6 +189,7 @@ export default function StaffFloor({ orgId, year }: { orgId: string; year: numbe
           </p>
         )}
       </Card>
+      </div>
 
       <FormError>{error}</FormError>
 
@@ -194,6 +204,7 @@ export default function StaffFloor({ orgId, year }: { orgId: string; year: numbe
           startOptions={startOptions}
           onChange={setEditing}
           onSaved={() => load()}
+          onGiveOutTables={() => switchView('assign')}
         />
       )}
 
@@ -204,7 +215,7 @@ export default function StaffFloor({ orgId, year }: { orgId: string; year: numbe
             Table numbers come from the saved design — once it’s saved, give out the tables here.
             {year === 2026 && ' This year’s starting design is ready to check and save.'}
           </p>
-          <button type="button" onClick={() => setView('design')} className={`${pill.orange} mx-auto`}>
+          <button type="button" onClick={() => switchView('design')} className={`${pill.orange} mx-auto`}>
             Design the venue
           </button>
         </Card>
@@ -225,7 +236,7 @@ export default function StaffFloor({ orgId, year }: { orgId: string; year: numbe
             </div>
             <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
               <Icon name="search" size={16} className="shrink-0 text-slate-400" />
-              <input className="min-h-[32px] min-w-0 flex-1 bg-transparent text-base outline-none" placeholder="Find a vendor or rescue" value={filter} onChange={(e) => setFilter(e.target.value)} />
+              <input className="min-h-[32px] min-w-0 flex-1 bg-transparent text-base outline-none" placeholder="Find a vendor or rescue" value={filter} onChange={(e) => setFilter(e.target.value)} enterKeyHint="search" onKeyDown={(e) => e.key === 'Enter' && putKeyboardAway()} />
             </label>
 
             <Section title={`Vendors · ${roster.vendors.length}`}>
@@ -349,6 +360,8 @@ function AssignRow({
       setError(parsed.error)
       return
     }
+    // Saved with the Enter key too: put the keyboard away so the check mark isn't hidden behind it.
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     try {
@@ -396,14 +409,18 @@ function AssignRow({
             {busy ? '…' : 'Save'}
           </button>
         ) : done ? (
-          <span className="inline-flex h-11 w-[4.25rem] shrink-0 items-center justify-center text-green-600">
+          <span role="status" aria-label="Saved" className="inline-flex h-11 w-[4.25rem] shrink-0 items-center justify-center text-green-600">
             <Icon name="check" size={20} />
           </span>
         ) : (
           <span className="w-[4.25rem] shrink-0" />
         )}
       </div>
-      {error && <p className="mt-1.5 text-[15px] font-semibold text-red-700">{error}</p>}
+      {error && (
+        <div className="mt-1.5">
+          <FormError>{error}</FormError>
+        </div>
+      )}
     </div>
   )
 }
@@ -414,18 +431,23 @@ function NewOther({ orgId, year, onSaved }: { orgId: string; year: number; onSav
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // The new line appears in the list ABOVE this form and pushes it down, so say what was added (and scroll to it).
+  const [note, setNote] = useState<{ text: string; n: number } | null>(null)
 
   const save = async () => {
     const parsed = parseNumbers(text)
     if ('error' in parsed) return setError(parsed.error)
     if (!label.trim() || parsed.numbers.length === 0) return setError('Give it a name and at least one table number.')
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     try {
-      await setTables(orgId, year, { kind: 'other', label: label.trim() }, parsed.numbers)
+      const name = label.trim()
+      await setTables(orgId, year, { kind: 'other', label: name }, parsed.numbers)
       setLabel('')
       setText('')
       await onSaved()
+      setNote((cur) => ({ text: `Added ${name}, table ${formatNumbers(parsed.numbers)}. It is in the list above.`, n: (cur?.n ?? 0) + 1 }))
     } catch (e) {
       setError(errMessage(e))
     }
@@ -434,6 +456,11 @@ function NewOther({ orgId, year, onSaved }: { orgId: string; year: number; onSav
 
   return (
     <div className="space-y-2 px-3 py-2.5">
+      {note && (
+        <StatusNote key={note.n} className="text-[15px] font-bold text-green-700">
+          {note.text}
+        </StatusNote>
+      )}
       <div className="flex items-center gap-2">
         <input className={`${staffInput} !mt-0 min-w-0 flex-1`} placeholder="Name, e.g. OHRR info" value={label} onChange={(e) => setLabel(e.target.value)} />
         <input
@@ -444,7 +471,7 @@ function NewOther({ orgId, year, onSaved }: { orgId: string; year: number; onSav
           onChange={(e) => setText(e.target.value)}
         />
       </div>
-      {error && <p className="text-[15px] font-semibold text-red-700">{error}</p>}
+      <FormError>{error}</FormError>
       <button type="button" onClick={save} disabled={busy} className={`${pill.soft} !min-h-[44px]`}>
         <Icon name="plus" size={16} /> {busy ? 'Adding…' : 'Add this table'}
       </button>

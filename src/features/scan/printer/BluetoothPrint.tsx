@@ -208,7 +208,7 @@ export default function BluetoothPrint({
         </>
       )}
       {open && (
-        <div ref={panelRef} className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
+        <div ref={panelRef} className={`space-y-2 rounded-2xl border border-slate-200 bg-white p-4 ${compact ? 'max-h-[45vh] overflow-y-auto' : ''}`}>
           {compact && printerRow}
           <p className="text-base font-bold text-ink">Darkness</p>
           <div className="flex flex-wrap gap-2">

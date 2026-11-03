@@ -38,6 +38,9 @@ import {
 } from '../floor'
 import { VenuePlan, ZoomBox, type PickKind } from '../VenuePlan'
 import { Explain } from '../../../components/StaffTitle'
+import { StatusNote } from '../../scan/ScanUI'
+import { putKeyboardAway } from '../../../lib/bringIntoView'
+import { showRow } from '../../../lib/staffScroll'
 
 type Pick = { kind: PickKind; id: string } | null
 
@@ -142,6 +145,7 @@ export default function StaffVenue({
   startOptions,
   onChange,
   onSaved,
+  onGiveOutTables,
 }: {
   orgId: string
   year: number
@@ -154,6 +158,8 @@ export default function StaffVenue({
   startOptions: { label: string; hint: string; venue: () => Promise<Venue> | Venue }[]
   onChange: (v: Venue | null) => void
   onSaved: () => Promise<void>
+  /** Goes to "Who sits where" — the next job once the design is saved. */
+  onGiveOutTables?: () => void
 }) {
   const [roomId, setRoomId] = useState<string | null>(venue?.rooms[0]?.id ?? null)
   const [tab, setTab] = useState<PickKind>('run')
@@ -161,6 +167,8 @@ export default function StaffVenue({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [starting, setStarting] = useState(false)
+  // Counts saves, so the "Saved — next" note shows (and scrolls into view) each time.
+  const [savedN, setSavedN] = useState(0)
 
   const room = venue?.rooms.find((r) => r.id === roomId) ?? venue?.rooms[0] ?? null
   const check = useMemo(() => (venue ? checkVenue(venue) : { errors: [], warnings: [] }), [venue])
@@ -182,6 +190,14 @@ export default function StaffVenue({
     setRoom(room.id, { [key]: [...(room[key] as Room[K]), item] } as Partial<Room>)
     setTab(key === 'runs' ? 'run' : key === 'areas' ? 'area' : 'door')
     setPick({ kind: key === 'runs' ? 'run' : key === 'areas' ? 'area' : 'door', id: item.id })
+    // Its editor opens in the list, which may be off screen below the button just tapped.
+    showRow(item.id, { align: 'top' })
+  }
+
+  /** Open (or close) one row's editor; a newly opened one is brought to the top of the screen. */
+  const togglePick = (kind: PickKind, id: string, open: boolean) => {
+    setPick(open ? null : { kind, id })
+    if (!open) showRow(id, { align: 'top' })
   }
 
   const removeItem = (key: 'runs' | 'areas' | 'doors', id: string) => {
@@ -202,11 +218,13 @@ export default function StaffVenue({
 
   const save = async () => {
     if (!venue) return
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     try {
       await saveVenue(orgId, year, venue.name, venue)
       await onSaved()
+      setSavedN((n) => n + 1)
     } catch (e) {
       setError(errMessage(e))
     }
@@ -236,6 +254,8 @@ export default function StaffVenue({
                 const v = await o.venue()
                 onChange(v)
                 setRoomId(v.rooms[0]?.id ?? null)
+                // The choices are replaced by the whole editor: start at its top, not wherever the tap was.
+                showRow('venue-editor', { align: 'top' })
               } catch (e) {
                 setError(errMessage(e))
               }
@@ -263,7 +283,7 @@ export default function StaffVenue({
   const selDoor = pick?.kind === 'door' ? room?.doors.find((d) => d.id === pick.id) : undefined
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-row="venue-editor">
       {/* ------------------------------------------------ the venue */}
       <Card className="space-y-3">
         <label className="block text-sm font-semibold text-slate-700">
@@ -338,6 +358,8 @@ export default function StaffVenue({
                     onChange({ ...venue, rooms: venue.rooms.filter((r) => r.id !== room.id) })
                     setRoomId(null)
                     setPick(null)
+                    // The room list is at the top; show that the room is gone.
+                    showRow('venue-editor', { align: 'top' })
                   }}
                   className={pill.red}
                 >
@@ -362,6 +384,8 @@ export default function StaffVenue({
                 onPick={(kind, id) => {
                   setTab(kind)
                   setPick({ kind, id })
+                  // Its editor is in the card below the drawing — bring it up.
+                  showRow(id, { align: 'top' })
                 }}
                 label={`${room.name} design`}
               />
@@ -400,10 +424,10 @@ export default function StaffVenue({
                   const [a, z] = rRanges.get(r.id) ?? [0, 0]
                   const open = selRun?.id === r.id
                   return (
-                    <div key={r.id} className={`rounded-xl border ${open ? 'border-brand-orange' : 'border-slate-200'}`}>
+                    <div key={r.id} data-row={r.id} className={`rounded-xl border ${open ? 'border-brand-orange' : 'border-slate-200'}`}>
                       <button
                         type="button"
-                        onClick={() => setPick(open ? null : { kind: 'run', id: r.id })}
+                        onClick={() => togglePick('run', r.id, open)}
                         className="flex min-h-[48px] w-full items-center justify-between gap-2 px-3 text-left"
                       >
                         <span className="text-[15px] font-bold text-ink">
@@ -435,10 +459,10 @@ export default function StaffVenue({
                 {room.areas.map((a) => {
                   const open = selArea?.id === a.id
                   return (
-                    <div key={a.id} className={`rounded-xl border ${open ? 'border-brand-orange' : 'border-slate-200'}`}>
+                    <div key={a.id} data-row={a.id} className={`rounded-xl border ${open ? 'border-brand-orange' : 'border-slate-200'}`}>
                       <button
                         type="button"
-                        onClick={() => setPick(open ? null : { kind: 'area', id: a.id })}
+                        onClick={() => togglePick('area', a.id, open)}
                         className="flex min-h-[48px] w-full items-center justify-between gap-2 px-3 text-left"
                       >
                         <span className="text-[15px] font-bold text-ink">{a.label || 'Unnamed area'}</span>
@@ -469,10 +493,10 @@ export default function StaffVenue({
                 {room.doors.map((d) => {
                   const open = selDoor?.id === d.id
                   return (
-                    <div key={d.id} className={`rounded-xl border ${open ? 'border-brand-orange' : 'border-slate-200'}`}>
+                    <div key={d.id} data-row={d.id} className={`rounded-xl border ${open ? 'border-brand-orange' : 'border-slate-200'}`}>
                       <button
                         type="button"
-                        onClick={() => setPick(open ? null : { kind: 'door', id: d.id })}
+                        onClick={() => togglePick('door', d.id, open)}
                         className="flex min-h-[48px] w-full items-center justify-between gap-2 px-3 text-left"
                       >
                         <span className="text-[15px] font-bold text-ink">{d.label || 'Door'}</span>
@@ -518,7 +542,6 @@ export default function StaffVenue({
             tables after the change — check “Who sits where” after saving.
           </p>
         )}
-        <FormError>{error}</FormError>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -534,6 +557,18 @@ export default function StaffVenue({
             </button>
           )}
         </div>
+        {/* Under the buttons, so a message never pushes Save down the screen. */}
+        <FormError>{error}</FormError>
+        {savedN > 0 && !dirty && !error && (
+          <StatusNote key={savedN} className="space-y-2">
+            <p className="text-[15px] font-bold text-green-700">Saved. Next, give out the tables.</p>
+            {onGiveOutTables && (
+              <button type="button" onClick={onGiveOutTables} className={pill.blue}>
+                Give out the tables
+              </button>
+            )}
+          </StatusNote>
+        )}
       </Card>
     </div>
   )

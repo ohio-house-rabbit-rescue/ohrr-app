@@ -82,6 +82,9 @@ export default function TableHolds({ orgId, onChange }: { orgId: string; onChang
   const [showDone, setShowDone] = useState(false)
   const [setup, setSetup] = useState(false)
   const seen = useRef<Set<string> | null>(null)
+  // A hold that was just paid and taken (or put back) stays in its place as one green line for a few seconds, so the
+  // next hold doesn't slide up under the finger on the button.
+  const [settled, setSettled] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
     const { data: d, error: e } = await supabase.rpc('auction_table_claims', { p_org: orgId, p_event: AUCTION_EVENT_SLUG })
@@ -117,7 +120,16 @@ export default function TableHolds({ orgId, onChange }: { orgId: string; onChang
     return () => clearInterval(t)
   }, [orgId, load])
 
-  const after = async () => {
+  const after = async (c: Claim, text: string) => {
+    setSettled((m) => ({ ...m, [c.sale_id]: text }))
+    window.setTimeout(
+      () =>
+        setSettled((m) => {
+          const { [c.sale_id]: _gone, ...rest } = m
+          return rest
+        }),
+      8000,
+    )
     await load()
     await onChange()
   }
@@ -135,6 +147,7 @@ export default function TableHolds({ orgId, onChange }: { orgId: string; onChang
   if (!data) return <Spinner label="Loading Buy it now…" />
 
   const open = data.claims.filter(waiting).sort((a, b) => a.pickup_no - b.pickup_no)
+  const rows = data.claims.filter((c) => waiting(c) || settled[c.sale_id]).sort((a, b) => a.pickup_no - b.pickup_no)
   const done = data.claims.filter((c) => !waiting(c))
 
   return (
@@ -173,9 +186,15 @@ export default function TableHolds({ orgId, onChange }: { orgId: string; onChang
         </div>
       )}
 
-      {open.map((c) => (
-        <HoldRow key={c.sale_id} c={c} now={data.now} onDone={after} />
-      ))}
+      {rows.map((c) =>
+        settled[c.sale_id] ? (
+          <p key={c.sale_id} role="status" className="rounded-xl bg-green-50 px-3 py-3 text-base font-bold text-green-800">
+            #{c.pickup_no} {c.title} — {settled[c.sale_id]}
+          </p>
+        ) : (
+          <HoldRow key={c.sale_id} c={c} now={data.now} onDone={after} />
+        ),
+      )}
 
       {done.length > 0 && (
         <div>
@@ -200,7 +219,7 @@ export default function TableHolds({ orgId, onChange }: { orgId: string; onChang
   )
 }
 
-function HoldRow({ c, now, onDone }: { c: Claim; now: string; onDone: () => Promise<void> }) {
+function HoldRow({ c, now, onDone }: { c: Claim; now: string; onDone: (c: Claim, text: string) => Promise<void> }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const paid = c.payment_status === 'cash' || c.payment_status === 'paid'
@@ -212,7 +231,7 @@ function HoldRow({ c, now, onDone }: { c: Claim; now: string; onDone: () => Prom
     try {
       const { error: e } = await supabase.rpc('auction_update_sale', { p_sale_id: c.sale_id, ...patch })
       if (e) throw e
-      await onDone()
+      await onDone(c, patch.p_payment_status === 'void' ? 'put back on sale.' : paid ? 'taken.' : 'paid and taken.')
     } catch (e) {
       setError(errMessage(e))
     } finally {
