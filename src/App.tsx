@@ -159,6 +159,7 @@ const TicketPage = lazy(() => import('./features/raffle/tickets/pages/TicketPage
 const BreedDetail = lazy(() => import('./features/breeds/pages/BreedDetail'))
 const Outreach = lazy(() => import('./features/share/pages/Outreach'))
 const StaffBunfest = lazy(() => import('./features/bunfest/pages/StaffBunfest'))
+const StaffBunnyRegistrations = lazy(() => import('./pages/StaffBunnyRegistrations'))
 const StaffTails = lazy(() => import('./features/tails/pages/StaffTails'))
 const MyHours = lazy(() => import('./features/volunteers/pages/MyHours'))
 const StaffVolunteers = lazy(() => import('./features/volunteers/pages/StaffVolunteers'))
@@ -327,6 +328,7 @@ export default function App() {
           <Route path="volunteers" element={<Suspense fallback={null}><StaffVolunteers /></Suspense>} />
           <Route path="calls" element={<Suspense fallback={null}><StaffCalls /></Suspense>} />
           <Route path="calls/:id" element={<Suspense fallback={null}><StaffCallRoute /></Suspense>} />
+          <Route path="bunfest/bunnies" element={<Suspense fallback={null}><StaffBunnyRegistrations /></Suspense>} />
           <Route path="bunfest/start" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
           <Route path="bunfest/people" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />
           <Route path="bunfest/schedule" element={<Suspense fallback={null}><StaffBunfest /></Suspense>} />

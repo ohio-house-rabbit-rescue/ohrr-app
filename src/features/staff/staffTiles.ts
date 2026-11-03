@@ -159,6 +159,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       // Events and BunFest
       { to: '/staff/events', title: 'Events', hint: 'BunFest and OHRR hoppenings', icon: 'calendar', group: 'events', show: canEvents },
       { to: '/staff/bunfest', title: 'BunFest content', hint: 'Schedule, vendors, rescues', icon: 'star', group: 'events', show: canEvents },
+      { to: '/staff/bunfest/bunnies', title: 'Bunny registrations', hint: 'Who is bringing a bunny; check vaccine proof', icon: 'check', group: 'events', show: canEvents },
       { to: '/staff/raffle', title: 'Silent Auction', hint: 'Auction items, photos, won', icon: 'award', group: 'events', section: 'auction', show: canEvents },
       { to: '/staff/raffle?auction=online', title: 'Online Auction', hint: 'Its own items, one closing time, Square', icon: 'gavel', group: 'events', section: 'auction', show: canEvents },
       { to: '/staff/auction-desk', title: 'Auction desk', hint: 'Close and charge, pickup, shipping', icon: 'gavel', group: 'events', section: 'auction', show: canEvents },

@@ -4,6 +4,7 @@ import { useBunfestPage, reserveDay, reserveState } from '../features/bunfest/pa
 import { PageHeader, Screen, Card, Badge, SectionLabel, btn } from '../components/ui'
 import { ContactLinks } from '../components/ContactLinks'
 import { ReserveSession } from '../components/ReserveSession'
+import { RegisterBunnies } from '../components/RegisterBunnies'
 import { RaffleTickets } from '../components/RaffleTickets'
 import { RafflePrizes } from '../features/raffle/RafflePrizes'
 import { useAuctionSettings } from '../features/raffle/useRaffleItems'
@@ -127,6 +128,8 @@ export default function BunfestPage() {
         {p.feature === 'reserve' && p.reserve?.closedNote && reserve === 'closed' && (
           <ReserveNotice>{p.reserve.closedNote}</ReserveNotice>
         )}
+        {/* Register the rabbits you are bringing: next to the Spa and Glamour requests, and on Bringing Your Bunny */}
+        {(p.feature === 'reserve' || p.id === 'bringing-bunny') && <RegisterBunnies />}
         {/* Prizes staff scanned in (published raffle_prizes) */}
         {p.feature === 'raffle' && <RafflePrizes />}
         {/* Test feature — renders only while switched on in /staff/features */}
