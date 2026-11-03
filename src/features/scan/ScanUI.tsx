@@ -1,7 +1,8 @@
 // Building blocks for the scan flow, sized for someone who finds ordinary
 // forms hard: one question per screen, 60px+ targets, plain words, the main
 // button always in the same place at the bottom, Back always top-left.
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { ensureVisible } from '../../lib/bringIntoView'
 import { Icon, type IconName } from '../../components/icons'
 import { itemPhotos } from './api'
 import PhotoGallery from '../../components/PhotoGallery'
@@ -319,9 +320,26 @@ export function Stepper({ value, onChange, ariaLabel }: { value: number; onChang
 }
 
 export function ErrorBox({ children }: { children?: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const shown = typeof children === 'string' ? children : Boolean(children)
+  // An error that appears below the keyboard or off the screen is brought into view.
+  useEffect(() => {
+    if (shown) ensureVisible(ref.current)
+  }, [shown])
   if (!children) return null
   return (
-    <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[15px] font-semibold text-red-700">
+    <div ref={ref} role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[15px] font-semibold text-red-700">
+      {children}
+    </div>
+  )
+}
+
+/** A "saved" / "sent to print" note. It scrolls itself into view when it appears, so it isn't left below the keyboard. */
+export function StatusNote({ className, children }: { className: string; children?: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => ensureVisible(ref.current), [])
+  return (
+    <div ref={ref} role="status" className={className}>
       {children}
     </div>
   )

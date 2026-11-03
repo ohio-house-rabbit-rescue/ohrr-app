@@ -9,6 +9,8 @@ import { Spinner } from '../../components/staffui'
 import ExportButtons from '../../components/ExportButtons'
 import { todayStamp, type SheetSpec } from '../../lib/inventoryExport'
 import { itemPhotos, listItems } from './api'
+import { listBoxes, type Box } from './boxes'
+import { WaitingLabels, type BoxSheet } from './pages/Boxes'
 import { BigButton, ErrorBox, Part, StepShell } from './ScanUI'
 import { SHEET_COLUMNS, SIMPLE_COLUMNS, sheetRow, simpleRow } from './itemSheets'
 import { formatMoney, type TaggedItem } from './types'
@@ -21,6 +23,7 @@ export default function ReceivingSummary({
   session,
   onMore,
   onDone,
+  onBoxSheet,
 }: {
   orgId: string
   session: SessionItem[]
@@ -28,10 +31,14 @@ export default function ReceivingSummary({
   onMore: () => void
   /** Finished for today: the list starts again next time. */
   onDone: () => void
+  /** The box labels for the print dialog: the page shows them outside this screen, which is hidden when printing. */
+  onBoxSheet: (sheet: BoxSheet) => void
 }) {
   const navigate = useNavigate()
   const [items, setItems] = useState<TaggedItem[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // The boxes today's items went into, whole, for their labels (each lists what is in it).
+  const [boxes, setBoxes] = useState<Box[]>([])
 
   useEffect(() => {
     let alive = true
@@ -46,6 +53,22 @@ export default function ReceivingSummary({
       alive = false
     }
   }, [orgId, session])
+
+  const boxCodes = [...new Set((items ?? []).map((i) => i.box?.code).filter((c): c is string => !!c))].join(',')
+  useEffect(() => {
+    if (!boxCodes) {
+      setBoxes([])
+      return
+    }
+    let alive = true
+    const want = new Set(boxCodes.split(','))
+    listBoxes(orgId)
+      .then((rows) => alive && setBoxes(rows.filter((b) => want.has(b.code)).sort((a, b) => a.box_no - b.box_no)))
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [orgId, boxCodes])
 
   const made = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   const sheet = (): SheetSpec => ({
@@ -66,6 +89,10 @@ export default function ReceivingSummary({
   const { groups, totals } = summarize(items ?? [])
   const unprintedCodes = (items ?? []).filter((i) => !i.label_printed_at).map((i) => i.code)
   const letters = groups.filter((g) => !g.bought)
+  // Part letters follow what is on the screen: Labels, Box labels (only if boxes were used), Thank-you letters, Summary.
+  const partBoxes = boxes.length > 0 ? 'B' : null
+  const partLetters = letters.length > 0 ? (partBoxes ? 'C' : 'B') : null
+  const partSummary = String.fromCharCode(66 + (partBoxes ? 1 : 0) + (partLetters ? 1 : 0))
 
   return (
     <StepShell
@@ -121,9 +148,45 @@ export default function ReceivingSummary({
               </p>
             )}
 
+            {partBoxes && (
+              <>
+                <Part n={partBoxes} hint="print these last">
+                  Box labels
+                </Part>
+                <p className="text-[15px] text-slate-600">
+                  A box label lists what is in the box right now, so print it after everything for today is in. If you add to a box later, print it again from its page under Boxes.
+                </p>
+                <ul className="space-y-2">
+                  {boxes.map((b) => (
+                    <li key={b.code} className="rounded-2xl border-2 border-slate-200 bg-white px-4 py-3">
+                      <p className="font-display text-lg font-extrabold text-ink">
+                        Box {b.box_no}
+                        {b.name ? ` · ${b.name}` : ''} · {plural(b.items.length, 'item')}
+                      </p>
+                      <ul className="mt-1 space-y-0.5 text-[15px] text-slate-700">
+                        {b.items.map((i) => (
+                          <li key={i.code} className="truncate">
+                            <span className="font-mono text-sm text-slate-500">{i.code}</span> {i.title}
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+                <WaitingLabels
+                  key={boxCodes}
+                  compact
+                  orgId={orgId}
+                  boxes={boxes}
+                  setPrintImgs={onBoxSheet}
+                  onPrinted={() => undefined}
+                />
+              </>
+            )}
+
             {letters.length > 0 && (
               <>
-                <Part n="B">Thank-you letters</Part>
+                <Part n={partLetters ?? 'B'}>Thank-you letters</Part>
                 <p className="text-[15px] text-slate-600">One letter for each donor, with everything they brought today.</p>
                 <div className="space-y-2">
                   {letters.map((g) =>
@@ -156,7 +219,7 @@ export default function ReceivingSummary({
               </>
             )}
 
-            <Part n={letters.length > 0 ? 'C' : 'B'}>Print or send the summary</Part>
+            <Part n={partSummary}>Print or send the summary</Part>
             <p className="text-[15px] text-slate-600">
               The summary is a PDF with the totals, who it came from and every item with its photo. The spreadsheets are the one-page list and the full one.
             </p>

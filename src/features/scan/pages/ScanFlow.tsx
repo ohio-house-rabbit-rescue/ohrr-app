@@ -37,7 +37,7 @@ import {
   splitDonation,
   uploadItemPhoto,
 } from '../api'
-import { BigButton, BigInput, Busy, ErrorBox, ItemCard, KindTile, MoneyInput, StepShell, Stepper } from '../ScanUI'
+import { BigButton, BigInput, Busy, ErrorBox, ItemCard, KindTile, MoneyInput, StatusNote, StepShell, Stepper } from '../ScanUI'
 import { StepButton, pill } from '../../../components/StaffJob'
 import {
   CostFields,
@@ -581,14 +581,14 @@ export default function ScanFlow() {
             </div>
           )}
           {note && (
-            <div role="status" className="flex flex-wrap items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-[15px] text-green-900">
+            <StatusNote key={note.text} className="flex flex-wrap items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-[15px] text-green-900">
               <span className="min-w-0 flex-1">{note.text}</span>
               {note.code && (
                 <Link to={`/staff/labels?code=${encodeURIComponent(note.code)}`} className={pill.blue}>
                   <Icon name="printer" size={16} /> Print its label
                 </Link>
               )}
-            </div>
+            </StatusNote>
           )}
           {item.kind === 'donation' && item.in_basket && (
             <button

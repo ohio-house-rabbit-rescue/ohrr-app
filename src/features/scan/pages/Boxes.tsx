@@ -11,7 +11,7 @@ import { Screen } from '../../../components/ui'
 import { Spinner } from '../../../components/staffui'
 import { isNative } from '../../../native/platform'
 import { shareFileNative } from '../../../native/share'
-import { BigButton, ErrorBox } from '../ScanUI'
+import { BigButton, ErrorBox, StatusNote } from '../ScanUI'
 import { labelDataUrl, labelsPdf, type LabelSize } from '../labels'
 import LabelSizeLine from '../LabelSizeLine'
 import { useCopies } from '../copies'
@@ -110,9 +110,9 @@ export default function Boxes() {
         </div>
 
         {saved && (
-          <div role="status" className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-base font-bold text-green-900">
+          <StatusNote key={saved} className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-base font-bold text-green-900">
             <Icon name="check" size={20} /> Saved: {saved}
-          </div>
+          </StatusNote>
         )}
 
         {waiting.length > 0 && <WaitingLabels orgId={orgId} boxes={waiting} setPrintImgs={setSheet} onPrinted={(codes) => {

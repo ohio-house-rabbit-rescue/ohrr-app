@@ -52,11 +52,50 @@ interface View {
   show: Show
   sub: Sub
   q: string
+  when?: When
+  what?: What
+  order?: Order
+}
+
+// Find an item: narrow the whole list by when it came in and what it is, and choose the order.
+type When = 'all' | 'today' | 'week' | 'month'
+type What = 'all' | 'donation' | 'bought' | 'events' | 'shop'
+type Order = 'newest' | 'oldest' | 'name'
+const WHENS: { key: When; label: string; days: number }[] = [
+  { key: 'all', label: 'Any time', days: 0 },
+  { key: 'today', label: 'Today', days: 1 },
+  { key: 'week', label: 'Last 7 days', days: 7 },
+  { key: 'month', label: 'Last 30 days', days: 30 },
+]
+const WHATS: { key: What; label: string }[] = [
+  { key: 'all', label: 'Everything' },
+  { key: 'donation', label: 'Donations' },
+  { key: 'bought', label: 'Bought' },
+  { key: 'events', label: 'Auction & raffle' },
+  { key: 'shop', label: 'Shop stock' },
+]
+const ORDERS: { key: Order; label: string }[] = [
+  { key: 'newest', label: 'Newest first' },
+  { key: 'oldest', label: 'Oldest first' },
+  { key: 'name', label: 'A to Z' },
+]
+/** The day an item came in: a donation's received day, else the day its record was made. */
+function enteredAt(i: TaggedItem): number {
+  const d = i.received_on ? new Date(`${i.received_on.slice(0, 10)}T00:00:00`) : new Date(i.created_at)
+  const t = d.getTime()
+  return Number.isNaN(t) ? 0 : t
+}
+function whatMatches(i: TaggedItem, what: What): boolean {
+  if (what === 'all') return true
+  if (what === 'events') return i.kind === 'auction' || i.kind === 'raffle'
+  if (what === 'shop') return i.kind === 'stock'
+  if (what === 'bought') return i.kind === 'donation' && i.source === 'purchase'
+  return i.kind === 'donation' && i.source !== 'purchase'
 }
 const defaultSub = (show: Show): Sub => (show === 'sort' ? 'unsure' : 'waiting')
 
 function loadView(): View {
-  const fallback: View = { show: 'sort', sub: 'unsure', q: '' }
+  const fallback: View = { show: 'sort', sub: 'unsure', q: '', when: 'all', what: 'all', order: 'newest' }
   try {
     const v = JSON.parse(sessionStorage.getItem(VIEW_KEY) ?? 'null') as Partial<View> | null
     if (!v) return fallback
@@ -64,6 +103,9 @@ function loadView(): View {
       show: SHOWS.includes(v.show as Show) ? (v.show as Show) : fallback.show,
       sub: SUB_KEYS.includes(v.sub as Sub) ? (v.sub as Sub) : fallback.sub,
       q: typeof v.q === 'string' ? v.q : '',
+      when: WHENS.some((w) => w.key === v.when) ? v.when : 'all',
+      what: WHATS.some((w) => w.key === v.what) ? v.what : 'all',
+      order: ORDERS.some((o) => o.key === v.order) ? v.order : 'newest',
     }
   } catch {
     return fallback
@@ -330,6 +372,10 @@ function ItemsListView({
   const filter = show === 'sort' ? 'donation' : show === 'events' ? 'event' : 'all'
   const [sub, setSub] = useState<Sub>(start?.sub ?? defaultSub(show))
   const [q, setQ] = useState(start?.q ?? '')
+  const [when, setWhen] = useState<When>(start?.when ?? 'all')
+  const [what, setWhat] = useState<What>(start?.what ?? 'all')
+  const [order, setOrder] = useState<Order>(start?.order ?? 'newest')
+  const [narrowOpen, setNarrowOpen] = useState(false)
   const [note, setNote] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
@@ -338,17 +384,35 @@ function ItemsListView({
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [basket, setBasket] = useState({ title: '', kind: 'raffle' as 'raffle' | 'auction', description: '' })
   const canBasket = can('events.bunfest.manage')
-  useEffect(() => saveView({ show, sub, q }), [show, sub, q])
+  useEffect(() => saveView({ show, sub, q, when, what, order }), [show, sub, q, when, what, order])
 
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase()
-    return (items ?? []).filter(
+    const days = WHENS.find((w) => w.key === when)?.days ?? 0
+    const since = new Date()
+    since.setHours(0, 0, 0, 0)
+    since.setDate(since.getDate() - (days - 1))
+    const find = show === 'all'
+    const rows = (items ?? []).filter(
       (i) =>
         (filter === 'all' || (filter === 'event' ? i.kind === 'auction' || i.kind === 'raffle' : i.kind === 'donation')) &&
         (filter !== 'donation' || subMatch(i, picking ? 'waiting' : sub)) &&
-        (!needle || i.title.toLowerCase().includes(needle) || i.code.toLowerCase().includes(needle) || (i.donated_by ?? '').toLowerCase().includes(needle)),
+        (!find || (whatMatches(i, what) && (!days || enteredAt(i) >= since.getTime()))) &&
+        (!needle ||
+          i.title.toLowerCase().includes(needle) ||
+          i.code.toLowerCase().includes(needle) ||
+          (i.donated_by ?? '').toLowerCase().includes(needle) ||
+          // Find an item also looks at who it was bought from, where it's kept and the box it's in.
+          (find &&
+            [i.bought_from, i.location, i.category, i.box ? `box ${i.box.box_no} ${i.box.code} ${i.box.name ?? ''}` : '']
+              .some((t) => (t ?? '').toLowerCase().includes(needle)))),
     )
-  }, [items, filter, sub, q, picking])
+    if (find) {
+      if (order === 'name') rows.sort((a, b) => a.title.localeCompare(b.title))
+      else rows.sort((a, b) => (order === 'oldest' ? enteredAt(a) - enteredAt(b) : enteredAt(b) - enteredAt(a)))
+    }
+    return rows
+  }, [items, filter, sub, q, picking, show, when, what, order])
 
   const pickedItems = (items ?? []).filter((i) => picked.has(i.code))
   const pickedValue = pickedItems.reduce((sum, i) => sum + (donationValues(i).total ?? 0), 0)
@@ -448,7 +512,7 @@ function ItemsListView({
           </p>
         )}
         {show === 'events' && <p>The auction lots and raffle prizes that have a code. Tap one to update it.</p>}
-        {show === 'all' && <p>Everything with a code. Type a name, code or donor to find it, or tap Scan and point the camera at its tag.</p>}
+        {show === 'all' && <p>Everything with a code. Search by name, code, donor or box, or narrow the list by when it came in and what it is. Or tap Scan and point the camera at its tag.</p>}
       </StaffTitle>
       {banner}
 
@@ -534,11 +598,75 @@ function ItemsListView({
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by name, code or donor"
+          placeholder={show === 'all' ? 'Search name, code, donor, box or place' : 'Search by name, code or donor'}
           aria-label="Search items"
           className="w-full rounded-2xl border-2 border-slate-200 bg-white py-3 pl-11 pr-4 text-base text-ink outline-none focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15"
         />
       </div>
+
+      {show === 'all' && (
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3">
+          <button
+            type="button"
+            onClick={() => setNarrowOpen((o) => !o)}
+            aria-expanded={narrowOpen}
+            className="flex min-h-[48px] w-full items-center gap-3 text-left"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block font-display text-base font-extrabold text-ink">Narrow or sort the list</span>
+              <span className="block truncate text-sm text-slate-600">
+                {WHENS.find((w) => w.key === when)?.label} · {WHATS.find((w) => w.key === what)?.label} · {ORDERS.find((o) => o.key === order)?.label}
+              </span>
+            </span>
+            <Icon name="chevron" size={18} className={`shrink-0 text-slate-400 transition ${narrowOpen ? 'rotate-90' : ''}`} />
+          </button>
+          {narrowOpen && (
+          <>
+          <div>
+            <p className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Came in</p>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="When it came in">
+              {WHENS.map((w) => (
+                <button key={w.key} type="button" onClick={() => setWhen(w.key)} aria-pressed={when === w.key} className={chip(when === w.key)}>
+                  {w.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">What it is</p>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="What it is">
+              {WHATS.map((w) => (
+                <button key={w.key} type="button" onClick={() => setWhat(w.key)} aria-pressed={what === w.key} className={chip(what === w.key)}>
+                  {w.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Order</p>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Order">
+              {ORDERS.map((o) => (
+                <button key={o.key} type="button" onClick={() => setOrder(o.key)} aria-pressed={order === o.key} className={chip(order === o.key)}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          </>
+          )}
+          <p className="text-[15px] text-slate-600">
+            {items ? `${shown.length} of ${items.length} shown. ` : ''}
+            Looking for a delivery or a drop-off?{' '}
+            <Link to="/staff/hopshop/deliveries" className="font-bold text-brand-blue">
+              Hop Shop deliveries
+            </Link>{' '}
+            ·{' '}
+            <Link to="/staff/dropoffs" className="font-bold text-brand-blue">
+              Drop-offs
+            </Link>
+          </p>
+        </div>
+      )}
 
       <ErrorBox>{error}</ErrorBox>
       {note && (
@@ -554,8 +682,10 @@ function ItemsListView({
             ? 'Nothing added yet.'
             : q.trim()
               ? 'Nothing matches that.'
-              : show === 'sort' && sub === 'unsure'
-                ? 'Nothing is waiting for a decision.'
+              : show === 'all' && (when !== 'all' || what !== 'all')
+                ? 'Nothing matches those choices. Try Any time or Everything.'
+                : show === 'sort' && sub === 'unsure'
+                  ? 'Nothing is waiting for a decision.'
                 : show === 'sort' && sub === 'done'
                   ? 'Nothing is done yet.'
                   : show === 'sort' && sub !== 'waiting'

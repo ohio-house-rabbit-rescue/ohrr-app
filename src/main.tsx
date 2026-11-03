@@ -5,11 +5,13 @@ import { applyTextSize } from './lib/textSize'
 import { isNative } from './native/platform'
 import { loadCurrentEvent } from './lib/currentEvent'
 import { keepFieldVisible } from './lib/keepFieldVisible'
+import { keyboardAwayOnButtons } from './lib/bringIntoView'
 import './index.css'
 
 // The reader's text-size choice, before anything renders.
 applyTextSize()
 keepFieldVisible()
+keyboardAwayOnButtons()
 
 // The offline cache (public/sw.js): the app — and the Counter and Door — keep
 // opening on a phone with no signal. Web only; the phone apps carry their

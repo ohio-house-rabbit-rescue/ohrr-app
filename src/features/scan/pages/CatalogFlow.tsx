@@ -42,6 +42,7 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'reac
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
+import { bringIntoView, putKeyboardAway } from '../../../lib/bringIntoView'
 import { Icon } from '../../../components/icons'
 import { isNative } from '../../../native/platform'
 import { pickPhoto } from '../../../native/camera'
@@ -169,7 +170,7 @@ interface Saved {
   /** It stayed a donation headed for the auction, or its prices didn't save: why. */
   auctionNote?: string
   /** Put in the box being filled: its number and how many are in it now. */
-  inBox?: { no: number; count: number | null }
+  inBox?: { no: number; count: number | null; code: string }
   /** It was meant for the box being filled and didn't go in: why. */
   boxNote?: string
   /** Its label went to the Bluetooth printer. */
@@ -356,6 +357,8 @@ export default function CatalogFlow() {
   // Plain Receive (not the box job): the box this item goes in, if any (part E), kept for the next items too.
   const [plainBox, setPlainBox] = useState<{ code: string; box_no: number; location: string | null; count: number } | null>(null)
   const [pickingBox, setPickingBox] = useState(false)
+  // The box the item just saved went into, whole (its items), for the box label on the Saved screen.
+  const [savedBox, setSavedBox] = useState<Box | null>(null)
   // Where the box being filled is kept (asked when it's started; its items are kept there too).
   const [boxPlace, setBoxPlace] = useState('')
   const setBox = (b: PackingBox | null) => {
@@ -410,6 +413,10 @@ export default function CatalogFlow() {
   const namePartRef = useRef<HTMLDivElement>(null)
   const boxPartRef = useRef<HTMLDivElement>(null)
   const savePartRef = useRef<HTMLDivElement>(null)
+  // Plain Receive: the label part of the Saved screen, and the pick-a-box panel; each is brought into view when it opens.
+  const labelPartRef = useRef<HTMLDivElement>(null)
+  const pickBoxRef = useRef<HTMLDivElement>(null)
+  const chooseBoxRef = useRef<HTMLDivElement>(null)
   // What was saved last, kept so a failed save can put it back on the screen.
   const lastDraft = useRef<Draft | null>(null)
   const lastShots = useRef<Shot[]>([])
@@ -498,6 +505,42 @@ export default function CatalogFlow() {
       live = false
     }
   }, [ending, orgId, endReload])
+
+  // Once the print dialog closes the box labels are cleared, so nothing printed later is sized 4 x 6 or carries them.
+  useEffect(() => {
+    const clear = () => setEndSheet(null)
+    window.addEventListener('afterprint', clear)
+    return () => window.removeEventListener('afterprint', clear)
+  }, [])
+  // The Saved screen (plain Receive) shows the box the item went into with everything now in it, for its label.
+  const savedBoxCode = !wantsBoxes && saved?.phase === 'saved' ? saved.inBox?.code : undefined
+  const savedItemCode = saved?.item?.code
+  useEffect(() => {
+    if (!orgId || !savedBoxCode) {
+      setSavedBox(null)
+      return
+    }
+    let live = true
+    boxByCode(orgId, savedBoxCode)
+      .then((b) => live && setSavedBox(b))
+      .catch(() => undefined)
+    return () => {
+      live = false
+    }
+  }, [orgId, savedBoxCode, savedItemCode])
+  // Saved: the label buttons come to the middle of the screen and the keyboard is put away.
+  useEffect(() => {
+    if (!wantsBoxes && step === 'saved' && saved?.phase === 'saved') bringIntoView(labelPartRef.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantsBoxes, step, saved?.phase, savedItemCode])
+  // "Not in a box — tap to put it in one": the panel opens at its top, with Start a new box on screen.
+  useEffect(() => {
+    if (pickingBox) bringIntoView(pickBoxRef.current, { align: 'top' })
+  }, [pickingBox])
+  // Box job, "Use a different box": the panel opens at its top, with Start a new box on screen.
+  useEffect(() => {
+    if (changingBox) bringIntoView(chooseBoxRef.current, { align: 'top' })
+  }, [changingBox])
 
   /** Plain Receive, part E: this item (and the next ones) go in this box. Its place becomes where the item is kept. */
   const choosePlainBox = (b: Box) => {
@@ -751,6 +794,8 @@ export default function CatalogFlow() {
     const packing = wantsBoxes ? box : plainBox
     const bag = bagKey(snap.source, current?.donor ?? '', current?.date ?? todayIso(), snap.boughtFrom)
     voice.stop()
+    // The keyboard goes away with Save, so what comes next isn't left behind it.
+    putKeyboardAway()
     setError(null)
     const waiting = list.some((s) => !s.url)
     lastDraft.current = snap
@@ -825,7 +870,7 @@ export default function CatalogFlow() {
           try {
             const r = await putInBox(orgId, packing.code, [item.code])
             const count = r.box ? r.box.items.length : null
-            inBox = { no: packing.box_no, count }
+            inBox = { no: packing.box_no, count, code: packing.code }
             if (count != null) setBoxCount(count)
             if (!wantsBoxes) setPlainBox((pb) => (pb && pb.code === packing.code ? { ...pb, count: count ?? pb.count + 1 } : pb))
             item = { ...item, box: { code: packing.code, box_no: packing.box_no, location: r.box?.location ?? null } }
@@ -1251,10 +1296,15 @@ export default function CatalogFlow() {
               </div>
             )}
             {choosing && (
-              <div className="space-y-3 rounded-2xl border-2 border-slate-200 bg-white p-4">
+              <div ref={chooseBoxRef} className="space-y-3 rounded-2xl border-2 border-slate-200 bg-white p-4">
+                {/* The new-box button comes first and stays put: the boxes already started load in under it. */}
+                <LocationField v={{ location: boxPlace }} set={(p) => setBoxPlace(p.location ?? '')} places={suggestions.locations} label="Where will this box be kept?" />
+                <BigButton onClick={() => void startBox()} disabled={boxBusy} icon="box">
+                  {boxBusy ? 'Starting the box…' : 'Start a new box'}
+                </BigButton>
                 {others.length > 0 && (
                   <>
-                    <p className="text-base font-bold text-ink">Put it in a box you started</p>
+                    <p className="text-base font-bold text-ink">Or put it in a box you started</p>
                     <ul className="space-y-2">
                       {others.map((b) => (
                         <li key={b.code}>
@@ -1273,13 +1323,8 @@ export default function CatalogFlow() {
                         </li>
                       ))}
                     </ul>
-                    <p className="text-base font-bold text-ink">Or start a new one</p>
                   </>
                 )}
-                <LocationField v={{ location: boxPlace }} set={(p) => setBoxPlace(p.location ?? '')} places={suggestions.locations} label="Where will this box be kept?" />
-                <BigButton onClick={() => void startBox()} disabled={boxBusy} icon="box">
-                  {boxBusy ? 'Starting the box…' : 'Start a new box'}
-                </BigButton>
                 {box && (
                   <button type="button" onClick={() => setChangingBox(false)} className="min-h-[44px] w-full text-base font-bold text-brand-blue">
                     Never mind — stay with Box {box.box_no}
@@ -1314,7 +1359,7 @@ export default function CatalogFlow() {
     )
   } else
   if (step === 'summary') {
-    screen = <ReceivingSummary orgId={orgId} session={session.items} onMore={() => setStep('start')} onDone={doneForToday} />
+    screen = <ReceivingSummary orgId={orgId} session={session.items} onMore={() => setStep('start')} onDone={doneForToday} onBoxSheet={setEndSheet} />
   } else if (step === 'start') {
     screen = (
       <StepShell
@@ -1544,6 +1589,7 @@ export default function CatalogFlow() {
             </div>
           )}
           {/* OHRR 2026-10-27: the label step shows its parts in the screen, like the others. */}
+          <div ref={labelPartRef} className="space-y-4">
           <Part n="A">{s.auction ? 'Print its bid-sheet label' : 'Print its label'}</Part>
           <LabelSizeLine title="Labels" size={labelSize} onChange={chooseItemSize} copies={itemCopies} onCopies={setItemCopies} />
           {btLabel && s.item && (
@@ -1568,6 +1614,7 @@ export default function CatalogFlow() {
             </BigButton>
           )}
           {!done && s.phase !== 'failed' && <p className="text-[15px] text-slate-500">Its label is ready once it’s saved.</p>}
+          </div>
           {done && (
             <p className="text-sm text-slate-500">
               Or print it later with the rest —{' '}
@@ -1580,6 +1627,36 @@ export default function CatalogFlow() {
             <p role="status" className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-[15px] font-bold text-green-800">
               <Icon name="check" size={18} className="shrink-0" /> {s.printed}
             </p>
+          )}
+          {done && s.inBox && savedBox && (
+            <>
+              <Part n="B" hint="when this donation is all in">
+                Print the box label
+              </Part>
+              <div className="space-y-3 rounded-2xl border-2 border-brand-orange bg-brand-orange-50 p-4">
+                <p className="font-display text-lg font-extrabold text-ink">
+                  Box {savedBox.box_no} · {savedBox.items.length} item{savedBox.items.length === 1 ? '' : 's'} in it
+                </p>
+                <ul className="space-y-0.5 text-[15px] text-slate-700">
+                  {savedBox.items.map((i) => (
+                    <li key={i.code} className="truncate">
+                      <span className="font-mono text-sm text-slate-500">{i.code}</span> {i.title}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-sm text-slate-600">
+                  The box label lists what is in the box right now. Save the rest of this donation first, then print it last. If you add to the box later, print it again from its page under Boxes.
+                </p>
+                <WaitingLabels
+                  key={`${savedBox.code}-${savedBox.items.length}`}
+                  compact
+                  orgId={orgId}
+                  boxes={[savedBox]}
+                  setPrintImgs={setEndSheet}
+                  onPrinted={() => undefined}
+                />
+              </div>
+            </>
           )}
           {done && s.auctionNote && (
             <div role="status" className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
@@ -1633,7 +1710,7 @@ export default function CatalogFlow() {
           */}
           {done && !wantsBoxes && s.item?.source !== 'purchase' && (
             <>
-              <Part n="B" hint="now or at the end">
+              <Part n={s.inBox ? 'C' : 'B'} hint="now or at the end">
                 Thank-you letter
               </Part>
               <Link
@@ -1744,11 +1821,18 @@ export default function CatalogFlow() {
               </button>
             )}
             {pickingBox && (
-              <div className="space-y-3 rounded-2xl border-2 border-slate-200 bg-white p-4">
-                {recentBoxes === null && <p className="text-[15px] text-slate-500">Looking for your boxes…</p>}
+              <div ref={pickBoxRef} className="space-y-3 rounded-2xl border-2 border-slate-200 bg-white p-4">
+                {/* The new-box button comes first and stays put: the boxes already started load in under it. */}
+                <p className="text-[15px] text-slate-600">
+                  {draft.location.trim() ? `A new box will be kept at ${draft.location.trim()}.` : 'Say where it’s kept above first, and a new box is kept there.'}
+                </p>
+                <BigButton onClick={() => void startPlainBox()} disabled={boxBusy} icon="box">
+                  {boxBusy ? 'Starting the box…' : 'Start a new box'}
+                </BigButton>
+                {recentBoxes === null && <p className="text-[15px] text-slate-500">Looking for the boxes you started…</p>}
                 {recentBoxes && recentBoxes.length > 0 && (
                   <>
-                    <p className="text-base font-bold text-ink">Put it in a box you started</p>
+                    <p className="text-base font-bold text-ink">Or put it in a box you started</p>
                     <ul className="space-y-2">
                       {recentBoxes.map((b) => (
                         <li key={b.code}>
@@ -1767,15 +1851,8 @@ export default function CatalogFlow() {
                         </li>
                       ))}
                     </ul>
-                    <p className="text-base font-bold text-ink">Or start a new one</p>
                   </>
                 )}
-                <p className="text-[15px] text-slate-600">
-                  {draft.location.trim() ? `The new box will be kept at ${draft.location.trim()}.` : 'Say where it’s kept above first, and the new box is kept there.'}
-                </p>
-                <BigButton onClick={() => void startPlainBox()} disabled={boxBusy} icon="box">
-                  {boxBusy ? 'Starting the box…' : 'Start a new box'}
-                </BigButton>
                 <button type="button" onClick={() => setPickingBox(false)} className="min-h-[44px] w-full text-base font-bold text-brand-blue">
                   Never mind
                 </button>
@@ -1867,7 +1944,7 @@ export default function CatalogFlow() {
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} aria-label="Take a photo" />
       <input ref={libraryRef} type="file" accept="image/*" className="hidden" onChange={onFile} aria-label="Choose a photo" />
       <div className="print:hidden">{screen}</div>
-      {(ending || closedBox) && <BoxPrintSheet sheet={endSheet} />}
+      {(ending || closedBox || endSheet) && <BoxPrintSheet sheet={endSheet} />}
     </>
   )
 }

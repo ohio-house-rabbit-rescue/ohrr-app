@@ -13,7 +13,7 @@ import { Icon } from '../../../components/icons'
 import { isNative } from '../../../native/platform'
 import { pickPhoto } from '../../../native/camera'
 import { MAX_ITEM_PHOTOS, dataUrlToBlob, findByCode, itemPhotos, setItemPhotos, uploadItemPhoto } from '../api'
-import { BigButton, Busy, ErrorBox, StepShell } from '../ScanUI'
+import { BigButton, Busy, ErrorBox, StatusNote, StepShell } from '../ScanUI'
 import type { TaggedItem } from '../types'
 import { Explain } from '../../../components/StaffTitle'
 
@@ -137,9 +137,9 @@ export default function ItemPhotos() {
         <div className="space-y-4">
           <ErrorBox>{error}</ErrorBox>
           {saved && !busy && (
-            <div role="status" className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-base font-bold text-green-900">
+            <StatusNote key={saved} className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-base font-bold text-green-900">
               <Icon name="check" size={20} /> {saved}
-            </div>
+            </StatusNote>
           )}
           {item === 'loading' ? (
             <Busy label="Finding the item…" />
