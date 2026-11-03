@@ -10,6 +10,8 @@ import { EditorForm, Field, Part, pill } from '../../../components/StaffJob'
 import { hoursTotalForYear } from '../../bookings/api'
 import { IMPACT_FIELDS, deleteImpact, listImpact, saveImpact, type ImpactYear } from '../api'
 import { StaffTitle } from '../../../components/StaffTitle'
+import { StatusNote } from '../../scan/ScanUI'
+import { putKeyboardAway } from '../../../lib/bringIntoView'
 
 type Draft = { fields: Record<string, string>; highlights: string; note: string; is_published: boolean }
 
@@ -31,6 +33,8 @@ export default function StaffImpact() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
+  // The answer to "Use the Hours tab", shown right under that button.
+  const [hoursMsg, setHoursMsg] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -53,6 +57,7 @@ export default function StaffImpact() {
 
   const save = async () => {
     if (!d) return
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     setMsg(null)
@@ -83,7 +88,7 @@ export default function StaffImpact() {
     try {
       const h = await hoursTotalForYear(orgId, year)
       setD((x) => (x ? { ...x, fields: { ...x.fields, volunteer_hours: String(Math.round(h)) } } : x))
-      setMsg(`Volunteer hours from the Hours tab for ${year}: ${Math.round(h)}.`)
+      setHoursMsg(`Volunteer hours from the Hours tab for ${year}: ${Math.round(h)}.`)
     } catch (e) {
       setError(errMessage(e))
     }
@@ -109,6 +114,7 @@ export default function StaffImpact() {
               onClick={() => {
                 setYear(y)
                 setMsg(null)
+                setHoursMsg(null)
                 setError(null)
               }}
               className={`min-h-[44px] rounded-full px-4 text-[15px] font-bold ${year === y ? 'bg-brand-blue text-white' : 'border border-slate-200 bg-white text-slate-700'}`}
@@ -132,7 +138,10 @@ export default function StaffImpact() {
               ? {
                   label: `Remove ${year}`,
                   confirm: `Delete the ${year} numbers?`,
-                  onRemove: () => deleteImpact(orgId, year).then(load).then(() => undefined).catch((e) => setError(errMessage(e))),
+                  onRemove: () => deleteImpact(orgId, year)
+                    .then(load)
+                    .then(() => setMsg(`Removed the ${year} numbers.`))
+                    .catch((e) => setError(errMessage(e))),
                 }
               : undefined
           }
@@ -147,9 +156,16 @@ export default function StaffImpact() {
                   <input className={staffInput} inputMode="decimal" value={d.fields[f.key]} onChange={(e) => setD({ ...d, fields: { ...d.fields, [f.key]: e.target.value } })} placeholder={f.money ? '12500' : ''} />
                 </Field>
                 {f.key === 'volunteer_hours' && (
-                  <button type="button" onClick={() => void pullHours()} className={pill.soft}>
-                    Use the Hours tab
-                  </button>
+                  <>
+                    <button type="button" onClick={() => void pullHours()} className={pill.soft}>
+                      Use the Hours tab
+                    </button>
+                    {hoursMsg && (
+                      <StatusNote key={hoursMsg} className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
+                        {hoursMsg}
+                      </StatusNote>
+                    )}
+                  </>
                 )}
               </div>
             ))}
@@ -176,7 +192,11 @@ export default function StaffImpact() {
               Show this year publicly
             </label>
           </div>
-          {msg && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{msg}</p>}
+          {msg && (
+            <StatusNote key={msg} className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
+              {msg}
+            </StatusNote>
+          )}
         </EditorForm>
       )}
     </Screen>

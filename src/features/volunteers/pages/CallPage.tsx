@@ -8,12 +8,13 @@
 //
 // A call can be for approved volunteers only (update 25): then the page asks
 // for the email they applied with before showing the sign-up form.
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { errMessage } from '../../../lib/supabase'
 import { mapsUrl } from '../../../lib/events'
 import { PageHeader, Screen, Card, SectionLabel, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
+import { ensureVisible, putKeyboardAway } from '../../../lib/bringIntoView'
 import { downloadBookingIcs } from '../../bookings/calendar'
 import { rememberBooking } from '../../bookings/mine'
 import type { BookingReceipt, BookingType } from '../../bookings/types'
@@ -188,6 +189,17 @@ function Fact({ icon, label, value }: { icon: 'calendar' | 'mappin' | 'users' | 
   )
 }
 
+/** A message in the form that scrolls itself into view when it appears, so it isn't left below the keyboard or off the screen. */
+function FormMsg({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLParagraphElement>(null)
+  useEffect(() => ensureVisible(ref.current), [])
+  return (
+    <p ref={ref} role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-base font-semibold text-red-700">
+      {children}
+    </p>
+  )
+}
+
 function SignUpForm({
   call,
   source,
@@ -209,6 +221,15 @@ function SignUpForm({
   const [attested, setAttested] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Where the message shows: next to the part that needs fixing, so it is the thing they see.
+  const [errorAt, setErrorAt] = useState<'shifts' | 'area' | 'end'>('end')
+  const [errorTick, setErrorTick] = useState(0)
+  const fail = (msg: string, at: 'shifts' | 'area' | 'end' = 'end') => {
+    putKeyboardAway()
+    setError(msg)
+    setErrorAt(at)
+    setErrorTick((t) => t + 1)
+  }
 
   const pickedHours = useMemo(
     () =>
@@ -223,9 +244,9 @@ function SignUpForm({
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
-    if (picked.length === 0) return setError('Pick at least one shift.')
-    if (call.areas.length > 0 && !area) return setError('Pick where you’d like to help.')
-    if (call.requirements && !attested) return setError('Please confirm you’ve read what’s needed.')
+    if (picked.length === 0) return fail('Pick at least one shift.', 'shifts')
+    if (call.areas.length > 0 && !area) return fail('Pick where you’d like to help.', 'area')
+    if (call.requirements && !attested) return fail('Please confirm you’ve read what’s needed.')
     setBusy(true)
     try {
       const r = await signUpForCall({
@@ -242,7 +263,7 @@ function SignUpForm({
       })
       onDone(r)
     } catch (err) {
-      setError(errMessage(err))
+      fail(errMessage(err))
       setBusy(false)
     }
   }
@@ -251,6 +272,7 @@ function SignUpForm({
     <form onSubmit={submit} className="space-y-5">
       <section className="space-y-2.5">
         <SectionLabel>1 · Pick your shift{shifts.length > 1 ? 's' : ''}</SectionLabel>
+        {error && errorAt === 'shifts' && <FormMsg key={errorTick}>{error}</FormMsg>}
         {shifts.length > 1 && (
           <p className="px-1 text-sm text-slate-600">
             Shifts are {lengthText(call.shift_minutes)} long — pick as many as you’d like.
@@ -295,6 +317,7 @@ function SignUpForm({
       {call.areas.length > 0 && (
         <section className="space-y-2.5">
           <SectionLabel>2 · Where you’d like to help</SectionLabel>
+          {error && errorAt === 'area' && <FormMsg key={errorTick}>{error}</FormMsg>}
           <div className="flex flex-wrap gap-2">
             {call.areas.map((a) => (
               <button
@@ -388,7 +411,7 @@ function SignUpForm({
         </Card>
       )}
 
-      {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-base font-semibold text-red-700">{error}</p>}
+      {error && errorAt === 'end' && <FormMsg key={errorTick}>{error}</FormMsg>}
 
       <button type="submit" disabled={busy} className={`${btn.primary} w-full !py-4 text-lg disabled:opacity-60`}>
         {busy ? 'Signing you up…' : 'Sign me up'}
@@ -410,6 +433,12 @@ function Done({ call, result }: { call: Call; result: SignUpResult }) {
     ends_at: s.ends_at,
     party_size: 1,
   }))
+
+  // The form was long: start the thank-you at the top, not wherever the Sign me up button was.
+  useEffect(() => {
+    putKeyboardAway()
+    window.scrollTo({ top: 0 })
+  }, [])
 
   // Keep them on this phone, beside any other bookings.
   useEffect(() => {

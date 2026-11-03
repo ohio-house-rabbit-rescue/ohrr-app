@@ -10,7 +10,7 @@ import ExportButtons from '../../components/ExportButtons'
 import { todayStamp, type SheetSpec } from '../../lib/inventoryExport'
 import { itemPhotos, listItems } from './api'
 import { listBoxes, type Box } from './boxes'
-import { WaitingLabels, type BoxSheet } from './pages/Boxes'
+import { BoxNameEditor, WaitingLabels, type BoxSheet } from './pages/Boxes'
 import { BigButton, ErrorBox, Part, StepShell } from './ScanUI'
 import { SHEET_COLUMNS, SIMPLE_COLUMNS, sheetRow, simpleRow } from './itemSheets'
 import { formatMoney, type TaggedItem } from './types'
@@ -150,11 +150,11 @@ export default function ReceivingSummary({
 
             {partBoxes && (
               <>
-                <Part n={partBoxes} hint="print these last">
+                <Part n={partBoxes} hint="print once">
                   Box labels
                 </Part>
                 <p className="text-[15px] text-slate-600">
-                  A box label lists what is in the box right now, so print it after everything for today is in. If you add to a box later, print it again from its page under Boxes.
+                  A box label has the box’s name and number only, so it stays right however many items you add. The list below is what is in each box now.
                 </p>
                 <ul className="space-y-2">
                   {boxes.map((b) => (
@@ -170,6 +170,7 @@ export default function ReceivingSummary({
                           </li>
                         ))}
                       </ul>
+                      <BoxNameEditor orgId={orgId} box={b} onSaved={(nb) => setBoxes((all) => all.map((x) => (x.code === nb.code ? { ...x, ...nb, items: x.items } : x)))} />
                     </li>
                   ))}
                 </ul>

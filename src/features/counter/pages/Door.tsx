@@ -9,10 +9,11 @@
 //
 // Works with no signal: the ticket list lives on the phone, and every entry
 // waits there until it can be sent (see door.ts).
-import { Suspense, lazy, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { Icon } from '../../../components/icons'
+import { bringIntoView } from '../../../lib/bringIntoView'
 import { BigButton, BigInput, StepShell, Stepper } from '../../scan/ScanUI'
 import { clock, getDevice, money, newId } from '../local'
 import {
@@ -47,7 +48,7 @@ export default function Door() {
   const door = useDoorSync(orgId, settings.event_key)
   const device = getDevice().name || 'Door'
   const [tab, setTab] = useState<Tab>('check')
-  const [flash, setFlash] = useState<string | null>(null)
+  const [flash, setFlash] = useState<{ n: number; text: string } | null>(null)
 
   const t = useMemo(() => totals(door.tickets, door.entries), [door.tickets, door.entries])
   const twice = useMemo(() => duplicates(door.entries), [door.entries])
@@ -61,8 +62,9 @@ export default function Door() {
     door.record({ ...e, id: newId(), at: new Date().toISOString(), device })
   }
   const say = (m: string) => {
-    setFlash(m)
-    setTimeout(() => setFlash(null), 2500)
+    const n = Date.now()
+    setFlash({ n, text: m })
+    setTimeout(() => setFlash((f) => (f && f.n === n ? null : f)), 2500)
   }
 
   return (
@@ -102,9 +104,14 @@ export default function Door() {
           ))}
         </div>
 
+        {/* The "in" / "paid" note floats at the top of the screen: always in sight whatever the scroll, and it pushes nothing down while buttons are being tapped. */}
         {flash && (
-          <p className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 font-display text-lg font-extrabold text-green-800" role="status">
-            <Icon name="check" size={22} /> {flash}
+          <p
+            key={flash.n}
+            className="fixed inset-x-4 top-20 z-50 flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 font-display text-lg font-extrabold text-green-800 shadow-lg"
+            role="status"
+          >
+            <Icon name="check" size={22} /> {flash.text}
           </p>
         )}
 
@@ -126,7 +133,10 @@ export default function Door() {
               })
               say(`${ticket.name || 'Receipt ' + ticket.code} — in (${heads(ticket)})`)
             }}
-            onSellInstead={() => setTab('sell')}
+            onSellInstead={() => {
+              setTab('sell')
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }}
           />
         ) : (
           <SellAtDoor
@@ -223,6 +233,13 @@ function CheckReceipt({
   const [scanning, setScanning] = useState(false)
   const [why, setWhy] = useState<string | null>(null)
   const matches = useMemo(() => findByName(byName, tickets), [byName, tickets])
+  // The answer (Valid / Already used / Not on the list) and its buttons come up where they can be read, with the keyboard put away.
+  // Typing "Other" as the reason keeps the keyboard, as the next thing to do is type.
+  const whyKind = why === null ? 0 : why.startsWith('Other') ? 2 : 1
+  useEffect(() => {
+    if (result) bringIntoView(document.getElementById('door-result'), { align: 'top', keyboard: whyKind === 2 ? 'keep' : 'away' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, whyKind])
 
   const check = (raw: string) => {
     if (!normalizeReceipt(raw)) return
@@ -260,7 +277,7 @@ function CheckReceipt({
   if (result) {
     if (result.status === 'ok') {
       return (
-        <div className="space-y-3 rounded-3xl border-4 border-green-500 bg-green-50 p-5">
+        <div id="door-result" className="space-y-3 rounded-3xl border-4 border-green-500 bg-green-50 p-5">
           <p className="font-display text-sm font-extrabold uppercase tracking-wider text-green-700">Valid</p>
           <p className="font-display text-2xl font-black text-ink">{result.ticket.name || `Receipt ${result.ticket.code}`}</p>
           <p className="text-lg text-slate-700">{partyText(result.ticket)}</p>
@@ -276,7 +293,7 @@ function CheckReceipt({
     }
     if (result.status === 'used') {
       return (
-        <div className="space-y-3 rounded-3xl border-4 border-red-500 bg-red-50 p-5">
+        <div id="door-result" className="space-y-3 rounded-3xl border-4 border-red-500 bg-red-50 p-5">
           <p className="font-display text-sm font-extrabold uppercase tracking-wider text-red-700">Already used</p>
           <p className="font-display text-2xl font-black text-ink">{result.ticket.name || `Receipt ${result.ticket.code}`}</p>
           <p className="text-base text-slate-700">{partyText(result.ticket)}</p>
@@ -322,7 +339,7 @@ function CheckReceipt({
       )
     }
     return (
-      <div className="space-y-3 rounded-3xl border-4 border-amber-400 bg-amber-50 p-5">
+      <div id="door-result" className="space-y-3 rounded-3xl border-4 border-amber-400 bg-amber-50 p-5">
         <p className="font-display text-sm font-extrabold uppercase tracking-wider text-amber-700">Not on the list</p>
         <p className="font-display text-2xl font-black text-ink">Receipt {result.code}</p>
         <p className="text-base text-slate-700">
@@ -353,6 +370,8 @@ function CheckReceipt({
         className="w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-3 text-lg outline-none focus:border-brand-blue"
         value={byName}
         onChange={(e) => setByName(e.target.value)}
+        // The names that match show below the box: lift the box so they are above the keyboard.
+        onFocus={(e) => bringIntoView(e.currentTarget, { align: 'top', keyboard: 'keep', delay: 300 })}
         placeholder="No receipt? Find their name"
         aria-label="Find by name"
         autoComplete="off"
@@ -397,6 +416,8 @@ function SellAtDoor({
   const done = (m: DoorMethod) => {
     onPaid(n, m, cents)
     setN({ adults: 0, children: 0, under5: 0 })
+    // Next customer: back up to the counters at the top.
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const row = (key: keyof typeof n, label: string, price: number) => (
     <div className="space-y-1.5">

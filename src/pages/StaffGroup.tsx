@@ -3,7 +3,7 @@
 // confuse"): a few big cards — a page, or a section of pages (?do=<section>).
 // "Me" also shows this person's access and the delete-account section (they
 // used to sit at the bottom of the dashboard).
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { Card, Screen } from '../components/ui'
@@ -13,6 +13,7 @@ import { ChoiceCard } from '../components/StaffJob'
 import { PERMISSION_CATALOG } from '../lib/capabilities'
 import { DeleteAccount } from '../components/DeleteAccount'
 import { useStaffTiles, type StaffTile } from '../features/staff/staffTiles'
+import { bringIntoView } from '../lib/bringIntoView'
 
 const backLink = '-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-base font-bold text-brand-blue hover:bg-brand-blue-50'
 
@@ -42,6 +43,17 @@ export default function StaffGroup() {
   const { loading, user, membership, capabilities } = useAuth()
   const { groups, isAdminish } = useStaffTiles({ counts: true })
   const [showMore, setShowMore] = useState(false)
+  const moreRef = useRef<HTMLDivElement>(null)
+  const doKey = params.get('do')
+
+  // A section opens on the same route (only ?do= changes), so the screen would stay scrolled where the card was: start at the top.
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [doKey])
+  // "More in this group" opens its list under the button: bring the button and the list up together.
+  useEffect(() => {
+    if (showMore) bringIntoView(moreRef.current, { align: 'top', keyboard: 'keep' })
+  }, [showMore])
 
   if (loading) return <Spinner />
   if (!membership) return <Navigate to="/staff" replace />
@@ -49,7 +61,6 @@ export default function StaffGroup() {
   if (!g) return <Navigate to="/staff" replace />
 
   // A section of pages: its own screen, a few cards.
-  const doKey = params.get('do')
   const sec = doKey ? g.entries.find((e) => e.kind === 'section' && e.section.key === doKey) : undefined
   if (sec && sec.kind === 'section') {
     return (
@@ -101,7 +112,7 @@ export default function StaffGroup() {
         )}
       </ul>
       {moreTiles.length > 0 && (
-        <div className="space-y-3">
+        <div ref={moreRef} className="space-y-3">
           <button
             type="button"
             onClick={() => setShowMore((o) => !o)}

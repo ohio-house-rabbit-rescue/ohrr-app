@@ -2,7 +2,7 @@
 // stores, schools, apartments, local media). Type your name once, who it is
 // for, then Open in Mail / Copy / Share. The words are OHRR's own; nothing
 // to write.
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../../../lib/auth'
 import { Screen, Card, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
@@ -10,6 +10,8 @@ import { staffInput } from '../../../components/staffui'
 import { OUTREACH, fillLetter, mailtoFor, type OutreachLetter } from '../outreach'
 import { copyText, shareText } from '../share'
 import { Explain, StaffTitle } from '../../../components/StaffTitle'
+import { StatusNote } from '../../scan/ScanUI'
+import { bringIntoView } from '../../../lib/bringIntoView'
 
 const SENDER_KEY = 'ohrr.outreach.sender'
 
@@ -19,6 +21,7 @@ export default function Outreach() {
   const [sender, setSender] = useState('')
   const [org, setOrg] = useState('')
   const [status, setStatus] = useState<string | null>(null)
+  const actionsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     try {
@@ -34,6 +37,11 @@ export default function Outreach() {
       /* ignore */
     }
   }, [sender])
+
+  // A letter opens in place of the list (and the list in place of the letter): start at the top.
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [pick])
 
   const filled = useMemo(() => (pick ? fillLetter(pick, sender, org) : null), [pick, sender, org])
 
@@ -63,6 +71,10 @@ export default function Outreach() {
     )
   }
 
+  // Enter in a name box: put the keyboard away and show the buttons that come next.
+  const onEnter = (e: { key: string }) => {
+    if (e.key === 'Enter') bringIntoView(actionsRef.current)
+  }
   const copy = async () => {
     if (!filled) return
     setStatus((await copyText(`Subject: ${filled.subject}\n\n${filled.body}`)) ? 'Copied — paste it into any email.' : 'Could not copy. Select the text and copy it.')
@@ -89,27 +101,33 @@ ${filled.body}`, filled.subject)
       <Card className="space-y-3">
         <label className="block text-sm font-semibold text-slate-700">
           Your name (signs the letter)
-          <input className={staffInput} value={sender} onChange={(e) => setSender(e.target.value)} placeholder="Bev" autoComplete="name" />
+          <input className={staffInput} value={sender} onChange={(e) => setSender(e.target.value)} placeholder="Bev" autoComplete="name" enterKeyHint="done" onKeyDown={onEnter} />
         </label>
         <label className="block text-sm font-semibold text-slate-700">
           Who is it for? (optional)
-          <input className={staffInput} value={org} onChange={(e) => setOrg(e.target.value)} placeholder="Ohio State Pre-Vet Club" />
+          <input className={staffInput} value={org} onChange={(e) => setOrg(e.target.value)} placeholder="Ohio State Pre-Vet Club" enterKeyHint="done" onKeyDown={onEnter} />
         </label>
       </Card>
       {filled && (
         <>
-          <a href={mailtoFor(filled.subject, filled.body)} className={`${btn.primary} w-full py-4 text-base`}>
-            <Icon name="mail" size={18} /> Open in Mail
-          </a>
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => void copy()} className={`${btn.outline} w-full`}>
-              Copy the letter
-            </button>
-            <button type="button" onClick={() => void share()} className={`${btn.outline} w-full`}>
-              <Icon name="external" size={16} /> Share
-            </button>
+          <div ref={actionsRef} className="space-y-4">
+            <a href={mailtoFor(filled.subject, filled.body)} className={`${btn.primary} w-full py-4 text-base`}>
+              <Icon name="mail" size={18} /> Open in Mail
+            </a>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => void copy()} className={`${btn.outline} w-full`}>
+                Copy the letter
+              </button>
+              <button type="button" onClick={() => void share()} className={`${btn.outline} w-full`}>
+                <Icon name="external" size={16} /> Share
+              </button>
+            </div>
           </div>
-          {status && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{status}</p>}
+          {status && (
+            <StatusNote key={status} className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
+              {status}
+            </StatusNote>
+          )}
           <Card>
             <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Subject</p>
             <p className="mt-0.5 font-semibold text-ink">{filled.subject}</p>

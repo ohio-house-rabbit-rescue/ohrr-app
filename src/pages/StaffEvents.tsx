@@ -5,7 +5,10 @@ import { btn, Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { Explain, StaffTitle } from '../components/StaffTitle'
 import { CardActions, EditorForm, Field, Part, pill } from '../components/StaffJob'
-import { Spinner, FormError, staffInput } from '../components/staffui'
+import { Spinner, staffInput } from '../components/staffui'
+import { ErrorBox, StatusNote } from '../features/scan/ScanUI'
+import { putKeyboardAway } from '../lib/bringIntoView'
+import { showRow } from '../lib/staffScroll'
 import StaffImageField from '../components/StaffImageField'
 import { slugify } from '../lib/careContent'
 import { eventDate, eventTime, type EventRow } from '../lib/events'
@@ -119,6 +122,7 @@ function EventForm({
 
   const submit = async (e: { preventDefault(): void }) => {
     e.preventDefault()
+    putKeyboardAway()
     setError(null)
     setBusy(true)
     try {
@@ -225,16 +229,20 @@ function EventForm({
   )
 }
 
-function EventCard({ item, userId, next = false, onChanged }: { item: EventRow; userId: string; next?: boolean; onChanged: () => void }) {
+function EventCard({ item, userId, next = false, onChanged }: { item: EventRow; userId: string; next?: boolean; onChanged: () => void | Promise<void> }) {
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [savedMsg, setSavedMsg] = useState<string | null>(null)
+  const rowId = `event-${item.id}`
 
   const saveEdit = async (d: Draft) => {
     const { error } = await supabase.from('events').update(toRow(d)).eq('id', item.id)
     if (error) throw error
     setEditing(false)
-    onChanged()
+    setSavedMsg('Saved.')
+    await onChanged()
+    showRow(rowId, { align: 'auto' })
   }
 
   const togglePublish = async () => {
@@ -257,7 +265,18 @@ function EventCard({ item, userId, next = false, onChanged }: { item: EventRow; 
   }
 
   if (editing) {
-    return <EventForm initial={draftFrom(item)} userId={userId} submitLabel="Save changes" onSubmit={saveEdit} onCancel={() => setEditing(false)} />
+    return (
+      <EventForm
+        initial={draftFrom(item)}
+        userId={userId}
+        submitLabel="Save changes"
+        onSubmit={saveEdit}
+        onCancel={() => {
+          setEditing(false)
+          showRow(rowId, { align: 'auto' })
+        }}
+      />
+    )
   }
 
   const e = { startsAt: item.starts_at, endsAt: item.ends_at ?? undefined }
@@ -280,7 +299,15 @@ function EventCard({ item, userId, next = false, onChanged }: { item: EventRow; 
       </div>
 
       <CardActions className="pt-1">
-        <button type="button" onClick={() => setEditing(true)} className={pill.blue}>
+        <button
+          type="button"
+          onClick={() => {
+            setSavedMsg(null)
+            setEditing(true)
+            showRow(rowId, { align: 'top' })
+          }}
+          className={pill.blue}
+        >
           Edit
         </button>
         <button type="button" onClick={togglePublish} disabled={busy} className={pill.outline}>
@@ -297,7 +324,12 @@ function EventCard({ item, userId, next = false, onChanged }: { item: EventRow; 
           <Icon name="trash" size={16} /> {busy ? 'Working…' : 'Delete'}
         </button>
       </CardActions>
-      <FormError>{error}</FormError>
+      {savedMsg && (
+        <StatusNote key={savedMsg} className="text-[15px] font-bold text-green-700">
+          {savedMsg}
+        </StatusNote>
+      )}
+      <ErrorBox>{error}</ErrorBox>
     </Card>
   )
 }
@@ -312,6 +344,7 @@ export default function StaffEvents() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [addedNote, setAddedNote] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
 
   const load = useCallback(async () => {
@@ -347,6 +380,7 @@ export default function StaffEvents() {
     })
     if (error) throw error
     setCreating(false)
+    setAddedNote(`Added “${d.title.trim()}”. It is in the list below.`)
     await load()
   }
 
@@ -407,7 +441,15 @@ export default function StaffEvents() {
         title="Events"
         actions={
           !creating ? (
-            <button type="button" onClick={() => setCreating(true)} className={pill.orange}>
+            <button
+              type="button"
+              onClick={() => {
+                setAddedNote(null)
+                setCreating(true)
+                showRow('new-event', { align: 'top' })
+              }}
+              className={pill.orange}
+            >
               <Icon name="plus" size={16} /> New event
             </button>
           ) : undefined
@@ -419,11 +461,18 @@ export default function StaffEvents() {
         </p>
       </StaffTitle>
 
-      {creating && (
-        <EventForm initial={emptyDraft} userId={userId} submitLabel="Add event" onSubmit={create} onCancel={() => setCreating(false)} />
-      )}
+      <div data-row="new-event">
+        {creating && (
+          <EventForm initial={emptyDraft} userId={userId} submitLabel="Add event" onSubmit={create} onCancel={() => setCreating(false)} />
+        )}
+        {!creating && addedNote && (
+          <StatusNote key={addedNote} className="rounded-xl bg-green-50 px-3 py-2 text-[15px] font-bold text-green-800">
+            {addedNote}
+          </StatusNote>
+        )}
+      </div>
 
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
 
       {loading ? (
         <Spinner label="Loading…" />
@@ -440,7 +489,9 @@ export default function StaffEvents() {
       ) : (
         <div className="grid grid-cols-1 gap-3">
           {ordered.map((item) => (
-            <EventCard key={item.id} item={item} userId={userId} next={item.id === nextId} onChanged={load} />
+            <div key={item.id} data-row={`event-${item.id}`}>
+              <EventCard item={item} userId={userId} next={item.id === nextId} onChanged={load} />
+            </div>
           ))}
         </div>
       )}

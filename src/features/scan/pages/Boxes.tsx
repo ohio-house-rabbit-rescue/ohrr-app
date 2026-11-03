@@ -2,7 +2,7 @@
 // box, or find one by its number, where it's kept, or an item inside. Box
 // labels not printed yet wait at the top, to print all at once when the
 // 4 × 6 roll is in (Receive into boxes leaves them for the end of the sort).
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
@@ -11,15 +11,16 @@ import { Screen } from '../../../components/ui'
 import { Spinner } from '../../../components/staffui'
 import { isNative } from '../../../native/platform'
 import { shareFileNative } from '../../../native/share'
-import { BigButton, ErrorBox, StatusNote } from '../ScanUI'
+import { BigButton, BigInput, ErrorBox, StatusNote } from '../ScanUI'
 import { labelDataUrl, labelsPdf, type LabelSize } from '../labels'
 import LabelSizeLine from '../LabelSizeLine'
 import { useCopies } from '../copies'
 import BluetoothPrint from '../printer/BluetoothPrint'
-import { BOX_SIZE, boxLabel, listBoxes, makeBoxes, markBoxesPrinted, type Box } from '../boxes'
+import { BOX_SIZE, NEEDS_50, boxLabel, listBoxes, makeBoxes, markBoxesPrinted, setBoxDetails, type Box } from '../boxes'
 import { boxTitle } from '../codes'
 import BoxFields, { type BoxFieldValues } from '../BoxFields'
 import { StaffTitle } from '../../../components/StaffTitle'
+import { bringIntoView } from '../../../lib/bringIntoView'
 
 export default function Boxes() {
   const { membership } = useAuth()
@@ -40,6 +41,12 @@ export default function Boxes() {
   const [sheet, setSheet] = useState<BoxSheet | null>(null)
   // Boxes printed during this visit stay in the list, so Print again is one tap.
   const [printedNow, setPrintedNow] = useState<string[]>([])
+
+  // "Start an empty box" opens the form under the buttons: scroll to it and put the keyboard away.
+  const makingRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (making) bringIntoView(makingRef.current, { align: 'top' })
+  }, [making])
 
   useEffect(() => {
     if (!orgId) return
@@ -115,11 +122,6 @@ export default function Boxes() {
           </StatusNote>
         )}
 
-        {waiting.length > 0 && <WaitingLabels orgId={orgId} boxes={waiting} setPrintImgs={setSheet} onPrinted={(codes) => {
-          setPrintedNow((l) => [...new Set([...l, ...codes])])
-          setReload((n) => n + 1)
-        }} />}
-
         <div className="grid grid-cols-2 gap-2">
           <BigButton onClick={() => navigate('/staff/catalog?box=1')} icon="camera">
             Pack a box
@@ -130,7 +132,7 @@ export default function Boxes() {
         </div>
 
         {making && (
-          <div className="space-y-3 rounded-2xl border-2 border-brand-orange/60 bg-white p-4">
+          <div ref={makingRef} className="space-y-3 rounded-2xl border-2 border-brand-orange/60 bg-white p-4">
             <p className="font-display text-lg font-extrabold text-ink">A new box</p>
             <BoxFields orgId={orgId} value={fields} onChange={(patch) => setFields((f) => ({ ...f, ...patch }))} />
             <label className="block text-base font-bold text-ink">
@@ -158,6 +160,12 @@ export default function Boxes() {
             </div>
           </div>
         )}
+
+        {/* The two buttons stay first, so they don't move when the waiting labels load in. */}
+        {waiting.length > 0 && <WaitingLabels orgId={orgId} boxes={waiting} setPrintImgs={setSheet} onPrinted={(codes) => {
+          setPrintedNow((l) => [...new Set([...l, ...codes])])
+          setReload((n) => n + 1)
+        }} />}
 
         {boxes && boxes.length > 0 && (
           <div className="relative">
@@ -343,8 +351,90 @@ export function WaitingLabels({
         onError={setError}
         onPrinted={(_codes, msg) => void marked(msg)}
       />
-      {note && <p className="rounded-xl bg-white px-3 py-2 text-[15px] text-slate-600">{note}</p>}
+      {note && (
+        <StatusNote key={note} className="rounded-xl bg-white px-3 py-2 text-[15px] text-slate-600">
+          {note}
+        </StatusNote>
+      )}
     </section>
+  )
+}
+
+const BOX_WORDS = ['Box', 'Storage box', 'Bin', 'Tote', 'Crate']
+
+/**
+ * Rename a box in place ("Box 12" → "Storage box 12"). The word is picked from a short list or typed; the number stays
+ * with it. Naming it "Box 12" again puts it back to the plain number.
+ */
+export function BoxNameEditor({ orgId, box, onSaved }: { orgId: string; box: Box; onSaved: (b: Box) => void }) {
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const save = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      const plain = `Box ${box.box_no}`
+      const name = text.trim() === plain ? '' : text.trim()
+      const next = await setBoxDetails(orgId, box.code, {
+        name,
+        description: box.description ?? '',
+        eventId: box.event_id ?? null,
+        partNo: box.part_no ?? null,
+        partOf: box.part_of ?? null,
+      })
+      onSaved(next)
+      setOpen(false)
+    } catch (e) {
+      const m = errMessage(e)
+      setError(/set_box_details|function/i.test(m) ? NEEDS_50 : m)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setText(boxTitle(box))
+          setOpen(true)
+        }}
+        className="inline-flex min-h-[44px] items-center text-[15px] font-bold text-brand-blue"
+      >
+        Rename this box (now “{boxTitle(box)}”)
+      </button>
+    )
+  }
+  return (
+    <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3">
+      <p className="text-base font-bold text-ink">What is it?</p>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Kind of container">
+        {BOX_WORDS.map((w) => (
+          <button
+            key={w}
+            type="button"
+            onClick={() => setText(`${w} ${box.box_no}`)}
+            className="min-h-[44px] rounded-full border-2 border-slate-200 bg-white px-4 text-[15px] font-bold text-slate-700 active:bg-brand-blue-50"
+          >
+            {w}
+          </button>
+        ))}
+      </div>
+      <BigInput value={text} onChange={setText} placeholder="Or type a name" ariaLabel="Box name" />
+      <ErrorBox>{error}</ErrorBox>
+      <div className="grid grid-cols-2 gap-2">
+        <BigButton onClick={() => void save()} disabled={busy || !text.trim()} icon="check">
+          {busy ? 'Saving…' : 'Save the name'}
+        </BigButton>
+        <BigButton tone="plain" onClick={() => setOpen(false)} disabled={busy}>
+          Cancel
+        </BigButton>
+      </div>
+    </div>
   )
 }
 

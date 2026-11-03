@@ -9,8 +9,8 @@
 // (EasterCampaignCard.tsx) plans each spring's Easter posts — shown only while
 // Easter is within the campaign's own window (NUDGE_DAYS before it, and the
 // weeks after it that its posts run).
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
 import { Screen, Card, Badge } from '../../../components/ui'
@@ -38,6 +38,8 @@ import {
 import { NUDGE_DAYS, easterCampaign } from '../easterCampaign'
 import { EasterCampaignCard, EasterNudge } from '../EasterCampaignCard'
 import { StaffTitle } from '../../../components/StaffTitle'
+import { bringIntoView } from '../../../lib/bringIntoView'
+import { StatusNote } from '../../scan/ScanUI'
 
 /** Resolves to the error text, or null when it worked (the list has reloaded). */
 type OnStatus = (p: SocialPost, s: PostStatus, opts?: { postedTo?: Platform[]; note?: string }) => Promise<string | null>
@@ -65,6 +67,9 @@ export default function PostQueue() {
   const [names, setNames] = useState<Map<string, string>>(() => new Map())
   const [error, setError] = useState<string | null>(null)
   const [showPosted, setShowPosted] = useState(false)
+  // What the editor just did ("Sent … for approval"), so the list says where the post went.
+  const location = useLocation()
+  const [flash] = useState<string | null>(() => (location.state as { note?: string } | null)?.note ?? null)
 
   const load = useCallback(async () => {
     try {
@@ -159,6 +164,9 @@ export default function PostQueue() {
           </StepButton>
         </div>
       )}
+      {flash && (
+        <StatusNote className="rounded-xl bg-green-50 px-3 py-2 text-base font-semibold text-green-800">{flash}</StatusNote>
+      )}
       <FormError>{error}</FormError>
       {posts === null && !error && <Spinner />}
       {nothing && <Card className="text-base text-slate-600">Nothing in the queue yet.{canDraft ? ' Tap “New post” to write one.' : ''}</Card>}
@@ -229,6 +237,15 @@ function PostCard({
   const [busy, setBusy] = useState(false)
   const [sendingBack, setSendingBack] = useState(false)
   const [note, setNote] = useState('')
+  const sendBackRef = useRef<HTMLDivElement>(null)
+  const confirmRef = useRef<HTMLDivElement>(null)
+  // The panel that opens after a tap is the next step: bring it into view.
+  useEffect(() => {
+    if (sendingBack) bringIntoView(sendBackRef.current, { keyboard: 'keep' })
+  }, [sendingBack])
+  useEffect(() => {
+    if (confirming) bringIntoView(confirmRef.current, { keyboard: 'keep' })
+  }, [confirming])
 
   const mine = Boolean(me) && post.created_by === me
   const who = (id: string | null | undefined) => (!id ? null : id === me ? 'you' : (names.get(id) ?? null))
@@ -323,7 +340,7 @@ function PostCard({
 
       {post.status === 'submitted' &&
         (canApprove && !mine ? (
-          <div className="space-y-2 rounded-2xl bg-brand-blue-50/60 p-3">
+          <div ref={sendBackRef} className="space-y-2 rounded-2xl bg-brand-blue-50/60 p-3">
             {!sendingBack ? (
               <>
                 <p className="text-base font-bold text-ink">Good to go?</p>
@@ -384,7 +401,7 @@ function PostCard({
       )}
       {msg && <p className="text-sm font-semibold text-slate-700">{msg}</p>}
       {confirming && post.status === 'approved' && canPublish && (
-        <div className="space-y-2 rounded-2xl bg-brand-orange-50/60 p-3">
+        <div ref={confirmRef} className="space-y-2 rounded-2xl bg-brand-orange-50/60 p-3">
           <p className="text-base font-bold text-ink">Posted it? Where?</p>
           <div className="flex flex-wrap gap-2">
             {PLATFORMS.map((pl) => (

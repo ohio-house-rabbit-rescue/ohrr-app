@@ -12,11 +12,14 @@
 // approved for, and makes their hours letter itself: a PDF with OHRR's
 // signature and a code a school or employer can check, built from the hours
 // OHRR has confirmed — so the rescue doesn't have to write it for them.
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageHeader, Screen, Card, SectionLabel, Badge, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
-import { Spinner } from '../../../components/staffui'
+import { Spinner, FormError } from '../../../components/staffui'
+import BringIn from '../../../components/BringIn'
+import { StatusNote } from '../../scan/ScanUI'
+import { bringIntoView } from '../../../lib/bringIntoView'
 import { inputClass } from '../../../components/SchemaField'
 import { errMessage } from '../../../lib/supabase'
 import { ohrr } from '../../../data/ohrr'
@@ -114,7 +117,7 @@ export default function MyHours() {
               </Link>
             </div>
           </Card>
-          {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+          <FormError>{error}</FormError>
         </Screen>
       </>
     )
@@ -129,6 +132,8 @@ function Record({ rec, onChanged }: { rec: MyRecord; onChanged: () => Promise<vo
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // "Logged": said right where the form was, so they see it worked.
+  const [logged, setLogged] = useState<string | null>(null)
 
   const selfLogging = useFeatureFlag(VOLUNTEER_HOURS_FLAG, true)
   const pending = rec.entries.filter((e) => e.status === 'logged').length
@@ -197,22 +202,39 @@ function Record({ rec, onChanged }: { rec: MyRecord; onChanged: () => Promise<vo
             OHRR records hours for volunteers at the moment — ask a staff member to add any that are missing.
           </Card>
         ) : adding ? (
-          <Card>
-            <LogForm
-              token={token}
-              busy={busy}
-              setBusy={setBusy}
-              onDone={async () => {
-                setAdding(false)
-                await onChanged()
-              }}
-              onCancel={() => setAdding(false)}
-            />
-          </Card>
+          <BringIn>
+            <Card>
+              <LogForm
+                token={token}
+                busy={busy}
+                setBusy={setBusy}
+                onDone={async () => {
+                  setAdding(false)
+                  setLogged('Your hours are logged. OHRR will confirm them; they’re already in your totals.')
+                  await onChanged()
+                }}
+                onCancel={() => setAdding(false)}
+              />
+            </Card>
+          </BringIn>
         ) : (
-          <button type="button" onClick={() => setAdding(true)} className={`${btn.primary} w-full`}>
-            <Icon name="plus" size={17} /> Log hours
-          </button>
+          <div className="space-y-2.5">
+            {logged && (
+              <StatusNote key={logged} className="rounded-2xl bg-green-50 px-3.5 py-2.5 text-sm font-bold text-green-800">
+                {logged}
+              </StatusNote>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setLogged(null)
+                setAdding(true)
+              }}
+              className={`${btn.primary} w-full`}
+            >
+              <Icon name="plus" size={17} /> Log hours
+            </button>
+          </div>
         )}
 
         {/* By year */}
@@ -250,8 +272,12 @@ function Record({ rec, onChanged }: { rec: MyRecord; onChanged: () => Promise<vo
                 ? 'Need it on letterhead? Make a signed hours letter below.'
                 : 'Need it on letterhead? Ask OHRR for a signed service-hours letter — they print it from the same record.'}
             </p>
-            {note && <p className="text-sm font-bold text-green-700">{note}</p>}
-            {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+            {note && (
+              <StatusNote key={note} className="text-sm font-bold text-green-700">
+                {note}
+              </StatusNote>
+            )}
+            <FormError>{error}</FormError>
           </Card>
         </section>
 
@@ -476,6 +502,11 @@ function LetterMaker({ rec, token }: { rec: MyRecord; token: string }) {
   const [error, setError] = useState<string | null>(null)
   const [made, setMade] = useState<{ issued: IssuedLetter; pdf: Blob; filename: string } | null>(null)
   const [note, setNote] = useState<string | null>(null)
+  const readyRef = useRef<HTMLDivElement>(null)
+  // The letter is made: take them to "Your letter is ready" (and put the keyboard away).
+  useEffect(() => {
+    if (made) bringIntoView(readyRef.current)
+  }, [made])
   const meta = MY_KINDS.find((k) => k.value === kind) ?? MY_KINDS[MY_KINDS.length - 1]
 
   const save = async (pdf: Blob, filename: string) => {
@@ -605,10 +636,10 @@ function LetterMaker({ rec, token }: { rec: MyRecord; token: string }) {
         <button type="button" onClick={() => void make()} disabled={busy || !from || !to} className={`${btn.primary} w-full disabled:opacity-60`}>
           <Icon name="printer" size={17} /> {busy ? 'Making your letter…' : 'Make my letter (PDF)'}
         </button>
-        {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+        <FormError>{error}</FormError>
 
         {made && (
-          <div className="space-y-2 rounded-2xl bg-green-50 px-4 py-3 text-sm text-slate-700">
+          <div ref={readyRef} className="space-y-2 rounded-2xl bg-green-50 px-4 py-3 text-sm text-slate-700">
             <p className="font-display text-base font-extrabold text-green-800">Your letter is ready</p>
             <p>
               {hoursLabel(made.issued.total)} confirmed, {longDate(made.issued.from)} to {longDate(made.issued.to)}. Its code is{' '}
@@ -628,7 +659,11 @@ function LetterMaker({ rec, token }: { rec: MyRecord; token: string }) {
             >
               <Icon name="printer" size={15} /> Save it again
             </button>
-            {note && <p className="font-bold text-green-700">{note}</p>}
+            {note && (
+              <StatusNote key={note} className="font-bold text-green-700">
+                {note}
+              </StatusNote>
+            )}
           </div>
         )}
       </Card>
@@ -740,7 +775,7 @@ function LogForm({
         Anything to remember? <span className="font-normal text-slate-400">(optional)</span>
         <input className={inputClass} value={d.note} onChange={set('note')} placeholder="Covered for Bev" />
       </label>
-      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+      <FormError>{error}</FormError>
       <div className="flex gap-2">
         <button type="submit" disabled={busy || !d.hours} className={`${btn.primary} flex-1 disabled:opacity-60`}>
           {busy ? 'Saving…' : 'Log it'}

@@ -8,6 +8,8 @@ import { Badge, btn, Card } from '../../components/ui'
 import { Icon } from '../../components/icons'
 import { Explain } from '../../components/StaffTitle'
 import { FormError, staffInput } from '../../components/staffui'
+import { bringIntoView } from '../../lib/bringIntoView'
+import { ErrorBox } from '../scan/ScanUI'
 import { deleteType, saveType, suggestTypeCode, type ProductType } from './api'
 
 const letters = (v: string) => v.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3)
@@ -80,7 +82,7 @@ export function NewTypeForm({
           />
         </label>
       </div>
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
       <div className="flex gap-2">
         <button type="button" onClick={() => void add()} disabled={busy} className={`${btn.blue} !py-2.5 disabled:opacity-60`}>
           <Icon name="plus" size={16} /> {busy ? 'Adding…' : 'Add the type'}
@@ -126,7 +128,7 @@ export function TypesPanel({
               }} onCancel={() => setEditing(null)} />
             </li>
           ) : (
-            <li key={t.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3">
+            <li key={t.id} id={`type-${t.id}`} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3">
               <span className="inline-flex h-11 w-14 shrink-0 items-center justify-center rounded-xl bg-brand-blue-50 font-mono text-[15px] font-black text-brand-blue">{t.code}</span>
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-1.5">
@@ -148,7 +150,15 @@ export function TypesPanel({
       </ul>
       {canWrite && (
         <Card>
-          <NewTypeForm orgId={orgId} types={types} onAdded={() => onChanged()} />
+          <NewTypeForm
+            orgId={orgId}
+            types={types}
+            onAdded={async (t) => {
+              await onChanged()
+              // The new type joins the list above this form: show it there.
+              window.setTimeout(() => bringIntoView(document.getElementById(`type-${t.id}`)), 50)
+            }}
+          />
         </Card>
       )}
     </div>

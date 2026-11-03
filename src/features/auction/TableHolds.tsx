@@ -14,6 +14,8 @@ import { errMessage, supabase } from '../../lib/supabase'
 import { Card, btn } from '../../components/ui'
 import { Icon } from '../../components/icons'
 import { Spinner } from '../../components/staffui'
+import { ErrorBox, StatusNote } from '../scan/ScanUI'
+import { showRow } from '../../lib/staffScroll'
 import { AUCTION_EVENT_SLUG } from '../raffle/types'
 import { money, type FulfilStatus, type PaymentStatus } from './client'
 
@@ -144,7 +146,14 @@ export default function TableHolds({ orgId, onChange }: { orgId: string; onChang
             {data.on ? (open.length ? `${open.length} waiting to pay` : 'On — nobody waiting') : 'Off — the QR codes show the item only'}
           </p>
         </div>
-        <button type="button" onClick={() => setSetup((v) => !v)} className={small}>
+        <button
+          type="button"
+          onClick={() => {
+            if (!setup) showRow('holds-setup', { align: 'top' })
+            setSetup((v) => !v)
+          }}
+          className={small}
+        >
           {setup ? 'Close' : 'Set up'}
         </button>
       </div>
@@ -256,7 +265,7 @@ function HoldRow({ c, now, onDone }: { c: Claim; now: string; onDone: () => Prom
           </button>
         )}
       </div>
-      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+      <ErrorBox>{error}</ErrorBox>
     </div>
   )
 }
@@ -305,7 +314,7 @@ function Setup({ orgId, data, onSaved }: { orgId: string; data: Holds; onSaved: 
     })
 
   return (
-    <div className="space-y-3 rounded-xl bg-slate-50 p-3">
+    <div data-row="holds-setup" className="space-y-3 rounded-xl bg-slate-50 p-3">
       <div className="space-y-1">
         <p className="text-sm leading-relaxed text-slate-700">
           When it’s on, an item’s QR code offers <span className="font-bold">Buy it now</span> at its Buy Now price: the buyer gives a name and phone
@@ -357,8 +366,12 @@ function Setup({ orgId, data, onSaved }: { orgId: string; data: Holds; onSaved: 
           </button>
         )}
       </div>
-      {note && <p className="text-sm font-semibold text-emerald-700">{note}</p>}
-      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+      {note && (
+        <StatusNote key={note} className="text-sm font-semibold text-emerald-700">
+          {note}
+        </StatusNote>
+      )}
+      <ErrorBox>{error}</ErrorBox>
     </div>
   )
 }

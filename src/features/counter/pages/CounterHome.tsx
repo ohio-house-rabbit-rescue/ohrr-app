@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { Icon, type IconName } from '../../../components/icons'
 import { staffInput } from '../../../components/staffui'
+import { putKeyboardAway } from '../../../lib/bringIntoView'
 import { getDevice, readLocal, setDevice, writeLocal } from '../local'
 import { useCounterOrg } from '../CounterShell'
 
@@ -110,6 +111,7 @@ export default function CounterHome() {
           <form
             onSubmit={(e) => {
               e.preventDefault()
+              putKeyboardAway() // Enter in the box saves with the keyboard still up
               setDeviceState(setDevice({ name: name.trim() }))
               setNaming(false)
             }}

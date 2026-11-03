@@ -11,7 +11,8 @@ import { Spinner, staffInput } from '../../../components/staffui'
 import { isNative } from '../../../native/platform'
 import { dropoffDetail, isNeeds40, setDropoffThanked, updateDropoff, type DonationLine, type Dropoff } from '../api'
 import { StepButton, pill } from '../../../components/StaffJob'
-import { BigButton, ErrorBox } from '../ScanUI'
+import { BigButton, ErrorBox, StatusNote } from '../ScanUI'
+import { bringIntoView, putKeyboardAway } from '../../../lib/bringIntoView'
 import { KIND_META, usDate } from '../types'
 import { inGivenOrder, lineCode, lineLabel, plural, thankYouLetter, thankYouMailto, toggleLetterValues, whereNow, worthLine, THANK_YOU_SUBJECT } from '../letters'
 
@@ -39,6 +40,11 @@ export default function DropoffDetail() {
   const [msg, setMsg] = useState<string | null>(null)
   const [thanking, setThanking] = useState(false)
   const req = useRef(0)
+  const editRef = useRef<HTMLFormElement>(null)
+  // Edit opens the form where the details were: start it under the top bar.
+  useEffect(() => {
+    if (editing) bringIntoView(editRef.current, { align: 'top', keyboard: 'keep' })
+  }, [editing])
 
   const load = useCallback(async () => {
     const n = ++req.current
@@ -79,6 +85,8 @@ export default function DropoffDetail() {
 
   const saveEdit = async (e: FormEvent) => {
     e.preventDefault()
+    // Saved with the Enter key, no button was tapped: put the keyboard away so the result isn't behind it.
+    putKeyboardAway()
     if (!data) return
     setSaving(true)
     setFormError(null)
@@ -133,6 +141,8 @@ export default function DropoffDetail() {
     try {
       const d = await setDropoffThanked(orgId, data.id, thanked)
       setData((cur) => (cur ? { ...cur, ...d } : cur))
+      // The "Thanked" tag is up at the top of this card; say it here too, beside the button just tapped.
+      setMsg(thanked ? 'Marked as thanked.' : 'Marked as not thanked yet.')
     } catch (e) {
       setMsg(isNeeds40(e) ? 'This isn’t switched on yet — ask an admin.' : errMessage(e))
     } finally {
@@ -167,7 +177,7 @@ export default function DropoffDetail() {
           <>
             {/* Who, when, note — and Edit */}
             {editing ? (
-              <form onSubmit={(e) => void saveEdit(e)} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+              <form ref={editRef} onSubmit={(e) => void saveEdit(e)} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
                 <p className="font-display text-lg font-extrabold text-ink">Edit the drop-off</p>
                 <label className="block text-sm font-bold text-slate-600">
                   Who gave it
@@ -325,7 +335,11 @@ export default function DropoffDetail() {
                 )}
               </div>
               {!email && <p className="text-[15px] text-slate-600">No email for this donor — print it or copy it.</p>}
-              {msg && <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">{msg}</p>}
+              {msg && (
+                <StatusNote key={msg} className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  {msg}
+                </StatusNote>
+              )}
 
               {data.thanked_at ? (
                 <BigButton tone="plain" disabled={thanking} onClick={() => void setThanked(false)}>

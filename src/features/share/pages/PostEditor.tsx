@@ -4,13 +4,15 @@
 // posts" (update 26), who approves it or sends it back with a note. Share-kit
 // cards arrive here already filled in.
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { supabase, errMessage } from '../../../lib/supabase'
 import { Screen, Card, Badge, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
 import { isNative } from '../../../native/platform'
+import { putKeyboardAway } from '../../../lib/bringIntoView'
+import { StatusNote } from '../../scan/ScanUI'
 import { pickPhoto, type PhotoSource } from '../../../native/camera'
 import { HASHTAGS } from '../templates'
 import {
@@ -56,6 +58,9 @@ export default function PostEditor() {
   const { id } = useParams()
   const isNew = !id || id === 'new'
   const navigate = useNavigate()
+  // A note from the page that sent us here ("Saved to the post queue … tap Send for approval").
+  const location = useLocation()
+  const [flash] = useState<string | null>(() => (location.state as { note?: string } | null)?.note ?? null)
   const { membership, user, can } = useAuth()
   const orgId = membership?.orgId ?? ''
   const me = user?.id ?? ''
@@ -127,6 +132,7 @@ export default function PostEditor() {
   // 'keep' leaves the status alone. (An approved post whose words change goes
   // back for approval by itself: the database does that.)
   const save = async (target: 'draft' | 'submitted' | 'keep') => {
+    putKeyboardAway()
     if (!d.title.trim()) {
       setError('Give the post a short name (for the queue).')
       return
@@ -161,7 +167,16 @@ export default function PostEditor() {
         return
       }
     }
-    navigate('/staff/posts')
+    navigate('/staff/posts', {
+      state: {
+        note:
+          target === 'submitted'
+            ? `Sent “${d.title.trim()}” for approval. It is under “Waiting for approval”.`
+            : target === 'draft'
+              ? `Saved “${d.title.trim()}” as a draft. When it is ready, open it and tap “Send for approval”.`
+              : `Saved “${d.title.trim()}”.`,
+      },
+    })
   }
 
   const togglePlatform = (p: Platform) => setD((x) => ({ ...x, platforms: x.platforms.includes(p) ? x.platforms.filter((y) => y !== p) : [...x.platforms, p] }))
@@ -182,6 +197,9 @@ export default function PostEditor() {
         <h1 className="font-display text-2xl font-black text-ink">{isNew && !saved ? 'New post' : 'Edit post'}</h1>
         <Badge tone={status === 'submitted' ? 'orange' : status === 'approved' ? 'blue' : 'slate'}>{status ? STATUS_LABEL[status] : 'Draft · not saved yet'}</Badge>
       </div>
+      {flash && (
+        <StatusNote className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{flash}</StatusNote>
+      )}
       {status === 'draft' && saved?.reviewNote && (
         <div className="rounded-2xl border border-brand-orange/40 bg-brand-orange-50 px-4 py-3">
           <p className="text-sm font-bold text-ink">Sent back for changes</p>

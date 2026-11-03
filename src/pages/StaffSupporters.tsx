@@ -16,6 +16,7 @@ import { Icon } from '../components/icons'
 import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { exportCsv, toCsv } from '../lib/exportFile'
+import { StatusNote } from '../features/scan/ScanUI'
 import { INTERESTS, INTEREST_LABEL, cleanInterests, isMissing, type Interest } from '../features/account/emailList'
 import type { Database } from '../lib/database.types'
 
@@ -206,7 +207,11 @@ export default function StaffSupporters() {
             Copy takes the {shownSubscribed.length} subscribed {shownSubscribed.length === 1 ? 'address' : 'addresses'} shown
             {showLeft ? ' (never anyone who unsubscribed)' : ''}. The spreadsheet has everyone shown.
           </p>
-          {msg && <p className="text-sm font-semibold text-green-700">{msg}</p>}
+          {msg && (
+            <StatusNote key={msg} className="text-sm font-semibold text-green-700">
+              {msg}
+            </StatusNote>
+          )}
 
           {shown.length === 0 ? (
             <Card>

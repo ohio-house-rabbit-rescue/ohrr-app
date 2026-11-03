@@ -1,4 +1,5 @@
-import { useState, type InputHTMLAttributes, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type InputHTMLAttributes, type ReactNode } from 'react'
+import { ensureVisible } from '../lib/bringIntoView'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { Icon } from './icons'
@@ -60,8 +61,18 @@ export function NotConfigured() {
 }
 
 export function FormError({ children }: { children?: ReactNode }) {
+  const ref = useRef<HTMLParagraphElement>(null)
+  const shown = typeof children === 'string' ? children : Boolean(children)
+  // An error that appears below the keyboard or off the screen is brought into view.
+  useEffect(() => {
+    if (shown) ensureVisible(ref.current)
+  }, [shown])
   if (!children) return null
-  return <p className="text-sm font-semibold text-red-600">{children}</p>
+  return (
+    <p ref={ref} role="alert" className="text-sm font-semibold text-red-600">
+      {children}
+    </p>
+  )
 }
 
 // Route guard: requires a configured backend, a signed-in user, and an active

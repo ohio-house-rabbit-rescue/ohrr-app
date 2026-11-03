@@ -75,7 +75,7 @@ import {
   useItemPurposes,
   type Extras,
 } from '../DetailsFields'
-import { BoxPrintSheet, WaitingLabels, type BoxSheet } from './Boxes'
+import { BoxNameEditor, BoxPrintSheet, WaitingLabels, type BoxSheet } from './Boxes'
 import LabelSizeLine from '../LabelSizeLine'
 import { useCopies } from '../copies'
 import { LABEL_SIZE_SETTING, saveLabelSize, type LabelSize } from '../labels'
@@ -1630,7 +1630,7 @@ export default function CatalogFlow() {
           )}
           {done && s.inBox && savedBox && (
             <>
-              <Part n="B" hint="when this donation is all in">
+              <Part n="B" hint="once is enough">
                 Print the box label
               </Part>
               <div className="space-y-3 rounded-2xl border-2 border-brand-orange bg-brand-orange-50 p-4">
@@ -1645,8 +1645,9 @@ export default function CatalogFlow() {
                   ))}
                 </ul>
                 <p className="text-sm text-slate-600">
-                  The box label lists what is in the box right now. Save the rest of this donation first, then print it last. If you add to the box later, print it again from its page under Boxes.
+                  The label has the box’s name and number only, so it stays right however many items you add. Print it once, any time.
                 </p>
+                <BoxNameEditor orgId={orgId} box={savedBox} onSaved={(nb) => setSavedBox((b) => (b ? { ...b, ...nb, items: b.items } : nb))} />
                 <WaitingLabels
                   key={`${savedBox.code}-${savedBox.items.length}`}
                   compact

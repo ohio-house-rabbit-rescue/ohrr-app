@@ -7,6 +7,8 @@ import { Icon } from '../components/icons'
 import { NotConfigured, Spinner, FormError, staffInput } from '../components/staffui'
 import { accessDate } from '../lib/staffLevels'
 import { clearPendingInvite, getPendingInvite, savePendingInvite } from '../lib/pendingInvite'
+import { putKeyboardAway } from '../lib/bringIntoView'
+import { StatusNote } from '../features/scan/ScanUI'
 
 export default function StaffJoin() {
   const { configured, loading, user, membership, accessEndedOn, accessOnHold, refresh } = useAuth()
@@ -20,6 +22,8 @@ export default function StaffJoin() {
   const [status, setStatus] = useState<'idle' | 'submitting'>('idle')
   const [error, setError] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
+  // "Check again" ran and they're still on hold: say so, so the tap doesn't seem to do nothing.
+  const [checkedOnce, setCheckedOnce] = useState(false)
   useEffect(() => {
     if (linkCode) savePendingInvite(linkCode)
   }, [linkCode])
@@ -53,6 +57,7 @@ export default function StaffJoin() {
       setChecking(true)
       await refresh()
       setChecking(false)
+      setCheckedOnce(true)
     }
     return (
       <Screen className="space-y-5">
@@ -79,12 +84,18 @@ export default function StaffJoin() {
         <button type="button" onClick={() => void checkAgain()} disabled={checking} className={`${btn.primary} w-full disabled:opacity-60`}>
           {checking ? 'Checking…' : 'Check again'}
         </button>
+        {checkedOnce && !checking && (
+          <StatusNote className="rounded-xl bg-slate-100 px-3 py-2.5 text-sm font-semibold text-slate-700">
+            Checked just now: your access is still on hold. Ask whoever looks after your access to turn it back on, then tap Check again.
+          </StatusNote>
+        )}
       </Screen>
     )
   }
 
   const onSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault()
+    putKeyboardAway()
     setError(null)
     setStatus('submitting')
     try {
@@ -138,8 +149,6 @@ export default function StaffJoin() {
             />
           </label>
 
-          <FormError>{error}</FormError>
-
           <button
             type="submit"
             disabled={status === 'submitting' || code.trim().length === 0}
@@ -147,6 +156,8 @@ export default function StaffJoin() {
           >
             {status === 'submitting' ? 'Joining…' : 'Join the team'}
           </button>
+
+          <FormError>{error}</FormError>
         </form>
       </Card>
 

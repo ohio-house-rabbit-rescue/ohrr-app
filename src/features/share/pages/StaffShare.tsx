@@ -25,6 +25,7 @@ import { canShareFiles, copyText, savePng, sharePng } from '../share'
 import { createPost, uploadPostPng } from '../queue'
 import { useNavigate } from 'react-router-dom'
 import { Explain, StaffTitle } from '../../../components/StaffTitle'
+import { ErrorBox, StatusNote } from '../../scan/ScanUI'
 
 type Tab = 'suggested' | 'rabbits' | 'events' | 'messages' | 'custom'
 
@@ -193,6 +194,11 @@ function Composer({ post, onBack }: { post: CardPost; onBack: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const shareable = canShareFiles()
 
+  // The card opens in place of the list: start at the top, where the picture and the first button are.
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [post.id])
+
   useEffect(() => {
     const c = canvasRef.current
     if (!c) return
@@ -253,7 +259,8 @@ function Composer({ post, onBack }: { post: CardPost; onBack: () => void }) {
         scheduled_for: null,
         source: `kit:${post.id}`,
       })
-      navigate(`/staff/posts/${created.id}`)
+      // The next step is on the editor page; say so there.
+      navigate(`/staff/posts/${created.id}`, { state: { note: 'Saved to the post queue as a draft. Check the words, then tap “Send for approval”.' } })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save to the queue')
       setBusy(false)
@@ -279,10 +286,10 @@ function Composer({ post, onBack }: { post: CardPost; onBack: () => void }) {
         ))}
       </div>
 
-      <div className={`mx-auto overflow-hidden rounded-2xl bg-slate-100 shadow-md ${format === 'story' ? 'w-[60%]' : 'w-full'}`}>
-        <canvas ref={canvasRef} className="block h-auto w-full" aria-label="Preview of the post image" />
+      <div className={`relative mx-auto overflow-hidden rounded-2xl bg-slate-100 shadow-md ${format === 'story' ? 'w-[60%]' : 'w-full'}`}>
+        <canvas ref={canvasRef} style={{ aspectRatio: format === 'story' ? '9 / 16' : '1 / 1' }} className="block h-auto w-full" aria-label="Preview of the post image" />
+        {busy && <span className="absolute inset-0 flex items-center justify-center bg-white/70 text-sm font-semibold text-slate-600">Drawing…</span>}
       </div>
-      {busy && <p className="text-center text-xs text-slate-500">Drawing…</p>}
 
       <Card className="space-y-2">
         <label className="block text-sm font-semibold text-slate-700">
@@ -308,8 +315,12 @@ function Composer({ post, onBack }: { post: CardPost; onBack: () => void }) {
           Copy caption
         </button>
       </div>
-      {status && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{status}</p>}
-      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+      {status && (
+        <StatusNote key={status} className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
+          {status}
+        </StatusNote>
+      )}
+      <ErrorBox>{error}</ErrorBox>
 
       {canPublish && (
         <Explain label="How to post">

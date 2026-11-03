@@ -16,6 +16,8 @@ import { authOrigin } from '../../../lib/appUrl'
 import { Screen, Card, Badge } from '../../../components/ui'
 import { Icon, type IconName } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
+import BringIn from '../../../components/BringIn'
+import { StatusNote } from '../../scan/ScanUI'
 import { CardActions, ChoiceCard, EditorForm, Field, Part, pill } from '../../../components/StaffJob'
 import {
   deleteSlot,
@@ -85,6 +87,7 @@ export default function StaffBookings() {
   const [allTypes, setTypes] = useState<BookingType[] | null>(null)
   const [allRows, setRows] = useState<RosterRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [acted, setActed] = useState<string | null>(null)
   const scopeParam = params.get('scope')
   const scope: Scope = scopeParam === 'adopt' || scopeParam === 'other' ? scopeParam : 'all'
   const types = allTypes && allTypes.filter((t) => inScope(scope, t.slug))
@@ -122,7 +125,10 @@ export default function StaffBookings() {
   const wanted = params.get('tab')
   const tab: Tab | null = isTab(wanted) ? wanted : null
   const step = tab ? STEPS.find((s) => s.tab === tab)! : null
-  const pick = (t: Tab) => setParams({ ...keep, tab: t })
+  const pick = (t: Tab) => {
+    setActed(null)
+    setParams({ ...keep, tab: t })
+  }
   const steps = scope === 'adopt' ? STEPS.filter((s) => s.tab !== 'hours') : STEPS
   const heading = scope === 'adopt' ? 'Adoption visits' : scope === 'other' ? 'Volunteer shifts' : 'Bookings'
 
@@ -131,6 +137,11 @@ export default function StaffBookings() {
     try {
       await setBookingStatus(r.booking_id, status)
       setRows((list) => (list ?? []).map((x) => (x.booking_id === r.booking_id ? { ...x, status } : x)))
+      // A row that leaves this list says where it went; one that changes in place needs no note.
+      if (status === 'cancelled') setActed(`${r.name}’s booking is canceled. It’s off the list.`)
+      else if (tab === 'confirm' && status === 'confirmed') setActed(`${r.name} is confirmed. You’ll find them under “3 · Coming up”.`)
+      else if (tab === 'confirm' && status === 'checked_in') setActed(`${r.name} is confirmed and checked in. You’ll find them under “2 · Today”.`)
+      else setActed(null)
     } catch (e) {
       setError(errMessage(e))
     }
@@ -190,7 +201,14 @@ export default function StaffBookings() {
       )}
       {step && types === null && !error && <Spinner />}
       {types && (tab === 'confirm' || tab === 'today' || tab === 'coming') && (
-        <Roster mode={tab} rows={rows} onAct={act} goTo={pick} />
+        <>
+          {acted && (
+            <StatusNote key={acted} className="rounded-xl bg-green-50 px-3 py-2.5 text-[15px] font-semibold text-green-800">
+              {acted}
+            </StatusNote>
+          )}
+          <Roster mode={tab} rows={rows} onAct={act} goTo={pick} />
+        </>
       )}
       {types && tab === 'times' && <MakeTimes types={types} />}
       {types && tab === 'hours' && <HoursTab />}
@@ -530,9 +548,13 @@ function MakeTimes({ types }: { types: BookingType[] }) {
               <input className={staffInput} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Nail trims only" />
             </Field>
           </div>
-          {made !== null && <p className="text-[15px] font-bold text-green-700">{made === 0 ? 'Those times already existed.' : `Made ${made} time${made === 1 ? '' : 's'}.`}</p>}
         </div>
       </EditorForm>
+      {made !== null && (
+        <StatusNote className="rounded-xl bg-green-50 px-3 py-2.5 text-[15px] font-bold text-green-800">
+          {made === 0 ? 'Those times already existed, so nothing new was made.' : `Made ${made} time${made === 1 ? '' : 's'}. They’re in the list just below.`}
+        </StatusNote>
+      )}
 
       <section className="space-y-2">
         <p className="font-display text-base font-extrabold text-ink">Times in the next 60 days</p>
@@ -598,22 +620,30 @@ const emptyType = (orgId: string): Partial<BookingType> & { org_id: string; slug
 function Setup({ orgId, types, onChanged }: { orgId: string; types: BookingType[]; onChanged: () => Promise<void> }) {
   const [editing, setEditing] = useState<string | 'new' | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
+  const [saved, setSaved] = useState<string | null>(null)
   // A new type gets the questions box once the database has the column (update 43).
   const hasQuestions = types.some((t) => t.questions !== undefined)
   const linkFor = (slug: string) => `${authOrigin()}/book/${slug}`
   return (
     <div className="space-y-3">
+      {saved && (
+        <StatusNote key={saved} className="rounded-xl bg-green-50 px-3 py-2.5 text-[15px] font-semibold text-green-800">
+          {saved}
+        </StatusNote>
+      )}
       {types.map((t) =>
         editing === t.id ? (
-          <TypeForm
-            key={t.id}
-            initial={t}
-            onCancel={() => setEditing(null)}
-            onSaved={async () => {
-              setEditing(null)
-              await onChanged()
-            }}
-          />
+          <BringIn key={t.id}>
+            <TypeForm
+              initial={t}
+              onCancel={() => setEditing(null)}
+              onSaved={async () => {
+                setEditing(null)
+                await onChanged()
+                setSaved(`Saved “${t.name}”. It’s in the list below.`)
+              }}
+            />
+          </BringIn>
         ) : (
           <Card key={t.id} className="space-y-2">
             <div className="min-w-0">
@@ -662,16 +692,19 @@ function Setup({ orgId, types, onChanged }: { orgId: string; types: BookingType[
         ),
       )}
       {editing === 'new' ? (
-        <TypeForm
-          initial={{ ...emptyType(orgId), ...(hasQuestions ? { questions: '' } : {}) }}
-          onCancel={() => setEditing(null)}
-          onSaved={async () => {
-            setEditing(null)
-            await onChanged()
-          }}
-        />
+        <BringIn>
+          <TypeForm
+            initial={{ ...emptyType(orgId), ...(hasQuestions ? { questions: '' } : {}) }}
+            onCancel={() => setEditing(null)}
+            onSaved={async () => {
+              setEditing(null)
+              await onChanged()
+              setSaved('Added. It’s in the list below; tap Edit on it to give it weekly times.')
+            }}
+          />
+        </BringIn>
       ) : (
-        <button type="button" onClick={() => setEditing('new')} className={pill.orange}>
+        <button type="button" onClick={() => { setSaved(null); setEditing('new') }} className={pill.orange}>
           <Icon name="plus" size={16} /> Add something bookable
         </button>
       )}

@@ -14,7 +14,8 @@
 //     links and 28px pills are hard to hit on a phone.
 //   - NotOnYet: the one plain line shown when a database update hasn't been
 //     run. Volunteers never need to see an update number.
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { ensureVisible, putKeyboardAway } from '../lib/bringIntoView'
 import { Link } from 'react-router-dom'
 import { Icon, type IconName } from './icons'
 
@@ -295,10 +296,17 @@ export function EditorForm({
   remove?: { label: string; confirm: string; onRemove: () => void | Promise<void> }
   children: ReactNode
 }) {
+  const errorRef = useRef<HTMLParagraphElement>(null)
+  const errorShown = typeof error === 'string' ? error : Boolean(error)
+  // The error sits under the buttons (so Save doesn't move) and scrolls itself into view.
+  useEffect(() => {
+    if (errorShown) ensureVisible(errorRef.current)
+  }, [errorShown])
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault()
+        putKeyboardAway()
         void onSubmit()
       }}
       className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4"
@@ -308,7 +316,6 @@ export function EditorForm({
         {hint && <p className="mt-1 text-sm text-slate-600">{hint}</p>}
       </div>
       {children}
-      {error ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</p> : null}
       <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
         <button
           type="submit"
@@ -335,6 +342,11 @@ export function EditorForm({
           </button>
         )}
       </div>
+      {error ? (
+        <p ref={errorRef} role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+          {error}
+        </p>
+      ) : null}
     </form>
   )
 }

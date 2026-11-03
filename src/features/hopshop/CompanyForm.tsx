@@ -19,6 +19,7 @@ import { errMessage } from '../../lib/supabase'
 import { btn } from '../../components/ui'
 import { Icon } from '../../components/icons'
 import { FormError, staffInput } from '../../components/staffui'
+import { ErrorBox } from '../scan/ScanUI'
 import { saveVendorDetails } from '../bunfest/api'
 import { fromCents, money, ORDER_HOW_LABEL, SHIP_HOW_LABEL, toCents, vendorText, type OrderHow, type ShipHow } from './api'
 import {
@@ -238,6 +239,8 @@ export function CompanyForm({
   const [busy, setBusy] = useState(false)
   const [photoBusy, setPhotoBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // A photo that did not save is told next to the photo; the form's own error sits just above Save.
+  const [photoError, setPhotoError] = useState<string | null>(null)
   const txt = (k: keyof Draft) => (e: { target: { value: string } }) => setD((x) => ({ ...x, [k]: e.target.value }))
   const nul = (s: string) => s.trim() || null
   const bunfest = mode === 'bunfest'
@@ -248,13 +251,14 @@ export function CompanyForm({
     if (!file) return
     setPhotoBusy(true)
     setError(null)
+    setPhotoError(null)
     try {
       const url = await uploadCompanyPhoto(file, orgId)
       // A photo uploaded and then replaced before saving is never used — tidy it now.
       if (d.photo_url && d.photo_url !== initial?.photo_url) void removeCompanyPhoto(d.photo_url)
       setD((x) => ({ ...x, photo_url: url }))
     } catch (err) {
-      setError(`The photo didn’t save: ${errMessage(err)}`)
+      setPhotoError(`The photo didn’t save: ${errMessage(err)}`)
     } finally {
       setPhotoBusy(false)
     }
@@ -365,7 +369,6 @@ export function CompanyForm({
         onCancel={onCancel}
         busy={busy || photoBusy}
         canSave={d.name.trim().length > 0}
-        error={error}
         remove={initial && canDelete && onDelete ? { label: 'Delete', confirm: `Delete ${initial.name}? This takes the ${what} off the list.`, onRemove: doDelete } : undefined}
       >
         <div className="space-y-3">
@@ -410,6 +413,7 @@ export function CompanyForm({
                 )}
               </div>
             </div>
+            <ErrorBox>{photoError}</ErrorBox>
           </Section>
         )}
 
@@ -706,6 +710,7 @@ export function CompanyForm({
           )}
         </Section>
 
+        <ErrorBox>{error}</ErrorBox>
       </EditorForm>
 
       {ready && !initial && (

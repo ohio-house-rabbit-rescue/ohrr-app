@@ -7,7 +7,8 @@ import { useState, type KeyboardEvent } from 'react'
 import { errMessage } from '../../lib/supabase'
 import { btn } from '../../components/ui'
 import { Icon } from '../../components/icons'
-import { FormError, staffInput } from '../../components/staffui'
+import { staffInput } from '../../components/staffui'
+import { ErrorBox } from '../scan/ScanUI'
 import { saveSupplier, type Supplier } from './api'
 
 const sameName = (a: string, b: string) => a.trim().toLowerCase().replace(/\s+/g, ' ') === b.trim().toLowerCase().replace(/\s+/g, ' ')
@@ -94,7 +95,7 @@ export function NewSupplierForm({
         </div>
       )}
       <p className="text-xs text-slate-500">It gets its vendor number when you add it. Shipping, account number and how to order can be added later on the Suppliers tab.</p>
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
       <div className="flex gap-2">
         <button type="button" onClick={() => void (onFile ? pickOnFile() : add())} disabled={busy} className={`${btn.blue} !py-2.5 disabled:opacity-60`}>
           <Icon name="plus" size={16} /> {busy ? 'Adding…' : onFile ? `Use ${onFile.name}` : 'Add the supplier'}

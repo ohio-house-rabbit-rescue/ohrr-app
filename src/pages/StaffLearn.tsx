@@ -7,6 +7,9 @@ import { Explain, StaffTitle } from '../components/StaffTitle'
 import { CardActions, EditorForm, Field, StepButton, pill } from '../components/StaffJob'
 import { CheckRow, PartBox, confirmRemove, useCardAction, useSaving } from '../components/ContentEditorBits'
 import { Spinner, FormError, staffInput } from '../components/staffui'
+import BringIn from '../components/BringIn'
+import { putKeyboardAway } from '../lib/bringIntoView'
+import { StatusNote } from '../features/scan/ScanUI'
 import {
   CARE_ICONS,
   asIconName,
@@ -107,10 +110,14 @@ function ArticleForm({
       setDraft((d) => ({ ...d, [k]: e.target.value }))
 
   return (
+    <BringIn>
     <EditorForm
       title={title}
       hint="Needed parts are marked. Save puts it in Learn (or the page you pick) right away if it is shown."
-      onSubmit={submit}
+      onSubmit={() => {
+        putKeyboardAway()
+        return submit()
+      }}
       onCancel={onCancel}
       busy={busy}
       saveLabel={saveLabel}
@@ -168,6 +175,7 @@ function ArticleForm({
         <CheckRow label="Show in the app (leave unchecked to keep it as a draft)" checked={draft.is_published} onChange={(v) => setDraft((d) => ({ ...d, is_published: v }))} />
       </PartBox>
     </EditorForm>
+    </BringIn>
   )
 }
 
@@ -182,9 +190,10 @@ function ArticleCard({
   first: boolean
   last: boolean
   onMove: (dir: -1 | 1) => Promise<void>
-  onChanged: () => void
+  onChanged: (note?: string) => void
 }) {
   const [editing, setEditing] = useState(false)
+  const [saved, setSaved] = useState(false)
   const { busy, error, run } = useCardAction()
 
   const saveEdit = async (d: Draft) => {
@@ -202,11 +211,13 @@ function ArticleCard({
       .eq('id', item.id)
     if (error) throw error
     setEditing(false)
+    setSaved(true)
     onChanged()
   }
 
   const togglePublish = () =>
     run(async () => {
+      setSaved(false)
       const { error } = await supabase.from('care_articles').update({ is_published: !item.is_published }).eq('id', item.id)
       if (error) throw error
       onChanged()
@@ -215,7 +226,7 @@ function ArticleCard({
   const doDelete = async () => {
     const { error } = await supabase.from('care_articles').delete().eq('id', item.id)
     if (error) throw error
-    onChanged()
+    onChanged(`Removed “${item.title}”.`)
   }
 
   if (editing) {
@@ -246,7 +257,14 @@ function ArticleCard({
       {item.summary && <p className="text-[15px] text-slate-600">{item.summary}</p>}
 
       <CardActions className="pt-1">
-        <button type="button" onClick={() => setEditing(true)} className={pill.blue}>
+        <button
+          type="button"
+          onClick={() => {
+            setSaved(false)
+            setEditing(true)
+          }}
+          className={pill.blue}
+        >
           Edit
         </button>
         <button type="button" onClick={() => void togglePublish()} disabled={busy} className={pill.outline}>
@@ -270,6 +288,7 @@ function ArticleCard({
         </button>
       </CardActions>
       <FormError>{error}</FormError>
+      {saved && <StatusNote className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">Saved.</StatusNote>}
     </Card>
   )
 }
@@ -285,6 +304,7 @@ export default function StaffLearn() {
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!orgId || !allowed) {
@@ -327,7 +347,14 @@ export default function StaffLearn() {
     })
     if (error) throw error
     setCreating(false)
+    setNote(`Added “${d.title.trim()}”. It is at the end of the list.`)
     await load()
+  }
+
+  // A card changed (saved, hidden, removed): reload; a removed card says so up here, since it is gone from the list.
+  const changed = (text?: string) => {
+    if (text) setNote(text)
+    void load()
   }
 
   // Guides are shown in this order, so moving one renumbers the list 0, 1, 2 …
@@ -381,7 +408,14 @@ export default function StaffLearn() {
 
       {!creating && (
         <div>
-          <StepButton tone="orange" icon="plus" onClick={() => setCreating(true)}>
+          <StepButton
+            tone="orange"
+            icon="plus"
+            onClick={() => {
+              setNote(null)
+              setCreating(true)
+            }}
+          >
             Add a guide
           </StepButton>
         </div>
@@ -395,6 +429,12 @@ export default function StaffLearn() {
           onSubmit={create}
           onCancel={() => setCreating(false)}
         />
+      )}
+
+      {note && !creating && (
+        <StatusNote key={note} className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
+          {note}
+        </StatusNote>
       )}
 
       <FormError>{error}</FormError>
@@ -420,7 +460,7 @@ export default function StaffLearn() {
               first={i === 0}
               last={i === items.length - 1}
               onMove={(dir) => move(i, dir)}
-              onChanged={load}
+              onChanged={changed}
             />
           ))}
         </div>

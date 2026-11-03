@@ -14,7 +14,7 @@
 // Update 28: a volunteer can be Trusted. Hours a trusted volunteer logs count
 // straight away (still marked self-reported); "To confirm" lists them under
 // "Counted straight away" so staff can un-confirm any that look wrong.
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage, supabase } from '../../../lib/supabase'
@@ -22,6 +22,9 @@ import { Screen, Card, Badge, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
 import QrCode from '../../../components/QrCode'
+import BringIn from '../../../components/BringIn'
+import { StatusNote } from '../../scan/ScanUI'
+import { ensureVisible, putKeyboardAway } from '../../../lib/bringIntoView'
 import { copyText, shareText } from '../../share/share'
 import { bccMailto, exportCsv, toCsv } from '../../../lib/exportFile'
 import {
@@ -306,7 +309,7 @@ function Applicant({ v, userId, onDecided }: { v: VolunteerRow; userId: string |
       </dl>
 
       {mode === 'pick' && (
-        <div className="space-y-2 rounded-xl bg-slate-50 p-3">
+        <BringIn align="auto" className="space-y-2 rounded-xl bg-slate-50 p-3">
           <p className="text-sm font-semibold text-slate-700">Approve {firstName(v)} for</p>
           <KindChips value={pick} onChange={setPick} />
           <div className="flex gap-2">
@@ -322,11 +325,11 @@ function Applicant({ v, userId, onDecided }: { v: VolunteerRow; userId: string |
               Cancel
             </button>
           </div>
-        </div>
+        </BringIn>
       )}
 
       {mode === 'decline' && (
-        <div className="space-y-2 rounded-xl bg-red-50 p-3">
+        <BringIn align="auto" className="space-y-2 rounded-xl bg-red-50 p-3">
           <p className="text-sm text-red-800">Decline {firstName(v)}’s application? They stay on the roster, marked declined.</p>
           <div className="flex gap-2">
             <button
@@ -341,7 +344,7 @@ function Applicant({ v, userId, onDecided }: { v: VolunteerRow; userId: string |
               Keep it
             </button>
           </div>
-        </div>
+        </BringIn>
       )}
 
       {mode === 'idle' && (
@@ -378,7 +381,9 @@ function Applicant({ v, userId, onDecided }: { v: VolunteerRow; userId: string |
 /** Just approved or declined: the email to send them. */
 function Decided({ v, d, onHide }: { v: VolunteerRow; d: Decision; onHide: () => void }) {
   const approved = d.kind === 'approved'
+  // The card that says "now send the email" appears above the list; take them to it.
   return (
+    <BringIn align="auto" keyboard="away">
     <Card className={`space-y-2 ${approved ? 'border-green-200 bg-green-50/60' : 'bg-slate-50'}`}>
       <p className="font-display text-[15px] font-extrabold text-ink">
         {v.name} —{' '}
@@ -402,6 +407,7 @@ function Decided({ v, d, onHide }: { v: VolunteerRow; d: Decision; onHide: () =>
         </button>
       </div>
     </Card>
+    </BringIn>
   )
 }
 
@@ -441,6 +447,12 @@ function CertificateHours({ orgId }: { orgId: string }) {
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const saveRef = useRef<HTMLButtonElement>(null)
+  const dirty = saved !== null && draft.join(',') !== saved.join(',')
+  // A number was added: the Save button that just appeared is brought into view.
+  useEffect(() => {
+    if (dirty) ensureVisible(saveRef.current)
+  }, [dirty])
 
   useEffect(() => {
     let alive = true
@@ -461,7 +473,6 @@ function CertificateHours({ orgId }: { orgId: string }) {
   }, [orgId])
 
   if (!saved) return null
-  const dirty = draft.join(',') !== saved.join(',')
   const put = (list: number[]) => setDraft([...new Set(list)].filter((h) => h > 0 && h <= 100000).sort((a, b) => a - b))
   const addMark = () => {
     const h = Math.round(Number(add))
@@ -520,6 +531,7 @@ function CertificateHours({ orgId }: { orgId: string }) {
             if (e.key === 'Enter') {
               e.preventDefault()
               addMark()
+              putKeyboardAway()
             }
           }}
           className="h-11 w-28 rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-ink outline-none focus:border-brand-blue"
@@ -534,11 +546,15 @@ function CertificateHours({ orgId }: { orgId: string }) {
         )}
       </div>
       {dirty && (
-        <button type="button" onClick={() => void save()} disabled={busy} className={`${btn.primary} w-full disabled:opacity-60`}>
+        <button ref={saveRef} type="button" onClick={() => void save()} disabled={busy} className={`${btn.primary} w-full disabled:opacity-60`}>
           {busy ? 'Saving…' : 'Save the certificate hours'}
         </button>
       )}
-      {note && <p className="text-sm font-bold text-green-700">{note}</p>}
+      {note && (
+        <StatusNote key={note} className="text-sm font-bold text-green-700">
+          {note}
+        </StatusNote>
+      )}
       <FormError>{error}</FormError>
     </Card>
   )
@@ -550,6 +566,7 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
   const [q, setQ] = useState('')
   const [editing, setEditing] = useState<string | 'new' | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [added, setAdded] = useState<string | null>(null)
 
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase()
@@ -577,7 +594,14 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
           />
         </div>
         {editing !== 'new' && (
-          <button type="button" onClick={() => setEditing('new')} className={`${btn.primary} shrink-0 !px-4 !py-2.5`}>
+          <button
+            type="button"
+            onClick={() => {
+              setAdded(null)
+              setEditing('new')
+            }}
+            className={`${btn.primary} shrink-0 !px-4 !py-2.5`}
+          >
             <Icon name="plus" size={16} /> Add
           </button>
         )}
@@ -620,20 +644,29 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
         </div>
       )}
 
+      {added && (
+        <StatusNote key={added} className="rounded-xl bg-green-50 px-3 py-2.5 text-sm font-bold text-green-700">
+          {added}
+        </StatusNote>
+      )}
+
       {editing === 'new' && (
-        <Card>
-          <VolunteerForm
-            orgId={orgId}
-            initial={null}
-            approvalReady={approvalReady}
-            trustReady={trustReady}
-            onDone={async () => {
-              setEditing(null)
-              await onChanged()
-            }}
-            onCancel={() => setEditing(null)}
-          />
-        </Card>
+        <BringIn>
+          <Card>
+            <VolunteerForm
+              orgId={orgId}
+              initial={null}
+              approvalReady={approvalReady}
+              trustReady={trustReady}
+              onDone={async (name) => {
+                setEditing(null)
+                if (name) setAdded(`Added ${name} to the roster.`)
+                await onChanged()
+              }}
+              onCancel={() => setEditing(null)}
+            />
+          </Card>
+        </BringIn>
       )}
 
       {rows.length === 0 && (
@@ -645,19 +678,21 @@ function Roster({ orgId, rows, onChanged }: { orgId: string; rows: VolunteerRow[
 
       {shown.map((r) =>
         editing === r.id ? (
-          <Card key={r.id}>
-            <VolunteerForm
-              orgId={orgId}
-              initial={r}
-              approvalReady={r.approved_for !== undefined}
-              trustReady={r.trust_level !== undefined}
-              onDone={async () => {
-                setEditing(null)
-                await onChanged()
-              }}
-              onCancel={() => setEditing(null)}
-            />
-          </Card>
+          <BringIn key={r.id}>
+            <Card>
+              <VolunteerForm
+                orgId={orgId}
+                initial={r}
+                approvalReady={r.approved_for !== undefined}
+                trustReady={r.trust_level !== undefined}
+                onDone={async () => {
+                  setEditing(null)
+                  await onChanged()
+                }}
+                onCancel={() => setEditing(null)}
+              />
+            </Card>
+          </BringIn>
         ) : (
           <Card key={r.id} className="space-y-2">
             <div className="flex items-start gap-3">
@@ -844,7 +879,8 @@ function VolunteerForm({
   approvalReady: boolean
   /** The trust_level column exists (update 28 has run). */
   trustReady: boolean
-  onDone: () => Promise<void>
+  /** Called after a save (with the name that was saved) or a delete (no name). */
+  onDone: (savedName?: string) => Promise<void>
   onCancel: () => void
 }) {
   const [trust, setTrust] = useState<VolunteerRow['trust_level']>(initial?.trust_level ?? 'standard')
@@ -892,7 +928,7 @@ function VolunteerForm({
           : {}),
         ...(trustReady ? { trust_level: trust } : {}),
       })
-      await onDone()
+      await onDone(initial ? undefined : d.name.trim())
     } catch (err) {
       setError(errMessage(err))
       setBusy(false)
@@ -1028,7 +1064,7 @@ function VolunteerForm({
           (confirmDelete ? (
             <button
               type="button"
-              onClick={() => deleteVolunteer(initial.id).then(onDone).catch((e) => setError(errMessage(e)))}
+              onClick={() => deleteVolunteer(initial.id).then(() => onDone()).catch((e) => setError(errMessage(e)))}
               className="rounded-full bg-red-600 px-4 py-2.5 text-sm font-bold text-white"
             >
               Confirm delete

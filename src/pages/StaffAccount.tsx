@@ -16,6 +16,7 @@ import StaffAvatar from '../components/StaffAvatar'
 import StaffImageField from '../components/StaffImageField'
 import { PERMISSION_CATALOG } from '../lib/capabilities'
 import { Icon } from '../components/icons'
+import { StatusNote } from '../features/scan/ScanUI'
 import { accessDate, isFullAccess, levelFromRole, levelInfo, useMyLevel } from '../lib/staffLevels'
 import type { MembershipRole } from '../lib/database.types'
 
@@ -292,11 +293,12 @@ function ProfileForm({
           />
           Show me on the About page
         </label>
-        <FormError>{error}</FormError>
-        {saved && !busy && <p className="text-sm font-bold text-green-700">Saved.</p>}
+        {/* The button comes first and stays put; what happened is said just under it. */}
         <button type="submit" disabled={busy || imageBusy} className={`${btn.primary} w-full disabled:opacity-60`}>
           {busy ? 'Saving…' : 'Save'}
         </button>
+        <FormError>{error}</FormError>
+        {saved && !busy && <StatusNote className="text-sm font-bold text-green-700">Saved. Your name, title and photo are updated.</StatusNote>}
       </form>
     </Card>
   )

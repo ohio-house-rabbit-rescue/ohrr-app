@@ -72,6 +72,8 @@ import { PackEditor, packRowsFrom, packRowsToInput, type PackRow } from '../feat
 import { NewTypeForm, TypesPanel } from '../features/hopshop/TypesPanel'
 import { NewSupplierForm } from '../features/hopshop/NewSupplierForm'
 import { openMail } from '../lib/emailWith'
+import { bringIntoView, ensureVisible } from '../lib/bringIntoView'
+import { ErrorBox, StatusNote } from '../features/scan/ScanUI'
 import { clearNewItemDraft, readNewItemDraft, writeNewItemDraft } from '../features/hopshop/newItemDraft'
 
 const Scanner = lazy(() => import('../features/scan/Scanner'))
@@ -427,6 +429,11 @@ function Items({
 }) {
   // The item just added, with its new SKU — and a way to print its labels.
   const [justAdded, setJustAdded] = useState<StockCard | null>(null)
+  // The form closes on save, so the "Added … Print its labels" note is brought into view (it sat under the keyboard / off screen).
+  const addedRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (justAdded) bringIntoView(addedRef.current, { align: 'top' })
+  }, [justAdded])
   const [error, setError] = useState<string | null>(null)
   const [params, setParams] = useSearchParams()
   // "Add an item" from elsewhere (Scan an item, the Counter, the website) lands here with ?add=1.
@@ -494,7 +501,7 @@ function Items({
         </div>
       )}
       {justAdded?.code && !creating && (
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-[15px] text-slate-700">
+        <div ref={addedRef} className="flex flex-wrap items-center gap-3 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-[15px] text-slate-700">
           <span className="min-w-0 flex-1">
             Added <strong>{justAdded.name}</strong> as <span className="font-mono font-bold text-ink">{justAdded.code}</span>.
           </span>
@@ -582,6 +589,14 @@ function ProductCard({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Opening the edit form, or saving it, brings this item's top under the top bar so the form (or the card again) is what you see.
+  const cardRef = useRef<HTMLDivElement>(null)
+  const wasEditing = useRef(false)
+  useEffect(() => {
+    if (editing === wasEditing.current) return
+    wasEditing.current = editing
+    bringIntoView(cardRef.current, { align: 'top' })
+  }, [editing])
 
   const doDelete = async () => {
     setError(null)
@@ -598,25 +613,28 @@ function ProductCard({
 
   if (editing) {
     return (
-      <ProductForm
-        orgId={orgId}
-        initial={p}
-        suppliers={suppliers}
-        types={types}
-        canCount={perms.canInventory}
-        onSuppliersChanged={onSuppliersChanged}
-        onTypesChanged={onTypesChanged}
-        onSaved={async () => {
-          setEditing(false)
-          await onChanged()
-        }}
-        onCancel={() => setEditing(false)}
-      />
+      <div ref={cardRef}>
+        <ProductForm
+          orgId={orgId}
+          initial={p}
+          suppliers={suppliers}
+          types={types}
+          canCount={perms.canInventory}
+          onSuppliersChanged={onSuppliersChanged}
+          onTypesChanged={onTypesChanged}
+          onSaved={async () => {
+            setEditing(false)
+            await onChanged()
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      </div>
     )
   }
 
   const low = isLow(p)
   return (
+    <div ref={cardRef}>
     <Card>
       <div className="flex items-start gap-3">
         <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-slate-300">
@@ -691,6 +709,7 @@ function ProductCard({
       )}
       <FormError>{error}</FormError>
     </Card>
+    </div>
   )
 }
 
@@ -848,6 +867,22 @@ function ProductForm({
   const [photoBusy, setPhotoBusy] = useState(false)
   const [preview, setPreview] = useState<string | null>(initial?.photo_url ?? kept?.d.photo_url ?? null)
   const [error, setError] = useState<string | null>(null)
+  // A photo that didn't save is told next to the photo buttons (the form's own error sits down by Save).
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const scanRef = useRef<HTMLDivElement>(null)
+  const barcodeRef = useRef<HTMLDivElement>(null)
+  const barcodeInput = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (scanning) bringIntoView(scanRef.current, { align: 'top' })
+  }, [scanning])
+  const typeRef = useRef<HTMLDivElement>(null)
+  const supplierRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (addingType) bringIntoView(typeRef.current, { align: 'top', keyboard: 'keep' })
+  }, [addingType])
+  useEffect(() => {
+    if (addingSupplier) bringIntoView(supplierRef.current, { align: 'top', keyboard: 'keep' })
+  }, [addingSupplier])
   const packsOn = usePacksReady()
   const [packs, setPacks] = useState<PackRow[]>(() => (kept?.packs?.length ? kept.packs : packRowsFrom(initial?.packs)))
   // Once a new item is saved, a second Save (after a pack-size error) updates it instead of adding another.
@@ -875,6 +910,7 @@ function ProductForm({
   /* photo: native camera / library, or the file inputs on the web */
   const usePhoto = async (src: Blob | string) => {
     setError(null)
+    setPhotoError(null)
     setPhotoBusy(true)
     try {
       setPreview(typeof src === 'string' ? src : URL.createObjectURL(src))
@@ -883,7 +919,7 @@ function ProductForm({
       setD((x) => ({ ...x, photo_url: url }))
     } catch (e) {
       setPreview(d.photo_url)
-      setError(`The photo didn’t save: ${errMessage(e)}`)
+      setPhotoError(`The photo didn’t save: ${errMessage(e)}`)
     } finally {
       setPhotoBusy(false)
     }
@@ -902,7 +938,7 @@ function ProductForm({
       const dataUrl = await pickPhoto(source)
       if (dataUrl) await usePhoto(dataUrl)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Couldn’t get that photo.')
+      setPhotoError(e instanceof Error ? e.message : 'Couldn’t get that photo.')
     }
   }
 
@@ -987,7 +1023,6 @@ function ProductForm({
       busy={busy}
       canSave={!photoBusy && !!d.name.trim()}
       saveLabel={initial ? 'Save changes' : 'Add item'}
-      error={error}
     >
       {kept && !savedId && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl bg-brand-blue-50 px-3 py-2 text-[15px] text-slate-700">
@@ -1018,6 +1053,7 @@ function ProductForm({
             <input ref={libraryRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
           </div>
         </div>
+        <ErrorBox>{photoError}</ErrorBox>
         <Field label="Name" needed>
           <input className={staffInput} required value={d.name} onChange={set('name')} placeholder="Oxbow Timothy Hay, 40 oz" />
         </Field>
@@ -1092,7 +1128,7 @@ function ProductForm({
             )}
           </div>
           {addingType && (
-            <div className="mt-2 rounded-2xl border border-slate-200 p-3">
+            <div ref={typeRef} className="mt-2 rounded-2xl border border-slate-200 p-3">
               <NewTypeForm
                 orgId={orgId}
                 types={types}
@@ -1132,22 +1168,28 @@ function ProductForm({
         </div>
 
         {/* The packet's own barcode: a second code */}
-        <div>
+        <div ref={barcodeRef}>
           <Field label="Barcode on the packet">
-            <input className={`${staffInput} font-mono`} value={d.barcode} onChange={set('barcode')} placeholder="012345678905" autoCapitalize="characters" />
+            <input ref={barcodeInput} className={`${staffInput} font-mono`} value={d.barcode} onChange={set('barcode')} placeholder="012345678905" autoCapitalize="characters" />
           </Field>
           <button type="button" onClick={() => setScanning((v) => !v)} className={`${pill.outline} ${tall} mt-2`}>
             <Icon name="scan" size={16} /> {scanning ? 'Stop scanning' : 'Scan the barcode on the packet'}
           </button>
           {scanning && (
-            <div className="mt-2 overflow-hidden rounded-2xl">
+            <div ref={scanRef} className="mt-2 overflow-hidden rounded-2xl">
               <Suspense fallback={<Spinner label="Starting the camera…" />}>
                 <Scanner
                   onResult={(raw) => {
                     setD((x) => ({ ...x, barcode: normalizeCode(raw) }))
                     setScanning(false)
+                    // The scanner folds away: show the barcode that was just read.
+                    ensureVisible(barcodeRef.current)
                   }}
-                  onTypeInstead={() => setScanning(false)}
+                  onTypeInstead={() => {
+                    // "Type it instead" goes to the barcode box, ready to type.
+                    setScanning(false)
+                    window.setTimeout(() => barcodeInput.current?.focus(), 50)
+                  }}
                 />
               </Suspense>
             </div>
@@ -1169,7 +1211,7 @@ function ProductForm({
             </select>
           </Field>
           {addingSupplier ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-3">
+            <div ref={supplierRef} className="rounded-2xl border border-slate-200 bg-white p-3">
               <NewSupplierForm
                 orgId={orgId}
                 suppliers={suppliers}
@@ -1229,6 +1271,8 @@ function ProductForm({
           )}
         </div>
       </div>
+      {/* The error sits just above Save, and brings itself into view (Enter in a box saves with the keyboard still up). */}
+      <ErrorBox>{error}</ErrorBox>
     </EditorForm>
   )
 }
@@ -1243,6 +1287,11 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
   const [choices, setChoices] = useState<Record<string, PackChoice>>({})
   // What just arrived, so its labels are one tap away.
   const [arrived, setArrived] = useState<{ code: string; name: string; qty: number } | null>(null)
+  // "Arrived" is tapped down the list; the "added to stock — print labels" note is at the top, so it is brought into view.
+  const arrivedRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (arrived) bringIntoView(arrivedRef.current)
+  }, [arrived])
 
   const load = useCallback(async () => {
     if (!orgId) return
@@ -1300,10 +1349,14 @@ function Reorder({ orgId, suppliers, canAct }: { orgId: string; suppliers: Suppl
 
   return (
     <div className="space-y-4">
-      <FormError>{error}</FormError>
-      {note && <p className="text-[15px] font-bold text-green-700">{note}</p>}
+      <ErrorBox>{error}</ErrorBox>
+      {note && (
+        <StatusNote key={note} className="text-[15px] font-bold text-green-700">
+          {note}
+        </StatusNote>
+      )}
       {arrived && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-green-50 px-3 py-2 text-[15px] text-slate-700">
+        <div ref={arrivedRef} className="flex flex-wrap items-center gap-3 rounded-xl bg-green-50 px-3 py-2 text-[15px] text-slate-700">
           <span className="min-w-0 flex-1">
             {arrived.qty} × {arrived.name} added to stock.
           </span>
@@ -1593,6 +1646,8 @@ function Suppliers({
   onChanged: () => Promise<void>
 }) {
   const [editing, setEditing] = useState<string | 'new' | null>(null)
+  // Saved: told where the form was (the form folds away and leaves the page shorter).
+  const [saved, setSaved] = useState<{ id: string; text: string } | null>(null)
   const [filter, setFilter] = useState<'all' | 'supplier' | 'vendor'>('all')
   const shown = (suppliers ?? []).filter((s) => (filter === 'supplier' ? s.is_supplier : filter === 'vendor' ? s.is_vendor : true))
 
@@ -1622,8 +1677,9 @@ function Suppliers({
     void loadGifts()
   }, [loadGifts])
 
-  const done = async () => {
+  const done = async (id: string, text: string) => {
     setEditing(null)
+    setSaved({ id, text })
     await onChanged()
   }
 
@@ -1722,11 +1778,19 @@ function Suppliers({
               )}
             </span>
             {canWrite && (
-              <button type="button" onClick={() => setEditing(editing === s.id ? null : s.id)} className={`${pill.outline} ${tall} shrink-0`}>
+              <button type="button" onClick={() => {
+                  setSaved(null)
+                  setEditing(editing === s.id ? null : s.id)
+                }} className={`${pill.outline} ${tall} shrink-0`}>
                 {editing === s.id ? 'Close' : 'Open'}
               </button>
             )}
           </div>
+          {saved?.id === s.id && editing !== s.id && (
+            <StatusNote key={saved.text} className="rounded-xl bg-green-50 px-3 py-2 text-[15px] font-bold text-green-700">
+              {saved.text}
+            </StatusNote>
+          )}
           {editing === s.id && (
             <div className="border-t border-slate-100 pt-3">
               <CompanyForm
@@ -1736,9 +1800,9 @@ function Suppliers({
                 canDelete={canDelete}
                 onDelete={async () => {
                   await deleteSupplier(s.id)
-                  await done()
+                  await done('new', `Deleted ${s.name}.`)
                 }}
-                onSaved={done}
+                onSaved={() => done(s.id, `Saved ${s.name}.`)}
                 onCancel={() => setEditing(null)}
                 onGiftsChanged={() => void loadGifts()}
               />
@@ -1750,12 +1814,22 @@ function Suppliers({
         (editing === 'new' ? (
           <Card>
             <p className="mb-3 font-display text-base font-extrabold text-ink">New company</p>
-            <CompanyForm orgId={orgId} initial={null} mode="shop" onSaved={done} onCancel={() => setEditing(null)} />
+            <CompanyForm orgId={orgId} initial={null} mode="shop" onSaved={() => done('new', 'Company added. Find it in the list above.')} onCancel={() => setEditing(null)} />
           </Card>
         ) : (
-          <button type="button" onClick={() => setEditing('new')} className={`${btn.outline} min-h-[44px] w-full`}>
-            <Icon name="plus" size={16} /> Add a company
-          </button>
+          <>
+            {saved?.id === 'new' && (
+              <StatusNote key={saved.text} className="rounded-xl bg-green-50 px-3 py-2 text-[15px] font-bold text-green-700">
+                {saved.text}
+              </StatusNote>
+            )}
+            <button type="button" onClick={() => {
+                setSaved(null)
+                setEditing('new')
+              }} className={`${btn.outline} min-h-[44px] w-full`}>
+              <Icon name="plus" size={16} /> Add a company
+            </button>
+          </>
         ))}
     </div>
   )

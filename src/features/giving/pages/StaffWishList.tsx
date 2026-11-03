@@ -20,6 +20,9 @@ import {
   type WishListItem,
 } from '../wishList'
 import { StaffTitle } from '../../../components/StaffTitle'
+import BringIn from '../../../components/BringIn'
+import { putKeyboardAway } from '../../../lib/bringIntoView'
+import { StatusNote } from '../../scan/ScanUI'
 
 const BAD_LINK = 'That doesn’t look like an Amazon link.'
 const LINK_HINT = 'On Amazon, open the item from OHRR’s list, tap Share → Copy link, and paste it here.'
@@ -136,6 +139,8 @@ export default function StaffWishList() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
+  // Hide / Show only changes the row in place, so its note must not scroll the page back to the top.
+  const [msgScrolls, setMsgScrolls] = useState(true)
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.from('wish_list_items').select(WISH_ITEM_COLUMNS).eq('org_id', orgId)
@@ -161,14 +166,16 @@ export default function StaffWishList() {
       </Screen>
     )
 
-  const start = () => {
+  // keepMsg: a quick change in the list (Hide, Move) swaps the note's words instead of removing it, so the list doesn't jump.
+  const start = (keepMsg = false) => {
     setBusy(true)
     setError(null)
-    setMsg(null)
+    if (!keepMsg) setMsg(null)
   }
-  const done = async (text: string) => {
+  const done = async (text: string, scrolls = true) => {
     await load()
     setBusy(false)
+    setMsgScrolls(scrolls)
     setMsg(text)
   }
   const fail = (e: unknown) => {
@@ -177,6 +184,7 @@ export default function StaffWishList() {
   }
 
   const add = async () => {
+    putKeyboardAway()
     const c = checkDraft(draft)
     if (!c.ok) return setError(c.error)
     start()
@@ -199,6 +207,7 @@ export default function StaffWishList() {
   }
 
   const saveEdit = async () => {
+    putKeyboardAway()
     if (!editing) return
     const c = checkDraft(editing.draft)
     if (!c.ok) return setError(c.error)
@@ -228,7 +237,7 @@ export default function StaffWishList() {
     ;[next[i], next[j]] = [next[j], next[i]]
     // 10, 20, 30… within the group (the two groups never mix: most-needed sorts first).
     const changes = next.map((x, k) => ({ id: x.id, from: x.sort_order, to: (k + 1) * 10 })).filter((c) => c.from !== c.to)
-    start()
+    start(true)
     for (const c of changes) {
       const { error } = await supabase.from('wish_list_items').update({ sort_order: c.to }).eq('id', c.id)
       if (error) return fail(error)
@@ -238,10 +247,10 @@ export default function StaffWishList() {
   }
 
   const toggle = async (item: WishListItem) => {
-    start()
+    start(true)
     const { error } = await supabase.from('wish_list_items').update({ is_published: !item.is_published }).eq('id', item.id)
     if (error) return fail(error)
-    await done(item.is_published ? `${item.name} is hidden.` : `${item.name} is shown again.`)
+    await done(item.is_published ? `${item.name} is hidden.` : `${item.name} is shown again.`, false)
   }
 
   const remove = async (item: WishListItem) => {
@@ -281,6 +290,7 @@ export default function StaffWishList() {
       {rows && !missing && (
         <>
           {adding ? (
+            <BringIn>
             <EditorForm
               title="New wish list item"
               hint="Paste the item’s own Amazon link so the Buy button goes straight to it."
@@ -296,6 +306,7 @@ export default function StaffWishList() {
             >
               <ItemFields draft={draft} onChange={setDraft} />
             </EditorForm>
+            </BringIn>
           ) : (
             <StepButton tone="orange" icon="plus" onClick={() => setAdding(true)}>
               New item
@@ -303,7 +314,14 @@ export default function StaffWishList() {
           )}
 
           {!adding && !editing && <FormError>{error}</FormError>}
-          {msg && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{msg}</p>}
+          {msg &&
+            (msgScrolls ? (
+              <StatusNote key={msg} className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
+                {msg}
+              </StatusNote>
+            ) : (
+              <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{msg}</p>
+            ))}
 
           <p className="font-display text-lg font-extrabold text-ink">
             {list.length} {list.length === 1 ? 'item' : 'items'}
@@ -318,8 +336,8 @@ export default function StaffWishList() {
                 const pos = group.findIndex((x) => x.id === item.id)
                 if (editing?.id === item.id)
                   return (
+                    <BringIn key={item.id}>
                     <EditorForm
-                      key={item.id}
                       title="Edit this item"
                       onSubmit={saveEdit}
                       onCancel={() => {
@@ -333,6 +351,7 @@ export default function StaffWishList() {
                     >
                       <ItemFields draft={editing.draft} onChange={(d) => setEditing({ id: item.id, draft: d })} />
                     </EditorForm>
+                    </BringIn>
                   )
                 return (
                   <Card key={item.id} className="space-y-3">

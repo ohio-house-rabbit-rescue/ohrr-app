@@ -39,6 +39,9 @@ import {
 import TableHolds from '../TableHolds'
 import { Explain, StaffTitle } from '../../../components/StaffTitle'
 import { ChoiceCard, WorkingOn } from '../../../components/StaffJob'
+import { ErrorBox, StatusNote } from '../../scan/ScanUI'
+import { putKeyboardAway } from '../../../lib/bringIntoView'
+import { showRow } from '../../../lib/staffScroll'
 import ExportButtons from '../../../components/ExportButtons'
 import { useOrgBits } from '../../volunteers/orgBits'
 import {
@@ -126,6 +129,11 @@ function Desk() {
     return () => clearInterval(t)
   }, [refresh])
 
+  // Each tab is its own screen: start it at the top, not where the last one was scrolled.
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [tab])
+
   if (!allowed) {
     return (
       <Screen>
@@ -196,7 +204,7 @@ function Desk() {
       {data && tab === 'home' && (
         <>
           <Totals t={data.totals} />
-          {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+          <ErrorBox>{error}</ErrorBox>
           <h2 className="font-display text-xl font-extrabold text-ink">What do you need to do?</h2>
           <ul className="space-y-3">
             <li>
@@ -241,6 +249,12 @@ function Desk() {
               placeholder={tab === 'items' ? 'Search items or bidders' : 'Search bidders'}
               value={q}
               onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  putKeyboardAway()
+                }
+              }}
               inputMode="search"
             />
           )}
@@ -320,6 +334,7 @@ function CloseAndCharge({ orgId, data, onDone }: { orgId: string; data: DeskData
   )
 
   const go = async () => {
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     setRes(null)
@@ -327,6 +342,7 @@ function CloseAndCharge({ orgId, data, onDone }: { orgId: string; data: DeskData
       const r = await auctionApi.charge(await staffJwt(), { org_id: orgId, event: ev.slug })
       setRes(r)
       await onDone()
+      showRow('close-result', { align: 'auto' })
     } catch (e) {
       setError(errMessage(e))
     } finally {
@@ -362,8 +378,8 @@ function CloseAndCharge({ orgId, data, onDone }: { orgId: string; data: DeskData
           <Icon name="gavel" size={18} /> Close &amp; charge now
         </button>
       )}
-      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
-      {res && <ResultList res={res} />}
+      <ErrorBox>{error}</ErrorBox>
+      <div data-row="close-result">{res && <ResultList res={res} />}</div>
     </Card>
   )
 }
@@ -521,7 +537,15 @@ function ItemCard({ item, now, settings, onChange }: { item: DeskItem; now: stri
       {/* Actions */}
       <div className="flex flex-wrap gap-2">
         {!sale && item.status === 'available' && !tableSale && (
-          <button type="button" disabled={busy} onClick={() => setTableSale(true)} className={`${btn.blue} min-h-[44px] !py-2 disabled:opacity-60`}>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setTableSale(true)
+              showRow(`tablesale-${item.id}`, { align: 'top' })
+            }}
+            className={`${btn.blue} min-h-[44px] !py-2 disabled:opacity-60`}
+          >
             Record a table sale
           </button>
         )}
@@ -609,17 +633,20 @@ function ItemCard({ item, now, settings, onChange }: { item: DeskItem; now: stri
         )}
       </div>
 
-      {tableSale && (
-        <TableSaleForm
-          item={item}
-          settings={settings}
-          onDone={async () => {
-            setTableSale(false)
-            await onChange()
-          }}
-          onCancel={() => setTableSale(false)}
-        />
-      )}
+      <div data-row={`tablesale-${item.id}`}>
+        {tableSale && (
+          <TableSaleForm
+            item={item}
+            settings={settings}
+            onDone={async () => {
+              setTableSale(false)
+              setNote('Table sale recorded.')
+              await onChange()
+            }}
+            onCancel={() => setTableSale(false)}
+          />
+        )}
+      </div>
 
       {showBids && (
         <ul className="divide-y divide-slate-100 rounded-xl border border-slate-100 px-3 text-sm">
@@ -636,8 +663,12 @@ function ItemCard({ item, now, settings, onChange }: { item: DeskItem; now: stri
         </ul>
       )}
 
-      {note && <p className="text-sm font-semibold text-emerald-700">{note}</p>}
-      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+      {note && (
+        <StatusNote key={note} className="text-sm font-semibold text-emerald-700">
+          {note}
+        </StatusNote>
+      )}
+      <ErrorBox>{error}</ErrorBox>
     </Card>
   )
 }
@@ -654,6 +685,7 @@ function TableSaleForm({ item, settings, onDone, onCancel }: { item: DeskItem; s
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
+    putKeyboardAway()
     const cents = dollarsToCents(amount)
     if (cents == null) {
       setError('Enter the amount.')
@@ -725,7 +757,7 @@ function TableSaleForm({ item, settings, onDone, onCancel }: { item: DeskItem; s
         <input type="checkbox" className="h-5 w-5 rounded border-slate-300" checked={paid} onChange={(e) => setPaid(e.target.checked)} />
         Paid at the desk (cash or card reader)
       </label>
-      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+      <ErrorBox>{error}</ErrorBox>
       <div className="flex gap-2">
         <button type="submit" disabled={busy} className={`${btn.primary} min-h-[48px] flex-1 disabled:opacity-60`}>
           {busy ? 'Saving…' : 'Record sale'}
@@ -776,13 +808,20 @@ function DoneTab({ data, eventName }: { data: DeskData; eventName: string }) {
           <p className="text-[15px] font-bold text-ink">
             {t.unpaid} item{t.unpaid === 1 ? ' is' : 's are'} still unpaid — {money(t.unpaidCents)} owed.
           </p>
-          <button type="button" onClick={() => setFilter('unpaid')} className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-brand-orange px-4 text-[15px] font-extrabold text-ink">
+          <button
+            type="button"
+            onClick={() => {
+              setFilter('unpaid')
+              showRow('done-list', { align: 'top' })
+            }}
+            className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-brand-orange px-4 text-[15px] font-extrabold text-ink"
+          >
             Show the unpaid
           </button>
         </Card>
       )}
 
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Show">
+      <div data-row="done-list" className="flex flex-wrap gap-2" role="group" aria-label="Show">
         {DONE_FILTERS.map((f) => (
           <button
             key={f.id}
@@ -887,7 +926,7 @@ function BidderCard({ b, onChange, eventName }: { b: DeskBidder; onChange: () =>
         </button>
       </div>
       <p className="text-xs text-slate-500">Their private “Your bids” link is in their registration email; the desk doesn’t hold it.</p>
-      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+      <ErrorBox>{error}</ErrorBox>
     </Card>
   )
 }

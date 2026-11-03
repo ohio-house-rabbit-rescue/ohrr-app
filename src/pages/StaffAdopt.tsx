@@ -11,6 +11,8 @@ import { isNative } from '../native/platform'
 import { pickPhoto } from '../native/camera'
 import type { Database, Json } from '../lib/database.types'
 import BreedInput from '../components/BreedInput'
+import { bringIntoView, ensureVisible } from '../lib/bringIntoView'
+import { ErrorBox, StatusNote } from '../features/scan/ScanUI'
 
 type Rabbit = Database['public']['Tables']['rabbits']['Row']
 type JobRun = Pick<Database['public']['Tables']['job_runs']['Row'], 'finished_at' | 'ok' | 'detail'>
@@ -154,6 +156,16 @@ function RescueGroupsCheck({ orgId, canRefresh, onRefreshed }: { orgId: string; 
   const [phase, setPhase] = useState<'idle' | 'asking' | 'waiting' | 'late'>('idle')
   const [error, setError] = useState<string | null>(null)
   const askedAt = useRef(0)
+  // Asking, waiting and the answer all change this card (the button hides, the line at the top is new): keep it in sight.
+  const cardRef = useRef<HTMLDivElement>(null)
+  const firstPhase = useRef(true)
+  useEffect(() => {
+    if (firstPhase.current) {
+      firstPhase.current = false
+      return
+    }
+    ensureVisible(cardRef.current)
+  }, [phase])
 
   const load = useCallback(async (): Promise<RabbitCheck | null> => {
     const { data, error } = await supabase
@@ -211,6 +223,7 @@ function RescueGroupsCheck({ orgId, canRefresh, onRefreshed }: { orgId: string; 
     )
 
   return (
+    <div ref={cardRef}>
     <Card className="space-y-2 !py-3">
       <p className="text-[15px] leading-relaxed text-slate-700">
         {check ? checkSummary(check) : 'RescueGroups hasn’t been checked yet.'}{' '}
@@ -234,6 +247,7 @@ function RescueGroupsCheck({ orgId, canRefresh, onRefreshed }: { orgId: string; 
         </button>
       )}
     </Card>
+    </div>
   )
 }
 
@@ -378,7 +392,6 @@ function RabbitForm({
       busy={busy}
       saveLabel={saveLabel}
       canSave={draft.name.trim().length > 0}
-      error={error}
       remove={
         onRemove
           ? { label: 'Remove this rabbit', confirm: 'Remove this rabbit? This can’t be undone.', onRemove: guard(onRemove) }
@@ -451,6 +464,8 @@ function RabbitForm({
         </Field>
         <CheckRow label="Show on the Adopt page (leave unchecked to keep it hidden)" checked={draft.is_published} onChange={check('is_published')} />
       </PartBox>
+      {/* Just above Save; it brings itself into view (Enter in a box saves with the keyboard still up). */}
+      <ErrorBox>{error}</ErrorBox>
     </EditorForm>
   )
 }
@@ -472,6 +487,14 @@ function RabbitCard({
 }) {
   const [editing, setEditing] = useState(false)
   const { busy, error, run } = useCardAction()
+  // Opening the edit form, or saving it, brings this rabbit's top under the top bar so the form (or the card again) is what you see.
+  const cardRef = useRef<HTMLDivElement>(null)
+  const wasEditing = useRef(false)
+  useEffect(() => {
+    if (editing === wasEditing.current) return
+    wasEditing.current = editing
+    bringIntoView(cardRef.current, { align: 'top' })
+  }, [editing])
 
   const toDraftPatch = (d: Draft) => ({
     name: d.name.trim(),
@@ -527,20 +550,23 @@ function RabbitCard({
 
   if (editing) {
     return (
-      <RabbitForm
-        initial={draftFrom(item)}
-        userId={userId}
-        title={`Edit ${item.name}`}
-        saveLabel="Save changes"
-        isNew={false}
-        onSubmit={saveEdit}
-        onCancel={() => setEditing(false)}
-        onRemove={canEdit ? doDelete : undefined}
-      />
+      <div ref={cardRef}>
+        <RabbitForm
+          initial={draftFrom(item)}
+          userId={userId}
+          title={`Edit ${item.name}`}
+          saveLabel="Save changes"
+          isNew={false}
+          onSubmit={saveEdit}
+          onCancel={() => setEditing(false)}
+          onRemove={canEdit ? doDelete : undefined}
+        />
+      </div>
     )
   }
 
   return (
+    <div ref={cardRef}>
     <Card className="space-y-2">
       <div className="flex gap-3">
         <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-100">
@@ -632,6 +658,7 @@ function RabbitCard({
       )}
       <FormError>{error}</FormError>
     </Card>
+    </div>
   )
 }
 
@@ -648,6 +675,8 @@ export default function StaffAdopt() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  // Saved: told where the form was (it folds away, and the new rabbit joins the A-to-Z list below).
+  const [added, setAdded] = useState<{ n: number; name: string } | null>(null)
 
   const load = useCallback(async () => {
     if (!orgId || !allowed) {
@@ -699,6 +728,7 @@ export default function StaffAdopt() {
     })
     if (error) throw error
     setCreating(false)
+    setAdded({ n: Date.now(), name: d.name.trim() })
     await load()
   }
 
@@ -727,7 +757,14 @@ export default function StaffAdopt() {
 
       {canCreate && !creating && (
         <div>
-          <StepButton tone="orange" icon="plus" onClick={() => setCreating(true)}>
+          <StepButton
+            tone="orange"
+            icon="plus"
+            onClick={() => {
+              setAdded(null)
+              setCreating(true)
+            }}
+          >
             Add a rabbit
           </StepButton>
         </div>
@@ -743,6 +780,12 @@ export default function StaffAdopt() {
           onSubmit={create}
           onCancel={() => setCreating(false)}
         />
+      )}
+
+      {added && !creating && (
+        <StatusNote key={added.n} className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-[15px] font-bold text-green-800">
+          Added {added.name}. {added.name} is in the list below, in A to Z order.
+        </StatusNote>
       )}
 
       {orgId && <RescueGroupsCheck orgId={orgId} canRefresh={canCreate || canEdit} onRefreshed={reload} />}

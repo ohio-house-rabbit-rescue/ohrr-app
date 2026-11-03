@@ -12,6 +12,9 @@ import { Spinner, FormError, staffInput } from '../../../components/staffui'
 import { CardActions, EditorForm, Field, NotOnYet, Part, StepButton, pill } from '../../../components/StaffJob'
 import { guessSortName, sortGuardians, type Guardian } from '../guardians'
 import { StaffTitle } from '../../../components/StaffTitle'
+import BringIn from '../../../components/BringIn'
+import { putKeyboardAway } from '../../../lib/bringIntoView'
+import { StatusNote } from '../../scan/ScanUI'
 
 /** Update 29 hasn't been run: PostgREST can't find the table. */
 function tableMissing(e: { code?: string; message?: string }) {
@@ -32,6 +35,8 @@ export default function StaffGuardians() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
+  // Hide / Show only changes the row in place, so its note must not scroll the page back to the top.
+  const [msgScrolls, setMsgScrolls] = useState(true)
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -72,19 +77,21 @@ export default function StaffGuardians() {
       </Screen>
     )
 
-  const done = async (text: string) => {
+  const done = async (text: string, scrolls = true) => {
     await load()
     setBusy(false)
+    setMsgScrolls(scrolls)
     setMsg(text)
   }
   const fail = (e: unknown) => {
     setBusy(false)
     setError(errMessage(e))
   }
-  const start = () => {
+  // keepMsg: Hide / Show swaps the note's words instead of removing it, so the list doesn't jump.
+  const start = (keepMsg = false) => {
     setBusy(true)
     setError(null)
-    setMsg(null)
+    if (!keepMsg) setMsg(null)
   }
 
   const closeAdd = () => {
@@ -96,6 +103,7 @@ export default function StaffGuardians() {
   }
 
   const add = async () => {
+    putKeyboardAway()
     const n = name.trim().replace(/\s+/g, ' ')
     if (!n) return
     start()
@@ -111,6 +119,7 @@ export default function StaffGuardians() {
     await done(`Added ${n} to ${year}.`)
   }
   const saveEdit = async () => {
+    putKeyboardAway()
     if (!editing) return
     const n = editing.name.trim().replace(/\s+/g, ' ')
     if (!n) return
@@ -124,10 +133,10 @@ export default function StaffGuardians() {
     await done('Saved.')
   }
   const toggle = async (g: Guardian) => {
-    start()
+    start(true)
     const { error } = await supabase.from('guardians').update({ is_published: !g.is_published }).eq('id', g.id)
     if (error) return fail(error)
-    await done(g.is_published ? `${g.display_name} is hidden from the Legacy Fund page.` : `${g.display_name} is shown again.`)
+    await done(g.is_published ? `${g.display_name} is hidden from the Legacy Fund page.` : `${g.display_name} is shown again.`, false)
   }
   const remove = async (g: Guardian) => {
     start()
@@ -208,6 +217,7 @@ export default function StaffGuardians() {
       {rows && !missing && (
         <>
           {adding ? (
+            <BringIn>
             <EditorForm
               title={`Add a name to ${year}`}
               onSubmit={add}
@@ -249,6 +259,7 @@ export default function StaffGuardians() {
                 </Field>
               </div>
             </EditorForm>
+            </BringIn>
           ) : (
             <StepButton tone="orange" icon="plus" onClick={() => setAdding(true)}>
               New name for {year}
@@ -256,7 +267,14 @@ export default function StaffGuardians() {
           )}
 
           {!adding && !editing && <FormError>{error}</FormError>}
-          {msg && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{msg}</p>}
+          {msg &&
+            (msgScrolls ? (
+              <StatusNote key={msg} className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
+                {msg}
+              </StatusNote>
+            ) : (
+              <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{msg}</p>
+            ))}
 
           <div className="space-y-2">
             <p className="font-display text-lg font-extrabold text-ink">
@@ -275,8 +293,8 @@ export default function StaffGuardians() {
             <div className="space-y-3">
               {list.map((g) =>
                 editing?.id === g.id ? (
+                  <BringIn key={g.id}>
                   <EditorForm
-                    key={g.id}
                     title="Edit this name"
                     onSubmit={saveEdit}
                     onCancel={() => {
@@ -305,6 +323,7 @@ export default function StaffGuardians() {
                       </Field>
                     </div>
                   </EditorForm>
+                  </BringIn>
                 ) : (
                   <Card key={g.id} className="space-y-2.5">
                     <div className="flex flex-wrap items-center gap-2">

@@ -11,7 +11,10 @@ import { supabase, errMessage } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { Card } from '../../components/ui'
 import { Field, Part, pill } from '../../components/StaffJob'
-import { FormError, staffInput } from '../../components/staffui'
+import { staffInput } from '../../components/staffui'
+import { ErrorBox } from '../scan/ScanUI'
+import { putKeyboardAway } from '../../lib/bringIntoView'
+import { showRow } from '../../lib/staffScroll'
 import { slugify } from '../../lib/careContent'
 import { setSetting } from '../settings/useSetting'
 import { EVENT_SETTING_KEY, currentEvent, dayLabel, ohioDay, type CurrentEvent } from '../../lib/currentEvent'
@@ -70,6 +73,7 @@ export default function EventPicker() {
   const addNew = async () => {
     const title = name.trim()
     if (!title || !day || busy) return
+    putKeyboardAway()
     const startsAt = eventTimeToIso('10:00', day)
     if (!startsAt) {
       setError('That day doesn’t look right — pick it from the calendar.')
@@ -103,13 +107,20 @@ export default function EventPicker() {
       {!mayChange && <p className="text-sm text-slate-500">An admin can change the event here when the next one comes around.</p>}
 
       {mayChange && !open && (
-        <button type="button" onClick={() => setOpen(true)} className={`${pill.soft} !min-h-[48px]`}>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(true)
+            showRow('event-picker-open', { align: 'top' })
+          }}
+          className={`${pill.soft} !min-h-[48px]`}
+        >
           Change the event
         </button>
       )}
 
       {mayChange && open && (
-        <div className="space-y-3">
+        <div data-row="event-picker-open" className="space-y-3">
           <Part n="A" hint="Items, prizes and tickets of the other events stay safe under their event.">
             Pick the event
           </Part>
@@ -139,11 +150,18 @@ export default function EventPicker() {
             Or type a new event
           </Part>
           {!adding ? (
-            <button type="button" onClick={() => setAdding(true)} className={`${pill.outline} !min-h-[48px]`}>
+            <button
+              type="button"
+              onClick={() => {
+                setAdding(true)
+                showRow('event-new', { align: 'auto' })
+              }}
+              className={`${pill.outline} !min-h-[48px]`}
+            >
               Type a new event
             </button>
           ) : (
-            <div className="space-y-3">
+            <div data-row="event-new" className="space-y-3">
               <Field label="Name of the event" needed>
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Midwest BunFest 2027" className={staffInput} />
               </Field>
@@ -165,7 +183,7 @@ export default function EventPicker() {
           </button>
         </div>
       )}
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
     </Card>
   )
 }

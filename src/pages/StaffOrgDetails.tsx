@@ -11,6 +11,7 @@ import { btn, Card, Screen } from '../components/ui'
 import { Explain, StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { fetchSettings, setSetting } from '../features/settings/useSetting'
+import { StatusNote } from '../features/scan/ScanUI'
 import { ORG_PROFILE_FALLBACK, ORG_PROFILE_KEY, type OrgProfile } from '../lib/orgProfile'
 import type { Json } from '../lib/database.types'
 
@@ -173,11 +174,12 @@ export default function StaffOrgDetails() {
             </label>
           </Card>
 
-          <FormError>{error}</FormError>
-          {saved && <p className="text-sm font-bold text-green-700">Saved.</p>}
+          {/* The Save button stays put; what happened shows under it. */}
           <button type="button" onClick={save} disabled={busy} className={`${btn.primary} w-full disabled:opacity-60`}>
             {busy ? 'Saving…' : 'Save OHRR details'}
           </button>
+          <FormError>{error}</FormError>
+          {saved && <StatusNote className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">Saved. Everyone sees the change the next time they open the app or the website.</StatusNote>}
         </>
       )}
     </Screen>

@@ -1,11 +1,12 @@
 // The questions about a box besides its number (update 50): its name ("Raffle box"), a description ("green tote"),
 // and which event it goes to — picked from the events list, or a new event made right here.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase, errMessage } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { staffInput } from '../../components/staffui'
 import { slugify } from '../../lib/careContent'
 import { eventTimeToIso } from '../raffle/types'
+import { bringIntoView, ensureVisible } from '../../lib/bringIntoView'
 
 export interface BoxFieldValues {
   name: string
@@ -31,6 +32,16 @@ export default function BoxFields({ orgId, value, onChange }: { orgId: string; v
   const [day, setDay] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // "Add a new event…" opens its questions under the drop-down: bring them into view. A problem is brought into view too.
+  const newRef = useRef<HTMLDivElement>(null)
+  const errRef = useRef<HTMLParagraphElement>(null)
+  useEffect(() => {
+    if (adding) bringIntoView(newRef.current)
+  }, [adding])
+  useEffect(() => {
+    if (error) ensureVisible(errRef.current)
+  }, [error])
 
   useEffect(() => {
     if (!orgId) return
@@ -111,7 +122,7 @@ export default function BoxFields({ orgId, value, onChange }: { orgId: string; v
         </select>
       </label>
       {adding && (
-        <div className="space-y-3 rounded-2xl border-2 border-brand-orange/60 bg-white p-3">
+        <div ref={newRef} className="space-y-3 rounded-2xl border-2 border-brand-orange/60 bg-white p-3">
           <p className="font-display text-lg font-extrabold text-ink">A new event</p>
           <label className="block text-base font-bold text-ink">
             Its name
@@ -132,7 +143,7 @@ export default function BoxFields({ orgId, value, onChange }: { orgId: string; v
           </div>
         </div>
       )}
-      {error && <p role="alert" className="text-base font-semibold text-red-700">{error}</p>}
+      {error && <p ref={errRef} role="alert" className="text-base font-semibold text-red-700">{error}</p>}
     </div>
   )
 }

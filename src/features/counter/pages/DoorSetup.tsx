@@ -7,12 +7,13 @@
 //                     receipt by hand. Loading again only adds or updates.
 //   Prices            the door prices (BunFest managers).
 //   Let in twice      receipts two phones both let in — with times and phones.
-import { useMemo, useState, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
 import { staffInput } from '../../../components/staffui'
-import { BigButton, ErrorBox, StepShell } from '../../scan/ScanUI'
+import { bringIntoView } from '../../../lib/bringIntoView'
+import { BigButton, ErrorBox, StatusNote, StepShell } from '../../scan/ScanUI'
 import { clock, money, toCents } from '../local'
 import {
   duplicates,
@@ -42,7 +43,8 @@ export default function DoorSetup() {
   const settings = useDoorSettings(orgId)
   const door = useDoorSync(orgId, settings.event_key)
   const isManager = can('events.bunfest.manage')
-  const [note, setNote] = useState<string | null>(null)
+  // The note is told at the top, which is where the counts change; it scrolls itself up from whichever panel was used.
+  const [note, setNote] = useState<{ n: number; text: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [q, setQ] = useState('')
 
@@ -54,7 +56,7 @@ export default function DoorSetup() {
   }, [q, door.tickets])
 
   const done = async (msg: string) => {
-    setNote(msg)
+    setNote({ n: Date.now(), text: msg })
     setError(null)
     await door.syncNow()
   }
@@ -63,7 +65,11 @@ export default function DoorSetup() {
     <StepShell title="Door setup" help={settings.event_name} onBack={() => navigate('/staff/counter/door')} backLabel="Door">
       <div className="space-y-5">
         {offline && <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">Setup needs signal.</p>}
-        {note && <p className="rounded-2xl bg-green-50 px-4 py-3 text-base font-semibold text-green-800">{note}</p>}
+        {note && (
+          <StatusNote key={note.n} className="rounded-2xl bg-green-50 px-4 py-3 text-base font-semibold text-green-800">
+            {note.text}
+          </StatusNote>
+        )}
         <ErrorBox>{error}</ErrorBox>
 
         <div className="grid grid-cols-3 gap-2 text-center">
@@ -114,7 +120,15 @@ export default function DoorSetup() {
 
         <section className="space-y-2">
           <p className="font-display text-lg font-extrabold text-ink">The ticket list</p>
-          <input className={staffInput} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a receipt or name" aria-label="Find a receipt" />
+          <input
+            className={staffInput}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            // The matches show below the box: lift the box so they are above the keyboard.
+            onFocus={(e) => bringIntoView(e.currentTarget, { align: 'top', keyboard: 'keep', delay: 300 })}
+            placeholder="Find a receipt or name"
+            aria-label="Find a receipt"
+          />
           {door.tickets.length === 0 ? (
             <p className="text-sm text-slate-500">No receipts yet — load the ticket shop’s export above.</p>
           ) : (
@@ -156,7 +170,7 @@ export default function DoorSetup() {
             onSave={async (s) => {
               try {
                 await saveDoorSettings(orgId, s)
-                setNote('Door settings saved. Door phones pick them up next time they open the Door screen.')
+                setNote({ n: Date.now(), text: 'Door settings saved. Door phones pick them up next time they open the Door screen.' })
                 setError(null)
               } catch (e) {
                 setError(errMessage(e))
@@ -186,6 +200,12 @@ function ImportCsv({ onImport }: { onImport: (rows: ReturnType<typeof rowsToTick
   const [types, setTypes] = useState<Record<string, TicketType>>({})
   const [busy, setBusy] = useState(false)
   const [fileError, setFileError] = useState<string | null>(null)
+  // Once a file is chosen the columns to check replace the button: start at their top.
+  const importRef = useRef<HTMLElement>(null)
+  const hasFile = rows !== null
+  useEffect(() => {
+    if (hasFile) bringIntoView(importRef.current, { align: 'top' })
+  }, [hasFile])
 
   const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
@@ -225,7 +245,7 @@ function ImportCsv({ onImport }: { onImport: (rows: ReturnType<typeof rowsToTick
     )
 
   return (
-    <section className="space-y-3 rounded-2xl border-2 border-slate-200 bg-white p-4">
+    <section ref={importRef} className="space-y-3 rounded-2xl border-2 border-slate-200 bg-white p-4">
       <p className="font-display text-lg font-extrabold text-ink">Load the advance tickets</p>
       {!rows ? (
         <>
@@ -297,6 +317,10 @@ function AddByHand({ onAdd }: { onAdd: (row: { code: string; name: string; adult
   const [open, setOpen] = useState(false)
   const [f, setF] = useState({ code: '', name: '', adults: '1', children: '0', under5: '0' })
   const num = (s: string) => Math.max(0, parseInt(s.replace(/[^0-9]/g, ''), 10) || 0)
+  const formRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (open) bringIntoView(formRef.current, { align: 'top', keyboard: 'keep' })
+  }, [open])
   if (!open)
     return (
       <button type="button" onClick={() => setOpen(true)} className="w-full text-center text-sm font-bold text-brand-blue">
@@ -304,7 +328,7 @@ function AddByHand({ onAdd }: { onAdd: (row: { code: string; name: string; adult
       </button>
     )
   return (
-    <section className="space-y-2 rounded-2xl border-2 border-slate-200 bg-white p-4">
+    <section ref={formRef} className="space-y-2 rounded-2xl border-2 border-slate-200 bg-white p-4">
       <p className="font-display text-lg font-extrabold text-ink">Add a receipt by hand</p>
       <div className="grid grid-cols-2 gap-2">
         <label className="block text-sm font-semibold text-slate-700">
@@ -362,6 +386,10 @@ function Prices({ initial, onSave }: { initial: { event_key: string; event_name:
   })
   const [f, setF] = useState(fromInitial)
   const [open, setOpen] = useState(false)
+  const formRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (open) bringIntoView(formRef.current, { align: 'top', keyboard: 'keep' })
+  }, [open])
   if (!open)
     return (
       <button
@@ -378,7 +406,7 @@ function Prices({ initial, onSave }: { initial: { event_key: string; event_name:
   const cents = { adult: toCents(f.adult), child: toCents(f.child), under5: toCents(f.under5) }
   const ok = cents.adult !== null && cents.child !== null && cents.under5 !== null && f.event_key.trim() && f.event_name.trim()
   return (
-    <section className="space-y-2 rounded-2xl border-2 border-slate-200 bg-white p-4">
+    <section ref={formRef} className="space-y-2 rounded-2xl border-2 border-slate-200 bg-white p-4">
       <p className="font-display text-lg font-extrabold text-ink">Door settings</p>
       <label className="block text-sm font-semibold text-slate-700">
         Event

@@ -20,9 +20,11 @@ import { errMessage, supabase, isSupabaseConfigured } from '../../../lib/supabas
 import { eventDate, eventIsoDay, useBunfestEvent } from '../../../lib/events'
 import { Screen, Card, Badge } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
-import { Spinner, FormError, staffInput } from '../../../components/staffui'
+import { Spinner, staffInput } from '../../../components/staffui'
 import { CardActions, ChoiceCard, EditorForm, Field, Part, WorkingOn, pill } from '../../../components/StaffJob'
-import { BigButton } from '../../scan/ScanUI'
+import { BigButton, ErrorBox, StatusNote } from '../../scan/ScanUI'
+import { putKeyboardAway } from '../../../lib/bringIntoView'
+import { showRow } from '../../../lib/staffScroll'
 import { listSuppliers, type Supplier } from '../../hopshop/api'
 import { giftTotals, type GiftTotals } from '../../hopshop/companies'
 import { CompanyForm, CompanySummary, CompanyThumb, useVendorRecordsReady } from '../../hopshop/CompanyForm'
@@ -294,7 +296,7 @@ export default function StaffBunfest() {
           </div>
         </Card>
       )}
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
 
       {known === null ? (
         <Spinner />
@@ -425,7 +427,7 @@ function StartYear({
       <BigButton tone="orange" icon="sparkles" disabled={busy} onClick={() => void start(latest)}>
         {busy ? 'Starting…' : `Start ${year}`}
       </BigButton>
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
       {known.length > 0 && (
         <div className="space-y-2">
           <button type="button" onClick={() => setMore((m) => !m)} aria-expanded={more} className={pill.soft}>
@@ -542,6 +544,7 @@ function YearStep({
   const [from, setFrom] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<string | null>(note)
+  const [copiedNote, setCopiedNote] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const chosen = from ?? others[0] ?? null
 
@@ -550,8 +553,9 @@ function YearStep({
     setBusy(true)
     setError(null)
     setDone(null)
+    setCopiedNote(null)
     try {
-      setDone(copySummary(await startBunfestYear(orgId, chosen, year), chosen, year))
+      setCopiedNote(copySummary(await startBunfestYear(orgId, chosen, year), chosen, year))
       await onCopied()
       setBump((b) => b + 1)
     } catch (e) {
@@ -608,10 +612,15 @@ function YearStep({
               ))}
             </div>
           </div>
-          <FormError>{error}</FormError>
+          <ErrorBox>{error}</ErrorBox>
           <button type="button" onClick={() => void run()} disabled={busy || chosen === null} className={pill.soft}>
             {busy ? 'Copying…' : `Copy ${chosen ?? ''} into ${year}`}
           </button>
+          {copiedNote && (
+            <StatusNote key={copiedNote} className="text-[15px] font-bold text-green-700">
+              {copiedNote}
+            </StatusNote>
+          )}
         </Card>
       )}
     </div>
@@ -642,6 +651,7 @@ function SessionsList({ orgId, year }: { orgId: string; year: number }) {
   const [rows, setRows] = useState<SessionRow[] | null>(null)
   const [presenters, setPresenters] = useState<PresenterRow[]>([])
   const [editing, setEditing] = useState<string | 'new' | null>(null)
+  const [added, setAdded] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
 
@@ -673,14 +683,21 @@ function SessionsList({ orgId, year }: { orgId: string; year: number }) {
 
   const older = years.filter((y) => y !== year)
   const done = async () => {
+    const was = editing
     setEditing(null)
     await load()
+    if (was === 'new') setAdded((n) => n + 1)
+    else if (was) showRow(was, { align: 'auto' })
   }
 
   return (
     <div className="space-y-3">
-      <FormError>{error}</FormError>
-      {note && <p className="text-[15px] font-bold text-green-700">{note}</p>}
+      <ErrorBox>{error}</ErrorBox>
+      {note && (
+        <StatusNote key={note} className="text-[15px] font-bold text-green-700">
+          {note}
+        </StatusNote>
+      )}
       {rows === null && !error && <Spinner />}
       {rows && rows.length === 0 && (
         <Card className="space-y-3">
@@ -703,9 +720,14 @@ function SessionsList({ orgId, year }: { orgId: string; year: number }) {
         </Card>
       )}
 
-      {rows?.map((r) =>
-        editing === r.id ? (
-          <SessionForm key={r.id} orgId={orgId} year={year} presenters={presenters} initial={r} onDone={done} onCancel={() => setEditing(null)} />
+      {rows?.map((r) => (
+        <div key={r.id} data-row={r.id}>
+        {editing === r.id ? (
+          <SessionForm key={r.id} orgId={orgId} year={year} presenters={presenters} initial={r} onDone={done} onCancel={() => {
+          const was = editing
+          setEditing(null)
+          if (was) showRow(was, { align: 'auto' })
+        }} />
         ) : (
           <Card key={r.id} className="space-y-2">
             <div className="flex items-start gap-3">
@@ -724,21 +746,40 @@ function SessionsList({ orgId, year }: { orgId: string; year: number }) {
               </span>
             </div>
             <CardActions>
-              <button type="button" onClick={() => setEditing(r.id)} className={pill.blue}>
+              <button type="button" onClick={() => {
+                  setEditing(r.id)
+                  showRow(r.id, { align: 'top' })
+                }} className={pill.blue}>
                 Edit
               </button>
             </CardActions>
           </Card>
-        ),
-      )}
+        )}
+        </div>
+      ))}
 
+      {added > 0 && (
+        <StatusNote key={added} className="text-[15px] font-bold text-green-700">
+          Added — it is in the list above.
+        </StatusNote>
+      )}
+      <div data-row="new">
       {editing === 'new' ? (
-        <SessionForm orgId={orgId} year={year} presenters={presenters} initial={null} onDone={done} onCancel={() => setEditing(null)} />
+        <SessionForm orgId={orgId} year={year} presenters={presenters} initial={null} onDone={done} onCancel={() => {
+          const was = editing
+          setEditing(null)
+          if (was) showRow(was, { align: 'auto' })
+        }} />
       ) : (
-        <button type="button" onClick={() => setEditing('new')} className={pill.orange}>
+        <button type="button" onClick={() => {
+            setEditing('new')
+            showRow('new', { align: 'top' })
+          }}
+          className={pill.orange}>
           <Icon name="plus" size={16} /> Add a session
         </button>
       )}
+      </div>
     </div>
   )
 }
@@ -780,6 +821,7 @@ function SessionForm({
   const txt = (k: keyof typeof d) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value })
 
   const submit = async () => {
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     try {
@@ -924,6 +966,7 @@ function SessionForm({
 function VendorsTab({ orgId, year }: { orgId: string; year: number }) {
   const [rows, setRows] = useState<Supplier[] | null>(null)
   const [editing, setEditing] = useState<string | 'new' | null>(null)
+  const [added, setAdded] = useState(0)
   const [onlyYear, setOnlyYear] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -955,8 +998,11 @@ function VendorsTab({ orgId, year }: { orgId: string; year: number }) {
   }, [loadGifts])
 
   const done = async () => {
+    const was = editing
     setEditing(null)
     await load()
+    if (was === 'new') setAdded((n) => n + 1)
+    else if (was) showRow(was, { align: 'auto' })
   }
   const yearPicker = (years: number[], onChange: (years: number[]) => void) => <YearChips value={years} onChange={onChange} />
   const published = (rows ?? []).filter((r) => r.vendor_published).length
@@ -990,7 +1036,7 @@ function VendorsTab({ orgId, year }: { orgId: string; year: number }) {
           {onlyYear ? `Showing only ${year}` : `Show only ${year}`}
         </button>
       </Card>
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
       {rows === null && !error && <Spinner />}
       {rows && rows.length === 0 && (
         <Card className="text-[15px] text-slate-700">
@@ -998,8 +1044,9 @@ function VendorsTab({ orgId, year }: { orgId: string; year: number }) {
         </Card>
       )}
 
-      {sorted.map((r) =>
-        editing === r.id ? (
+      {sorted.map((r) => (
+        <div key={r.id} data-row={r.id}>
+        {editing === r.id ? (
           <Card key={r.id}>
             <p className="mb-3 font-display text-lg font-extrabold text-ink">{r.name}</p>
             <CompanyForm
@@ -1007,7 +1054,11 @@ function VendorsTab({ orgId, year }: { orgId: string; year: number }) {
               initial={r}
               mode="bunfest"
               onSaved={done}
-              onCancel={() => setEditing(null)}
+              onCancel={() => {
+          const was = editing
+          setEditing(null)
+          if (was) showRow(was, { align: 'auto' })
+        }}
               onGiftsChanged={() => void loadGifts()}
               yearPicker={yearPicker}
             />
@@ -1032,24 +1083,43 @@ function VendorsTab({ orgId, year }: { orgId: string; year: number }) {
               </span>
             </div>
             <CardActions>
-              <button type="button" onClick={() => setEditing(r.id)} className={pill.blue}>
+              <button type="button" onClick={() => {
+                  setEditing(r.id)
+                  showRow(r.id, { align: 'top' })
+                }} className={pill.blue}>
                 Open
               </button>
             </CardActions>
           </Card>
-        ),
-      )}
+        )}
+        </div>
+      ))}
 
+      {added > 0 && (
+        <StatusNote key={added} className="text-[15px] font-bold text-green-700">
+          Added — it is in the list above.
+        </StatusNote>
+      )}
+      <div data-row="new">
       {editing === 'new' ? (
         <Card>
           <p className="mb-3 font-display text-lg font-extrabold text-ink">New vendor</p>
-          <CompanyForm orgId={orgId} initial={null} mode="bunfest" onSaved={done} onCancel={() => setEditing(null)} yearPicker={yearPicker} />
+          <CompanyForm orgId={orgId} initial={null} mode="bunfest" onSaved={done} onCancel={() => {
+          const was = editing
+          setEditing(null)
+          if (was) showRow(was, { align: 'auto' })
+        }} yearPicker={yearPicker} />
         </Card>
       ) : (
-        <button type="button" onClick={() => setEditing('new')} className={pill.orange}>
+        <button type="button" onClick={() => {
+            setEditing('new')
+            showRow('new', { align: 'top' })
+          }}
+          className={pill.orange}>
           <Icon name="plus" size={16} /> Add a vendor
         </button>
       )}
+      </div>
     </div>
   )
 }
@@ -1059,6 +1129,7 @@ function VendorsTab({ orgId, year }: { orgId: string; year: number }) {
 function PartnersTab({ orgId, year }: { orgId: string; year: number }) {
   const [rows, setRows] = useState<PartnerRow[] | null>(null)
   const [editing, setEditing] = useState<string | 'new' | null>(null)
+  const [added, setAdded] = useState(0)
   const [q, setQ] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -1083,8 +1154,11 @@ function PartnersTab({ orgId, year }: { orgId: string; year: number }) {
   }, [rows, q])
 
   const done = async () => {
+    const was = editing
     setEditing(null)
     await load()
+    if (was === 'new') setAdded((n) => n + 1)
+    else if (was) showRow(was, { align: 'auto' })
   }
 
   return (
@@ -1099,17 +1173,28 @@ function PartnersTab({ orgId, year }: { orgId: string; year: number }) {
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              putKeyboardAway()
+            }
+          }}
           placeholder="Find by name or state"
           aria-label="Find a rescue by name or state"
           className="min-h-[48px] w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-base text-ink outline-none focus:border-brand-blue"
         />
       </div>
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
       {rows === null && !error && <Spinner />}
 
-      {shown.map((r) =>
-        editing === r.id ? (
-          <PartnerForm key={r.id} orgId={orgId} initial={r} onDone={done} onCancel={() => setEditing(null)} />
+      {shown.map((r) => (
+        <div key={r.id} data-row={r.id}>
+        {editing === r.id ? (
+          <PartnerForm key={r.id} orgId={orgId} initial={r} onDone={done} onCancel={() => {
+          const was = editing
+          setEditing(null)
+          if (was) showRow(was, { align: 'auto' })
+        }} />
         ) : (
           <Card key={r.id} className="space-y-2">
             <span className="block min-w-0">
@@ -1125,21 +1210,40 @@ function PartnersTab({ orgId, year }: { orgId: string; year: number }) {
               </span>
             </span>
             <CardActions>
-              <button type="button" onClick={() => setEditing(r.id)} className={pill.blue}>
+              <button type="button" onClick={() => {
+                  setEditing(r.id)
+                  showRow(r.id, { align: 'top' })
+                }} className={pill.blue}>
                 Edit
               </button>
             </CardActions>
           </Card>
-        ),
-      )}
+        )}
+        </div>
+      ))}
 
+      {added > 0 && (
+        <StatusNote key={added} className="text-[15px] font-bold text-green-700">
+          Added — it is in the list above.
+        </StatusNote>
+      )}
+      <div data-row="new">
       {editing === 'new' ? (
-        <PartnerForm orgId={orgId} initial={null} onDone={done} onCancel={() => setEditing(null)} />
+        <PartnerForm orgId={orgId} initial={null} onDone={done} onCancel={() => {
+          const was = editing
+          setEditing(null)
+          if (was) showRow(was, { align: 'auto' })
+        }} />
       ) : (
-        <button type="button" onClick={() => setEditing('new')} className={pill.orange}>
+        <button type="button" onClick={() => {
+            setEditing('new')
+            showRow('new', { align: 'top' })
+          }}
+          className={pill.orange}>
           <Icon name="plus" size={16} /> Add a rescue
         </button>
       )}
+      </div>
     </div>
   )
 }
@@ -1174,6 +1278,7 @@ function PartnerForm({
   const txt = (k: keyof typeof d) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value })
 
   const submit = async () => {
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     try {
@@ -1329,6 +1434,7 @@ function PagesStep({ orgId, year }: { orgId: string; year: number }) {
 function CardsTab({ orgId, year, onChanged }: { orgId: string; year: number; onChanged: () => void }) {
   const [rows, setRows] = useState<FeatureRow[] | null>(null)
   const [editing, setEditing] = useState<string | 'new' | null>(null)
+  const [added, setAdded] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -1344,15 +1450,21 @@ function CardsTab({ orgId, year, onChanged }: { orgId: string; year: number; onC
   }, [load])
 
   const done = async () => {
+    const was = editing
     setEditing(null)
     await load()
     onChanged()
+    if (was === 'new') setAdded((n) => n + 1)
+    else if (was) showRow(was, { align: 'auto' })
   }
   const move = async (i: number, by: -1 | 1) => {
     if (!rows) return
     setError(null)
     try {
-      if (await moveInList(rows, i, by, (r, n) => saveFeature({ ...r, sort_order: n }))) await load()
+      if (await moveInList(rows, i, by, (r, n) => saveFeature({ ...r, sort_order: n }))) {
+        await load()
+        showRow(rows[i].id, { align: 'auto', keyboard: 'keep' })
+      }
     } catch (e) {
       setError(errMessage(e))
     }
@@ -1366,12 +1478,17 @@ function CardsTab({ orgId, year, onChanged }: { orgId: string; year: number; onC
         <p>Leave a year empty and the app shows the built-in list.</p>
       </Explain>
 
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
       {rows === null && !error && <Spinner />}
 
-      {rows?.map((r, i) =>
-        editing === r.id ? (
-          <FeatureForm key={r.id} orgId={orgId} year={year} initial={r} nextOrder={nextOrder} onDone={done} onCancel={() => setEditing(null)} />
+      {rows?.map((r, i) => (
+        <div key={r.id} data-row={r.id}>
+        {editing === r.id ? (
+          <FeatureForm key={r.id} orgId={orgId} year={year} initial={r} nextOrder={nextOrder} onDone={done} onCancel={() => {
+          const was = editing
+          setEditing(null)
+          if (was) showRow(was, { align: 'auto' })
+        }} />
         ) : (
           <Card key={r.id} className="space-y-2">
             <span className="block min-w-0">
@@ -1385,22 +1502,41 @@ function CardsTab({ orgId, year, onChanged }: { orgId: string; year: number; onC
               </span>
             </span>
             <CardActions>
-              <button type="button" onClick={() => setEditing(r.id)} className={pill.blue}>
+              <button type="button" onClick={() => {
+                  setEditing(r.id)
+                  showRow(r.id, { align: 'top' })
+                }} className={pill.blue}>
                 Edit
               </button>
               <MovePills i={i} count={rows.length} onMove={(by) => void move(i, by)} />
             </CardActions>
           </Card>
-        ),
-      )}
+        )}
+        </div>
+      ))}
 
+      {added > 0 && (
+        <StatusNote key={added} className="text-[15px] font-bold text-green-700">
+          Added — it is in the list above.
+        </StatusNote>
+      )}
+      <div data-row="new">
       {editing === 'new' ? (
-        <FeatureForm orgId={orgId} year={year} initial={null} nextOrder={nextOrder} onDone={done} onCancel={() => setEditing(null)} />
+        <FeatureForm orgId={orgId} year={year} initial={null} nextOrder={nextOrder} onDone={done} onCancel={() => {
+          const was = editing
+          setEditing(null)
+          if (was) showRow(was, { align: 'auto' })
+        }} />
       ) : (
-        <button type="button" onClick={() => setEditing('new')} className={pill.orange}>
+        <button type="button" onClick={() => {
+            setEditing('new')
+            showRow('new', { align: 'top' })
+          }}
+          className={pill.orange}>
           <Icon name="plus" size={16} /> Add a card
         </button>
       )}
+      </div>
     </div>
   )
 }
@@ -1433,6 +1569,7 @@ function FeatureForm({
   const txt = (k: keyof typeof d) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value })
 
   const submit = async () => {
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     try {
@@ -1524,7 +1661,7 @@ function EventFactsCard({ orgId }: { orgId: string }) {
       .catch((e) => setError(errMessage(e)))
   }, [orgId])
 
-  if (error && !d) return <FormError>{error}</FormError>
+  if (error && !d) return <ErrorBox>{error}</ErrorBox>
   if (!d) return <Spinner />
   const txt = (k: keyof EventFacts) => (e: { target: { value: string } }) => {
     setSaved(false)
@@ -1536,6 +1673,7 @@ function EventFactsCard({ orgId }: { orgId: string }) {
       title="Plan your visit"
       hint="What the app tells visitors about getting in and getting there. Everything here is optional."
       onSubmit={async () => {
+        putKeyboardAway()
         setBusy(true)
         setError(null)
         try {
@@ -1588,7 +1726,9 @@ function EventFactsCard({ orgId }: { orgId: string }) {
         <Field label="Credit line">
           <input className={staffInput} value={d.logo_credit} onChange={txt('logo_credit')} placeholder="Logo design by …" />
         </Field>
-        {saved && <p className="text-[15px] font-bold text-green-700">Saved.</p>}
+        {saved && (
+          <StatusNote className="text-[15px] font-bold text-green-700">Saved.</StatusNote>
+        )}
       </div>
     </EditorForm>
   )
@@ -1602,6 +1742,7 @@ function EventFactsCard({ orgId }: { orgId: string }) {
 function PagesTab({ orgId, year, onChanged }: { orgId: string; year: number; onChanged: () => void }) {
   const [rows, setRows] = useState<PageRow[] | null>(null)
   const [editing, setEditing] = useState<string | 'new' | null>(null)
+  const [added, setAdded] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -1617,15 +1758,21 @@ function PagesTab({ orgId, year, onChanged }: { orgId: string; year: number; onC
   }, [load])
 
   const done = async () => {
+    const was = editing
     setEditing(null)
     await load()
     onChanged()
+    if (was === 'new') setAdded((n) => n + 1)
+    else if (was) showRow(was, { align: 'auto' })
   }
   const move = async (i: number, by: -1 | 1) => {
     if (!rows) return
     setError(null)
     try {
-      if (await moveInList(rows, i, by, (r, n) => savePage({ ...r, sort_order: n }))) await load()
+      if (await moveInList(rows, i, by, (r, n) => savePage({ ...r, sort_order: n }))) {
+        await load()
+        showRow(rows[i].id, { align: 'auto', keyboard: 'keep' })
+      }
     } catch (e) {
       setError(errMessage(e))
     }
@@ -1642,15 +1789,20 @@ function PagesTab({ orgId, year, onChanged }: { orgId: string; year: number; onC
         </p>
       </Explain>
 
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
       {rows === null && !error && <Spinner />}
       {rows && rows.length === 0 && (
         <Card className="text-[15px] text-slate-700">No pages for {year} yet. Copy them forward in step 1, or add one below.</Card>
       )}
 
-      {rows?.map((r, i) =>
-        editing === r.id ? (
-          <PageForm key={r.id} orgId={orgId} year={year} initial={r} nextOrder={nextOrder} onDone={done} onCancel={() => setEditing(null)} />
+      {rows?.map((r, i) => (
+        <div key={r.id} data-row={r.id}>
+        {editing === r.id ? (
+          <PageForm key={r.id} orgId={orgId} year={year} initial={r} nextOrder={nextOrder} onDone={done} onCancel={() => {
+          const was = editing
+          setEditing(null)
+          if (was) showRow(was, { align: 'auto' })
+        }} />
         ) : (
           <Card key={r.id} className="space-y-2">
             <span className="block min-w-0">
@@ -1663,22 +1815,41 @@ function PagesTab({ orgId, year, onChanged }: { orgId: string; year: number; onC
               <span className="block text-sm text-slate-500">/bunfest/p/{r.slug}</span>
             </span>
             <CardActions>
-              <button type="button" onClick={() => setEditing(r.id)} className={pill.blue}>
+              <button type="button" onClick={() => {
+                  setEditing(r.id)
+                  showRow(r.id, { align: 'top' })
+                }} className={pill.blue}>
                 Edit
               </button>
               <MovePills i={i} count={rows.length} onMove={(by) => void move(i, by)} />
             </CardActions>
           </Card>
-        ),
-      )}
+        )}
+        </div>
+      ))}
 
+      {added > 0 && (
+        <StatusNote key={added} className="text-[15px] font-bold text-green-700">
+          Added — it is in the list above.
+        </StatusNote>
+      )}
+      <div data-row="new">
       {editing === 'new' ? (
-        <PageForm orgId={orgId} year={year} initial={null} nextOrder={nextOrder} onDone={done} onCancel={() => setEditing(null)} />
+        <PageForm orgId={orgId} year={year} initial={null} nextOrder={nextOrder} onDone={done} onCancel={() => {
+          const was = editing
+          setEditing(null)
+          if (was) showRow(was, { align: 'auto' })
+        }} />
       ) : (
-        <button type="button" onClick={() => setEditing('new')} className={pill.orange}>
+        <button type="button" onClick={() => {
+            setEditing('new')
+            showRow('new', { align: 'top' })
+          }}
+          className={pill.orange}>
           <Icon name="plus" size={16} /> Add a page
         </button>
       )}
+      </div>
     </div>
   )
 }
@@ -1764,6 +1935,7 @@ function PageForm({
     setSections(sections.map((s, j) => (i === j ? { ...s, ...patch } : s)))
 
   const submit = async () => {
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     try {
@@ -1866,7 +2038,7 @@ function PageForm({
         </Field>
         <div className="space-y-2 rounded-2xl bg-slate-50 p-3">
           {sections.map((sec, i) => (
-            <div key={i} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+            <div key={i} data-row={`section-${i}`} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
               <p className="text-sm font-bold uppercase tracking-wider text-slate-500">Section {i + 1}</p>
               <Field label="Heading">
                 <input className={staffInput} value={sec.heading} onChange={(e) => setSection(i, { heading: e.target.value })} placeholder="Services" />
@@ -1888,7 +2060,14 @@ function PageForm({
               )}
             </div>
           ))}
-          <button type="button" onClick={() => setSections([...sections, { heading: '', body: '', list: '' }])} className={pill.soft}>
+          <button
+            type="button"
+            onClick={() => {
+              setSections([...sections, { heading: '', body: '', list: '' }])
+              showRow(`section-${sections.length}`, { align: 'top' })
+            }}
+            className={pill.soft}
+          >
             <Icon name="plus" size={16} /> Add a section
           </button>
         </div>

@@ -10,7 +10,10 @@ import { Icon } from '../components/icons'
 import { StaffTitle } from '../components/StaffTitle'
 import ExportButtons from '../components/ExportButtons'
 import { useOrgBits } from '../features/volunteers/orgBits'
-import { Spinner, FormError, staffInput } from '../components/staffui'
+import { Spinner, staffInput } from '../components/staffui'
+import { ErrorBox, StatusNote } from '../features/scan/ScanUI'
+import { putKeyboardAway } from '../lib/bringIntoView'
+import { showRow } from '../lib/staffScroll'
 import { SponsorLogo } from '../features/sponsors/SponsorLogo'
 import {
   hrefFor,
@@ -376,6 +379,7 @@ function ContactForm({
 
   const submit = async (e: { preventDefault(): void }) => {
     e.preventDefault()
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     try {
@@ -433,7 +437,7 @@ function ContactForm({
           placeholder="e.g. Asked at BunFest, call back in November"
         />
       </label>
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
       <div className="flex gap-2">
         <button type="submit" disabled={busy} className={`${btn.primary} min-h-[44px] flex-1 disabled:opacity-60`}>
           {busy ? 'Saving…' : 'Save'}
@@ -476,7 +480,9 @@ function RenewalCard({
   const [confirmRenew, setConfirmRenew] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [savedMsg, setSavedMsg] = useState<string | null>(null)
   const { sponsor, renewal } = item
+  const rowId = `renewal-${sponsor.id}`
   const email = (renewal?.contact_email ?? '').trim()
   const phone = (renewal?.contact_phone ?? '').trim()
   const note = (renewal?.note ?? '').trim()
@@ -502,6 +508,10 @@ function RenewalCard({
     )
     setBusy(false)
     if (error) setError(errMessage(error))
+    else if (next === 'not_renewing')
+      // The card sinks to the bottom of the list; say so, or it just seems to vanish.
+      await onChanged(`${sponsor.name} is now at the bottom of the list, because they are not renewing. Tap the button again to undo.`)
+    else if (item.status === 'not_renewing' && next === 'not_asked') await onChanged(`${sponsor.name} is back in its place in the list.`)
     else await onChanged()
   }
 
@@ -520,7 +530,9 @@ function RenewalCard({
     )
     if (error) throw error
     setEditing(false)
+    setSavedMsg('Saved.')
     await onChanged()
+    showRow(rowId, { align: 'auto' })
   }
 
   // Renewed: the next term starts the day after this one ends and runs a year.
@@ -615,7 +627,10 @@ function RenewalCard({
             note: renewal?.note ?? '',
           }}
           onSave={saveContact}
-          onCancel={() => setEditing(false)}
+          onCancel={() => {
+            setEditing(false)
+            showRow(rowId, { align: 'auto' })
+          }}
         />
       ) : (
         <div className="space-y-2.5 border-t border-slate-100 pt-3 print:hidden">
@@ -627,7 +642,11 @@ function RenewalCard({
             ) : (
               <button
                 type="button"
-                onClick={() => setEditing(true)}
+                onClick={() => {
+                  setSavedMsg(null)
+                  setEditing(true)
+                  showRow(rowId, { align: 'top' })
+                }}
                 className={`${btn.blue} min-h-[44px] w-full !py-2`}
               >
                 <Icon name="plus" size={16} /> {renewal?.contact_name || phone ? 'Add their email' : 'Add a contact'}
@@ -668,7 +687,11 @@ function RenewalCard({
               {canSave && (
                 <button
                   type="button"
-                  onClick={() => setEditing(true)}
+                  onClick={() => {
+                    setSavedMsg(null)
+                    setEditing(true)
+                    showRow(rowId, { align: 'top' })
+                  }}
                   className="inline-flex min-h-[44px] items-center text-sm font-bold text-brand-blue"
                 >
                   Edit contact & note
@@ -687,7 +710,12 @@ function RenewalCard({
         </div>
       )}
 
-      <FormError>{error}</FormError>
+      {savedMsg && (
+        <StatusNote key={savedMsg} className="text-[15px] font-bold text-green-700 print:hidden">
+          {savedMsg}
+        </StatusNote>
+      )}
+      <ErrorBox>{error}</ErrorBox>
     </Card>
   )
 }
@@ -754,7 +782,11 @@ export default function StaffSponsorRenewals() {
 
   const refresh = useCallback(
     async (message?: string) => {
-      if (message) setFlash(message)
+      if (message) {
+        setFlash(message)
+        // The banner is at the top of the page; the button that caused it is further down.
+        showRow('renewals-flash', { align: 'top', keyboard: 'keep' })
+      }
       await load()
     },
     [load],
@@ -848,6 +880,7 @@ export default function StaffSponsorRenewals() {
       {flash && (
         <div
           role="status"
+          data-row="renewals-flash"
           className="flex items-start gap-2.5 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 print:hidden"
         >
           <Icon name="check" size={16} className="mt-0.5 shrink-0" />
@@ -880,7 +913,7 @@ export default function StaffSponsorRenewals() {
         </div>
       )}
 
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
 
       {loading ? (
         <Spinner label="Loading sponsors…" />
@@ -931,19 +964,24 @@ export default function StaffSponsorRenewals() {
           <p className="sr-only" aria-live="polite">
             {copied ? 'Copied the list' : ''}
           </p>
-          {toolNote && <p className="px-1 text-sm text-slate-600 print:hidden">{toolNote}</p>}
+          {toolNote && (
+            <StatusNote key={toolNote} className="px-1 text-sm text-slate-600 print:hidden">
+              {toolNote}
+            </StatusNote>
+          )}
 
           <div className="grid grid-cols-1 gap-3">
             {items.map((item) => (
-              <RenewalCard
-                key={item.sponsor.id}
-                item={item}
-                orgId={orgId}
-                userId={userId}
-                canSave={renewalsState === 'ok'}
-                today={today}
-                onChanged={refresh}
-              />
+              <div key={item.sponsor.id} data-row={`renewal-${item.sponsor.id}`}>
+                <RenewalCard
+                  item={item}
+                  orgId={orgId}
+                  userId={userId}
+                  canSave={renewalsState === 'ok'}
+                  today={today}
+                  onChanged={refresh}
+                />
+              </div>
             ))}
           </div>
         </>

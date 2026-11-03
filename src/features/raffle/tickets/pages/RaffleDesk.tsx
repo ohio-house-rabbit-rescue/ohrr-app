@@ -21,6 +21,9 @@ import { Icon } from '../../../../components/icons'
 import { Explain, StaffTitle } from '../../../../components/StaffTitle'
 import { Spinner, staffInput } from '../../../../components/staffui'
 import { StepButton, StepRow, StepRows, WorkingOn, pill } from '../../../../components/StaffJob'
+import { ErrorBox, StatusNote } from '../../../scan/ScanUI'
+import { putKeyboardAway } from '../../../../lib/bringIntoView'
+import { showRow } from '../../../../lib/staffScroll'
 import ExportButtons from '../../../../components/ExportButtons'
 import { useOrgBits } from '../../../volunteers/orgBits'
 import { AUCTION_EVENT_SLUG, formatValue, rafflePriceLine, type AuctionSettings } from '../../types'
@@ -84,6 +87,8 @@ export default function RaffleDesk() {
     if (t === 'desk') next.delete('tab')
     else next.set('tab', t)
     setParams(next, { replace: true })
+    putKeyboardAway()
+    showRow('raffle-tab', { align: 'top' })
   }
 
   if (!isManager && !can('counter.use')) return <Screen><p className="text-sm text-slate-600">You don’t have access to the raffle desk.</p></Screen>
@@ -153,11 +158,13 @@ export default function RaffleDesk() {
           </Card>
         </div>
       )}
-      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
-      {tab === 'desk' && <DeskTab orgId={orgId} onChange={refreshSummary} />}
-      {tab === 'sell' && <SellTab orgId={orgId} onChange={refreshSummary} />}
-      {tab === 'draw' && isManager && <DrawTab orgId={orgId} onChange={refreshSummary} />}
-      {tab === 'winners' && isManager && <WinnersTab orgId={orgId} summary={summary} eventName={bunfest.title} />}
+      <ErrorBox>{error}</ErrorBox>
+      <div data-row="raffle-tab" className="space-y-4">
+        {tab === 'desk' && <DeskTab orgId={orgId} onChange={refreshSummary} />}
+        {tab === 'sell' && <SellTab orgId={orgId} onChange={refreshSummary} />}
+        {tab === 'draw' && isManager && <DrawTab orgId={orgId} onChange={refreshSummary} />}
+        {tab === 'winners' && isManager && <WinnersTab orgId={orgId} summary={summary} eventName={bunfest.title} />}
+      </div>
     </Screen>
   )
 }
@@ -209,7 +216,10 @@ function DeskTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
     try {
       const o = await orderByToken(token)
       if (!o) setError('No reservation for that code.')
-      else setFocus(o)
+      else {
+        setFocus(o)
+        showRow('desk-results', { align: 'top' })
+      }
     } catch (e) {
       setError(errMessage(e))
     }
@@ -231,7 +241,7 @@ function DeskTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
         </Card>
       ) : (
         <div className="flex gap-2">
-          <input className={`${staffInput} !mt-0 flex-1`} placeholder="Name, phone or ticket number" value={q} onChange={(e) => { setQ(e.target.value); setFocus(null) }} inputMode="search" />
+          <input className={`${staffInput} !mt-0 flex-1`} placeholder="Name, phone or ticket number" value={q} onChange={(e) => { setQ(e.target.value); setFocus(null) }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); putKeyboardAway() } }} inputMode="search" />
           <button type="button" onClick={() => setScanning(true)} className={`${btn.blue} min-h-[44px] shrink-0 px-4`} aria-label="Scan a ticket QR">
             <Icon name="scan" size={18} /> Scan
           </button>
@@ -242,12 +252,14 @@ function DeskTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
           <Icon name="arrowLeft" size={16} /> All reservations
         </button>
       )}
-      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+      <ErrorBox>{error}</ErrorBox>
+      <div data-row="desk-results" className="space-y-3">
       {list === null && <Spinner />}
       {list && list.length === 0 && <p className="text-sm text-slate-500">{q ? 'Nothing matches.' : 'No reservations yet. They appear here the moment someone taps “Get tickets”.'}</p>}
       {list?.map((o) => (
         <OrderCard key={o.id} order={o} busy={busy === o.id} onStatus={(s) => void status(o, s)} />
       ))}
+      </div>
     </div>
   )
 }
@@ -315,11 +327,13 @@ function SellTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
 
   const sell = async (e: FormEvent) => {
     e.preventDefault()
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     try {
       const o = await sellAtTable(orgId, AUCTION_EVENT_SLUG, qty, name, phone || undefined)
       setSold(o)
+      showRow('raffle-sold', { align: 'auto' })
       setName('')
       setPhone('')
       setQty(1)
@@ -359,11 +373,12 @@ function SellTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
           <input className={staffInput} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </label>
       </Card>
-      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+      <ErrorBox>{error}</ErrorBox>
       <button type="submit" disabled={busy} className={`${btn.primary} min-h-[56px] w-full text-base disabled:opacity-60`}>
         <Icon name="ticket" size={18} /> {busy ? 'Selling…' : `Sell ${qty} ${qty === 1 ? 'ticket' : 'tickets'}`}
       </button>
       {sold && (
+        <div data-row="raffle-sold">
         <Card className="border-green-200 bg-green-50/40">
           <p className="text-sm font-bold text-ink">
             Sold to {sold.name}
@@ -372,6 +387,7 @@ function SellTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
           <p className="mt-1 font-mono text-lg font-black text-ink">{ticketRange(sold.tickets)}</p>
           <p className="mt-1 text-xs text-slate-500">Write these on the stubs, or hand them the numbers.</p>
         </Card>
+        </div>
       )}
     </form>
   )
@@ -407,6 +423,7 @@ function DrawTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
   const available = prizes.filter((p) => p.status !== 'drawn')
 
   const draw = async () => {
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     setNote(null)
@@ -416,6 +433,7 @@ function DrawTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
       setPrizeId('')
       await load()
       onChange()
+      showRow('raffle-winner', { align: 'auto' })
     } catch (e) {
       setError(errMessage(e))
     } finally {
@@ -426,6 +444,7 @@ function DrawTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
     e.preventDefault()
     const no = Number(bucketNo.replace(/[^0-9]/g, ''))
     if (!no) return
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     setNote(null)
@@ -437,6 +456,7 @@ function DrawTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
         setPrizeId('')
         await load()
         onChange()
+        showRow('raffle-winner', { align: 'auto' })
       }
       setBucketNo('')
     } catch (err) {
@@ -489,9 +509,14 @@ function DrawTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
           <p className="text-xs text-slate-500">If the stub is an app number, the winner is recorded and their ticket page says so.</p>
         </Card>
       </form>
-      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
-      {note && <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">{note}</p>}
+      <ErrorBox>{error}</ErrorBox>
+      {note && (
+        <StatusNote key={note} className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          {note}
+        </StatusNote>
+      )}
       {latest && (
+        <div data-row="raffle-winner">
         <Card className="border-brand-orange/40 bg-brand-orange-50/50 text-center">
           <p className="text-xs font-extrabold uppercase tracking-wider text-brand-orange-dark">Winner</p>
           <p className="mt-1 font-mono text-4xl font-black text-ink">{ticketLabel(latest.no)}</p>
@@ -499,6 +524,7 @@ function DrawTab({ orgId, onChange }: { orgId: string; onChange: () => void }) {
           {latest.phone && <p className="text-sm text-slate-600">{latest.phone}</p>}
           {latest.prize && <p className="mt-1 text-sm font-bold text-brand-blue">{latest.prize}</p>}
         </Card>
+        </div>
       )}
       {list && list.length > 0 && (
         <div className="space-y-2">
@@ -641,7 +667,7 @@ function WinnersTab({ orgId, summary, eventName }: { orgId: string; summary: Des
   return (
     <div className="space-y-3">
       <SectionLabel>Step 3 · Hand over the prizes</SectionLabel>
-      {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+      <ErrorBox>{error}</ErrorBox>
       {list === null && <Spinner />}
       {list && list.length === 0 && <p className="text-sm text-slate-500">No winners drawn yet. Draw them in step 2.</p>}
       {list?.map((w) => (

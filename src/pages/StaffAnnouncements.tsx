@@ -6,6 +6,9 @@ import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { CardActions, EditorForm, Field, Part, StepButton, pill } from '../components/StaffJob'
 import StaffImageField from '../components/StaffImageField'
+import BringIn from '../components/BringIn'
+import { putKeyboardAway } from '../lib/bringIntoView'
+import { StatusNote } from '../features/scan/ScanUI'
 import type { Database } from '../lib/database.types'
 
 type Announcement = Database['public']['Tables']['announcements']['Row']
@@ -55,6 +58,7 @@ function AnnouncementForm({
   const [error, setError] = useState<string | null>(null)
 
   const run = async (fn: () => Promise<void>) => {
+    putKeyboardAway()
     setError(null)
     setBusy(true)
     try {
@@ -66,6 +70,7 @@ function AnnouncementForm({
   }
 
   return (
+    <BringIn>
     <EditorForm
       title={heading}
       hint="Notices show on the app’s home screen and the website."
@@ -131,6 +136,7 @@ function AnnouncementForm({
         </label>
       </div>
     </EditorForm>
+    </BringIn>
   )
 }
 
@@ -141,9 +147,10 @@ function AnnouncementCard({
 }: {
   item: Announcement
   userId: string
-  onChanged: () => void
+  onChanged: (note?: string) => void
 }) {
   const [editing, setEditing] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -154,12 +161,14 @@ function AnnouncementCard({
       .eq('id', item.id)
     if (error) throw error
     setEditing(false)
+    setSaved(true)
     onChanged()
   }
 
   const togglePublish = async () => {
     setBusy(true)
     setError(null)
+    setSaved(false)
     const { error } = await supabase
       .from('announcements')
       .update({ is_published: !item.is_published })
@@ -172,7 +181,7 @@ function AnnouncementCard({
   const doDelete = async () => {
     const { error } = await supabase.from('announcements').delete().eq('id', item.id)
     if (error) throw error
-    onChanged()
+    onChanged(`Removed “${item.title}”.`)
   }
 
   if (editing) {
@@ -199,7 +208,14 @@ function AnnouncementCard({
       <p className="text-sm text-slate-500">Updated {fmtDate(item.updated_at)}</p>
 
       <CardActions className="pt-1">
-        <button type="button" onClick={() => setEditing(true)} className={pill.blue}>
+        <button
+          type="button"
+          onClick={() => {
+            setSaved(false)
+            setEditing(true)
+          }}
+          className={pill.blue}
+        >
           Edit
         </button>
         <button type="button" onClick={togglePublish} disabled={busy} className={pill.outline}>
@@ -207,6 +223,7 @@ function AnnouncementCard({
         </button>
       </CardActions>
       <FormError>{error}</FormError>
+      {saved && <StatusNote className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">Saved.</StatusNote>}
     </Card>
   )
 }
@@ -221,6 +238,7 @@ export default function StaffAnnouncements() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!orgId || !allowed) {
@@ -258,7 +276,14 @@ export default function StaffAnnouncements() {
     })
     if (error) throw error
     setCreating(false)
+    setNote(d.is_published ? `Posted “${d.title.trim()}”. It is showing on the home screen now.` : `Saved “${d.title.trim()}” as a draft. It is hidden until you tap Show.`)
     await load()
+  }
+
+  // A card changed (saved, hidden, removed): reload; a removed card says so up here, since it is gone from the list.
+  const changed = (text?: string) => {
+    if (text) setNote(text)
+    void load()
   }
 
   if (!allowed) {
@@ -283,7 +308,14 @@ export default function StaffAnnouncements() {
       </StaffTitle>
 
       {!creating && (
-        <StepButton tone="orange" icon="plus" onClick={() => setCreating(true)}>
+        <StepButton
+          tone="orange"
+          icon="plus"
+          onClick={() => {
+            setNote(null)
+            setCreating(true)
+          }}
+        >
           New announcement
         </StepButton>
       )}
@@ -299,6 +331,12 @@ export default function StaffAnnouncements() {
         />
       )}
 
+      {note && !creating && (
+        <StatusNote key={note} className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
+          {note}
+        </StatusNote>
+      )}
+
       <FormError>{error}</FormError>
 
       {loading ? (
@@ -312,7 +350,7 @@ export default function StaffAnnouncements() {
       ) : (
         <div className="grid grid-cols-1 gap-3">
           {items.map((item) => (
-            <AnnouncementCard key={item.id} item={item} userId={userId} onChanged={load} />
+            <AnnouncementCard key={item.id} item={item} userId={userId} onChanged={changed} />
           ))}
         </div>
       )}

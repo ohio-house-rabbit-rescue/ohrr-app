@@ -3,7 +3,9 @@ import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen, SegTabs } from '../components/ui'
 import { StaffTitle } from '../components/StaffTitle'
 import { NotOnYet } from '../components/StaffJob'
-import { Spinner, FormError, staffInput } from '../components/staffui'
+import { Spinner, staffInput } from '../components/staffui'
+import { ErrorBox } from '../features/scan/ScanUI'
+import { putKeyboardAway } from '../lib/bringIntoView'
 import {
   activityLabel,
   deleteRegistration,
@@ -202,7 +204,7 @@ export default function StaffBunnyRegistrations() {
         <NotOnYet what="Bunny registration" update={52} />
       ) : (
         <>
-          <FormError>{error}</FormError>
+          <ErrorBox>{error}</ErrorBox>
           {rows === null ? (
             <Spinner label="Loading registrations…" />
           ) : (
@@ -217,6 +219,12 @@ export default function StaffBunnyRegistrations() {
                   inputMode="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      putKeyboardAway()
+                    }
+                  }}
                   placeholder="Name, email or phone"
                   autoComplete="off"
                   className={staffInput}

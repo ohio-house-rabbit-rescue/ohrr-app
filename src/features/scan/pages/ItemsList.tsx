@@ -12,7 +12,7 @@
 //
 // The list itself keeps its rows, search, basket, "move all" and spreadsheet — each shown only when it
 // applies, and the long chip rows are cut to three, then a second row only after "Decided".
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { PERMISSION_CATALOG } from '../../../lib/capabilities'
@@ -25,7 +25,8 @@ import { Spinner } from '../../../components/staffui'
 import ExportButtons from '../../../components/ExportButtons'
 import { todayStamp, type SheetSpec } from '../../../lib/inventoryExport'
 import { listItems, makeBasket, sortHeadedDonations } from '../api'
-import { BigButton, BigInput, ErrorBox } from '../ScanUI'
+import { BigButton, BigInput, ErrorBox, StatusNote } from '../ScanUI'
+import { bringIntoView } from '../../../lib/bringIntoView'
 import { SHEET_COLUMNS, SIMPLE_COLUMNS, sheetRow, simpleRow } from '../itemSheets'
 import { HEADED_FOR, KIND_META, donationValues, extrasSummary, formatMoney, headedFor, statusLabel, isUseSoon, type HeadedFor, type TaggedItem } from '../types'
 
@@ -384,6 +385,15 @@ function ItemsListView({
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [basket, setBasket] = useState({ title: '', kind: 'raffle' as 'raffle' | 'auction', description: '' })
   const canBasket = can('events.bunfest.manage')
+  // Panels that open are brought into view, so the next thing to do isn't left off the screen.
+  const basketRef = useRef<HTMLDivElement>(null)
+  const exportRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (picking) bringIntoView(basketRef.current, { align: 'top' })
+  }, [picking])
+  useEffect(() => {
+    if (exportOpen) bringIntoView(exportRef.current)
+  }, [exportOpen])
   useEffect(() => saveView({ show, sub, q, when, what, order }), [show, sub, q, when, what, order])
 
   const shown = useMemo(() => {
@@ -558,7 +568,7 @@ function ItemsListView({
       )}
 
       {picking && (
-        <div className="space-y-3 rounded-2xl border-2 border-brand-orange bg-brand-orange-50 p-4">
+        <div ref={basketRef} className="space-y-3 rounded-2xl border-2 border-brand-orange bg-brand-orange-50 p-4">
           <p className="font-display text-lg font-black text-ink">Make a basket</p>
           <p className="text-[15px] text-slate-700">
             Check what goes in it below. {picked.size} picked
@@ -670,9 +680,9 @@ function ItemsListView({
 
       <ErrorBox>{error}</ErrorBox>
       {note && (
-        <div role="status" className="rounded-2xl bg-green-50 px-4 py-3 text-[15px] text-green-900">
+        <StatusNote key={note} className="rounded-2xl bg-green-50 px-4 py-3 text-[15px] text-green-900">
           {note}
-        </div>
+        </StatusNote>
       )}
       {items === null && !error && <Spinner />}
 
@@ -757,9 +767,15 @@ function ItemsListView({
         })}
       </ul>
 
+      {/* Picking for a basket: the basket's name and Make button are at the top, so say how to get back to them. */}
+      {picking && picked.size > 0 && (
+        <BigButton tone="blue" onClick={() => bringIntoView(basketRef.current, { align: 'top' })}>
+          Next: name the basket ({picked.size} picked)
+        </BigButton>
+      )}
 
       {items && shown.length > 0 && !picking && (
-        <div className="space-y-2">
+        <div ref={exportRef} className="space-y-2">
           <button
             type="button"
             onClick={() => setExportOpen((o) => !o)}

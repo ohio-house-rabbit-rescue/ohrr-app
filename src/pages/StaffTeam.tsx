@@ -9,6 +9,8 @@ import { Spinner, FormError, staffInput } from '../components/staffui'
 import QrCode from '../components/QrCode'
 import StaffAvatar from '../components/StaffAvatar'
 import StaffImageField from '../components/StaffImageField'
+import BringIn from '../components/BringIn'
+import { StatusNote } from '../features/scan/ScanUI'
 import { shareText } from '../features/share/share'
 import { APP_URL } from '../features/mybunny/ics'
 import {
@@ -461,6 +463,8 @@ function InvitePanel({
       </EditorForm>
 
       {code && made && (
+        // The invite is made: take them to the code, so they can show, send or copy it.
+        <BringIn key={code} keyboard="away">
         <Card className="space-y-3 border-brand-blue/30 bg-brand-blue-50/60">
           <div>
             <p className="text-sm font-bold uppercase tracking-wide text-brand-blue">
@@ -517,6 +521,7 @@ function InvitePanel({
             access you chose.
           </p>
         </Card>
+        </BringIn>
       )}
 
       <WaitingInvites orgId={orgId} reloadKey={code ?? ''} />
@@ -896,17 +901,19 @@ function Certifications({
       )}
       {manage &&
         (adding ? (
-          <CertForm
-            orgId={orgId}
-            membershipId={member.id}
-            userId={userId}
-            held={certs.map((c) => c.kind)}
-            onDone={async () => {
-              setAdding(false)
-              await onChanged()
-            }}
-            onCancel={() => setAdding(false)}
-          />
+          <BringIn>
+            <CertForm
+              orgId={orgId}
+              membershipId={member.id}
+              userId={userId}
+              held={certs.map((c) => c.kind)}
+              onDone={async () => {
+                setAdding(false)
+                await onChanged()
+              }}
+              onCancel={() => setAdding(false)}
+            />
+          </BringIn>
         ) : (
           <button type="button" onClick={() => setAdding(true)} className={pill.soft}>
             <Icon name="plus" size={16} /> Add a certification
@@ -1110,9 +1117,9 @@ function MemberCard({
       </div>
 
       {notice && (
-        <p role="status" className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
+        <StatusNote key={notice} className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
           {notice}
-        </p>
+        </StatusNote>
       )}
 
       {(isSelf || manage || (levelsMode && manage && levelChoices.length > 0)) && !editingProfile && (
@@ -1131,19 +1138,21 @@ function MemberCard({
       )}
 
       {editingProfile && (
-        <ProfileForm
-          member={member}
-          onCancel={() => setEditingProfile(false)}
-          onDone={async () => {
-            setEditingProfile(false)
-            await onProfileSaved()
-          }}
-        />
+        <BringIn>
+          <ProfileForm
+            member={member}
+            onCancel={() => setEditingProfile(false)}
+            onDone={async () => {
+              setEditingProfile(false)
+              await onProfileSaved()
+            }}
+          />
+        </BringIn>
       )}
 
       {/* Level — only the levels this person may give, and only for people below them. */}
       {levelsMode && manage && levelChoices.length > 0 && changingLevel && (
-        <div>
+        <BringIn>
           <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Change level</p>
           <LevelPicker
             value={pendingLevel ?? member.level}
@@ -1155,7 +1164,8 @@ function MemberCard({
             }}
           />
           {pendingLevel && (
-            <div className="mt-2 space-y-2 rounded-xl bg-brand-blue-50/60 p-3">
+            // Picking a level asks "Make them …?": that question and its button are brought into view.
+            <BringIn align="auto" className="mt-2 space-y-2 rounded-xl bg-brand-blue-50/60 p-3">
               <p className="text-sm text-ink">
                 Make {name} <strong>{levelInfo(pendingLevel).asA}</strong>? {levelInfo(pendingLevel).blurb}.
                 {fullAccess && !everything(pendingLevel)
@@ -1181,7 +1191,7 @@ function MemberCard({
                   Cancel
                 </button>
               </div>
-            </div>
+            </BringIn>
           )}
           <FormError>{levelError}</FormError>
           {!pendingLevel && (
@@ -1196,7 +1206,7 @@ function MemberCard({
               Close
             </button>
           )}
-        </div>
+        </BringIn>
       )}
 
       {fullAccess ? (
@@ -1444,11 +1454,15 @@ export default function StaffTeam() {
   // "<name> is back on…", shown on that person's card after turning them back on.
   const [backOn, setBackOn] = useState<{ id: string; text: string } | null>(null)
 
+  // Said at the top of the list when a card moves into the closed "On hold" section at the bottom.
+  const [heldNote, setHeldNote] = useState<string | null>(null)
+
   const putOnHold = useCallback(async (member: Member): Promise<string | null> => {
     const { error } = await supabase.rpc('set_membership_status', { p_membership: member.id, p_status: 'disabled' })
     if (error) return errMessage(error)
     setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, status: 'disabled' } : m)))
     setBackOn((b) => (b?.id === member.id ? null : b))
+    setHeldNote(`${memberName(member)} is on hold. You’ll find them under “On hold” at the bottom of this page; turn them back on there.`)
     return null
   }, [])
 
@@ -1482,6 +1496,8 @@ export default function StaffTeam() {
       const { error } = await supabase.rpc('set_member_level', { p_membership: member.id, p_level: level })
       if (error) return errMessage(error)
       await load() // the role follows the level, and who may manage whom can change
+      // Their card moves to the new level's group: say so, and scroll to it there.
+      setBackOn({ id: member.id, text: `${memberName(member)} is now ${levelInfo(level).asA}.` })
       return null
     },
     [load],
@@ -1623,6 +1639,12 @@ export default function StaffTeam() {
             {expiring.length > 6 && <li className="text-slate-500">…and {expiring.length - 6} more below.</li>}
           </ul>
         </Card>
+      )}
+
+      {heldNote && (
+        <StatusNote key={heldNote} className="rounded-2xl bg-slate-100 px-4 py-3 text-[15px] font-semibold text-slate-700">
+          {heldNote}
+        </StatusNote>
       )}
 
       {loading ? (

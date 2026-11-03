@@ -11,6 +11,9 @@ import { Explain, StaffTitle } from '../components/StaffTitle'
 import { CardActions, EditorForm, Field, StepButton, pill } from '../components/StaffJob'
 import { CheckRow, PartBox, byName, confirmRemove, useCardAction, useSaving } from '../components/ContentEditorBits'
 import { Spinner, FormError, staffInput } from '../components/staffui'
+import BringIn from '../components/BringIn'
+import { putKeyboardAway } from '../lib/bringIntoView'
+import { StatusNote } from '../features/scan/ScanUI'
 import { slugify } from '../lib/careContent'
 import { SEED_TOPICS } from '../features/bunnyhelp/seedTopics'
 import {
@@ -117,10 +120,14 @@ function TopicForm({
       setDraft((d) => ({ ...d, [k]: e.target.value }))
 
   return (
+    <BringIn>
     <EditorForm
       title={title}
       hint="Needed parts are marked. Save puts it in the “My bunny is…” search right away if it is shown."
-      onSubmit={submit}
+      onSubmit={() => {
+        putKeyboardAway()
+        return submit()
+      }}
       onCancel={onCancel}
       busy={busy}
       saveLabel={saveLabel}
@@ -195,22 +202,26 @@ function TopicForm({
         <CheckRow label="Show in the app (leave unchecked to keep it as a draft)" checked={draft.is_published} onChange={(v) => setDraft((d) => ({ ...d, is_published: v }))} />
       </PartBox>
     </EditorForm>
+    </BringIn>
   )
 }
 
-function TopicCard({ item, onChanged }: { item: TopicRow; onChanged: () => void }) {
+function TopicCard({ item, onChanged }: { item: TopicRow; onChanged: (note?: string) => void }) {
   const [editing, setEditing] = useState(false)
+  const [saved, setSaved] = useState(false)
   const { busy, error, run } = useCardAction()
 
   const saveEdit = async (d: Draft) => {
     const { error } = await supabase.from('care_topics').update(rowFromDraft(d)).eq('id', item.id)
     if (error) throw error
     setEditing(false)
+    setSaved(true)
     onChanged()
   }
 
   const togglePublish = () =>
     run(async () => {
+      setSaved(false)
       const { error } = await supabase.from('care_topics').update({ is_published: !item.is_published }).eq('id', item.id)
       if (error) throw error
       onChanged()
@@ -219,7 +230,7 @@ function TopicCard({ item, onChanged }: { item: TopicRow; onChanged: () => void 
   const doDelete = async () => {
     const { error } = await supabase.from('care_topics').delete().eq('id', item.id)
     if (error) throw error
-    onChanged()
+    onChanged(`Removed “${item.title}”.`)
   }
 
   if (editing) {
@@ -257,7 +268,14 @@ function TopicCard({ item, onChanged }: { item: TopicRow; onChanged: () => void 
       {item.aliases?.length > 0 && <p className="text-sm text-slate-500">Matches: {item.aliases.join(', ')}</p>}
 
       <CardActions className="pt-1">
-        <button type="button" onClick={() => setEditing(true)} className={pill.blue}>
+        <button
+          type="button"
+          onClick={() => {
+            setSaved(false)
+            setEditing(true)
+          }}
+          className={pill.blue}
+        >
           Edit
         </button>
         <button type="button" onClick={() => void togglePublish()} disabled={busy} className={pill.outline}>
@@ -275,6 +293,7 @@ function TopicCard({ item, onChanged }: { item: TopicRow; onChanged: () => void 
         </button>
       </CardActions>
       <FormError>{error}</FormError>
+      {saved && <StatusNote className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">Saved.</StatusNote>}
     </Card>
   )
 }
@@ -290,6 +309,7 @@ export default function StaffBunnyHelp() {
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!orgId || !allowed) {
@@ -326,7 +346,14 @@ export default function StaffBunnyHelp() {
     })
     if (error) throw error
     setCreating(false)
+    setNote(`Added “${d.title.trim()}”. Topics are listed A to Z.`)
     await load()
+  }
+
+  // A card changed (saved, hidden, removed): reload; a removed card says so up here, since it is gone from the list.
+  const changed = (text?: string) => {
+    if (text) setNote(text)
+    void load()
   }
 
   const importSeed = async () => {
@@ -381,7 +408,14 @@ export default function StaffBunnyHelp() {
 
       {!creating && (
         <div>
-          <StepButton tone="orange" icon="plus" onClick={() => setCreating(true)}>
+          <StepButton
+            tone="orange"
+            icon="plus"
+            onClick={() => {
+              setNote(null)
+              setCreating(true)
+            }}
+          >
             Add a topic
           </StepButton>
         </div>
@@ -403,6 +437,12 @@ export default function StaffBunnyHelp() {
         <TopicForm initial={emptyDraft} title="New topic" saveLabel="Add topic" onSubmit={create} onCancel={() => setCreating(false)} />
       )}
 
+      {note && !creating && (
+        <StatusNote key={note} className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
+          {note}
+        </StatusNote>
+      )}
+
       <FormError>{error}</FormError>
 
       {loading ? (
@@ -420,7 +460,7 @@ export default function StaffBunnyHelp() {
       ) : (
         <div className="grid grid-cols-1 gap-3">
           {sorted.map((item) => (
-            <TopicCard key={item.id} item={item} onChanged={load} />
+            <TopicCard key={item.id} item={item} onChanged={changed} />
           ))}
         </div>
       )}

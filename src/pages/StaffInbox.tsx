@@ -12,6 +12,9 @@ import { Icon, type IconName } from '../components/icons'
 import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { exportCsv, toCsv } from '../lib/exportFile'
+import BringIn from '../components/BringIn'
+import { StatusNote } from '../features/scan/ScanUI'
+import { bringIntoView } from '../lib/bringIntoView'
 import { publishHappyTail } from '../features/tails/api'
 import { TAIL_STATUS, type TailStatus } from '../data/tails'
 import { kindLabel } from '../features/volunteers/approval'
@@ -80,6 +83,13 @@ export default function StaffInbox() {
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<Status | 'open'>('open')
   const [openId, setOpenId] = useState<string | null>(null)
+  // "Moved to Done": said at the top when a request leaves the list being looked at.
+  const [moved, setMoved] = useState<string | null>(null)
+
+  // A request was opened: start it just under the top bar (another one closing above it would push it away).
+  useEffect(() => {
+    if (openId) bringIntoView(document.getElementById(`request-${openId}`), { align: 'top', keyboard: 'keep' })
+  }, [openId])
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -109,12 +119,19 @@ export default function StaffInbox() {
     return c
   }, [rows])
 
-  const setStatus = async (r: Row, status: Status, notes?: string) => {
+  const setStatus = async (r: Row, status: Status, notes?: string, message?: string): Promise<boolean> => {
     setError(null)
+    setMoved(null)
     const { error } = await supabase.rpc('set_request_status', { p_id: r.id, p_status: status, p_notes: notes ?? null })
     if (error) {
       setError(errMessage(error))
-      return
+      return false
+    }
+    // It no longer belongs in the list on screen: say where it went.
+    const stays = filter === 'open' ? status === 'new' || status === 'in_progress' : status === filter
+    if (notes === undefined && !stays) {
+      const where = status === 'new' || status === 'in_progress' ? 'To do' : (STATUS.find((s) => s.value === status)?.label ?? status)
+      setMoved(message ?? `${r.name || 'That request'} moved to “${where}”. Tap “${where}” above to see it.`)
     }
     setRows((list) =>
       (list ?? []).map((x) =>
@@ -123,6 +140,7 @@ export default function StaffInbox() {
           : x,
       ),
     )
+    return true
   }
 
   return (
@@ -174,6 +192,11 @@ export default function StaffInbox() {
         </button>
       )}
       <FormError>{error}</FormError>
+      {moved && (
+        <StatusNote key={moved} className="rounded-2xl bg-green-50 px-4 py-3 text-[15px] font-bold text-green-800">
+          {moved}
+        </StatusNote>
+      )}
       {rows === null && !error && <Spinner />}
       {rows && shown.length === 0 && (
         <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
@@ -187,7 +210,7 @@ export default function StaffInbox() {
           const open = openId === r.id
           const payload = (r.payload ?? {}) as Record<string, string>
           return (
-            <li key={r.id}>
+            <li key={r.id} id={`request-${r.id}`} className="scroll-mt-24">
               <Card className={`space-y-3 ${r.status === 'new' ? 'border-brand-orange/40' : ''}`}>
                 <button type="button" onClick={() => setOpenId(open ? null : r.id)} className="flex w-full items-start gap-3 text-left">
                   <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-blue-50 text-brand-blue">
@@ -240,7 +263,7 @@ export default function StaffInbox() {
                         <Icon name="check" size={18} /> Approve or decline in Volunteers
                       </Link>
                     )}
-                    {r.kind === 'happy-tail' && <PublishTail row={r} payload={payload} onPublished={() => void setStatus(r, 'done')} />}
+                    {r.kind === 'happy-tail' && <PublishTail row={r} payload={payload} onPublished={() => void setStatus(r, 'done', undefined, 'Published to Happy Tails, and this request is marked Done. Tap “Done” above to see it.')} />}
                     <Notes row={r} onSave={(n) => setStatus(r, r.status, n)} />
                     <div className="grid grid-cols-2 gap-2">
                       {r.status !== 'done' ? (
@@ -305,19 +328,38 @@ function Field({ label, value }: { label: string; value: string }) {
   )
 }
 
-function Notes({ row, onSave }: { row: Row; onSave: (notes: string) => Promise<void> }) {
+function Notes({ row, onSave }: { row: Row; onSave: (notes: string) => Promise<boolean> }) {
   const [notes, setNotes] = useState(row.staff_notes ?? '')
+  const [saved, setSaved] = useState(false)
   const dirty = notes !== (row.staff_notes ?? '')
   return (
-    <label className="block text-sm font-semibold text-slate-700">
-      Notes for the team
-      <textarea className={staffInput} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Called back Tue, confirmed for Sat 1 pm" />
+    <div>
+      <label className="block text-sm font-semibold text-slate-700">
+        Notes for the team
+        <textarea
+          className={staffInput}
+          rows={2}
+          value={notes}
+          onChange={(e) => {
+            setNotes(e.target.value)
+            setSaved(false)
+          }}
+          placeholder="Called back Tue, confirmed for Sat 1 pm"
+        />
+      </label>
       {dirty && (
-        <button type="button" onClick={() => void onSave(notes)} className="mt-2 rounded-full bg-brand-blue-50 px-4 py-2 text-sm font-bold text-brand-blue">
+        <button
+          type="button"
+          onClick={() => void onSave(notes).then((ok) => setSaved(ok))}
+          className="mt-2 rounded-full bg-brand-blue-50 px-4 py-2 text-sm font-bold text-brand-blue"
+        >
           Save note
         </button>
       )}
-    </label>
+      {saved && !dirty && (
+        <StatusNote className="mt-2 text-sm font-bold text-green-700">Note saved.</StatusNote>
+      )}
+    </div>
   )
 }
 
@@ -392,7 +434,7 @@ function PublishTail({
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-brand-blue/25 bg-brand-blue-50/40 p-3">
+    <BringIn className="space-y-3 rounded-2xl border border-brand-blue/25 bg-brand-blue-50/40 p-3">
       <p className="font-display text-[15px] font-extrabold text-ink">Publish as a Happy Tail</p>
       {d.photoUrl && <img src={d.photoUrl} alt="" className="max-h-48 w-full rounded-xl object-cover" />}
       <div className="grid grid-cols-2 gap-3">
@@ -438,6 +480,6 @@ function PublishTail({
           Not yet
         </button>
       </div>
-    </div>
+    </BringIn>
   )
 }

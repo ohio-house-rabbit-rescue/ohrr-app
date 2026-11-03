@@ -7,6 +7,8 @@ import { Explain, StaffTitle } from '../components/StaffTitle'
 import { CardActions, EditorForm, Field, StepButton, pill } from '../components/StaffJob'
 import { CheckRow, PartBox, confirmRemove, useCardAction, useSaving } from '../components/ContentEditorBits'
 import { Spinner, FormError, staffInput } from '../components/staffui'
+import BringIn from '../components/BringIn'
+import { StatusNote } from '../features/scan/ScanUI'
 import { LIMIT_KINDS, OPP_CATEGORIES, categoryLabel, remainingLabel, type VolunteerOpp } from '../lib/volunteerOpps'
 
 interface Draft {
@@ -196,6 +198,7 @@ function OppForm({
 
 function OppCard({ item, onChanged }: { item: VolunteerOpp; onChanged: () => void }) {
   const [editing, setEditing] = useState(false)
+  const [saved, setSaved] = useState(false)
   const { busy, error, run } = useCardAction()
 
   const saveEdit = async (d: Draft) => {
@@ -214,6 +217,7 @@ function OppCard({ item, onChanged }: { item: VolunteerOpp; onChanged: () => voi
       .eq('id', item.id)
     if (error) throw error
     setEditing(false)
+    setSaved(true)
     onChanged()
   }
 
@@ -232,14 +236,16 @@ function OppCard({ item, onChanged }: { item: VolunteerOpp; onChanged: () => voi
 
   if (editing) {
     return (
-      <OppForm
-        initial={draftFrom(item)}
-        title={`Edit ${item.title}`}
-        saveLabel="Save changes"
-        onSubmit={saveEdit}
-        onCancel={() => setEditing(false)}
-        onRemove={doDelete}
-      />
+      <BringIn>
+        <OppForm
+          initial={draftFrom(item)}
+          title={`Edit ${item.title}`}
+          saveLabel="Save changes"
+          onSubmit={saveEdit}
+          onCancel={() => setEditing(false)}
+          onRemove={doDelete}
+        />
+      </BringIn>
     )
   }
 
@@ -259,7 +265,14 @@ function OppCard({ item, onChanged }: { item: VolunteerOpp; onChanged: () => voi
       {item.detail && <p className="text-[15px] leading-relaxed text-slate-600">{item.detail}</p>}
 
       <CardActions className="pt-1">
-        <button type="button" onClick={() => setEditing(true)} className={pill.blue}>
+        <button
+          type="button"
+          onClick={() => {
+            setSaved(false)
+            setEditing(true)
+          }}
+          className={pill.blue}
+        >
           Edit
         </button>
         <button type="button" onClick={() => void togglePublish()} disabled={busy} className={pill.outline}>
@@ -276,6 +289,7 @@ function OppCard({ item, onChanged }: { item: VolunteerOpp; onChanged: () => voi
           <Icon name="trash" size={16} /> Remove
         </button>
       </CardActions>
+      {saved && <StatusNote className="text-sm font-bold text-green-700">Saved. This is how it looks now.</StatusNote>}
       <FormError>{error}</FormError>
     </Card>
   )
@@ -291,6 +305,7 @@ export default function StaffVolunteer() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [added, setAdded] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!orgId || !allowed) {
@@ -344,6 +359,7 @@ export default function StaffVolunteer() {
     })
     if (error) throw error
     setCreating(false)
+    setAdded(`Added “${d.title.trim()}”. It is in the list below, under its type.`)
     await load()
   }
 
@@ -371,21 +387,35 @@ export default function StaffVolunteer() {
       </StaffTitle>
 
       {!creating && (
-        <div>
-          <StepButton tone="orange" icon="plus" onClick={() => setCreating(true)}>
+        <div className="space-y-2.5">
+          {added && (
+            <StatusNote key={added} className="rounded-2xl bg-green-50 px-3.5 py-2.5 text-sm font-bold text-green-800">
+              {added}
+            </StatusNote>
+          )}
+          <StepButton
+            tone="orange"
+            icon="plus"
+            onClick={() => {
+              setAdded(null)
+              setCreating(true)
+            }}
+          >
             Add an opportunity
           </StepButton>
         </div>
       )}
 
       {creating && (
-        <OppForm
-          initial={emptyDraft}
-          title="New opportunity"
-          saveLabel="Add opportunity"
-          onSubmit={create}
-          onCancel={() => setCreating(false)}
-        />
+        <BringIn>
+          <OppForm
+            initial={emptyDraft}
+            title="New opportunity"
+            saveLabel="Add opportunity"
+            onSubmit={create}
+            onCancel={() => setCreating(false)}
+          />
+        </BringIn>
       )}
 
       <FormError>{error}</FormError>

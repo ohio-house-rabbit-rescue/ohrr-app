@@ -5,16 +5,19 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../../lib/auth'
 import { Screen, Card, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
-import { FLYERS, flyerLink, renderFlyer, type Flyer } from '../flyers'
+import { FLYERS, FLYER_H, FLYER_W, flyerLink, renderFlyer, type Flyer } from '../flyers'
 import { canvasToBlob } from '../render'
 import { canShareFiles, copyText, savePngAsync, sharePng } from '../share'
 import { isNative } from '../../../native/platform'
 import { Explain, StaffTitle } from '../../../components/StaffTitle'
+import { bringIntoView } from '../../../lib/bringIntoView'
+import { ErrorBox, StatusNote } from '../../scan/ScanUI'
 
 export default function Flyers() {
   const { can } = useAuth()
   const [pick, setPick] = useState<Flyer>(FLYERS[0])
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const previewRef = useRef<HTMLDivElement>(null)
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -26,6 +29,7 @@ export default function Flyers() {
     let alive = true
     setBusy(true)
     setStatus(null)
+    setError(null)
     renderFlyer(c, pick)
       .catch((e) => alive && setError(e instanceof Error ? e.message : 'Could not draw the flyer'))
       .finally(() => alive && setBusy(false))
@@ -87,17 +91,23 @@ export default function Flyers() {
 
       <div className="grid grid-cols-1 gap-2">
         {FLYERS.map((f) => (
-          <button key={f.id} type="button" onClick={() => setPick(f)} className={`min-h-[60px] rounded-2xl border-2 px-4 py-3 text-left ${pick.id === f.id ? 'border-brand-orange bg-white shadow-md' : 'border-slate-200 bg-white'}`}>
+          <button key={f.id} type="button" onClick={() => {
+            setPick(f)
+            // The picture and the Share button are the next thing: bring them up under the list.
+            bringIntoView(previewRef.current, { align: 'top' })
+          }} className={`min-h-[60px] rounded-2xl border-2 px-4 py-3 text-left ${pick.id === f.id ? 'border-brand-orange bg-white shadow-md' : 'border-slate-200 bg-white'}`}>
             <span className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-400">{f.audience}</span>
             <span className="mt-0.5 block font-display text-[15px] font-extrabold text-ink">{f.headline}</span>
           </button>
         ))}
       </div>
 
-      <Card className="!p-2">
-        <canvas ref={canvasRef} className="block h-auto w-full rounded-xl" aria-label="Preview of the flyer" />
-      </Card>
-      {busy && <p className="text-center text-xs text-slate-500">Drawing…</p>}
+      <div ref={previewRef}>
+        <Card className="relative !p-2">
+          <canvas ref={canvasRef} style={{ aspectRatio: `${FLYER_W} / ${FLYER_H}` }} className="block h-auto w-full rounded-xl" aria-label="Preview of the flyer" />
+          {busy && <span className="absolute inset-2 flex items-center justify-center rounded-xl bg-white/70 text-sm font-semibold text-slate-600">Drawing…</span>}
+        </Card>
+      </div>
 
       <button type="button" onClick={() => void share()} disabled={busy} className={`${btn.primary} w-full py-4 text-base disabled:opacity-60`}>
         <Icon name="external" size={18} /> {shareable ? 'Share the flyer' : 'Save the flyer'}
@@ -113,8 +123,12 @@ export default function Flyers() {
       <button type="button" onClick={() => void copyLink()} className="block w-full py-2 text-center text-sm font-bold text-brand-blue">
         Copy this flyer’s link
       </button>
-      {status && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{status}</p>}
-      {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</p>}
+      {status && (
+        <StatusNote key={status} className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
+          {status}
+        </StatusNote>
+      )}
+      <ErrorBox>{error}</ErrorBox>
       <Explain label="About printing">
         <p>Prints on one US-Letter page, color or black-and-white. Each flyer carries its own link, so the analytics show which ones bring people in.</p>
       </Explain>

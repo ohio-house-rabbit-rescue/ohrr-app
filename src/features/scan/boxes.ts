@@ -59,7 +59,7 @@ export function boxLabel(box: Box): LabelItem {
   return {
     code: box.code,
     title: boxTitle(box),
-    box: { items: box.items.map((i) => ({ code: i.code, title: i.title })), location: box.location, description: box.description ?? null, event: box.event_title ?? null },
+    box: { numberOnly: true, items: box.items.map((i) => ({ code: i.code, title: i.title })), location: box.location, description: box.description ?? null, event: box.event_title ?? null },
   }
 }
 

@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth'
 import { btn, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { NotConfigured, Spinner, FormError, staffInput } from '../components/staffui'
+import { putKeyboardAway } from '../lib/bringIntoView'
 
 export default function StaffOnboard() {
   const { configured, loading, user, membership, refresh } = useAuth()
@@ -20,6 +21,7 @@ export default function StaffOnboard() {
 
   const onSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault()
+    putKeyboardAway()
     setError(null)
     setStatus('submitting')
     try {
@@ -63,8 +65,6 @@ export default function StaffOnboard() {
             />
           </label>
 
-          <FormError>{error}</FormError>
-
           <button
             type="submit"
             disabled={status === 'submitting' || code.trim().length === 0}
@@ -72,6 +72,8 @@ export default function StaffOnboard() {
           >
             {status === 'submitting' ? 'Redeeming…' : 'Become Owner'}
           </button>
+
+          <FormError>{error}</FormError>
         </form>
       </Card>
 

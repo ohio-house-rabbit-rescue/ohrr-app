@@ -47,6 +47,7 @@ import type { Json } from '../../../lib/database.types'
 import { AUCTION_EVENT_SLUG } from '../../raffle/types'
 import BluetoothPrint from '../printer/BluetoothPrint'
 import { Part, PartBadge, pill } from '../../../components/StaffJob'
+import { bringIntoView, ensureVisible } from '../../../lib/bringIntoView'
 
 type Mode = 'items' | 'shop'
 
@@ -230,6 +231,8 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   const [printImgs, setPrintImgs] = useState<string[]>([])
   const [busy, setBusy] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
+  // A printing problem shows in the sticky footer beside the Print buttons, where the finger just was.
+  const [printError, setPrintError] = useState<string | null>(null)
   const [lastMarked, setLastMarked] = useState<string[]>([])
   // Copies per label, as typed (so the box can be cleared while typing); 1 when not set.
   const [copyText, setCopyText] = useState<Record<string, string>>({})
@@ -334,6 +337,19 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   // A: the size folds to one line once it's set; B: the filters fold behind one pill.
   const [sizeOpen, setSizeOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  // A panel that opens is brought into view, so what to do next isn't left off the screen.
+  const sizeRef = useRef<HTMLDivElement>(null)
+  const customRef = useRef<HTMLDivElement>(null)
+  const filtersRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (sizeOpen) bringIntoView(sizeRef.current, { align: 'top' })
+  }, [sizeOpen])
+  useEffect(() => {
+    if (customOpen) ensureVisible(customRef.current)
+  }, [customOpen])
+  useEffect(() => {
+    if (filtersOpen) ensureVisible(filtersRef.current)
+  }, [filtersOpen])
   const showSize = (s: LabelSize, at: number) => {
     setSize(s)
     saveLabelSize(s, at)
@@ -385,7 +401,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   const print = async () => {
     if (selected.length === 0) return
     setBusy('Making the labels…')
-    setError(null)
+    setPrintError(null)
     try {
       const imgs: string[] = []
       for (const it of selected) {
@@ -398,7 +414,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
       await markPrinted(selected.map((s) => s.code))
       setNote(`${plural(imgs.length)} sent to print and marked as printed.`)
     } catch (e) {
-      setError(errMessage(e))
+      setPrintError(errMessage(e))
     } finally {
       setBusy(null)
     }
@@ -408,7 +424,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
   const pdf = async () => {
     if (selected.length === 0) return
     setBusy('Making the PDF…')
-    setError(null)
+    setPrintError(null)
     try {
       const list = selected.map((i) => ({ item: toLabel(i), copies: copiesOf(i.code) }))
       const pages = list.reduce((n, l) => n + l.copies, 0)
@@ -428,7 +444,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
       await markPrinted(selected.map((s) => s.code))
       setNote(`${plural(pages)} in the PDF, each on its own ${size.wIn} × ${size.hIn} in page, marked as printed.`)
     } catch (e) {
-      setError(errMessage(e))
+      setPrintError(errMessage(e))
     } finally {
       setBusy(null)
     }
@@ -511,7 +527,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
                 size={size}
                 busy={busy}
                 setBusy={setBusy}
-                onError={setError}
+                onError={setPrintError}
                 onPrinted={(codes, msg) => {
                   setNote(msg)
                   void markPrinted(codes)
@@ -519,6 +535,11 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
                 compact
               />
               </div>
+              {printError && (
+                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+                  {printError}
+                </div>
+              )}
               {note && (
                 <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
                   <span className="flex-1">{note}</span>
@@ -541,7 +562,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
             </p>
 
             {/* A · the label size: one line once it's set, the full choice behind Change */}
-            <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+            <div ref={sizeRef} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
               <Part n="A" hint={sizeOpen ? 'the rescue’s printer' : undefined}>
                 Label size
               </Part>
@@ -590,7 +611,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
                         : 'Stays on this device until it’s changed.'}
                   </p>
                   {(customOpen || size.key.startsWith('custom:')) && (
-                    <div className="flex flex-wrap items-end gap-2">
+                    <div ref={customRef} className="flex flex-wrap items-end gap-2">
                       <label className="text-sm font-bold text-slate-600">
                         Width (in)
                         <input type="number" step="0.05" min="0.5" max="8.5" value={customW} onChange={(e) => setCustomW(e.target.value)} className="mt-1 block w-24 rounded-xl border-2 border-slate-200 px-3 py-2 text-base text-ink" />
@@ -689,7 +710,7 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
                 )}
               </div>
               {filtersOpen && (
-                <div className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 bg-white p-3">
+                <div ref={filtersRef} className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 bg-white p-3">
                   <label className="text-sm font-bold text-slate-600">
                     Show
                     <select value={view.show} onChange={(e) => setView({ show: e.target.value as ListView['show'] })} className={SELECT}>

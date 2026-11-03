@@ -13,6 +13,7 @@ import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { EditorForm, Field, NotOnYet, Part, pill } from '../components/StaffJob'
 import { PUSH_TOPICS, PUSH_TOPIC_LABEL, isPushTopic } from '../features/account/push'
+import { StatusNote } from '../features/scan/ScanUI'
 
 type Message = Pick<
   Database['public']['Tables']['push_messages']['Row'],
@@ -322,11 +323,19 @@ export default function StaffNotifications() {
               </div>
             </div>
 
-            {msg && <p className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{msg}</p>}
-            {confirming && (
-              <p className="rounded-xl border border-brand-orange/40 bg-brand-orange-50 px-3 py-3 text-base font-bold text-ink">Send to {phones(n)}?</p>
-            )}
           </EditorForm>
+
+          {/* Said under the buttons, not above them, so the Send button doesn't move when these appear. */}
+          {msg && (
+            <StatusNote key={msg} className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
+              {msg}
+            </StatusNote>
+          )}
+          {confirming && (
+            <StatusNote className="rounded-xl border border-brand-orange/40 bg-brand-orange-50 px-3 py-3 text-base font-bold text-ink">
+              Send to {phones(n)}? Tap “Yes, send to {phones(n)}” above to send it now, or “Not yet” to keep editing.
+            </StatusNote>
+          )}
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2 px-1">

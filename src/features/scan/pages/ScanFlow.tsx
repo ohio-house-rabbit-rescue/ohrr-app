@@ -18,6 +18,7 @@ import { errMessage } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
 import { isNative } from '../../../native/platform'
 import { Explain } from '../../../components/StaffTitle'
+import { bringIntoView } from '../../../lib/bringIntoView'
 import { pickPhoto, type PhotoSource } from '../../../native/camera'
 import Scanner from '../Scanner'
 import { normalizeCode, isRetailBarcode, isOhrrCode, isBoxCode } from '../codes'
@@ -130,6 +131,21 @@ export default function ScanFlow() {
   const [moreOpen, setMoreOpen] = useState(false)
   const cameraRef = useRef<HTMLInputElement>(null)
   const libraryRef = useRef<HTMLInputElement>(null)
+  const moreRef = useRef<HTMLDivElement>(null)
+  const splitRef = useRef<HTMLDivElement>(null)
+
+  // A new step is a new screen: start it at the top, so its question and its first button are on screen
+  // (the page would otherwise stay scrolled to wherever the last step ended).
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [step])
+  // "More…" and "Split this lot" open under the button that was tapped: bring them into view.
+  useEffect(() => {
+    if (moreOpen) bringIntoView(moreRef.current)
+  }, [moreOpen])
+  useEffect(() => {
+    if (splitOpen) bringIntoView(splitRef.current, { align: 'top' })
+  }, [splitOpen])
 
   // The kinds this person may create (the DB checks for real on save).
   const allowedKinds = ITEM_KINDS.filter((k) => KIND_META[k].caps.some((c) => can(c)))
@@ -680,7 +696,7 @@ export default function ScanFlow() {
             </button>
           )}
           {canThis && moreOpen && (
-            <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+            <div ref={moreRef} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
               <div className="flex flex-wrap gap-2">
                 <StepButton icon="camera" onClick={() => navigate(`/staff/items/photos?code=${encodeURIComponent(item.code)}${fromList ? '&back=items' : ''}`)}>
                   Photos
@@ -729,7 +745,7 @@ export default function ScanFlow() {
                 {fromList && <StepButton to="/staff/items?list=1">Back to the list</StepButton>}
               </div>
               {toSort && (item.quantity ?? 1) > 1 && splitOpen && (
-                <div className="space-y-4 border-t border-slate-100 pt-3">
+                <div ref={splitRef} className="space-y-4 border-t border-slate-100 pt-3">
                   <p className="text-[15px] text-slate-600">Take some off as their own item, with a new code. The rest stay here.</p>
                   <div>
                     <p className="mb-2 text-base font-bold text-ink">How many to take off?</p>
@@ -1072,6 +1088,7 @@ export default function ScanFlow() {
             </span>
           </div>
           <ItemCard item={item} />
+          <ErrorBox>{error}</ErrorBox>
           {numbered && (
             <BigButton tone="blue" icon="printer" onClick={() => navigate(`${labelsAt}?code=${encodeURIComponent(item.code)}`)}>
               Print its label

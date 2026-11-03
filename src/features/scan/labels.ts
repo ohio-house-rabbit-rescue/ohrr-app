@@ -128,6 +128,8 @@ export interface LabelItem {
 }
 
 export interface BoxLabel {
+  /** Number-only label (OHRR 2026-11-03): the name and number big, no list of items, so it never goes out of date as items are added. */
+  numberOnly?: boolean
   /** The items inside, in the order they went in: each line is "DON-00001  Stuffed bunny". */
   items: { code: string; title: string }[]
   /** Where the box is kept. */
@@ -640,7 +642,7 @@ async function renderBoxLabel(canvas: HTMLCanvasElement, item: LabelItem, box: B
   y += Math.round(namePx * 1.05)
   const infoPx = Math.round(Math.max(0.08 * dpi, qrSide * 0.1))
   ctx.font = `600 ${infoPx}px "Open Sans"`
-  const count = `${box.items.length} item${box.items.length === 1 ? '' : 's'}`
+  const count = box.numberOnly ? null : `${box.items.length} item${box.items.length === 1 ? '' : 's'}`
   for (const line of [box.description ?? null, box.event ? `For ${box.event}` : null, box.location ? box.location : null, count].filter(Boolean) as string[]) {
     if (y + infoPx > top + qrSide) break
     ctx.fillText(ellipsize(ctx, line, tw), tx, y)
@@ -667,6 +669,21 @@ async function renderBoxLabel(canvas: HTMLCanvasElement, item: LabelItem, box: B
   const bottom = H - m
   const room = bottom - top
   if (room < 0.12 * dpi) return
+  if (box.numberOnly) {
+    // The name and number as big as the room allows, across the middle of what is left.
+    ctx.fillStyle = '#0f172a'
+    ctx.textAlign = 'center'
+    const big = (item.title || boxName(item.code)).toUpperCase()
+    let bigPx = Math.floor(room * 0.8)
+    ctx.font = `900 ${bigPx}px "Nunito"`
+    while (bigPx > 20 && ctx.measureText(big).width > W - 2 * m) {
+      bigPx -= 4
+      ctx.font = `900 ${bigPx}px "Nunito"`
+    }
+    ctx.fillText(big, W / 2, top + Math.max(0, Math.round((room - bigPx) / 2)))
+    ctx.textAlign = 'left'
+    return
+  }
   const rows = box.items.map((it) => ({ code: it.code, title: it.title.trim() || 'Untitled' }))
   const maxPx = Math.round(Math.min(0.2 * dpi, short * 0.06))
   const minPx = Math.round(0.085 * dpi)

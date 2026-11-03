@@ -22,6 +22,7 @@ import { btn, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { NotConfigured, Spinner, FormError, staffInput } from '../components/staffui'
 import { authOrigin } from '../lib/appUrl'
+import { putKeyboardAway } from '../lib/bringIntoView'
 
 type LinkState = 'checking' | 'ready' | 'bad'
 
@@ -95,6 +96,7 @@ export default function StaffResetPassword() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    putKeyboardAway()
     setError(null)
     if (password.length < 8) {
       setError('Use at least 8 characters.')
@@ -179,8 +181,6 @@ export default function StaffResetPassword() {
             <span className="text-xs text-slate-500">At least 8 characters</span>
           </div>
 
-          <FormError>{error}</FormError>
-
           <button
             type="submit"
             disabled={status === 'submitting' || !password || !confirm}
@@ -188,6 +188,8 @@ export default function StaffResetPassword() {
           >
             {status === 'submitting' ? 'Saving…' : 'Save new password'}
           </button>
+
+          <FormError>{error}</FormError>
         </form>
       </Card>
 
@@ -222,6 +224,7 @@ function BadLink({ reason }: { reason: string | null }) {
 
   const send = async (e: FormEvent) => {
     e.preventDefault()
+    putKeyboardAway()
     setError(null)
     setStatus('sending')
     try {
@@ -283,10 +286,10 @@ function BadLink({ reason }: { reason: string | null }) {
               placeholder="you@example.com"
             />
           </label>
-          <FormError>{error}</FormError>
           <button type="submit" disabled={status === 'sending' || !email.trim()} className={`${btn.primary} w-full disabled:opacity-60`}>
             {status === 'sending' ? 'Sending…' : 'Email me a new link'}
           </button>
+          <FormError>{error}</FormError>
         </form>
       </Card>
 

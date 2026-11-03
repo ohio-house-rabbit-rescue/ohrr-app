@@ -3,7 +3,7 @@
 // its price labels, and Undo (the items come back off stock).
 //   /staff/hopshop/deliveries            the list (?supplier= for one supplier)
 //   /staff/hopshop/deliveries/:id        one delivery
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
 import { errMessage } from '../../lib/supabase'
@@ -12,6 +12,8 @@ import { Icon } from '../../components/icons'
 import { StaffTitle } from '../../components/StaffTitle'
 import { StepButton, pill } from '../../components/StaffJob'
 import { FormError, Spinner, staffInput } from '../../components/staffui'
+import { bringIntoView } from '../../lib/bringIntoView'
+import { ErrorBox } from '../scan/ScanUI'
 import { listSuppliers, money, type Supplier } from './api'
 import { dayText, deliveryDetail, invoiceFileUrl, listDeliveries, undoDelivery, type Delivery } from './deliveries'
 
@@ -135,6 +137,11 @@ function DeliveryPage({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null)
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
+  // "Undo this delivery" is at the bottom: the question it asks is brought into view.
+  const confirmRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (confirm) bringIntoView(confirmRef.current)
+  }, [confirm])
 
   const load = useCallback(async () => {
     if (!orgId) return
@@ -178,7 +185,7 @@ function DeliveryPage({ id }: { id: string }) {
           <Icon name="arrowLeft" size={20} /> Deliveries
         </Link>
       </div>
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
       {d === undefined && !error && <Spinner />}
       {d === null && <Card className="text-sm text-slate-600">That delivery isn’t here — it may have been undone.</Card>}
       {d && (
@@ -241,6 +248,7 @@ function DeliveryPage({ id }: { id: string }) {
             </Link>
           )}
           {confirm ? (
+            <div ref={confirmRef}>
             <Card className="space-y-2 border-red-200 bg-red-50">
               <p className="text-sm text-slate-700">
                 This takes {d.units} item{d.units === 1 ? '' : 's'} back off stock and deletes this delivery and its invoice file.
@@ -254,6 +262,7 @@ function DeliveryPage({ id }: { id: string }) {
                 </button>
               </div>
             </Card>
+            </div>
           ) : (
             <div>
               <button type="button" onClick={() => setConfirm(true)} className={`${pill.red} !min-h-[44px]`}>

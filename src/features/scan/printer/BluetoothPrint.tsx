@@ -13,6 +13,7 @@ import { isNative } from '../../../native/platform'
 import { isIphone } from '../../account/push'
 import { Icon } from '../../../components/icons'
 import { BigButton } from '../ScanUI'
+import { ensureVisible } from '../../../lib/bringIntoView'
 import { printsPhoto, renderLabel, type LabelItem, type LabelSize } from '../labels'
 import { PRINTER_DPI, buildJob, toRaster, type Darkness } from './tspl'
 import { bluetoothAvailable, choosePrinter, connectedPrinter, ensurePrinter, forgetPrinter, rememberedPrinter, sendJob } from './bluetooth'
@@ -82,6 +83,13 @@ export default function BluetoothPrint({
     void print()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoPrint])
+
+  // "Printer settings" opens under its button; if that is near the bottom of the screen, scroll so the choices show.
+  // (In the compact form the settings live in the page's sticky footer, which is always on screen.)
+  const panelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (open && !compact) ensureVisible(panelRef.current)
+  }, [open, compact])
 
   if (!bluetoothAvailable()) {
     // Safari on iPhone, Firefox: no Bluetooth for web pages.
@@ -200,7 +208,7 @@ export default function BluetoothPrint({
         </>
       )}
       {open && (
-        <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
+        <div ref={panelRef} className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
           {compact && printerRow}
           <p className="text-base font-bold text-ink">Darkness</p>
           <div className="flex flex-wrap gap-2">

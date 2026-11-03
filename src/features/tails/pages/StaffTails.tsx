@@ -18,6 +18,10 @@ import { deleteTail, listTails, saveTail, type TailRow } from '../api'
 import { Explain, StaffTitle } from '../../../components/StaffTitle'
 import { CardActions, EditorForm, Field, Optional, StepButton, pill } from '../../../components/StaffJob'
 import { CheckRow, PartBox, confirmRemove, useCardAction, useSaving } from '../../../components/ContentEditorBits'
+import { bringIntoView, ensureVisible } from '../../../lib/bringIntoView'
+import { ErrorBox, StatusNote } from '../../scan/ScanUI'
+
+const tailEl = (id: string) => document.getElementById(`tail-${id}`)
 
 export default function StaffTails() {
   const { membership } = useAuth()
@@ -25,6 +29,16 @@ export default function StaffTails() {
   const [rows, setRows] = useState<TailRow[] | null>(null)
   const [editing, setEditing] = useState<string | 'new' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // A form opens in place of the card (or the button): start at its top. When it closes, the card is brought back into view,
+  // and a new story is told about where the form was (the form folds away, and the story joins the top of the list).
+  const [back, setBack] = useState<{ id: string; n: number } | null>(null)
+  const [saved, setSaved] = useState<{ n: number; text: string } | null>(null)
+  useEffect(() => {
+    if (editing) bringIntoView(tailEl(editing), { align: 'top' })
+  }, [editing])
+  useEffect(() => {
+    if (back) bringIntoView(tailEl(back.id), { align: 'top' })
+  }, [back])
 
   const load = useCallback(async () => {
     if (!orgId) return
@@ -55,6 +69,8 @@ export default function StaffTails() {
       if (error) throw error
     }
     await load()
+    // The moved story is now one place up or down: keep it in sight, so its buttons are not lost.
+    ensureVisible(tailEl(rows[index].id))
   }
 
   return (
@@ -68,23 +84,39 @@ export default function StaffTails() {
 
       {editing !== 'new' && (
         <div>
-          <StepButton tone="orange" icon="plus" onClick={() => setEditing('new')}>
+          <StepButton
+            tone="orange"
+            icon="plus"
+            onClick={() => {
+              setSaved(null)
+              setEditing('new')
+            }}
+          >
             Add a story
           </StepButton>
         </div>
       )}
 
+      {saved && editing !== 'new' && (
+        <StatusNote key={saved.n} className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-[15px] font-bold text-green-800">
+          {saved.text}
+        </StatusNote>
+      )}
+
       {editing === 'new' && (
-        <TailForm
-          orgId={orgId}
-          initial={null}
-          newOrder={topOrder}
-          onCancel={() => setEditing(null)}
-          onDone={async () => {
-            setEditing(null)
-            await load()
-          }}
-        />
+        <div id="tail-new">
+          <TailForm
+            orgId={orgId}
+            initial={null}
+            newOrder={topOrder}
+            onCancel={() => setEditing(null)}
+            onDone={async () => {
+              setEditing(null)
+              setSaved({ n: Date.now(), text: 'Story added. It is at the top of the list below.' })
+              await load()
+            }}
+          />
+        </div>
       )}
 
       <FormError>{error}</FormError>
@@ -93,24 +125,32 @@ export default function StaffTails() {
 
       {rows?.map((r, i) =>
         editing === r.id ? (
-          <TailForm
-            key={r.id}
-            orgId={orgId}
-            initial={r}
-            newOrder={topOrder}
-            onCancel={() => setEditing(null)}
-            onDone={async () => {
-              setEditing(null)
-              await load()
-            }}
-          />
+          <div key={r.id} id={`tail-${r.id}`}>
+            <TailForm
+              orgId={orgId}
+              initial={r}
+              newOrder={topOrder}
+              onCancel={() => {
+                setEditing(null)
+                setBack({ id: r.id, n: Date.now() })
+              }}
+              onDone={async () => {
+                setEditing(null)
+                setBack({ id: r.id, n: Date.now() })
+                await load()
+              }}
+            />
+          </div>
         ) : (
           <TailCard
             key={r.id}
             row={r}
             first={i === 0}
             last={i === rows.length - 1}
-            onEdit={() => setEditing(r.id)}
+            onEdit={() => {
+              setSaved(null)
+              setEditing(r.id)
+            }}
             onMove={(dir) => move(i, dir)}
             onChanged={load}
           />
@@ -143,6 +183,7 @@ function TailCard({
       await onChanged()
     })
   return (
+    <div id={`tail-${r.id}`}>
     <Card className="space-y-2">
       <div className="flex items-start gap-3">
         <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-slate-300">
@@ -188,6 +229,7 @@ function TailCard({
       </CardActions>
       <FormError>{error}</FormError>
     </Card>
+    </div>
   )
 }
 
@@ -318,7 +360,6 @@ function TailForm({
       onCancel={onCancel}
       busy={busy || photoBusy}
       canSave={d.bunny.trim().length > 0 && d.summary.trim().length > 0}
-      error={error ?? photoError}
       remove={
         initial
           ? {
@@ -371,6 +412,7 @@ function TailForm({
               )}
             </div>
           </div>
+          <ErrorBox>{photoError}</ErrorBox>
           <Field label="Or paste a photo address">
             <input className={staffInput} value={d.photo_url} onChange={txt('photo_url')} placeholder="https://…" />
           </Field>
@@ -404,6 +446,8 @@ function TailForm({
       <PartBox n="D" title="Showing" hint="optional">
         <CheckRow label="People can see this" checked={d.is_published} onChange={(v) => setD((x) => ({ ...x, is_published: v }))} />
       </PartBox>
+      {/* Just above Save; it brings itself into view (Enter in a box saves with the keyboard still up). */}
+      <ErrorBox>{error}</ErrorBox>
     </EditorForm>
   )
 }

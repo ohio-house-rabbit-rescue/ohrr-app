@@ -2,7 +2,7 @@
 // scanning their labels (the camera stays on for the next one) or checking them
 // in a list, and printing the 4 × 6 in box label and a letter-size packing
 // list. Scanning a box label anywhere in the app lands here.
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
@@ -12,7 +12,8 @@ import { Spinner, staffInput } from '../../../components/staffui'
 import { isNative } from '../../../native/platform'
 import { shareFileNative } from '../../../native/share'
 import Scanner from '../Scanner'
-import { BigButton, ErrorBox } from '../ScanUI'
+import { BigButton, ErrorBox, StatusNote } from '../ScanUI'
+import { bringIntoView, ensureVisible } from '../../../lib/bringIntoView'
 import { listItems } from '../api'
 import { boxName, boxTitle, isBoxCode, normalizeCode } from '../codes'
 import BoxFields, { type BoxFieldValues } from '../BoxFields'
@@ -80,6 +81,34 @@ export default function BoxDetail() {
   const [preview, setPreview] = useState<string | null>(null)
   const [printImgs, setPrintImgs] = useState<string[]>([])
   const [copies, setCopies] = useState(1)
+  // Printing problems show beside the print buttons, not at the top of the page.
+  const [printError, setPrintError] = useState<string | null>(null)
+
+  // After a tap, the next thing is brought into view (and the keyboard put away) so it isn't left below the screen.
+  const addRef = useRef<HTMLDivElement>(null)
+  const editRef = useRef<HTMLDivElement>(null)
+  const labelRef = useRef<HTMLElement>(null)
+  const logRef = useRef<HTMLUListElement>(null)
+  const firstMode = useRef(true)
+  useEffect(() => {
+    if (firstMode.current) {
+      firstMode.current = false
+      return
+    }
+    // Scanning, typing a code, picking from a list, or back to the two buttons: that panel starts under the top bar.
+    bringIntoView(addRef.current, { align: 'top', keyboard: mode === 'type' ? 'keep' : 'away' })
+  }, [mode])
+  useEffect(() => {
+    if (editing) bringIntoView(editRef.current, { align: 'top' })
+  }, [editing])
+  useEffect(() => {
+    if (labelOpen) bringIntoView(labelRef.current, { align: 'top' })
+  }, [labelOpen])
+  // Typing a code: each result is brought into view if it landed below the keyboard. (With the camera on, the
+  // newest result is shown above the camera instead, so the viewfinder never has to scroll away.)
+  useEffect(() => {
+    if (mode === 'type' && log.length > 0) ensureVisible(logRef.current)
+  }, [log, mode])
 
   // Another box (a link, or a box label scanned elsewhere): start fresh.
   useEffect(() => {
@@ -228,7 +257,7 @@ export default function BoxDetail() {
   const printWeb = async () => {
     if (!box) return
     setBusy('Making the label…')
-    setError(null)
+    setPrintError(null)
     try {
       const img = await labelDataUrl(boxLabel(box), BOX_SIZE)
       setPrintImgs(Array.from({ length: copies }, () => img))
@@ -236,7 +265,7 @@ export default function BoxDetail() {
       window.print()
       await marked(`${boxName(box.code)} label sent to print.`)
     } catch (e) {
-      setError(errMessage(e))
+      setPrintError(errMessage(e))
     } finally {
       setBusy(null)
     }
@@ -245,13 +274,13 @@ export default function BoxDetail() {
   const labelPdf = async () => {
     if (!box) return
     setBusy('Making the PDF…')
-    setError(null)
+    setPrintError(null)
     try {
       const label = boxLabel(box)
       const blob = await labelsPdf(Array.from({ length: copies }, () => label), BOX_SIZE)
       if (await save(blob, `ohrr-${box.code.toLowerCase()}-label.pdf`, `OHRR ${boxName(box.code)} label`)) await marked(`${boxName(box.code)} label: a 4 × 6 in PDF.`)
     } catch (e) {
-      setError(errMessage(e))
+      setPrintError(errMessage(e))
     } finally {
       setBusy(null)
     }
@@ -260,12 +289,12 @@ export default function BoxDetail() {
   const listPdf = async () => {
     if (!box) return
     setBusy('Making the packing list…')
-    setError(null)
+    setPrintError(null)
     try {
       const blob = await packingListPdf(box)
       if (await save(blob, `ohrr-${box.code.toLowerCase()}-packing-list.pdf`, `OHRR ${boxName(box.code)} packing list`)) setNote('Packing list made — print it on letter paper to go inside the box.')
     } catch (e) {
-      setError(errMessage(e))
+      setPrintError(errMessage(e))
     } finally {
       setBusy(null)
     }
@@ -327,7 +356,7 @@ export default function BoxDetail() {
         </div>
 
         {editing && (
-          <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+          <div ref={editRef} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
             <BoxFields orgId={orgId} value={fields} onChange={(patch) => setFields((f) => ({ ...f, ...patch }))} />
             <div>
               <p className="text-base font-bold text-ink">
@@ -360,7 +389,8 @@ export default function BoxDetail() {
 
         <ErrorBox>{error}</ErrorBox>
 
-        {/* Adding items */}
+        {/* Adding items (one wrapper, so the panel that opens can be scrolled to) */}
+        <div ref={addRef} className="space-y-4">
         {mode === 'list' && (
           <div className="grid grid-cols-2 gap-2">
             <BigButton onClick={() => setMode('scan')} icon="scan">
@@ -374,6 +404,15 @@ export default function BoxDetail() {
         {(mode === 'scan' || mode === 'type') && (
           <div className="space-y-3 rounded-2xl border-2 border-brand-orange/60 bg-white p-3">
             <p className="font-display text-lg font-extrabold text-ink">Scan each item’s label</p>
+            {mode === 'scan' && log[0] && (
+              <p
+                aria-live="polite"
+                className={`flex items-start gap-2 rounded-xl px-3 py-2 text-[15px] font-semibold ${log[0].ok ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'}`}
+              >
+                <Icon name={log[0].ok ? 'check' : 'x'} size={18} className="mt-0.5 shrink-0" />
+                {log[0].text}
+              </p>
+            )}
             {mode === 'scan' ? (
               <Scanner onResult={(raw) => void handleCode(raw)} onTypeInstead={() => setMode('type')} paused={scanBusy} />
             ) : (
@@ -400,16 +439,6 @@ export default function BoxDetail() {
                 </button>
               </form>
             )}
-            {log.length > 0 && (
-              <ul className="space-y-1" aria-live="polite">
-                {log.slice(0, 5).map((l, i) => (
-                  <li key={i} className={`flex items-start gap-2 rounded-xl px-3 py-2 text-[15px] font-semibold ${l.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'} ${i > 0 ? 'opacity-60' : ''}`}>
-                    <Icon name={l.ok ? 'check' : 'x'} size={18} className="mt-0.5 shrink-0" />
-                    {l.text}
-                  </li>
-                ))}
-              </ul>
-            )}
             <div className="grid grid-cols-2 gap-2">
               <BigButton tone="blue" onClick={() => setMode('list')}>
                 Done · {box.items.length} in the box
@@ -418,6 +447,16 @@ export default function BoxDetail() {
                 {mode === 'scan' ? 'Type a code' : 'Use the camera'}
               </BigButton>
             </div>
+            {(mode === 'scan' ? log.length > 1 : log.length > 0) && (
+              <ul ref={logRef} className="space-y-1" aria-live={mode === 'scan' ? 'off' : 'polite'}>
+                {(mode === 'scan' ? log.slice(1, 5) : log.slice(0, 5)).map((l, i) => (
+                  <li key={i} className={`flex items-start gap-2 rounded-xl px-3 py-2 text-[15px] font-semibold ${l.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'} ${mode === 'scan' || i > 0 ? 'opacity-60' : ''}`}>
+                    <Icon name={l.ok ? 'check' : 'x'} size={18} className="mt-0.5 shrink-0" />
+                    {l.text}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
         {mode === 'pick' && (
@@ -435,6 +474,7 @@ export default function BoxDetail() {
         {mode === 'list' && log.length > 0 && (
           <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">{log.map((l) => l.text).join(' ')}</p>
         )}
+        </div>
 
         {/* What's in it */}
         {mode !== 'pick' && (
@@ -485,7 +525,7 @@ export default function BoxDetail() {
         )}
         {/* Kept mounted when closed: the Bluetooth connection lives in it. */}
         {mode === 'list' && (
-          <section className={`space-y-3 rounded-2xl border border-slate-200 bg-white p-4 ${labelOpen ? '' : 'hidden'}`}>
+          <section ref={labelRef} className={`space-y-3 rounded-2xl border border-slate-200 bg-white p-4 ${labelOpen ? '' : 'hidden'}`}>
             <h2 className="font-display text-lg font-extrabold text-ink">Box label · 4 × 6 in</h2>
             {preview && <img src={preview} alt={`${name} label preview`} className="mx-auto w-full max-w-[16rem] rounded-lg border border-slate-200 shadow-sm" style={{ aspectRatio: '4 / 6' }} />}
             <label className="block text-sm font-bold text-slate-600">
@@ -519,16 +559,21 @@ export default function BoxDetail() {
               size={BOX_SIZE}
               busy={busy}
               setBusy={setBusy}
-              onError={setError}
+              onError={setPrintError}
               onPrinted={(_codes, msg) => void marked(msg)}
             />
             <BigButton tone="plain" onClick={() => void listPdf()} disabled={!!busy} icon="file">
               Packing list (letter paper)
             </BigButton>
-            {note && <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">{note}</p>}
+            <ErrorBox>{printError}</ErrorBox>
+            {note && (
+              <StatusNote key={`${note}|${box.label_printed_at ?? ''}`} className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                {note}
+              </StatusNote>
+            )}
             {box.label_printed_at && <p className="text-sm text-slate-500">The label has been printed.</p>}
             <Explain label="About the box label">
-              <p>Put a 4 × 6 in roll in the printer first. The label lists the names; scanning it opens this page with everything in the box.</p>
+              <p>Put a 4 × 6 in roll in the printer first. The label shows the box’s name and number, so it stays right as items are added; scanning it opens this page with everything in the box. The packing list has the names.</p>
             </Explain>
           </section>
         )}
@@ -616,6 +661,18 @@ function Picker({ orgId, box, onPut, onCancel }: { orgId: string; box: Box; onPu
       return n
     })
 
+  const putThem = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await onPut([...picked])
+    } catch (e) {
+      setError(errMessage(e))
+      setBusy(false)
+    }
+  }
+  const putLabel = busy ? 'Putting them in…' : picked.size === 0 ? 'Check the items for this box' : `Put ${picked.size} in ${boxName(box.code)}`
+
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-2">
@@ -637,21 +694,8 @@ function Picker({ orgId, box, onPut, onCancel }: { orgId: string; box: Box; onPu
           <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name or code" className={SELECT} />
         </label>
       </div>
-      <BigButton
-        onClick={async () => {
-          setBusy(true)
-          setError(null)
-          try {
-            await onPut([...picked])
-          } catch (e) {
-            setError(errMessage(e))
-            setBusy(false)
-          }
-        }}
-        disabled={busy || picked.size === 0}
-        icon="box"
-      >
-        {busy ? 'Putting them in…' : picked.size === 0 ? 'Check the items for this box' : `Put ${picked.size} in ${boxName(box.code)}`}
+      <BigButton onClick={() => void putThem()} disabled={busy || picked.size === 0} icon="box">
+        {putLabel}
       </BigButton>
       <ErrorBox>{error}</ErrorBox>
       {rows === null && !error && <Spinner />}
@@ -705,6 +749,12 @@ function Picker({ orgId, box, onPut, onCancel }: { orgId: string; box: Box; onPu
         <button type="button" onClick={() => setLimit((l) => l + PAGE_SIZE)} className="min-h-[48px] w-full rounded-2xl border-2 border-brand-blue/50 bg-white text-[15px] font-bold text-brand-blue">
           Show {Math.min(PAGE_SIZE, shown.length - limit)} more ({shown.length - limit} not shown yet)
         </button>
+      )}
+      {/* The same button again at the end, so it's under the thumb after checking items far down the list. */}
+      {picked.size > 0 && (
+        <BigButton onClick={() => void putThem()} disabled={busy} icon="box">
+          {putLabel}
+        </BigButton>
       )}
     </section>
   )

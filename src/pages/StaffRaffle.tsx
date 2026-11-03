@@ -26,7 +26,10 @@ import { btn, Badge, Card, Screen, SectionLabel } from '../components/ui'
 import { Icon } from '../components/icons'
 import { StaffTitle } from '../components/StaffTitle'
 import { ChoiceCard, Field, NotOnYet, Optional, Part, StepButton, StepRow, StepRows, WorkingOn, pill } from '../components/StaffJob'
-import { Spinner, FormError, staffInput } from '../components/staffui'
+import { Spinner, staffInput } from '../components/staffui'
+import { ErrorBox, StatusNote } from '../features/scan/ScanUI'
+import { putKeyboardAway } from '../lib/bringIntoView'
+import { showRow } from '../lib/staffScroll'
 import { RafflePhoto } from '../features/raffle/RafflePhoto'
 import { uploadAuctionPhoto } from '../features/raffle/photoUpload'
 import {
@@ -135,7 +138,7 @@ function PhotoCapture({
             <Icon name="trash" size={16} /> Remove photo
           </button>
         </div>
-        <FormError>{error}</FormError>
+        <ErrorBox>{error}</ErrorBox>
       </div>
     )
   }
@@ -159,7 +162,7 @@ function PhotoCapture({
       <button type="button" disabled={busy} onClick={() => libraryRef.current?.click()} className={`${act(pill.outline)} w-full`}>
         Choose from your photos instead
       </button>
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
     </div>
   )
 }
@@ -272,6 +275,7 @@ function ItemForm({
 
   const submit = async (e: { preventDefault(): void }) => {
     e.preventDefault()
+    putKeyboardAway()
     setError(null)
     if (hasBidding) {
       const buyNow = dollarsToCents(draft.buy_now)
@@ -424,7 +428,7 @@ function ItemForm({
         </div>
       )}
 
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
 
       <div className="flex gap-2">
         <button
@@ -466,11 +470,21 @@ function AddItem({
     return (
       <Card className="space-y-3">
         <p className="font-display text-[15px] font-extrabold text-ink">New item — photo first</p>
-        <PhotoCapture orgId={orgId} photo={photo} onPhoto={setPhoto} />
-        <div className="flex gap-2">
+        <PhotoCapture
+          orgId={orgId}
+          photo={photo}
+          onPhoto={(p) => {
+            setPhoto(p)
+            if (p) showRow('add-continue', { align: 'auto', keyboard: 'keep' })
+          }}
+        />
+        <div data-row="add-continue" className="flex gap-2">
           <button
             type="button"
-            onClick={() => setStep('details')}
+            onClick={() => {
+              setStep('details')
+              showRow('add-item', { align: 'top' })
+            }}
             className={`${btn.primary} min-h-[48px] flex-1`}
           >
             {photo ? 'Continue' : 'Continue without a photo'}
@@ -516,7 +530,7 @@ function ItemCard({
   isFirst: boolean
   isLast: boolean
   hasBidding: boolean
-  onChanged: () => void
+  onChanged: () => void | Promise<void>
   onMove: (dir: -1 | 1) => Promise<void>
 }) {
   const ev = useAuctionEvent()
@@ -524,6 +538,8 @@ function ItemCard({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [savedMsg, setSavedMsg] = useState<string | null>(null)
+  const rowId = `item-${item.id}`
   const navigate = useNavigate()
   const other = ev.online ? BUNFEST_AUCTION : ONLINE_AUCTION
 
@@ -560,7 +576,9 @@ function ItemCard({
     const { error } = await supabase.from('raffle_items').update(draftToRow(d, hasBidding)).eq('id', item.id)
     if (error) throw error
     setEditing(false)
-    onChanged()
+    setSavedMsg('Saved.')
+    await onChanged()
+    showRow(rowId, { align: 'auto' })
   }
 
   const doDelete = async () => {
@@ -580,6 +598,7 @@ function ItemCard({
     setError(null)
     try {
       await onMove(dir)
+      showRow(rowId, { align: 'auto', keyboard: 'keep' })
     } catch (e) {
       setError(errMessage(e))
     } finally {
@@ -597,7 +616,10 @@ function ItemCard({
           hasBidding={hasBidding}
           currentBidCents={item.current_bid_cents ?? null}
           onSubmit={saveEdit}
-          onCancel={() => setEditing(false)}
+          onCancel={() => {
+            setEditing(false)
+            showRow(rowId, { align: 'auto' })
+          }}
         />
         {/* Which company gave it — puts it on their card (update 27) */}
         <GivenByCompany orgId={orgId} itemId={item.id} />
@@ -666,7 +688,15 @@ function ItemCard({
             <Icon name="check" size={16} /> Mark won
           </button>
         )}
-        <button type="button" onClick={() => setEditing(true)} className={act(pill.outline)}>
+        <button
+          type="button"
+          onClick={() => {
+            setSavedMsg(null)
+            setEditing(true)
+            showRow(rowId, { align: 'top' })
+          }}
+          className={act(pill.outline)}
+        >
           Edit
         </button>
         <button type="button" disabled={busy} onClick={() => patch({ is_published: !item.is_published })} className={act(pill.outline)}>
@@ -701,7 +731,12 @@ function ItemCard({
           </button>
         )}
       </div>
-      <FormError>{error}</FormError>
+      {savedMsg && (
+        <StatusNote key={savedMsg} className="text-[15px] font-bold text-green-700">
+          {savedMsg}
+        </StatusNote>
+      )}
+      <ErrorBox>{error}</ErrorBox>
     </Card>
   )
 }
@@ -734,7 +769,7 @@ function PaymentServerStatus() {
       alive = false
     }
   }, [])
-  if (h === undefined) return <p className="text-sm text-slate-500">Checking the payment server…</p>
+  if (h === undefined) return <p className="min-h-[5.5rem] text-sm text-slate-500">Checking the payment server…</p>
   if (h === null) {
     return (
       <p className="text-sm leading-relaxed text-amber-800">
@@ -765,16 +800,23 @@ function FindLocation({ event, applicationId, onPick }: { event: string; applica
   const [list, setList] = useState<{ id: string; name: string; active: boolean }[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
   const find = async () => {
+    putKeyboardAway()
     setBusy(true)
     setError(null)
+    setNote(null)
     try {
       const jwt = (await supabase.auth.getSession()).data.session?.access_token
       if (!jwt) throw new Error('Please sign in again.')
       const r = await auctionApi.locations(jwt, event, applicationId.trim())
       setList(r.locations)
       const active = r.locations.filter((l) => l.active)
-      if (active.length === 1) onPick(active[0].id)
+      if (active.length === 1) {
+        onPick(active[0].id)
+        setNote(`Filled in the location: ${active[0].name}.`)
+      } else if (r.locations.length > 1) setNote('Tap the location to use.')
+      showRow('find-location', { align: 'auto' })
     } catch (e) {
       setError(errMessage(e))
     } finally {
@@ -782,10 +824,15 @@ function FindLocation({ event, applicationId, onPick }: { event: string; applica
     }
   }
   return (
-    <div className="space-y-1.5">
+    <div data-row="find-location" className="space-y-1.5">
       <button type="button" disabled={busy || !applicationId.trim()} onClick={() => void find()} className={act(pill.soft)}>
         {busy ? 'Asking Square…' : 'Find it from Square'}
       </button>
+      {note && (
+        <StatusNote key={note} className="text-sm font-bold text-green-700">
+          {note}
+        </StatusNote>
+      )}
       {list && list.length === 0 && <p className="text-sm text-amber-800">Square has no locations for this token.</p>}
       {list && list.length > 1 && (
         <div className="flex flex-wrap gap-1.5">
@@ -797,7 +844,7 @@ function FindLocation({ event, applicationId, onPick }: { event: string; applica
           ))}
         </div>
       )}
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
     </div>
   )
 }
@@ -848,8 +895,10 @@ function SetupPanel({
   const [shippingNote, setShippingNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [savedMsg, setSavedMsg] = useState<string | null>(null)
 
   const startEdit = () => {
+    setSavedMsg(null)
     setTitle(settings?.title ?? '')
     setClosesAt(isoToLocalInput(settings?.afternoon_closes_at))
     setMorning(isoToEventTime(settings?.morning_closes_at))
@@ -877,13 +926,14 @@ function SetupPanel({
   useEffect(() => {
     if (openSignal > 0) {
       startEdit()
-      setTimeout(() => document.getElementById('auction-setup')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+      showRow('auction-setup', { align: 'top' })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openSignal])
 
   const save = async (e: { preventDefault(): void }) => {
     e.preventDefault()
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     const qty = Number.parseInt(bundleQty, 10)
@@ -967,7 +1017,9 @@ function SetupPanel({
     }
     setBusy(false)
     setEditing(false)
+    setSavedMsg('Setup saved. This is what it looks like now.')
     onSaved()
+    showRow('auction-setup', { align: 'top', keyboard: 'keep' })
   }
 
   const morningLabel = formatEventTime(settings?.morning_closes_at)
@@ -975,7 +1027,7 @@ function SetupPanel({
   const priceLabel = rafflePriceLine(settings)
 
   return (
-    <section id="auction-setup" className="space-y-2.5">
+    <section id="auction-setup" data-row="auction-setup" className="space-y-2.5">
       <SectionLabel>Auction setup</SectionLabel>
       <Card className="space-y-3">
         {editing ? (
@@ -1152,7 +1204,7 @@ function SetupPanel({
               </div>
             )}
 
-            <FormError>{error}</FormError>
+            <ErrorBox>{error}</ErrorBox>
             <div className="flex gap-2">
               <button type="submit" disabled={busy} className={`${btn.primary} min-h-[48px] flex-1 disabled:opacity-60`}>
                 {busy ? 'Saving…' : 'Save setup'}
@@ -1164,6 +1216,11 @@ function SetupPanel({
           </form>
         ) : (
           <>
+            {savedMsg && (
+              <StatusNote key={savedMsg} className="text-[15px] font-bold text-green-700">
+                {savedMsg}
+              </StatusNote>
+            )}
             {ev.online ? (
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
@@ -1284,19 +1341,23 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
   // The item list is its own screen (?show=items): the steps first, the long list one tap away.
   const [sp, setSp] = useSearchParams()
   const showItems = sp.get('show') === 'items'
-  const openItems = (on: boolean) =>
+  const openItems = (on: boolean) => {
     setSp((prev) => {
       const n = new URLSearchParams(prev)
       if (on) n.set('show', 'items')
       else n.delete('show')
       return n
     })
+    // A different screen: start it at the top, not wherever this one was scrolled.
+    window.scrollTo({ top: 0 })
+  }
 
   const [items, setItems] = useState<AuctionItem[]>([])
   const [settings, setSettings] = useState<AuctionSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [addedNote, setAddedNote] = useState<string | null>(null)
   // Goes up each time step 1 asks the setup form to open.
   const [setupSignal, setSetupSignal] = useState(0)
   // BunFest's name and day come from its event record, never from this page.
@@ -1351,6 +1412,7 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
     })
     if (error) throw error
     setCreating(false)
+    setAddedNote(`Added “${d.title.trim()}”. Add another, or tap “See and change the items” below to check it.`)
     await load()
   }
 
@@ -1414,22 +1476,23 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
           <Icon name="arrowLeft" size={20} /> {ev.online ? settings?.title || ev.name : ev.name}
         </button>
         <h1 className="font-display text-[26px] font-black leading-tight text-ink">The items</h1>
-        <FormError>{error}</FormError>
+        <ErrorBox>{error}</ErrorBox>
         <SectionLabel>
           {items.length} total · {availableCount} available in the app
         </SectionLabel>
         <div className="grid grid-cols-1 gap-3">
           {items.map((item, i) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              orgId={orgId}
-              isFirst={i === 0}
-              isLast={i === items.length - 1}
-              hasBidding={hasBidding}
-              onChanged={load}
-              onMove={(dir) => move(item.id, dir)}
-            />
+            <div key={item.id} data-row={`item-${item.id}`}>
+              <ItemCard
+                item={item}
+                orgId={orgId}
+                isFirst={i === 0}
+                isLast={i === items.length - 1}
+                hasBidding={hasBidding}
+                onChanged={load}
+                onMove={(dir) => move(item.id, dir)}
+              />
+            </div>
           ))}
         </div>
       </Screen>
@@ -1496,7 +1559,13 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
           </StepButton>
         </StepRow>
         <StepRow n={2} name="Add items and photos" done={items.length > 0} hint={items.length > 0 ? `${items.length} so far` : undefined}>
-          <StepButton icon="camera" tone={items.length === 0 && Boolean(settings) ? 'orange' : 'outline'} onClick={() => setCreating(true)} disabled={creating}>
+          <StepButton icon="camera" tone={items.length === 0 && Boolean(settings) ? 'orange' : 'outline'} onClick={() => {
+              setAddedNote(null)
+              setCreating(true)
+              showRow('add-item', { align: 'top' })
+            }}
+            disabled={creating}
+          >
             Add an item
           </StepButton>
         </StepRow>
@@ -1556,15 +1625,22 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
         )}
       </StepRows>
 
-      {creating && (
-        <AddItem
-          orgId={orgId}
-          nextSortOrder={nextSortOrder}
-          hasBidding={hasBidding}
-          onCreate={create}
-          onCancel={() => setCreating(false)}
-        />
-      )}
+      <div data-row="add-item">
+        {creating && (
+          <AddItem
+            orgId={orgId}
+            nextSortOrder={nextSortOrder}
+            hasBidding={hasBidding}
+            onCreate={create}
+            onCancel={() => setCreating(false)}
+          />
+        )}
+        {!creating && addedNote && (
+          <StatusNote key={addedNote} className="rounded-xl bg-green-50 px-3 py-2 text-[15px] font-bold text-green-800">
+            {addedNote}
+          </StatusNote>
+        )}
+      </div>
 
       {!loading && (
         <SetupPanel
@@ -1577,7 +1653,7 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
         />
       )}
 
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
 
       {loading ? (
         <Spinner label="Loading items…" />

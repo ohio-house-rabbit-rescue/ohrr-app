@@ -4,7 +4,10 @@ import { useAuth } from '../lib/auth'
 import { Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { StaffTitle, Explain } from '../components/StaffTitle'
-import { Spinner, FormError, staffInput } from '../components/staffui'
+import { Spinner, staffInput } from '../components/staffui'
+import { ErrorBox, StatusNote } from '../features/scan/ScanUI'
+import { putKeyboardAway } from '../lib/bringIntoView'
+import { showRow } from '../lib/staffScroll'
 import { CardActions, EditorForm, Field, Part, StepButton, pill } from '../components/StaffJob'
 import { SponsorLogo } from '../features/sponsors/SponsorLogo'
 import {
@@ -240,7 +243,7 @@ function LogoUploader({
       <p className="mt-1 text-sm text-slate-500">
         The real brand logo (PNG or JPG). It’s resized to 800px max.
       </p>
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
     </div>
   )
 }
@@ -273,6 +276,7 @@ function SponsorForm({
       setDraft((d) => ({ ...d, [k]: e.target.value }))
 
   const run = async (fn: () => Promise<void>) => {
+    putKeyboardAway()
     setError(null)
     setBusy(true)
     try {
@@ -497,6 +501,7 @@ function PlacementsEditor({ sponsor, orgId }: { sponsor: SponsorRow; orgId: stri
   const [surface, setSurface] = useState<Surface>('home')
   const [startsAt, setStartsAt] = useState('')
   const [endsAt, setEndsAt] = useState('')
+  const [addedMsg, setAddedMsg] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -526,8 +531,10 @@ function PlacementsEditor({ sponsor, orgId }: { sponsor: SponsorRow; orgId: stri
 
   const add = async (e: { preventDefault(): void }) => {
     e.preventDefault()
+    putKeyboardAway()
     setBusy(true)
     setError(null)
+    setAddedMsg(null)
     const { error } = await supabase.from('sponsor_placements').insert({
       org_id: orgId,
       sponsor_id: sponsor.id,
@@ -543,6 +550,7 @@ function PlacementsEditor({ sponsor, orgId }: { sponsor: SponsorRow; orgId: stri
     }
     setStartsAt('')
     setEndsAt('')
+    setAddedMsg(`Added: ${surfaceLabel(surface)}. It is in the list above.`)
     await load()
   }
 
@@ -642,8 +650,13 @@ function PlacementsEditor({ sponsor, orgId }: { sponsor: SponsorRow; orgId: stri
         <button type="submit" disabled={busy} className={pill.blue}>
           {busy ? 'Saving…' : 'Add placement'}
         </button>
+        {addedMsg && (
+          <StatusNote key={addedMsg} className="text-[15px] font-bold text-green-700">
+            {addedMsg}
+          </StatusNote>
+        )}
       </form>
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
     </div>
   )
 }
@@ -663,12 +676,14 @@ function SponsorCard({
   canMoveUp: boolean
   canMoveDown: boolean
   onMove: (dir: -1 | 1) => Promise<void>
-  onChanged: () => void
+  onChanged: () => void | Promise<void>
 }) {
   const [editing, setEditing] = useState(false)
   const [placementsOpen, setPlacementsOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [savedMsg, setSavedMsg] = useState<string | null>(null)
+  const rowId = `sponsor-${item.id}`
 
   const expired = Boolean(item.term_end && item.term_end < todayIso())
 
@@ -676,7 +691,9 @@ function SponsorCard({
     const { error } = await supabase.from('sponsors').update(draftToPatch(d)).eq('id', item.id)
     if (error) throw error
     setEditing(false)
-    onChanged()
+    setSavedMsg('Saved.')
+    await onChanged()
+    showRow(rowId, { align: 'auto' })
   }
 
   const toggleActive = async () => {
@@ -696,6 +713,7 @@ function SponsorCard({
     setError(null)
     try {
       await onMove(dir)
+      showRow(rowId, { align: 'auto', keyboard: 'keep' })
     } catch (e) {
       setError(errMessage(e))
     } finally {
@@ -730,7 +748,10 @@ function SponsorCard({
         orgId={orgId}
         saveLabel="Save"
         onSubmit={saveEdit}
-        onCancel={() => setEditing(false)}
+        onCancel={() => {
+          setEditing(false)
+          showRow(rowId, { align: 'auto' })
+        }}
         onRemove={doDelete}
       />
     )
@@ -763,12 +784,23 @@ function SponsorCard({
       </div>
 
       <CardActions>
-        <button type="button" onClick={() => setEditing(true)} className={pill.blue}>
+        <button
+          type="button"
+          onClick={() => {
+            setSavedMsg(null)
+            setEditing(true)
+            showRow(rowId, { align: 'top' })
+          }}
+          className={pill.blue}
+        >
           Edit
         </button>
         <button
           type="button"
-          onClick={() => setPlacementsOpen((o) => !o)}
+          onClick={() => {
+            if (!placementsOpen) showRow(`placements-${item.id}`, { align: 'top' })
+            setPlacementsOpen((o) => !o)
+          }}
           aria-expanded={placementsOpen}
           className={placementsOpen ? pill.soft : pill.outline}
         >
@@ -788,8 +820,13 @@ function SponsorCard({
         </button>
       </CardActions>
 
-      {placementsOpen && <PlacementsEditor sponsor={item} orgId={orgId} />}
-      <FormError>{error}</FormError>
+      <div data-row={`placements-${item.id}`}>{placementsOpen && <PlacementsEditor sponsor={item} orgId={orgId} />}</div>
+      {savedMsg && (
+        <StatusNote key={savedMsg} className="text-[15px] font-bold text-green-700">
+          {savedMsg}
+        </StatusNote>
+      )}
+      <ErrorBox>{error}</ErrorBox>
     </Card>
   )
 }
@@ -814,6 +851,7 @@ export default function StaffSponsors() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [addedNote, setAddedNote] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!orgId || !allowed) {
@@ -845,6 +883,7 @@ export default function StaffSponsors() {
     })
     if (error) throw error
     setCreating(false)
+    setAddedNote(`Added “${d.name.trim()}”. It is in the list below, under ${tierLabel(d.tier)}s.`)
     await load()
   }
 
@@ -897,7 +936,15 @@ export default function StaffSponsors() {
 
       {!creating && (
         <div className="flex flex-wrap items-center gap-2">
-          <StepButton tone="orange" icon="plus" onClick={() => setCreating(true)}>
+          <StepButton
+            tone="orange"
+            icon="plus"
+            onClick={() => {
+              setAddedNote(null)
+              setCreating(true)
+              showRow('new-sponsor', { align: 'top' })
+            }}
+          >
             New sponsor
           </StepButton>
           <StepButton to="/staff/sponsors/renewals" icon="calendar">
@@ -906,18 +953,25 @@ export default function StaffSponsors() {
         </div>
       )}
 
-      {creating && (
-        <SponsorForm
-          heading="New sponsor"
-          initial={emptyDraft}
-          orgId={orgId}
-          saveLabel="Add sponsor"
-          onSubmit={create}
-          onCancel={() => setCreating(false)}
-        />
-      )}
+      <div data-row="new-sponsor">
+        {creating && (
+          <SponsorForm
+            heading="New sponsor"
+            initial={emptyDraft}
+            orgId={orgId}
+            saveLabel="Add sponsor"
+            onSubmit={create}
+            onCancel={() => setCreating(false)}
+          />
+        )}
+        {!creating && addedNote && (
+          <StatusNote key={addedNote} className="rounded-xl bg-green-50 px-3 py-2 text-[15px] font-bold text-green-800">
+            {addedNote}
+          </StatusNote>
+        )}
+      </div>
 
-      <FormError>{error}</FormError>
+      <ErrorBox>{error}</ErrorBox>
 
       {loading ? (
         <Spinner label="Loading sponsors…" />
@@ -935,15 +989,16 @@ export default function StaffSponsors() {
               <h2 className="font-display text-lg font-extrabold text-ink">{tierLabel(g.tier)}s</h2>
               <div className="grid grid-cols-1 gap-3">
                 {g.rows.map((item, idx) => (
-                  <SponsorCard
-                    key={item.id}
-                    item={item}
-                    orgId={orgId}
-                    canMoveUp={idx > 0}
-                    canMoveDown={idx < g.rows.length - 1}
-                    onMove={(dir) => move(item, dir)}
-                    onChanged={load}
-                  />
+                  <div key={item.id} data-row={`sponsor-${item.id}`}>
+                    <SponsorCard
+                      item={item}
+                      orgId={orgId}
+                      canMoveUp={idx > 0}
+                      canMoveDown={idx < g.rows.length - 1}
+                      onMove={(dir) => move(item, dir)}
+                      onChanged={load}
+                    />
+                  </div>
                 ))}
               </div>
             </div>

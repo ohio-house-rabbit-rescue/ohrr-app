@@ -4,9 +4,10 @@
 // always has. Works with no signal: the sale waits on the phone.
 // A line that isn't a vendor's item can have its price changed ("3 towels for
 // $30", update 47): for one, or for all of them.
-import { Suspense, lazy, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../../../components/icons'
+import { bringIntoView } from '../../../lib/bringIntoView'
 import { BigButton, BigInput, ErrorBox, MoneyInput, StepShell } from '../../scan/ScanUI'
 import { getDevice, money, newId, toCents } from '../local'
 import { canChangePrice, findByCode, saleTotal, useTill, type CounterProduct, type PayMethod, type SaleLine } from '../sales'
@@ -47,6 +48,17 @@ export default function CounterSell() {
   const [last, setLast] = useState<{ total: number; method: PayMethod; change: number | null } | null>(null)
   // The line whose price is being changed, and what's typed.
   const [pricing, setPricing] = useState<{ i: number; price: string; mode: 'each' | 'all' } | null>(null)
+
+  const cashRef = useRef<HTMLDivElement>(null)
+  // Each screen (basket, scan, pay, done) starts at the top, so the total and the next button are what is seen.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+  }, [step])
+  // Changing a price: the box and its "Use this price" button come up above the keyboard.
+  const pricingLine = pricing?.i ?? null
+  useEffect(() => {
+    if (pricingLine !== null) bringIntoView(document.getElementById('sell-price-panel'), { align: 'top', keyboard: 'keep', delay: 300 })
+  }, [pricingLine])
 
   const total = saleTotal(lines.map(priced))
   const count = lines.reduce((n, l) => n + l.qty, 0)
@@ -192,7 +204,12 @@ export default function CounterSell() {
           <BigButton onClick={() => pay('card')} tone="blue" icon="check">
             Paid by card
           </BigButton>
-          <div className="space-y-2 rounded-2xl border-2 border-slate-200 p-4">
+          <div
+            ref={cashRef}
+            // Typing the cash given: lift the block so "Paid cash" stays above the keyboard.
+            onFocus={() => bringIntoView(cashRef.current, { align: 'top', keyboard: 'keep', delay: 300 })}
+            className="space-y-2 rounded-2xl border-2 border-slate-200 p-4"
+          >
             <p className="text-sm font-semibold text-slate-600">Cash? How much did they give you? (optional)</p>
             <MoneyInput value={given} onChange={setGiven} ariaLabel="Cash given" />
             {g !== null && g >= total && <p className="font-display text-xl font-black text-green-700">Change: {money(g - total)}</p>}
@@ -240,15 +257,22 @@ export default function CounterSell() {
       onBack={() => navigate('/staff/counter')}
       backLabel="Sell"
       footer={
-        <BigButton onClick={() => setStep('pay')} disabled={lines.length === 0}>
-          {lines.length ? `Take payment · ${money(total)}` : 'Add something first'}
-        </BigButton>
+        <div className="space-y-2">
+          {/* "Added …" shows here, where it can always be seen, not up by the basket. */}
+          {note && (
+            <p role="status" className="text-center text-[15px] font-bold text-green-700">
+              {note}
+            </p>
+          )}
+          <BigButton onClick={() => setStep('pay')} disabled={lines.length === 0}>
+            {lines.length ? `Take payment · ${money(total)}` : 'Add something first'}
+          </BigButton>
+        </div>
       }
     >
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2">
           {pill}
-          {note && <span className="text-sm font-bold text-green-700">{note}</span>}
         </div>
         <ErrorBox>{error}</ErrorBox>
 
@@ -278,7 +302,7 @@ export default function CounterSell() {
                     </button>
                   )}
                   {editing && (
-                    <div className="mt-2 space-y-3 rounded-2xl bg-slate-50 p-3">
+                    <div id="sell-price-panel" className="mt-2 space-y-3 rounded-2xl bg-slate-50 p-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <div className="min-w-[9rem] flex-1">
                           <MoneyInput value={editing.price} onChange={(v) => setPricing({ ...editing, price: v })} ariaLabel={`New price for ${l.name}`} autoFocus />
@@ -347,6 +371,8 @@ export default function CounterSell() {
           className="w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-3 text-lg outline-none focus:border-brand-blue"
           value={q}
           onChange={(e) => setQ(e.target.value)}
+          // The matches show below the box: lift the box so they are above the keyboard.
+          onFocus={(e) => bringIntoView(e.currentTarget, { align: 'top', keyboard: 'keep', delay: 300 })}
           placeholder="Or find it by name or barcode number"
           aria-label="Find an item by name"
           autoComplete="off"

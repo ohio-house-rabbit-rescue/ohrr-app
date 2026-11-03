@@ -7,6 +7,8 @@ import { errMessage } from '../../../lib/supabase'
 import { Card, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
 import { Spinner, FormError, staffInput } from '../../../components/staffui'
+import BringIn from '../../../components/BringIn'
+import { StatusNote } from '../../scan/ScanUI'
 import { EditorForm, Field, Part, pill } from '../../../components/StaffJob'
 import { addHours, deleteHours, hoursHistory, hoursSummary, type HoursLine, type HoursSummaryRow } from '../api'
 
@@ -37,6 +39,7 @@ export default function HoursTab() {
   const [q, setQ] = useState('')
   const [open, setOpen] = useState<HoursSummaryRow | null>(null)
   const [adding, setAdding] = useState(false)
+  const [added, setAdded] = useState(false)
   const range = useMemo(() => periodRange(period), [period])
 
   const load = useCallback(async () => {
@@ -79,20 +82,28 @@ export default function HoursTab() {
           <p className="font-display text-3xl font-black text-ink">{fmtHours(total)}</p>
           <p className="text-xs text-slate-500">{(rows ?? []).length} people · checked-in shifts + hours added by hand</p>
         </div>
-        <button type="button" onClick={() => setAdding(true)} className={`${btn.blue} min-h-[44px] px-4`}>
+        <button type="button" onClick={() => { setAdded(false); setAdding(true) }} className={`${btn.blue} min-h-[44px] px-4`}>
           <Icon name="plus" size={14} /> Add hours
         </button>
       </Card>
       {adding && (
-        <AddHours
-          orgId={orgId}
-          userId={user?.id ?? ''}
-          onDone={async () => {
-            setAdding(false)
-            await load()
-          }}
-          onCancel={() => setAdding(false)}
-        />
+        <BringIn>
+          <AddHours
+            orgId={orgId}
+            userId={user?.id ?? ''}
+            onDone={async () => {
+              setAdding(false)
+              await load()
+              setAdded(true)
+            }}
+            onCancel={() => setAdding(false)}
+          />
+        </BringIn>
+      )}
+      {added && !adding && (
+        <StatusNote className="rounded-xl bg-green-50 px-3 py-2.5 text-[15px] font-semibold text-green-800">
+          Hours added. They’re in the total above; tap the person below to see the entry.
+        </StatusNote>
       )}
       <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a volunteer" aria-label="Find a volunteer" className={staffInput} />
       <FormError>{error}</FormError>
@@ -122,6 +133,7 @@ function Person({ row, orgId, userId, range, onBack, onChanged }: { row: HoursSu
   const [lines, setLines] = useState<HoursLine[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
+  const [added, setAdded] = useState(false)
   const load = useCallback(async () => {
     try {
       setLines(await hoursHistory(orgId, row.email, range.from, range.to))
@@ -151,22 +163,30 @@ function Person({ row, orgId, userId, range, onBack, onChanged }: { row: HoursSu
         <Link to={letterHref} className={`${btn.primary} w-full`}>
           <Icon name="printer" size={16} /> Service letter
         </Link>
-        <button type="button" onClick={() => setAdding(true)} className={`${btn.outline} w-full`}>
+        <button type="button" onClick={() => { setAdded(false); setAdding(true) }} className={`${btn.outline} w-full`}>
           <Icon name="plus" size={16} /> Add hours
         </button>
       </div>
       {adding && (
-        <AddHours
-          orgId={orgId}
-          userId={userId}
-          preset={{ email: row.email, name: row.name ?? '' }}
-          onDone={async () => {
-            setAdding(false)
-            await load()
-            await onChanged()
-          }}
-          onCancel={() => setAdding(false)}
-        />
+        <BringIn>
+          <AddHours
+            orgId={orgId}
+            userId={userId}
+            preset={{ email: row.email, name: row.name ?? '' }}
+            onDone={async () => {
+              setAdding(false)
+              await load()
+              await onChanged()
+              setAdded(true)
+            }}
+            onCancel={() => setAdding(false)}
+          />
+        </BringIn>
+      )}
+      {added && !adding && (
+        <StatusNote className="rounded-xl bg-green-50 px-3 py-2.5 text-[15px] font-semibold text-green-800">
+          Hours added. You’ll see the entry in the list below.
+        </StatusNote>
       )}
       <FormError>{error}</FormError>
       {lines === null && !error && <Spinner />}

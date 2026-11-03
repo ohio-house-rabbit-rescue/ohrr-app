@@ -13,6 +13,9 @@ import { StaffTitle, Explain } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { CardActions, EditorForm, Field, Part, StepButton, pill } from '../components/StaffJob'
 import StaffImageField from '../components/StaffImageField'
+import BringIn from '../components/BringIn'
+import { putKeyboardAway } from '../lib/bringIntoView'
+import { StatusNote } from '../features/scan/ScanUI'
 import { slideVisual } from '../data/heroSlides'
 
 type Placement = 'hero' | 'featured' | 'happening'
@@ -125,6 +128,8 @@ export default function StaffHomeScreen() {
   const [creating, setCreating] = useState<Placement | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  // What was just saved or removed, shown in the group it belongs to.
+  const [note, setNote] = useState<{ group: Placement; text: string } | null>(null)
 
   const load = useCallback(async () => {
     if (!orgId || !allowed) return
@@ -155,12 +160,14 @@ export default function StaffHomeScreen() {
     if (error) throw error
     setCreating(null)
     setEditingId(null)
+    setNote({ group: d.placement, text: id ? 'Saved.' : `Added “${d.headline.trim()}”.` })
     await load()
   }
 
   const toggle = async (r: Row) => {
     setBusyId(r.id)
     setError(null)
+    setNote(null)
     const { error } = await supabase.from('hero_slides').update({ is_published: !r.is_published }).eq('id', r.id)
     if (error) setError(errMessage(error))
     else await load()
@@ -176,6 +183,7 @@ export default function StaffHomeScreen() {
     ;[next[i], next[j]] = [next[j], next[i]]
     setBusyId(rows[i].id)
     setError(null)
+    setNote(null)
     try {
       for (let k = 0; k < next.length; k++) {
         const want = next.length - k
@@ -235,9 +243,22 @@ export default function StaffHomeScreen() {
                   onCancel={() => setCreating(null)}
                 />
               ) : (
-                <StepButton tone="orange" icon="plus" onClick={() => setCreating(g.key)}>
+                <StepButton
+                  tone="orange"
+                  icon="plus"
+                  onClick={() => {
+                    setNote(null)
+                    setCreating(g.key)
+                  }}
+                >
                   {newLabel[g.key]}
                 </StepButton>
+              )}
+
+              {note?.group === g.key && creating !== g.key && !rows.some((r) => r.id === editingId) && (
+                <StatusNote key={note.text} className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
+                  {note.text}
+                </StatusNote>
               )}
 
               {rows.length === 0 && creating !== g.key && <p className="text-base text-slate-600">None yet — the built-in cards show.</p>}
@@ -256,6 +277,7 @@ export default function StaffHomeScreen() {
                       const { error } = await supabase.from('hero_slides').delete().eq('id', r.id)
                       if (error) throw error
                       setEditingId(null)
+                      setNote({ group: r.placement, text: `Removed “${r.headline}”.` })
                       await load()
                     }}
                   />
@@ -275,7 +297,14 @@ export default function StaffHomeScreen() {
                       </span>
                     </div>
                     <CardActions>
-                      <button type="button" onClick={() => setEditingId(r.id)} className={pill.blue}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNote(null)
+                          setEditingId(r.id)
+                        }}
+                        className={pill.blue}
+                      >
                         Edit
                       </button>
                       <button type="button" onClick={() => void toggle(r)} disabled={busyId === r.id} className={pill.outline}>
@@ -322,6 +351,7 @@ function SlideForm({
   const txt = (k: keyof Draft) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value })
 
   const run = async (fn: () => Promise<void>) => {
+    putKeyboardAway()
     setBusy(true)
     setError(null)
     try {
@@ -333,6 +363,7 @@ function SlideForm({
   }
 
   return (
+    <BringIn>
     <EditorForm
       title={heading}
       hint="Cards show on the app’s home screen and the website’s home page."
@@ -405,5 +436,6 @@ function SlideForm({
         </label>
       </div>
     </EditorForm>
+    </BringIn>
   )
 }

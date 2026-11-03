@@ -23,6 +23,7 @@ import { Icon } from '../../components/icons'
 import { Spinner, staffInput } from '../../components/staffui'
 import { Field, Part, PartBadge, StepButton, WorkingOn, pill } from '../../components/StaffJob'
 import { BigButton, ErrorBox, StepShell } from '../scan/ScanUI'
+import { bringIntoView, ensureVisible } from '../../lib/bringIntoView'
 import { isNative } from '../../native/platform'
 import { pickPhoto } from '../../native/camera'
 import { dataUrlToBlob } from '../scan/api'
@@ -172,6 +173,21 @@ export default function ReceiveDelivery() {
   const cameraRef = useRef<HTMLInputElement>(null)
   const photosRef = useRef<HTMLInputElement>(null)
   const matchCache = useRef(new Map<string, RememberedMatch[]>())
+  const filesRef = useRef<HTMLDivElement>(null)
+  // The line just added with "Add a line" (it lands below the button, so it is scrolled to).
+  const [newLine, setNewLine] = useState<string | null>(null)
+
+  // Each step is its own screen: start every one at the top, so the result (the read invoice, the added stock) is what is seen.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+  }, [step])
+  // A photo or PDF just added: the list of what is added is shown, with "Read the invoice" in the footer.
+  useEffect(() => {
+    if (files.length) ensureVisible(filesRef.current)
+  }, [files.length])
+  useEffect(() => {
+    if (newLine) bringIntoView(document.getElementById(`delivery-line-${newLine}`), { align: 'top', keyboard: 'keep' })
+  }, [newLine])
 
   useEffect(() => {
     if (!orgId) return
@@ -528,6 +544,7 @@ export default function ReceiveDelivery() {
             </StepButton>
           </div>
           {files.length > 0 && (
+            <div ref={filesRef}>
             <Card className="space-y-2">
               <p className="text-base font-bold text-ink">The invoice</p>
               <ul className="space-y-1">
@@ -543,6 +560,7 @@ export default function ReceiveDelivery() {
               </ul>
               {files.some((f) => !isPdf(f)) && <p className="text-sm text-slate-600">More than one page? Photograph each one. Flat, in good light, the whole page in the picture.</p>}
             </Card>
+            </div>
           )}
           <ErrorBox>{error}</ErrorBox>
         </section>
@@ -677,7 +695,7 @@ export default function ReceiveDelivery() {
           </p>
           <ul className="space-y-3">
             {rows.map((r) => (
-              <li key={r.key}>
+              <li key={r.key} id={`delivery-line-${r.key}`}>
                 <LineCard
                   r={r}
                   products={sorted}
@@ -693,7 +711,14 @@ export default function ReceiveDelivery() {
             ))}
           </ul>
           <div>
-            <StepButton icon="plus" onClick={() => setRows((rs) => [...rs, blankRow()])}>
+            <StepButton
+              icon="plus"
+              onClick={() => {
+                const line = blankRow()
+                setRows((rs) => [...rs, line])
+                setNewLine(line.key)
+              }}
+            >
               Add a line
             </StepButton>
           </div>

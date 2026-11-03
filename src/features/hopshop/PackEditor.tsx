@@ -3,8 +3,9 @@
 // the supplier's minimum. OHRR: "on the ordering process we need the case count
 // or boxes it can come in." Part of the product form; the product's Save saves
 // these too (update 27, `product_packs`).
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../../components/icons'
+import { bringIntoView } from '../../lib/bringIntoView'
 import { staffInput } from '../../components/staffui'
 import { eachFromPack, fromCents, money, toCents, type Pack, type PackInput } from './api'
 
@@ -67,6 +68,13 @@ const smallBtn =
 
 export function PackEditor({ rows, onChange }: { rows: PackRow[]; onChange: (rows: PackRow[]) => void }) {
   const [open, setOpen] = useState<string | null>(null)
+  // A pack size opens above the "Add a pack size" button: start at its top. When it is closed with Done, the summary line it became is shown.
+  const lastOpen = useRef<string | null>(null)
+  useEffect(() => {
+    const k = open ?? lastOpen.current
+    lastOpen.current = open
+    if (k) bringIntoView(document.getElementById(`pack-row-${k}`), { align: open ? 'top' : 'auto', keyboard: open ? 'keep' : 'away' })
+  }, [open])
   const patch = (key: string, p: Partial<PackRow>) =>
     onChange(
       rows.map((r) =>
@@ -116,7 +124,7 @@ export function PackEditor({ rows, onChange }: { rows: PackRow[]; onChange: (row
         const each = units > 0 ? eachFromPack({ cost_cents: toCents(r.cost), units }) : null
         if (open !== r.key) {
           return (
-            <div key={r.key} className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+            <div key={r.key} id={`pack-row-${r.key}`} className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
               <span className="min-w-0 flex-1 text-sm">
                 <span className="font-bold text-ink">
                   {r.label || 'Pack'}
@@ -141,7 +149,7 @@ export function PackEditor({ rows, onChange }: { rows: PackRow[]; onChange: (row
           )
         }
         return (
-          <div key={r.key} className="space-y-3 rounded-xl border border-brand-blue/30 bg-white p-3">
+          <div key={r.key} id={`pack-row-${r.key}`} className="space-y-3 rounded-xl border border-brand-blue/30 bg-white p-3">
             <div className="grid grid-cols-2 gap-2">
               <label className={label}>
                 Pack
