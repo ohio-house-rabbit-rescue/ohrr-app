@@ -51,6 +51,7 @@ function joinUrl(code: string): string {
 }
 
 /** Shown wherever inviting needs update 30 and it hasn't been run. */
+const NEEDS_UPDATE_53 = 'Removing a team member isn’t switched on yet — ask the developer to post database update 53.'
 const NEEDS_UPDATE_30 = 'Invites aren’t switched on yet — ask an admin.' // database update 30
 
 interface Member {
@@ -538,6 +539,7 @@ interface WaitingInvite {
   access_until: string | null
   invitee_name: string | null
   invitee_email: string | null
+  invitee_phone: string | null
   position_note: string | null
   expires_at: string | null
 }
@@ -562,6 +564,7 @@ function parseInvites(data: Json | null): WaitingInvite[] {
       access_until: jsonText(row.access_until),
       invitee_name: jsonText(row.invitee_name),
       invitee_email: jsonText(row.invitee_email),
+      invitee_phone: jsonText(row.invitee_phone),
       position_note: jsonText(row.position_note),
       expires_at: jsonText(row.expires_at),
     })
@@ -573,6 +576,8 @@ function WaitingInvites({ orgId, reloadKey }: { orgId: string; reloadKey: string
   const [invites, setInvites] = useState<WaitingInvite[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.rpc('open_invites', { p_org: orgId })
@@ -585,18 +590,26 @@ function WaitingInvites({ orgId, reloadKey }: { orgId: string; reloadKey: string
   const revoke = async (code: string) => {
     setBusy(true)
     setError(null)
+    setNote(null)
     const { error } = await supabase.rpc('revoke_invite', { p_code: code })
     setBusy(false)
     if (error) return setError(errMessage(error))
+    setEditing(null)
     await load()
+    setNote('The invite is deleted. Its code no longer works.')
   }
 
-  if (invites.length === 0) return null
+  if (invites.length === 0 && !note) return null
   return (
     <Card className="space-y-2">
       <p className="font-display text-[15px] font-extrabold text-ink">
         Waiting invites <span className="font-bold text-slate-400">({invites.length})</span>
       </p>
+      {note && (
+        <StatusNote key={note} className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
+          {note}
+        </StatusNote>
+      )}
       <ul className="divide-y divide-slate-100">
         {invites.map((i) => {
           const tasks =
@@ -605,12 +618,31 @@ function WaitingInvites({ orgId, reloadKey }: { orgId: string; reloadKey: string
               : i.preset
                 ? i.preset
                 : `${i.capabilities.length} task${i.capabilities.length === 1 ? '' : 's'}`
+          if (editing === i.code) {
+            return (
+              <li key={i.code} className="py-2.5">
+                <BringIn>
+                  <InviteEditForm
+                    invite={i}
+                    onCancel={() => setEditing(null)}
+                    onDelete={() => revoke(i.code)}
+                    onSaved={async () => {
+                      setEditing(null)
+                      await load()
+                      setNote(`Saved the details for ${i.code}.`)
+                    }}
+                  />
+                </BringIn>
+              </li>
+            )
+          }
           return (
             <li key={i.code} className="space-y-1.5 py-2.5">
               <div className="flex items-start justify-between gap-2">
                 <span className="min-w-0">
                   <span className="block break-all text-base font-bold text-ink">{i.invitee_name || i.invitee_email || 'No name given'}</span>
                   {i.invitee_name && i.invitee_email && <span className="block break-all text-sm text-slate-500">{i.invitee_email}</span>}
+                  {i.invitee_phone && <span className="block text-sm text-slate-500">{i.invitee_phone}</span>}
                   {i.position_note && <span className="block text-sm text-slate-600">{i.position_note}</span>}
                 </span>
                 {i.level && <Badge tone={isFullAccess(i.level) ? 'blue' : 'slate'}>{levelInfo(i.level).label}</Badge>}
@@ -631,13 +663,23 @@ function WaitingInvites({ orgId, reloadKey }: { orgId: string; reloadKey: string
                 </button>
                 <button
                   type="button"
+                  onClick={() => {
+                    setNote(null)
+                    setEditing(i.code)
+                  }}
+                  className={pill.outline}
+                >
+                  Edit details
+                </button>
+                <button
+                  type="button"
                   disabled={busy}
                   onClick={() => {
-                    if (window.confirm(`Cancel the invite for ${i.invitee_name || i.invitee_email || 'this person'}? The code stops working.`)) void revoke(i.code)
+                    if (window.confirm(`Delete the invite for ${i.invitee_name || i.invitee_email || 'this person'}? The code stops working.`)) void revoke(i.code)
                   }}
                   className={pill.red}
                 >
-                  {busy ? 'Canceling…' : 'Cancel invite'}
+                  {busy ? 'Deleting…' : 'Delete this invite'}
                 </button>
               </CardActions>
             </li>
@@ -646,6 +688,76 @@ function WaitingInvites({ orgId, reloadKey }: { orgId: string; reloadKey: string
       </ul>
       <FormError>{error}</FormError>
     </Card>
+  )
+}
+
+/** Change who an unused invite is for. The level, tasks and end date are fixed when it is made: delete it and make a new one to change those. */
+function InviteEditForm({
+  invite,
+  onSaved,
+  onCancel,
+  onDelete,
+}: {
+  invite: WaitingInvite
+  onSaved: () => Promise<void>
+  onCancel: () => void
+  onDelete: () => Promise<void>
+}) {
+  const [d, setD] = useState({
+    name: invite.invitee_name ?? '',
+    email: invite.invitee_email ?? '',
+    phone: invite.invitee_phone ?? '',
+    position: invite.position_note ?? '',
+  })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const set = (k: keyof typeof d) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value })
+
+  const save = async () => {
+    setBusy(true)
+    setError(null)
+    const { error } = await supabase.rpc('set_invite_details', {
+      p_code: invite.code,
+      p_name: d.name,
+      p_email: d.email,
+      p_phone: d.phone,
+      p_position: d.position,
+    })
+    setBusy(false)
+    if (error) return setError(errMessage(error))
+    await onSaved()
+  }
+
+  return (
+    <EditorForm
+      title="Edit this invite"
+      hint="Fix the name, email, phone or position. The level, tasks and end date stay as they were: to change those, delete this invite and make a new one."
+      onSubmit={save}
+      onCancel={onCancel}
+      busy={busy}
+      canSave={d.name.trim().length > 0 || d.email.trim().length > 0}
+      error={error}
+      remove={{
+        label: 'Delete this invite',
+        confirm: `Delete the invite for ${invite.invitee_name || invite.invitee_email || 'this person'}? The code stops working.`,
+        onRemove: onDelete,
+      }}
+    >
+      <div className="space-y-3">
+        <Field label="Their name" needed hint="Or just their email below.">
+          <input className={staffInput} value={d.name} onChange={set('name')} />
+        </Field>
+        <Field label="Email">
+          <input className={staffInput} type="email" value={d.email} onChange={set('email')} />
+        </Field>
+        <Field label="Text / phone">
+          <input className={staffInput} type="tel" value={d.phone} onChange={set('phone')} />
+        </Field>
+        <Field label="The position they asked about">
+          <input className={staffInput} value={d.position} onChange={set('position')} placeholder="Hop Shop, Saturdays" />
+        </Field>
+      </div>
+    </EditorForm>
   )
 }
 
@@ -1006,6 +1118,7 @@ function MemberCard({
   onToggleCap,
   onPutOnHold,
   onTurnBackOn,
+  onRemove,
   onSetLevel,
   onSetAccessUntil,
   onProfileSaved,
@@ -1030,6 +1143,7 @@ function MemberCard({
   onToggleCap: (memId: string, key: Capability, grant: boolean) => Promise<void>
   onPutOnHold: (member: Member) => Promise<string | null>
   onTurnBackOn: (member: Member) => Promise<string | null>
+  onRemove: (member: Member) => Promise<string | null>
   onSetLevel: (member: Member, level: StaffLevel) => Promise<string | null>
   onSetAccessUntil: (member: Member, until: string | null) => Promise<string | null>
   onProfileSaved: () => Promise<void>
@@ -1126,7 +1240,7 @@ function MemberCard({
         <CardActions>
           {(isSelf || manage) && (
             <button type="button" onClick={() => setEditingProfile(true)} className={pill.outline}>
-              {member.photo_url ? 'Edit photo & title' : 'Add a photo & title'}
+              Edit details
             </button>
           )}
           {levelsMode && manage && levelChoices.length > 0 && !changingLevel && (
@@ -1141,6 +1255,18 @@ function MemberCard({
         <BringIn>
           <ProfileForm
             member={member}
+            remove={
+              manage && !isSelf
+                ? {
+                    label: 'Remove from the team',
+                    confirm: `Remove ${name} from the team? Their login stays, but they lose all staff access and their level and tasks are deleted. To let them back in later, make them a new invite. If you only want a break, use Put on hold instead.`,
+                    onRemove: async () => {
+                      const err = await onRemove(member)
+                      if (err) throw new Error(err)
+                    },
+                  }
+                : undefined
+            }
             onCancel={() => setEditingProfile(false)}
             onDone={async () => {
               setEditingProfile(false)
@@ -1466,6 +1592,16 @@ export default function StaffTeam() {
     return null
   }, [])
 
+  // Take someone off the team altogether (update 53). Their card goes; the note says who and how to bring them back.
+  const removeMember = useCallback(async (member: Member): Promise<string | null> => {
+    const { error } = await supabase.rpc('remove_member', { p_membership: member.id })
+    if (error) return isMissingFunction(error) ? NEEDS_UPDATE_53 : errMessage(error)
+    setMembers((prev) => prev.filter((m) => m.id !== member.id))
+    setBackOn((b) => (b?.id === member.id ? null : b))
+    setHeldNote(`${memberName(member)} is removed from the team. To let them back in, make them a new invite.`)
+    return null
+  }, [])
+
   // On hold can mean put on hold, a passed end date, or both: undo whichever applies.
   const turnBackOn = useCallback(async (member: Member): Promise<string | null> => {
     if (member.status === 'disabled') {
@@ -1583,6 +1719,7 @@ export default function StaffTeam() {
           onToggleCap={toggleCap}
           onPutOnHold={putOnHold}
           onTurnBackOn={turnBackOn}
+          onRemove={removeMember}
           onSetLevel={setLevel}
           onSetAccessUntil={setAccessUntil}
           onCertsChanged={load}
@@ -1702,7 +1839,17 @@ export default function StaffTeam() {
  * would rather not be photographed, and the team list draws a bunny instead.
  * A member may always edit their own; staff.permissions.manage may edit anyone's.
  */
-function ProfileForm({ member, onDone, onCancel }: { member: Member; onDone: () => Promise<void>; onCancel: () => void }) {
+function ProfileForm({
+  member,
+  onDone,
+  onCancel,
+  remove,
+}: {
+  member: Member
+  onDone: () => Promise<void>
+  onCancel: () => void
+  remove?: { label: string; confirm: string; onRemove: () => void | Promise<void> }
+}) {
   const { user } = useAuth()
   const [d, setD] = useState({
     display_name: member.display_name ?? '',
@@ -1736,8 +1883,21 @@ function ProfileForm({ member, onDone, onCancel }: { member: Member; onDone: () 
 
   return (
     <EditorForm
-      title={`${member.photo_url || member.title ? 'Edit' : 'Add'} photo & title`}
-      hint="Nothing here is needed — fill in what you like."
+      title={`Edit details for ${memberName(member)}`}
+      hint="Name, what they do, photo and the public About page. Nothing here is needed: fill in what you like."
+      remove={
+        remove && {
+          ...remove,
+          onRemove: async () => {
+            setError(null)
+            try {
+              await remove.onRemove()
+            } catch (e) {
+              setError(errMessage(e))
+            }
+          },
+        }
+      }
       onSubmit={save}
       onCancel={onCancel}
       busy={busy || imageBusy}

@@ -2902,6 +2902,7 @@ export type Database = {
         Returns: undefined
       }
       open_invites: { Args: { p_org: string }; Returns: Json }
+      remove_member: { Args: { p_membership: string }; Returns: undefined }
       revoke_invite: { Args: { p_code: string }; Returns: undefined }
       save_member_profile: {
         Args: {
