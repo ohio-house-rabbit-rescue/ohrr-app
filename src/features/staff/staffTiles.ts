@@ -12,6 +12,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useAllAccess } from '../../lib/allAccess'
 import { useMyLevel } from '../../lib/staffLevels'
+import { useCanDesign } from '../../lib/designAccess'
 import { PERMISSION_CATALOG } from '../../lib/capabilities'
 import type { IconName } from '../../components/icons'
 
@@ -106,6 +107,7 @@ export interface StaffTiles {
 export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): StaffTiles {
   const { user, membership, can, capabilities } = useAuth()
   const { allAccess } = useAllAccess()
+  const { can: canDesign } = useCanDesign()
   const myLevel = useMyLevel(user?.id, membership?.orgId)
   const orgId = membership?.orgId ?? null
   const newCount = useCount('count_new_requests', counts && orgId && can('inbox.manage') ? orgId : null)
@@ -186,6 +188,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       { to: '/staff/team', title: 'Team', hint: 'Invite staff, who can do what', icon: 'users', group: 'admin', show: can('staff.invite') || can('staff.permissions.manage') },
       { to: '/staff/activity', title: 'Activity', hint: 'Who changed what, and when', icon: 'clock', group: 'admin', show: can('audit.view') },
       { to: '/staff/features', title: 'Features', hint: 'Show or hide whole features', icon: 'settings', group: 'admin', show: allAccess },
+      { to: '/staff/design', title: 'Web page design', hint: 'Colors, pictures, home page order', icon: 'sparkles', group: 'admin', show: canDesign },
       { to: '/staff/details', title: 'OHRR details', hint: 'Hours, phone, address, a notice', icon: 'mappin', group: 'admin', show: can('settings.manage') },
 
       // Me
@@ -220,7 +223,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       nothingYet: groups.every((g) => g.key === 'me'),
       isAdminish,
     }
-  }, [membership, can, capabilities, allAccess, myLevel.ready, newCount, pendingCount, readyPosts])
+  }, [membership, can, capabilities, allAccess, canDesign, myLevel.ready, newCount, pendingCount, readyPosts])
 }
 
 /** Where a page sits, for the menu label: its group and its own title. */

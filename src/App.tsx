@@ -95,6 +95,7 @@ import PartnersPage from './features/sponsors/PartnersPage'
 import PartnerPerksPage from './features/sponsors/PartnerPerksPage'
 import StaffSponsors from './pages/StaffSponsors'
 import StaffFeatures from './pages/StaffFeatures'
+import StaffDesign from './pages/StaffDesign'
 import StaffOrgDetails from './pages/StaffOrgDetails'
 import StaffBunnyHelp from './pages/StaffBunnyHelp'
 import StaffInbox from './pages/StaffInbox'
@@ -350,6 +351,8 @@ export default function App() {
           <Route path="my-hours" element={<StaffMyHours />} />
           <Route path="activity" element={<StaffActivity />} />
           <Route path="features" element={<StaffFeatures />} />
+          <Route path="design" element={<StaffDesign />} />
+          <Route path="design/:part" element={<StaffDesign />} />
           <Route path="details" element={<StaffOrgDetails />} />
           {/* The old combined screen — anyone with it bookmarked lands on Features. */}
           <Route path="settings" element={<Navigate to="/staff/features" replace />} />

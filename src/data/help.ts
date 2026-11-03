@@ -39,7 +39,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'Why do the rabbits say “sample”?',
-        a: 'The app shows sample rabbits until OHRR staff add the real adoptable bunnies from the staff screens. As soon as they do, the samples disappear — no app update needed.',
+        a: 'The app shows sample rabbits until OHRR adds the real adoptable bunnies. As soon as they do, the samples disappear — no app update needed.',
       },
       {
         q: 'What are OHRR’s hours?',
@@ -165,9 +165,8 @@ export const faqCategories: FaqCategory[] = [
         link: { label: 'Settings', to: '/settings' },
       },
       {
-        q: 'I volunteer at OHRR — where do I sign in?',
-        a: 'Staff and volunteers with an OHRR account sign in at the staff area. If you only want to see your volunteer hours, you don’t need an account at all — ask OHRR for your private hours link.',
-        link: { label: 'Staff sign-in', to: '/staff' },
+        q: 'How do I see my volunteer hours?',
+        a: 'You don’t need an account to see your hours. Ask OHRR for your private hours link.',
       },
     ],
   },

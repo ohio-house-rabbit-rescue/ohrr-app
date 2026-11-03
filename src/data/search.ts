@@ -66,12 +66,6 @@ const screens: { title: string; subtitle: string; to: string; extra?: string }[]
   { title: 'Chillaxabun Lounge', subtitle: 'BunFest', to: '/bunfest/p/lounge', extra: 'quiet pen rest hay water' },
   { title: 'Accommodations', subtitle: 'BunFest', to: '/bunfest/p/accommodations', extra: 'hotel embassy suites dublin room block group rate' },
   {
-    title: 'OHRR staff sign-in',
-    subtitle: 'For staff & volunteers',
-    to: '/staff',
-    extra: 'staff sign in login log in admin dashboard volunteer hours inbox hop shop manager team',
-  },
-  {
     title: 'My volunteer hours',
     subtitle: 'Your own record',
     to: '/volunteer/hours',

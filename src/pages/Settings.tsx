@@ -187,21 +187,8 @@ export default function Settings() {
           </Link>
         </section>
 
-        {/* Staff sign-in, one quiet line — a visitor scrolls past it, and
-             someone who works at OHRR can find it without being told. Staff
-             use the same account; signed in, what's left is the invite code. */}
-        {!membership && (
-          <Link
-            to="/staff"
-            className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-          >
-            <span className="inline-flex items-center gap-2">
-              <Icon name="users" size={18} className="text-slate-400" />
-              {user ? 'OHRR staff? Enter your invite code' : <>OHRR staff &amp; volunteer sign-in</>}
-            </span>
-            <Icon name="chevron" size={18} className="shrink-0 text-slate-300" />
-          </Link>
-        )}
+        {/* Nothing here about the staff area for a visitor (OHRR, 2026-11-03): staff are given a link
+             or a code by the person who brings them on, and signed-in staff see their dashboard above. */}
 
         {/* ---- Photo credits: one line, opened when someone wants them.
              The licenses require the credit to be available, not prominent. ---- */}

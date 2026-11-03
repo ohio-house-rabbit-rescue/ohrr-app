@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Card, Screen } from '../components/ui'
@@ -116,7 +116,7 @@ export default function StaffJoin() {
         <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-orange-50 text-brand-orange">
           <Icon name="ticket" size={22} />
         </span>
-        <h1 className="mt-3 font-display text-2xl font-black text-ink">{code ? 'Join the OHRR team' : 'Enter your invite code'}</h1>
+        <h1 className="mt-3 font-display text-2xl font-black text-ink">{code ? 'Join the OHRR team' : 'This area is for OHRR staff and volunteers'}</h1>
         <p className="mt-1 text-sm leading-relaxed text-slate-600">
           Signed in as <strong>{user.email}</strong>. You’re not on the OHRR team yet — one more step.
         </p>
@@ -126,9 +126,11 @@ export default function StaffJoin() {
           </p>
         ) : (
           <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            Ask the person bringing you on (a founder, an admin or a lead) for an invite code — they make one in{' '}
-            <strong>Staff → Team → Invite someone</strong> — and enter it here. It joins you to the team with the
-            access they set up for you.
+            If you’re joining the OHRR team, enter the invite code the person bringing you on gave you. If you’re not, there’s
+            nothing for you here: thank you for stopping by.{' '}
+            <Link to="/" className="font-bold text-brand-blue">
+              Back to the app
+            </Link>
           </p>
         )}
       </div>
@@ -161,15 +163,15 @@ export default function StaffJoin() {
         </form>
       </Card>
 
-      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-[13px] leading-relaxed text-slate-600">
-        <p className="font-bold text-slate-700">Are you an OHRR owner?</p>
+      <details className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-[13px] leading-relaxed text-slate-600">
+        <summary className="cursor-pointer font-bold text-slate-700">Are you an OHRR owner?</summary>
         <p className="mt-1">
           Owners use the one-time master code instead.{' '}
           <a href="/staff/start" className="font-bold text-brand-blue hover:text-brand-blue-dark">
             Enter a master code
           </a>
         </p>
-      </div>
+      </details>
     </Screen>
   )
 }

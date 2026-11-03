@@ -6,8 +6,8 @@ import { OHRR_TABS } from '../data/content'
 
 export default function OhrrLayout() {
   return (
-    <div className="min-h-screen bg-canvas">
-      <div className="relative mx-auto flex min-h-screen max-w-[480px] flex-col bg-white font-sans text-ink shadow-xl">
+    <div className="design-page min-h-screen bg-canvas">
+      <div className="design-page relative mx-auto flex min-h-screen max-w-[480px] flex-col bg-white font-sans text-ink shadow-xl">
         <ScrollToTop />
         <OhrrTopBar />
         <main className="flex-1 pb-24">

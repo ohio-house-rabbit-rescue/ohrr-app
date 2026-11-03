@@ -34,6 +34,24 @@ html {
   scroll-behavior: smooth;
 }
 
+/* The shared look (Staff → Web page design). Without a design these are the plain page and the
+   standard blue band; the variables are set on the page by lib/design.ts. */
+.design-page {
+  background-image: var(--design-page-image, none);
+  background-size: cover;
+  background-position: center;
+}
+@media (min-width: 768px) {
+  .design-page {
+    background-attachment: fixed;
+  }
+}
+.design-band {
+  background-image: var(--design-band-image-app, linear-gradient(to bottom, var(--color-brand-blue), var(--color-brand-blue-dark)));
+  background-size: cover;
+  background-position: center;
+}
+
 body {
   margin: 0;
 }

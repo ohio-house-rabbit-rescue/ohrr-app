@@ -36,6 +36,8 @@ export const CAPABILITIES = [
   // Update 32: the Amazon wish list items, and phone notifications.
   'giving.wishlist',
   'notifications.send',
+  // Update 54: change how the app and website look (colors, pictures, home sections).
+  'site.design',
 ] as const
 
 export type Capability = (typeof CAPABILITIES)[number]
@@ -82,6 +84,7 @@ export const PERMISSION_CATALOG: PermissionMeta[] = [
   { key: 'supporters.view', area: 'Supporters', description: 'See and download the supporter email list' },
   { key: 'giving.wishlist', area: 'Giving', description: 'Keep the Amazon wish list items' },
   { key: 'notifications.send', area: 'Supporters', description: 'Send phone notifications to people who asked for them' },
+  { key: 'site.design', area: 'Web page admin', description: 'Change how the app and website look: colors, background pictures, and the home page sections' },
 ]
 
 // The preset → capabilities bundles, mirroring `permission_presets` in the seed
@@ -107,6 +110,8 @@ export const PRESETS: Record<string, Capability[]> = {
   ],
   'Volunteer Lead': ['volunteers.shifts.manage', 'volunteers.signups.approve', 'inbox.manage', 'bookings.manage'],
   'Content Editor': ['content.education.edit', 'announcements.post', 'events.bunfest.manage'],
+  // Update 54: the one task that opens Staff → Web page design (Founders and Developers always can).
+  'Web Page Admin': ['site.design'],
   // Update 30: whoever runs the festival and its bookings.
   'BunFest & Events': ['events.bunfest.manage', 'bookings.manage', 'counter.use'],
   // Volunteer 3 — update 30: the Inbox; and (update 26) a second pair of eyes on social posts.

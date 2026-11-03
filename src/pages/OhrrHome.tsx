@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ohrr, RABBIT_READY } from '../data/ohrr'
 import { easterAhead } from '../lib/season'
@@ -18,6 +19,7 @@ import MyBookingsCard from '../features/bookings/MyBookingsCard'
 import HomeSearch from '../features/bunnyhelp/HomeSearch'
 import ForYou from '../features/account/ForYou'
 import HelpNeededCard from '../features/volunteers/HelpNeededCard'
+import { resolveHome, useDesign } from '../lib/design'
 
 // One top card, in the existing "big BunFest button" styling. The BunFest slide
 // keeps BunFest's own palette + logo and shows the live event date; any other
@@ -125,11 +127,88 @@ export default function OhrrHome() {
   const heroSlides = useHeroSlides('hero')
   const featuredSlides = useHeroSlides('featured')
   const slides = [...heroSlides, ...featuredSlides]
+  const design = useDesign()
+
+  // The pieces of the home screen. Which are shown and in what order comes from the shared design
+  // (lib/design.ts); the welcome band and the notices above them stay put.
+  const parts: Record<string, ReactNode> = {
+    // Volunteers needed: only while a call is open with places left
+    'help-needed': <HelpNeededCard />,
+    // What's new for the things they checked, since they last looked (hidden when nothing is),
+    // and — once, for people who haven't decided — the question about volunteer notifications
+    'for-you': <ForYou notifyPrompt />,
+    'presented-by': <PresentedBy surface="home" />,
+    // My Bunny first — the user's own rabbit is the daily reason to open the app —
+    // with Bunny Help right under it, one line: "my bunny is…" → OHRR's own guidance
+    'my-bunny': (
+      <div className="space-y-3">
+        <MyBunnyHomeCard />
+        <HomeSearch />
+        {/* Shifts and appointments booked on this phone (hidden when there are none) */}
+        <MyBookingsCard compact />
+      </div>
+    ),
+    // Top cards — hero slides
+    slides: slides.length > 0 && (
+      <div className="-mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {slides.map((s) => (
+          <HeroCard key={s.id} slide={s} />
+        ))}
+      </div>
+    ),
+    // Quick actions — fixed line icons for functions; a real rabbit photo only for Adopt
+    'quick-actions': (
+      <div className="space-y-2.5">
+        <SectionLabel>Quick actions</SectionLabel>
+        <div className="grid grid-cols-3 gap-2">
+          {OHRR_QUICK_ACTIONS.map((q) =>
+            q.icon ? (
+              <IconPhotoTile key={q.to} to={q.to} title={q.title} subtitle={q.subtitle} icon={q.icon} tone={q.tone} variant="tile" />
+            ) : (
+              <PhotoCard key={q.to} to={q.to} title={q.title} subtitle={q.subtitle} photo={q.photo} variant="tile" />
+            ),
+          )}
+        </div>
+      </div>
+    ),
+    thinking: <ThinkingAboutARabbit />,
+    // OHRR sections that aren't already a quick action or a tab (see OHRR_HUB)
+    explore: (
+      <div className="space-y-2.5">
+        <SectionLabel>Explore</SectionLabel>
+        <div className="space-y-2.5">
+          {OHRR_HUB.map((h) => (
+            <ActionCard key={h.to} to={h.to} title={h.title} subtitle={h.subtitle} icon={h.icon} tone={h.tone} />
+          ))}
+        </div>
+      </div>
+    ),
+    // Visit mini-card
+    visit: (
+      <Card className="border-slate-200 bg-slate-50/80">
+        {org.notice && (
+          <p className="mb-2 rounded-xl bg-brand-orange-50 px-3 py-2 text-sm font-bold text-brand-orange-dark">
+            {org.notice}
+          </p>
+        )}
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          <Icon name="clock" size={18} className="shrink-0 text-brand-blue" /> Hop Shop {org.hours_short} ·{' '}
+          {ohrr.adoptionsNote.toLowerCase()}
+        </div>
+        <Link
+          to="/appointment"
+          className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
+        >
+          Schedule a visit <Icon name="chevron" size={14} />
+        </Link>
+      </Card>
+    ),
+  }
 
   return (
     <div>
       {/* Hero, with the logo's bunny drawn faintly at the right (PageArt) */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-brand-blue to-brand-blue-dark px-5 pb-4 pt-4 text-white">
+      <section className="relative overflow-hidden design-band px-5 pb-4 pt-4 text-white">
         <PageArt name="bunny" className="inset-y-2 right-4 w-[26%] max-w-28 text-white/20" />
         <h1 className="relative font-display text-2xl font-black leading-tight">
           Every bunny deserves a home
@@ -141,75 +220,12 @@ export default function OhrrHome() {
         <EasterReminder />
         {/* Live staff-posted notices (hidden when there are none) */}
         <AnnouncementsBanner />
-        {/* Volunteers needed: only while a call is open with places left */}
-        <HelpNeededCard />
-        {/* What's new for the things they checked, since they last looked (hidden when nothing is),
-            and — once, for people who haven't decided — the question about volunteer notifications */}
-        <ForYou notifyPrompt />
-        <PresentedBy surface="home" />
-
-        {/* My Bunny first — the user's own rabbit is the daily reason to open the app —
-            with Bunny Help right under it, one line: "my bunny is…" → OHRR's own guidance */}
-        <div className="space-y-3">
-          <MyBunnyHomeCard />
-          <HomeSearch />
-          {/* Shifts and appointments booked on this phone (hidden when there are none) */}
-          <MyBookingsCard compact />
-        </div>
-
-        {/* Top cards — hero slides */}
-        {slides.length > 0 && (
-          <div className="-mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {slides.map((s) => (
-              <HeroCard key={s.id} slide={s} />
-            ))}
-          </div>
-        )}
-
-        {/* Quick actions — fixed line icons for functions; a real rabbit photo only for Adopt */}
-        <div className="space-y-2.5">
-          <SectionLabel>Quick actions</SectionLabel>
-          <div className="grid grid-cols-3 gap-2">
-            {OHRR_QUICK_ACTIONS.map((q) =>
-              q.icon ? (
-                <IconPhotoTile key={q.to} to={q.to} title={q.title} subtitle={q.subtitle} icon={q.icon} tone={q.tone} variant="tile" />
-              ) : (
-                <PhotoCard key={q.to} to={q.to} title={q.title} subtitle={q.subtitle} photo={q.photo} variant="tile" />
-              ),
-            )}
-          </div>
-        </div>
-
-        <ThinkingAboutARabbit />
-
-        {/* OHRR sections that aren't already a quick action or a tab (see OHRR_HUB) */}
-        <div className="space-y-2.5">
-          <SectionLabel>Explore</SectionLabel>
-          <div className="space-y-2.5">
-            {OHRR_HUB.map((h) => (
-              <ActionCard key={h.to} to={h.to} title={h.title} subtitle={h.subtitle} icon={h.icon} tone={h.tone} />
-            ))}
-          </div>
-        </div>
-
-        {/* Visit mini-card */}
-        <Card className="border-slate-200 bg-slate-50/80">
-          {org.notice && (
-            <p className="mb-2 rounded-xl bg-brand-orange-50 px-3 py-2 text-sm font-bold text-brand-orange-dark">
-              {org.notice}
-            </p>
-          )}
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <Icon name="clock" size={18} className="shrink-0 text-brand-blue" /> Hop Shop {org.hours_short} ·{' '}
-            {ohrr.adoptionsNote.toLowerCase()}
-          </div>
-          <Link
-            to="/appointment"
-            className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-brand-blue hover:text-brand-blue-dark"
-          >
-            Schedule a visit <Icon name="chevron" size={14} />
-          </Link>
-        </Card>
+        {/* The rest, in the order staff chose (Staff → Web page design) */}
+        {resolveHome('app', design)
+          .filter((x) => x.on)
+          .map((x) => (
+            <Fragment key={x.id}>{parts[x.id]}</Fragment>
+          ))}
       </Screen>
     </div>
   )

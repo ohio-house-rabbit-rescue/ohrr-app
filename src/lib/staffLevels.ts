@@ -142,6 +142,7 @@ export const PRESET_SUGGESTED_LEVEL: Record<string, StaffLevel> = {
   'Volunteer Lead': 'lead',
   'Hop Shop Manager': 'lead',
   'Content Editor': 'lead',
+  'Web Page Admin': 'lead',
   'BunFest & Events': 'lead',
   'Inbox helper': 'volunteer3',
   'Content Approver': 'volunteer3',

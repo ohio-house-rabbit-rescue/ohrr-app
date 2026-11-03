@@ -6,12 +6,23 @@ import { isNative } from './native/platform'
 import { loadCurrentEvent } from './lib/currentEvent'
 import { keepFieldVisible } from './lib/keepFieldVisible'
 import { keyboardAwayOnButtons } from './lib/bringIntoView'
+import { DESIGN_KEY, startDesign } from './lib/design'
+import { supabase, isSupabaseConfigured } from './lib/supabase'
 import './index.css'
 
 // The reader's text-size choice, before anything renders.
 applyTextSize()
 keepFieldVisible()
 keyboardAwayOnButtons()
+
+// The shared look (Staff → Web page design): the device's remembered copy is already on the page
+// (design.ts applies it as it loads); this refreshes it. Offline or on an error, the remembered one stays.
+startDesign(async () => {
+  if (!isSupabaseConfigured) throw new Error('not configured')
+  const { data, error } = await supabase.from('app_settings').select('value').eq('key', DESIGN_KEY).limit(1).maybeSingle()
+  if (error) throw error
+  return data?.value ?? null
+})
 
 // The offline cache (public/sw.js): the app — and the Counter and Door — keep
 // opening on a phone with no signal. Web only; the phone apps carry their

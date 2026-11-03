@@ -417,6 +417,10 @@ function StaffBox() {
     }
   }
 
+  // Nothing about the staff area unless an invite link was opened on this phone (OHRR, 2026-11-03:
+  // a customer shouldn't know it's there). The link carries the code; the box below is for retyping it.
+  if (!pending) return null
+
   return (
     <section className="space-y-2">
       <SectionLabel>Staff?</SectionLabel>
