@@ -15,6 +15,7 @@ import { PostsToApproveNotice } from '../features/share/PostsToApproveNotice'
 import { EasterCampaignNotice } from '../features/share/EasterCampaignCard'
 import { isFullAccess, levelInfo, useMyLevel } from '../lib/staffLevels'
 import { useStaffTiles } from '../features/staff/staffTiles'
+import GuideCard from '../features/guide/GuideCard'
 
 const roleBadge: Record<string, { label: string; tone: 'blue' | 'orange' | 'slate' }> = {
   owner: { label: 'Owner', tone: 'blue' },
@@ -55,6 +56,8 @@ export default function StaffHome() {
       {can('social.approve') && <PostsToApproveNotice />}
       {/* In the weeks before Easter, until this year's Easter posts are planned (Staff → Posts) */}
       {can('announcements.post') && <EasterCampaignNotice />}
+
+      <GuideCard />
 
       {today.length > 0 && (
         <section aria-labelledby="today-h">

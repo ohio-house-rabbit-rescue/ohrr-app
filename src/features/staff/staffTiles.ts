@@ -15,6 +15,8 @@ import { useMyLevel } from '../../lib/staffLevels'
 import { useCanDesign } from '../../lib/designAccess'
 import { PERMISSION_CATALOG } from '../../lib/capabilities'
 import type { IconName } from '../../components/icons'
+import { useGuideAccess } from '../guide/useGuide'
+import { TRAIL_PATH } from '../guide/guideEnv'
 
 export type GroupKey = 'items' | 'rabbits' | 'volunteers' | 'events' | 'word' | 'giving' | 'admin' | 'me'
 
@@ -112,6 +114,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
   const orgId = membership?.orgId ?? null
   const newCount = useCount('count_new_requests', counts && orgId && can('inbox.manage') ? orgId : null)
   const pendingCount = useCount('count_pending_bookings', counts && orgId && can('bookings.manage') ? orgId : null)
+  const guide = useGuideAccess()
   const readyPosts = useCount('count_ready_posts', counts && orgId && (can('announcements.post') || can('social.publish')) ? orgId : null)
 
   return useMemo(() => {
@@ -192,6 +195,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       { to: '/staff/details', title: 'OHRR details', hint: 'Hours, phone, address, a notice', icon: 'mappin', group: 'admin', show: can('settings.manage') },
 
       // Me
+      { to: TRAIL_PATH, title: 'Start here', hint: 'A step-by-step guide to the app', icon: 'sparkles', group: 'me', show: guide.visible },
       { to: '/staff/account', title: 'My account', hint: 'Name, photo, level and access', icon: 'user', group: 'me', show: Boolean(membership) },
       { to: '/staff/my-hours', title: 'My volunteer hours', hint: 'Log time that isn’t a shift', icon: 'clock', group: 'me', show: myLevel.ready },
     ]
@@ -223,7 +227,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       nothingYet: groups.every((g) => g.key === 'me'),
       isAdminish,
     }
-  }, [membership, can, capabilities, allAccess, canDesign, myLevel.ready, newCount, pendingCount, readyPosts])
+  }, [membership, can, capabilities, allAccess, canDesign, myLevel.ready, guide.visible, newCount, pendingCount, readyPosts])
 }
 
 /** Where a page sits, for the menu label: its group and its own title. */

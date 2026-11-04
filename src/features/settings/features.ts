@@ -37,6 +37,9 @@ export const RAFFLE_TICKETS_NATIVE_FLAG = 'raffle_tickets_native_enabled'
 export const HOP_SHOP_ITEMS_FLAG = 'hop_shop_items_enabled'
 export const PHONE_NOTIFICATIONS_FLAG = 'phone_notifications_enabled'
 export const VOLUNTEER_HOURS_FLAG = 'volunteer_hours_enabled'
+/** The guided start for staff (src/features/guide). */
+export { GUIDE_FLAG } from '../guide/walkthrough'
+import { GUIDE_FLAG } from '../guide/walkthrough'
 
 export const APP_FEATURES: AppFeature[] = [
   {
@@ -84,6 +87,14 @@ export const APP_FEATURES: AppFeature[] = [
     description:
       'The “Notifications on this phone” sign-up in My OHRR and the one-time offer on Home. Switched OFF, nothing new is sent either; phones already signed up hear again when it is back on.',
     group: 'The rescue',
+  },
+  {
+    key: GUIDE_FLAG,
+    label: 'Guided start for staff (Hop Into the App)',
+    defaultOn: true,
+    description:
+      'The step-by-step guide under Staff → Start here, for everyone on the team. Switch it OFF when the app launches: it then stays only for people who join the team afterwards.',
+    group: 'Volunteering',
   },
   {
     key: VOLUNTEER_HOURS_FLAG,

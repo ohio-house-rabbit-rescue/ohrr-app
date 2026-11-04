@@ -2370,6 +2370,23 @@ export type Database = {
         }
         Relationships: []
       }
+      // The guided start's ticks (update 56): a person's own rows only.
+      staff_walkthrough: {
+        Row: {
+          user_id: string
+          step_key: string
+          done_at: string
+        }
+        Insert: {
+          user_id: string
+          step_key: string
+          done_at?: string
+        }
+        Update: {
+          done_at?: string
+        }
+        Relationships: []
+      }
       // What they saved, one JSON document per kind. Read with a select (only
       // their own rows); written ONLY through save_my_data().
       user_saves: {

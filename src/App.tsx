@@ -80,6 +80,10 @@ import StaffGroup from './pages/StaffGroup'
 import HopShopManager from './pages/HopShopManager'
 import StaffTeam from './pages/StaffTeam'
 import StaffMyHours from './pages/StaffMyHours'
+import GuideTrail from './features/guide/GuideTrail'
+import GuideLevelPage from './features/guide/GuideLevel'
+import GuideMoney from './features/guide/GuideMoney'
+import Welcome from './features/guide/Welcome'
 import StaffAccount from './pages/StaffAccount'
 import StaffActivity from './pages/StaffActivity'
 import StaffAnnouncements from './pages/StaffAnnouncements'
@@ -188,6 +192,8 @@ export default function App() {
         <Route path="/adopt/how-it-works" element={<AdoptHowItWorks />} />
         <Route path="/adopt/apply" element={<AdoptionApplication />} />
         <Route path="/mailing-list" element={<MailingList />} />
+        {/* Unlisted, before sign-in: what the staff guide is and how to begin */}
+        <Route path="/welcome" element={<Welcome />} />
         <Route path="/impact" element={<ImpactPage />} />
         <Route path="/raffle/tickets/:token" element={<Suspense fallback={null}><TicketPage /></Suspense>} />
         <Route path="/auction" element={online(<RaffleCatalog />)} />
@@ -349,6 +355,10 @@ export default function App() {
           <Route path="team" element={<StaffTeam />} />
           {/* Update 28: a staff member's own volunteer page, to log hours that aren't a shift */}
           <Route path="my-hours" element={<StaffMyHours />} />
+          {/* The guided start (Hop Into the App): the Trail, one level, and the plain note about money */}
+          <Route path="guide" element={<GuideTrail />} />
+          <Route path="guide/money" element={<GuideMoney />} />
+          <Route path="guide/:level" element={<GuideLevelPage />} />
           <Route path="activity" element={<StaffActivity />} />
           <Route path="features" element={<StaffFeatures />} />
           <Route path="design" element={<StaffDesign />} />
