@@ -3154,6 +3154,8 @@ export type Database = {
           can_manage: boolean
           /** Update 30: the last day of their access (null = no end). Missing before it. */
           access_until: string | null
+          /** Update 55: the name they gave as a customer (their account profile). Missing before it. */
+          account_name?: string | null
         }[]
       }
       /** Only for people below your own level (founders and developers: anyone but themselves); keeps role in step. */

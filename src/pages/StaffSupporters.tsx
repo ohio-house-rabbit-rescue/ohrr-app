@@ -22,7 +22,7 @@ import type { Database } from '../lib/database.types'
 
 type Row = Pick<
   Database['public']['Tables']['mailing_list']['Row'],
-  'id' | 'email' | 'name' | 'interests' | 'source' | 'created_at' | 'unsubscribed_at'
+  'id' | 'email' | 'name' | 'interests' | 'source' | 'created_at' | 'unsubscribed_at' | 'user_id'
 >
 
 const PAGE = 1000
@@ -50,6 +50,8 @@ export default function StaffSupporters() {
   const [interest, setInterest] = useState<Interest | 'all'>('all')
   const [showLeft, setShowLeft] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  // People on the team who are also on this list: one person, one account (update 55 keeps their email the same).
+  const [team, setTeam] = useState<{ ids: Set<string>; emails: Set<string> }>({ ids: new Set(), emails: new Set() })
 
   // Everyone, a thousand at a time (PostgREST's page size).
   const load = useCallback(async () => {
@@ -58,7 +60,7 @@ export default function StaffSupporters() {
     for (let from = 0; ; from += PAGE) {
       const { data, error } = await supabase
         .from('mailing_list')
-        .select('id, email, name, interests, source, created_at, unsubscribed_at')
+        .select('id, email, name, interests, source, created_at, unsubscribed_at, user_id')
         .eq('org_id', orgId)
         .order('created_at', { ascending: false })
         .range(from, from + PAGE - 1)
@@ -72,6 +74,14 @@ export default function StaffSupporters() {
       if (!data || data.length < PAGE) break
     }
     setRows(all)
+    // Who is on the team, to mark them. If this can't be read the list simply shows no marks.
+    const t = await supabase.rpc('list_team', { p_org: orgId })
+    if (!t.error && t.data) {
+      setTeam({
+        ids: new Set(t.data.map((m) => m.user_id)),
+        emails: new Set(t.data.map((m) => (m.email ?? '').toLowerCase()).filter(Boolean)),
+      })
+    }
   }, [orgId])
   useEffect(() => {
     if (orgId && can('supporters.view')) void load()
@@ -94,6 +104,7 @@ export default function StaffSupporters() {
     )
   }, [rows, query, interest, showLeft])
   const shownSubscribed = shown.filter((r) => !r.unsubscribed_at)
+  const onTeam = (r: Row) => (r.user_id != null && team.ids.has(r.user_id)) || team.emails.has(r.email.toLowerCase())
 
   if (!can('supporters.view'))
     return (
@@ -116,7 +127,7 @@ export default function StaffSupporters() {
   const download = async () => {
     setMsg(null)
     const csv = toCsv(
-      ['Name', 'Email', 'Interests', 'Source', 'Joined', 'Unsubscribed'],
+      ['Name', 'Email', 'Interests', 'Source', 'Joined', 'Unsubscribed', 'On the team'],
       shown.map((r) => [
         r.name ?? '',
         r.email,
@@ -126,6 +137,7 @@ export default function StaffSupporters() {
         SOURCE_LABEL[r.source ?? ''] ?? r.source ?? '',
         usDate(r.created_at),
         usDate(r.unsubscribed_at),
+        onTeam(r) ? 'Yes' : '',
       ]),
     )
     const stamp = new Date().toISOString().slice(0, 10)
@@ -223,6 +235,7 @@ export default function StaffSupporters() {
                 <div key={r.id} className="space-y-1 px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-ink">{r.name || 'No name given'}</span>
+                    {onTeam(r) && <Badge tone="blue">On the team</Badge>}
                     {r.unsubscribed_at && <Badge tone="slate">Unsubscribed {usDate(r.unsubscribed_at)}</Badge>}
                   </div>
                   <a href={`mailto:${r.email}`} className="block break-all text-sm text-brand-blue">

@@ -68,6 +68,8 @@ interface Member {
   access_until: string | null
   // Team profile — a photo is optional; a bunny stands in (20260922140000_*.sql)
   display_name: string | null
+  /** Update 55: the name they gave as a customer, when their staff profile has none. */
+  account_name?: string | null
   title: string | null
   photo_url: string | null
   show_on_about: boolean
@@ -75,7 +77,8 @@ interface Member {
 
 type Cert = Database['public']['Tables']['member_certifications']['Row']
 
-const memberName = (m: Pick<Member, 'display_name' | 'email'>) => m.display_name || m.email || 'Team member'
+const memberName = (m: Pick<Member, 'display_name' | 'account_name' | 'email'>) =>
+  m.display_name || m.account_name || m.email || 'Team member'
 
 /**
  * On hold: someone put them on hold (status 'disabled'), or their end date has
@@ -359,7 +362,7 @@ function InvitePanel({
           <Field label="Their name" needed hint="Or just their email below.">
             <input className={staffInput} value={who.name} onChange={setWhoField('name')} placeholder="Bev" />
           </Field>
-          <Field label="Email" hint="With an email you can send the invite in one tap.">
+          <Field label="Email" hint="With an email you can send the invite in one tap. They must sign in with this same email, so if they already have an OHRR account, use the email they signed up with.">
             <input className={staffInput} type="email" value={who.email} onChange={setWhoField('email')} />
           </Field>
           <Field label="Text / phone">
@@ -747,7 +750,7 @@ function InviteEditForm({
         <Field label="Their name" needed hint="Or just their email below.">
           <input className={staffInput} value={d.name} onChange={set('name')} />
         </Field>
-        <Field label="Email">
+        <Field label="Email" hint="They must sign in with this same email.">
           <input className={staffInput} type="email" value={d.email} onChange={set('email')} />
         </Field>
         <Field label="Text / phone">
@@ -1208,10 +1211,10 @@ function MemberCard({
               {isSelf && <span className="shrink-0 text-sm font-bold text-slate-500">(you)</span>}
             </div>
             {member.title && <span className="block text-sm font-semibold text-slate-600">{member.title}</span>}
-            {member.display_name && member.email && (
+            {(member.display_name || member.account_name) && member.email && (
               <span className="block break-all text-sm text-slate-500">{member.email}</span>
             )}
-            {!member.email && !member.display_name && (
+            {!member.email && !member.display_name && !member.account_name && (
               <span className="font-mono text-[11px] text-slate-400">ID {member.user_id.slice(0, 8)}</span>
             )}
           </div>
@@ -1482,6 +1485,7 @@ export default function StaffTeam() {
         access_until: r.access_until ?? null,
         ...blankProfile,
         display_name: r.display_name ?? null,
+        account_name: r.account_name ?? null,
         title: r.title ?? null,
         ...(profiles.get(r.membership_id) ?? {}),
       }))
