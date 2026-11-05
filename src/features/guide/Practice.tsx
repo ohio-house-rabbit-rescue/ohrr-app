@@ -167,7 +167,135 @@ function PracticeScan() {
   )
 }
 
+const cash = (cents: number) => `$${(cents / 100).toFixed(2)}`
+const SELL_ITEMS = [
+  { id: 'hay', name: 'Hay, small bag', cents: 800 },
+  { id: 'toy', name: 'Carrot toy', cents: 350 },
+  { id: 'treat', name: 'Treat jar', cents: 600 },
+  { id: 'tag', name: 'Bunny bandana', cents: 1200 },
+]
+const stepper = 'inline-flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-lg font-black text-ink'
+
+function PracticeSellBasket() {
+  const [qty, setQty] = useState<Record<string, number>>({})
+  const [asked, setAsked] = useState(false)
+  const lines = SELL_ITEMS.filter((i) => (qty[i.id] ?? 0) > 0)
+  const total = lines.reduce((n, i) => n + i.cents * (qty[i.id] ?? 0), 0)
+  const bump = (id: string, d: number) => setQty((m) => ({ ...m, [id]: Math.max(0, (m[id] ?? 0) + d) }))
+  return (
+    <PracticeFrame>
+      <div className="space-y-3">
+        <p className="text-sm text-slate-600">Pretend items and prices. Tap one to add it.</p>
+        <div className="grid grid-cols-2 gap-2">
+          {SELL_ITEMS.map((i) => (
+            <button
+              key={i.id}
+              type="button"
+              onClick={() => {
+                bump(i.id, 1)
+                setAsked(false)
+              }}
+              className="rounded-2xl border-2 border-slate-200 bg-white px-3 py-2 text-left active:scale-[.97]"
+            >
+              <span className="block text-sm font-bold leading-snug text-ink">{i.name}</span>
+              <span className="font-display text-base font-black text-brand-blue">{cash(i.cents)}</span>
+            </button>
+          ))}
+        </div>
+        {lines.length > 0 && (
+          <div className="divide-y divide-slate-100 rounded-2xl border-2 border-brand-orange/40 bg-white" aria-label="The pretend basket">
+            {lines.map((i) => (
+              <div key={i.id} className="flex items-center gap-2 px-3 py-2">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-bold text-ink">{i.name}</span>
+                  <span className="text-sm text-slate-500">
+                    {cash(i.cents)} each · {cash(i.cents * (qty[i.id] ?? 0))}
+                  </span>
+                </span>
+                <button type="button" aria-label={`One fewer ${i.name}`} onClick={() => bump(i.id, -1)} className={stepper}>
+                  −
+                </button>
+                <span className="w-6 text-center font-display text-lg font-black">{qty[i.id]}</span>
+                <button type="button" aria-label={`One more ${i.name}`} onClick={() => bump(i.id, 1)} className={stepper}>
+                  +
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <button type="button" disabled={lines.length === 0} onClick={() => setAsked(true)} className={`${ORANGE_BTN} w-full disabled:opacity-50`}>
+          {lines.length ? `Take payment · ${cash(total)}` : 'Add something first'}
+        </button>
+        {asked && (
+          <p role="status" className="text-sm font-bold text-emerald-800">
+            In the real app this opens the payment screen. You practice that in the next step. (Pretend — nothing was recorded.)
+          </p>
+        )}
+      </div>
+    </PracticeFrame>
+  )
+}
+
+const PAY_TOTAL = 800 + 350
+
+function PracticePay() {
+  const [given, setGiven] = useState('')
+  const [done, setDone] = useState<{ method: 'card' | 'cash'; change: number | null } | null>(null)
+  const g = given.trim() === '' || Number.isNaN(Number(given)) ? null : Math.round(Number(given) * 100)
+  const pay = (method: 'card' | 'cash') => setDone({ method, change: method === 'cash' && g !== null && g >= PAY_TOTAL ? g - PAY_TOTAL : null })
+  if (done)
+    return (
+      <PracticeFrame>
+        <div className="space-y-2 text-center" role="status">
+          <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-2xl font-black text-emerald-700" aria-hidden="true">
+            ✓
+          </span>
+          <p className="font-display text-xl font-black text-ink">Sale recorded</p>
+          <p className="font-display text-2xl font-black text-ink">{cash(PAY_TOTAL)}</p>
+          <p className="text-base text-slate-600">{done.method === 'card' ? 'Paid by card' : 'Paid cash'}</p>
+          {done.change !== null && <p className="font-display text-xl font-black text-emerald-700">Change: {cash(done.change)}</p>}
+          <p className="text-sm text-slate-500">(Pretend — nothing was recorded and no stock changed.)</p>
+          <button
+            type="button"
+            onClick={() => {
+              setDone(null)
+              setGiven('')
+            }}
+            className={ORANGE_BTN}
+          >
+            Practice again
+          </button>
+        </div>
+      </PracticeFrame>
+    )
+  return (
+    <PracticeFrame>
+      <div className="space-y-3">
+        <p className="font-display text-xl font-black text-ink">Total {cash(PAY_TOTAL)}</p>
+        <p className="text-sm text-slate-600">2 items: Hay, small bag and Carrot toy. Take the money, then tap how they paid.</p>
+        <button type="button" onClick={() => pay('card')} className={`${ORANGE_BTN} w-full`}>
+          Paid by card
+        </button>
+        <div className="space-y-2 rounded-2xl border-2 border-slate-200 bg-white p-3">
+          <label className="block text-sm font-semibold text-slate-600">
+            Cash? How much did they give you? (optional)
+            <input type="number" inputMode="decimal" min="0" step="0.01" value={given} onChange={(e) => setGiven(e.target.value)} className={`${field} mt-1`} placeholder="20.00" />
+          </label>
+          {g !== null && g >= PAY_TOTAL && <p className="font-display text-lg font-black text-emerald-700">Change: {cash(g - PAY_TOTAL)}</p>}
+          {g !== null && g < PAY_TOTAL && <p className="text-sm font-bold text-red-700">That’s {cash(PAY_TOTAL - g)} short.</p>}
+          <button type="button" onClick={() => pay('cash')} className={`${ORANGE_BTN} w-full`}>
+            Paid cash
+          </button>
+        </div>
+        <p className="text-center text-sm text-slate-500">Card payments go through the card reader, as now.</p>
+      </div>
+    </PracticeFrame>
+  )
+}
+
 export function PracticeScreen({ kind }: { kind: PracticeKey }) {
+  if (kind === 'sell-basket') return <PracticeSellBasket />
+  if (kind === 'sell-pay') return <PracticePay />
   if (kind === 'hours') return <PracticeHours />
   if (kind === 'receive') return <PracticeReceive />
   if (kind === 'scan') return <PracticeScan />

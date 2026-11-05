@@ -85,7 +85,7 @@ function TrailBody() {
                 <span className="mt-0.5 block text-sm leading-snug text-slate-600">{level.goal}</span>
                 <span className="mt-1 block text-sm font-bold text-slate-500">
                   {level.soon ? 'Coming next' : st.complete ? 'Done' : st.done > 0 ? `${st.done} of ${st.total} steps` : `About ${level.minutes} minutes`}
-                  {level.money ? ' · money, so it comes last' : ''}
+                  {level.money ? ' · money, so take your time' : ''}
                 </span>
               </span>
             </div>

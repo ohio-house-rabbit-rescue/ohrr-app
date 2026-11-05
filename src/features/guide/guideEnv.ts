@@ -35,6 +35,10 @@ export const GUIDE_ROUTES: Record<RouteKey, { to: string; match: string; title: 
   shelf: { to: '/staff/hopshop?show=list', match: '/staff/hopshop', title: 'On the shelf' },
   reorder: { to: '/staff/hopshop/reorder', match: '/staff/hopshop', title: 'Reorder list' },
   deliveries: { to: '/staff/hopshop/deliveries', match: '/staff/hopshop', title: 'Deliveries' },
+  // The money page of the guide itself: always open.
+  money: { to: '/staff/guide/money', match: '', title: 'What the app does with money' },
+  sell: { to: '/staff/counter', match: '/staff/counter', title: 'Sell' },
+  'sell-today': { to: '/staff/counter/today', match: '/staff/counter', title: 'Today’s sales' },
 }
 
 /** Where the Welcome page's "I have my invitation" goes: the join screen (an invite link carries its code). */

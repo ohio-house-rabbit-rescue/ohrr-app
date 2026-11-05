@@ -30,9 +30,12 @@ export type RouteKey =
   | 'shelf'
   | 'reorder'
   | 'deliveries'
+  | 'money'
+  | 'sell'
+  | 'sell-today'
 
 /** A pretend screen that saves nothing (practice.tsx). */
-export type PracticeKey = 'hours' | 'announcement' | 'receive' | 'scan'
+export type PracticeKey = 'hours' | 'announcement' | 'receive' | 'scan' | 'sell-basket' | 'sell-pay'
 
 export interface GuideStep {
   key: string
@@ -246,9 +249,39 @@ export const LEVELS: GuideLevel[] = [
     title: 'Practice selling',
     goal: 'Ring up a pretend sale. The cash box and card reader work exactly as they do now.',
     minutes: 10,
-    soon: true,
     money: true,
-    steps: [],
+    steps: [
+      {
+        key: 'money',
+        do: 'Read “{title}” first. It is short.',
+        see: 'A page titled “{title}” that says in plain words what the app does with money, and what it does not do.',
+        go: { route: 'money', label: 'Open {title}' },
+      },
+      {
+        key: 'practice-basket',
+        do: 'Practice filling a basket below. Tap the items a pretend customer is buying, and use the plus and minus buttons.',
+        see: 'Each item you tap is added to the basket with its price, and the big button at the bottom shows the total, like “Take payment · $11.50.” Nothing here is saved, and the items and prices are pretend.',
+        practice: 'sell-basket',
+      },
+      {
+        key: 'practice-pay',
+        do: 'Practice taking payment below. Pretend the customer paid cash and handed you $20.00: type 20 in the box, then tap Paid cash. Or tap Paid by card.',
+        see: 'For cash, the change shows as you type. Then a green check and “Sale recorded.” In the real app a sale is recorded the moment you tap Paid by card or Paid cash, and the shop’s stock goes down, so you tap only after the cash box or card reader has already taken the money. If you ever tap Paid by mistake, tell a team lead. Nothing here is saved.',
+        practice: 'sell-pay',
+      },
+      {
+        key: 'sell',
+        do: 'Open {title} on the phone app and look around. “Ring up a sale” opens the real basket, and nothing is recorded until you tap Paid by card or Paid cash, so you can look and go back.',
+        see: 'A page titled “{title}” with big buttons, and a switch that says what this phone is for today: The Hop Shop or BunFest. The first time, it asks you to name this phone, for example Hop Shop till. Type a name and tap Save, or leave it for later.',
+        go: { route: 'sell', label: 'Open {title}' },
+      },
+      {
+        key: 'today',
+        do: 'Open {title} and look at the totals.',
+        see: 'A page titled “{title}” with Cash, Card, Sales and Total, then a list of what sold. If you are not allowed to see totals it says so, and that is fine.',
+        go: { route: 'sell-today', label: 'Open {title}' },
+      },
+    ],
   },
   { key: 'bunfest', n: 8, title: 'BunFest season', goal: 'Run the big event from the app.', minutes: 10, soon: true, steps: [] },
   { key: 'website', n: 9, title: 'The new website', goal: 'The finale: the website opens to the public.', minutes: 5, soon: true, steps: [] },
@@ -273,7 +306,7 @@ export const MONEY_POINTS = [
   },
   {
     title: 'Writing down a sale',
-    text: 'Selling in the app only records a sale after the cash box or the card reader has handled the money, exactly as you do today. The app never takes a payment itself.',
+    text: 'Selling in the app writes down a sale after you have taken the money with the cash box or the card reader, exactly as you do today. The app never takes a payment itself.',
   },
   {
     title: 'Charging a card',
@@ -281,8 +314,8 @@ export const MONEY_POINTS = [
   },
 ] as const
 
-/** May this person open the page a step points at? `openable` is null while the menu is still loading (then: yes). An empty `match` is a public page: always. */
-export const canOpen = (openable: readonly string[] | null, match: string) => !match || openable === null || openable.some((p) => p === match || p.split('?')[0] === match)
+/** May this person open the page a step points at? `openable` is null while the menu is still loading (then: yes). An empty `match` is a public page: always. A `match` starting with “!” is a page this site does not have (Sell is on the phone app): never. */
+export const canOpen = (openable: readonly string[] | null, match: string) => !match.startsWith('!') && (!match || openable === null || openable.some((p) => p === match || p.split('?')[0] === match))
 
 /** The steps of a level this person can actually do: practice steps always, "open a page" steps only if the page is on their menu. */
 export function stepsFor(level: GuideLevel, openable: readonly string[] | null, matchOf: (route: RouteKey) => string): GuideStep[] {

@@ -13,7 +13,7 @@ export default function GuideMoney() {
       <GuidePage>
         <StaffTitle title="What the app does with money" />
         <p className="px-1 text-base leading-relaxed text-slate-600">
-          Plenty of people feel nervous about this part, so here it is in plain words. The money levels come last in the guide, and every one of them is a practice screen first.
+          Plenty of people feel nervous about this part, so here it is in plain words. The money level comes late in the guide, and it is a practice screen first.
         </p>
         <ul className="space-y-3">
           {MONEY_POINTS.map((p, i) => (

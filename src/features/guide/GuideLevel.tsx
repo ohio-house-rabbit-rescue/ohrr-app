@@ -63,7 +63,9 @@ function LevelBody({ level }: { level: Level }) {
                 <Card className="space-y-2 border-dashed bg-slate-50/70">
                   <p className="text-base font-bold text-slate-600">{fill(step.do, vars)}</p>
                   <p className="text-sm leading-relaxed text-slate-500">
-                    This page isn’t on your menu, so you can skip this step. If you’d like it, ask a team lead to switch it on for you.
+                    {matchOf(step.go!.route).startsWith('!')
+                      ? 'This part is on the phone app, so you can skip it here.'
+                      : 'This page isn’t on your menu, so you can skip this step. If you’d like it, ask a team lead to switch it on for you.'}
                   </p>
                 </Card>
               </li>
@@ -156,6 +158,8 @@ function doneLine(level: Level): string {
       return 'You’ve seen your rabbits on the staff page and on the public Adopt page, side by side. That’s how you know a change worked.'
     case 'receive':
       return 'You know how an item gets its code and how a scan finds it again. Real receiving works the same way, with a photo first.'
+    case 'sell':
+      return 'You’ve rung up a pretend sale, start to finish, and nothing was recorded. The real thing is the same taps, once the cash box or card reader has taken the money.'
     case 'shop':
       return 'You’ve looked at the shop’s stock, its reorder list and its deliveries, and you changed nothing. That’s the whole look-around.'
     default:

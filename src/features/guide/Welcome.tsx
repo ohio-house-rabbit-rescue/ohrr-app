@@ -96,7 +96,7 @@ export default function Welcome() {
 
       <Card className="space-y-3 border-brand-blue/20 bg-brand-blue-50/50">
         <h2 className="font-display text-xl font-black text-ink">About the money parts</h2>
-        <p className="text-base leading-relaxed text-slate-600">Lots of people feel nervous here, so in plain words, and they come last:</p>
+        <p className="text-base leading-relaxed text-slate-600">Lots of people feel nervous here, so in plain words, and they come late in the guide:</p>
         <ul className="space-y-2">
           {MONEY_POINTS.map((p) => (
             <li key={p.title} className="text-base leading-relaxed text-slate-700">
