@@ -37,7 +37,7 @@ function LevelBody({ level }: { level: Level }) {
   const next = LEVELS.find((l) => l.n === level.n + 1)
   const photo = DONE_PHOTOS[(level.n - 1) % DONE_PHOTOS.length]
   let shown = 0
-  // A page already linked by an earlier step in this level is not linked again.
+  // A page (address) already linked by an earlier step in this level is not linked again.
   const linked = new Set<string>()
 
   return (
@@ -71,8 +71,8 @@ function LevelBody({ level }: { level: Level }) {
           }
           shown += 1
           const canGo = step.go && canOpen(openable, matchOf(step.go.route))
-          const again = Boolean(step.go) && linked.has(step.go!.route)
-          if (step.go) linked.add(step.go.route)
+          const again = Boolean(step.go) && linked.has(route!.to)
+          if (step.go) linked.add(route!.to)
           return (
             <li key={step.key}>
               <Card className={`space-y-3 ${ticked ? 'border-emerald-200 bg-emerald-50/40' : ''}`}>
@@ -152,6 +152,12 @@ function doneLine(level: Level): string {
       return 'You’ve seen how a notice gets from a form to everyone’s phone, and you didn’t post a thing.'
     case 'daily':
       return 'That’s the daily check: new sign-ups, bookings and calls, all in one pass. It gets quicker every time.'
+    case 'rabbits':
+      return 'You’ve seen your rabbits on the staff page and on the public Adopt page, side by side. That’s how you know a change worked.'
+    case 'receive':
+      return 'You know how an item gets its code and how a scan finds it again. Real receiving works the same way, with a photo first.'
+    case 'shop':
+      return 'You’ve looked at the shop’s stock, its reorder list and its deliveries, and you changed nothing. That’s the whole look-around.'
     default:
       return 'Nicely done.'
   }

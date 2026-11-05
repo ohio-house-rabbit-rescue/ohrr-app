@@ -13,10 +13,26 @@ export const PROGRAM_NAME = 'Hop Into the App'
 /** The Staff → Features switch (an app_settings row, {"enabled": boolean}). */
 export const GUIDE_FLAG = 'walkthrough_enabled'
 
-export type RouteKey = 'account' | 'my-hours' | 'announcements' | 'post-queue' | 'inbox' | 'bookings' | 'calls'
+export type RouteKey =
+  | 'account'
+  | 'my-hours'
+  | 'announcements'
+  | 'post-queue'
+  | 'inbox'
+  | 'bookings'
+  | 'calls'
+  | 'rabbits'
+  | 'adopt-page'
+  | 'tails'
+  | 'scan'
+  | 'items'
+  | 'hopshop'
+  | 'shelf'
+  | 'reorder'
+  | 'deliveries'
 
 /** A pretend screen that saves nothing (practice.tsx). */
-export type PracticeKey = 'hours' | 'announcement'
+export type PracticeKey = 'hours' | 'announcement' | 'receive' | 'scan'
 
 export interface GuideStep {
   key: string
@@ -131,9 +147,99 @@ export const LEVELS: GuideLevel[] = [
       },
     ],
   },
-  { key: 'rabbits', n: 4, title: 'Our rabbits', goal: 'See your own rabbits live, with their photos and status.', minutes: 5, soon: true, steps: [] },
-  { key: 'receive', n: 5, title: 'Receive and scan', goal: 'Photograph an item, name it, label it and scan it.', minutes: 5, soon: true, steps: [] },
-  { key: 'shop', n: 6, title: 'Hop Shop: look around', goal: 'See stock, prices and deliveries. Numbers only, nothing sold.', minutes: 5, soon: true, steps: [] },
+  {
+    key: 'rabbits',
+    n: 4,
+    title: 'Our rabbits',
+    goal: 'See your own rabbits the way the public sees them.',
+    minutes: 5,
+    steps: [
+      {
+        key: 'staff',
+        do: 'Open {title} and find a rabbit you know. You are only looking: Hide, Remove and the Mark buttons change what the public sees right away, so leave them alone for now.',
+        see: 'A page titled “{title}” with a card for each rabbit: a photo, the name, and a status label. A rabbit hidden from the public has a label that starts with “Hidden.”',
+        go: { route: 'rabbits', label: 'Open {title}' },
+      },
+      {
+        key: 'public',
+        do: 'Open {title} and find the same rabbit, the way an adopter would.',
+        see: 'A page titled “{title}” listing the rabbits that are not hidden. A rabbit marked Hidden on the staff page is not listed here.',
+        go: { route: 'adopt-page', label: 'Open {title}' },
+      },
+      {
+        key: 'tails',
+        do: 'Open {title} and read one story.',
+        see: 'A page titled “{title}” with the adoption stories people sent in. Most arrive through the Inbox.',
+        go: { route: 'tails', label: 'Open {title}' },
+      },
+    ],
+  },
+  {
+    key: 'receive',
+    n: 5,
+    title: 'Receive and scan',
+    goal: 'See how a donation becomes an item with its own code that anyone can scan.',
+    minutes: 5,
+    steps: [
+      {
+        key: 'practice-receive',
+        do: 'Practice receiving a donated item below. Type what it is, then tap Save.',
+        see: 'A pretend label with a number that starts DON-. In the real app you take a photo first, and the next free number is made for you. Nothing here is saved.',
+        practice: 'receive',
+      },
+      {
+        key: 'practice-scan',
+        do: 'Practice scanning that label below. Tap Scan the label.',
+        see: 'A “Found it” card with the item’s name. A real label works the same way: scan it, and the item comes up. Nothing here is saved.',
+        practice: 'scan',
+      },
+      {
+        key: 'scan',
+        do: 'Open {title} and look. You do not need to scan anything today.',
+        see: 'A page titled “{title}” with a place to scan a label or type its code. If your phone asks to use the camera, that is normal; you can type the code instead.',
+        go: { route: 'scan', label: 'Open {title}' },
+      },
+      {
+        key: 'items',
+        do: 'Open {title} and read the top of the page.',
+        see: 'A page titled “{title}” that explains what lives here: donations, auction lots and raffle prizes, everything with an OHRR code.',
+        go: { route: 'items', label: 'Open {title}' },
+      },
+    ],
+  },
+  {
+    key: 'shop',
+    n: 6,
+    title: 'Hop Shop: look around',
+    goal: 'See stock, prices and deliveries. Numbers only, nothing sold.',
+    minutes: 5,
+    steps: [
+      {
+        key: 'open',
+        do: 'Open {title} and read the top of the page. If you see a Sell button, leave it for Level 7.',
+        see: 'A page titled “{title}.” Stock, prices and photos here go live on the public Hop Shop as soon as they are saved, which is why today is for looking only.',
+        go: { route: 'hopshop', label: 'Open {title}' },
+      },
+      {
+        key: 'shelf',
+        do: 'Open the list of what the shop carries and use the search box to find one item. Do not tap Edit, Delete or the stock buttons.',
+        see: 'Each item shows its name, its SKU code, its price on the right, and a Stock line. The search box finds items by name or SKU.',
+        go: { route: 'shelf', label: 'Open the shop’s item list' },
+      },
+      {
+        key: 'reorder',
+        do: 'Open the reorder list and look. You are only reading it.',
+        see: 'The items that are at or below their reorder point, or the words “Nothing to reorder.” when none are.',
+        go: { route: 'reorder', label: 'Open the reorder list' },
+      },
+      {
+        key: 'deliveries',
+        do: 'Open {title} and read down the list. You do not need to open a delivery today.',
+        see: 'A page titled “{title}” listing every invoice added to stock, with what it cost and what the shipping was.',
+        go: { route: 'deliveries', label: 'Open {title}' },
+      },
+    ],
+  },
   {
     key: 'sell',
     n: 7,
@@ -175,8 +281,8 @@ export const MONEY_POINTS = [
   },
 ] as const
 
-/** May this person open the page a step points at? `openable` is null while the menu is still loading (then: yes). */
-export const canOpen = (openable: readonly string[] | null, match: string) => openable === null || openable.some((p) => p === match || p.split('?')[0] === match)
+/** May this person open the page a step points at? `openable` is null while the menu is still loading (then: yes). An empty `match` is a public page: always. */
+export const canOpen = (openable: readonly string[] | null, match: string) => !match || openable === null || openable.some((p) => p === match || p.split('?')[0] === match)
 
 /** The steps of a level this person can actually do: practice steps always, "open a page" steps only if the page is on their menu. */
 export function stepsFor(level: GuideLevel, openable: readonly string[] | null, matchOf: (route: RouteKey) => string): GuideStep[] {

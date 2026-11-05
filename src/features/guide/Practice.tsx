@@ -105,6 +105,71 @@ function PracticeAnnouncement() {
   )
 }
 
+function PracticeReceive() {
+  const [name, setName] = useState('')
+  const [saved, setSaved] = useState<string | null>(null)
+  const ready = name.trim() !== ''
+  return (
+    <PracticeFrame>
+      <form
+        className="space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (ready) setSaved(name.trim())
+        }}
+      >
+        <label className="block text-sm font-bold text-ink">
+          What is it called?
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={`${field} mt-1`} placeholder="Stuffed bunny" />
+        </label>
+        <button type="submit" disabled={!ready} className={`${ORANGE_BTN} disabled:opacity-50`}>
+          Save
+        </button>
+      </form>
+      {saved && (
+        <div className="mt-3 space-y-2">
+          <p role="status" className="text-sm font-bold text-emerald-800">
+            Saved! (Pretend — nothing was saved.)
+          </p>
+          <div className="mx-auto max-w-[260px] rounded-xl border border-slate-300 bg-white p-3 text-center shadow-sm" aria-label="A pretend label">
+            <p className="font-mono text-lg font-black tracking-widest text-ink">DON-00000</p>
+            <p className="text-sm font-bold text-slate-700">{saved}</p>
+            <p className="mt-1 text-xs text-slate-500">A pretend number. Real ones are made for you.</p>
+          </div>
+        </div>
+      )}
+    </PracticeFrame>
+  )
+}
+
+function PracticeScan() {
+  const [found, setFound] = useState(false)
+  return (
+    <PracticeFrame>
+      <div className="mx-auto max-w-[260px] space-y-3 text-center">
+        <div className="rounded-xl border border-slate-300 bg-white p-3 shadow-sm" aria-label="A pretend label on an item">
+          <p className="font-mono text-lg font-black tracking-widest text-ink">DON-00000</p>
+          <p className="text-sm font-bold text-slate-700">Stuffed bunny</p>
+        </div>
+        {found ? (
+          <div role="status" className="rounded-xl bg-emerald-50 px-3 py-3 text-left">
+            <p className="font-display text-lg font-extrabold text-emerald-900">Found it</p>
+            <p className="text-sm text-emerald-900">DON-00000 · Stuffed bunny</p>
+            <p className="mt-1 text-xs text-emerald-800">(Pretend — nothing was looked up.)</p>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setFound(true)} className={ORANGE_BTN}>
+            Scan the label
+          </button>
+        )}
+      </div>
+    </PracticeFrame>
+  )
+}
+
 export function PracticeScreen({ kind }: { kind: PracticeKey }) {
-  return kind === 'hours' ? <PracticeHours /> : <PracticeAnnouncement />
+  if (kind === 'hours') return <PracticeHours />
+  if (kind === 'receive') return <PracticeReceive />
+  if (kind === 'scan') return <PracticeScan />
+  return <PracticeAnnouncement />
 }

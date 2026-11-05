@@ -25,6 +25,16 @@ export const GUIDE_ROUTES: Record<RouteKey, { to: string; match: string; title: 
   inbox: { to: '/staff/inbox', match: '/staff/inbox', title: 'Inbox' },
   bookings: { to: '/staff/adoptions', match: '/staff/adoptions', title: 'Adoptions' },
   calls: { to: '/staff/calls', match: '/staff/calls', title: 'Volunteer calls' },
+  rabbits: { to: '/staff/adopt', match: '/staff/adopt', title: 'Adoptable rabbits' },
+  // The public Adopt page: always open (no menu entry needed).
+  'adopt-page': { to: '/adopt', match: '', title: 'Adopt a Rabbit' },
+  tails: { to: '/staff/tails', match: '/staff/tails', title: 'Happy Tails' },
+  scan: { to: '/staff/scan', match: '/staff/scan', title: 'Scan an item' },
+  items: { to: '/staff/items', match: '/staff/items', title: 'Items' },
+  hopshop: { to: '/staff/hopshop', match: '/staff/hopshop', title: 'Hop Shop' },
+  shelf: { to: '/staff/hopshop?show=list', match: '/staff/hopshop', title: 'On the shelf' },
+  reorder: { to: '/staff/hopshop/reorder', match: '/staff/hopshop', title: 'Reorder list' },
+  deliveries: { to: '/staff/hopshop/deliveries', match: '/staff/hopshop', title: 'Deliveries' },
 }
 
 /** Where the Welcome page's "I have my invitation" goes: the join screen (an invite link carries its code). */
