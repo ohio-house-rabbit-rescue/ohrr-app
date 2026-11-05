@@ -293,7 +293,61 @@ function PracticePay() {
   )
 }
 
+const ticketNo = (n: number) => `A-${String(n).padStart(4, '0')}`
+
+function PracticeRaffle() {
+  const [qty, setQty] = useState(1)
+  const [name, setName] = useState('')
+  const [next, setNext] = useState(101)
+  const [sold, setSold] = useState<{ name: string; qty: number; from: number } | null>(null)
+  const sell = (e: React.FormEvent) => {
+    e.preventDefault()
+    setSold({ name: name.trim() || 'Walk-up', qty, from: next })
+    setNext(next + qty)
+    setName('')
+    setQty(1)
+  }
+  return (
+    <PracticeFrame>
+      <form onSubmit={sell} className="space-y-3">
+        <p className="text-sm text-slate-600">Cash in hand at the table. Pretend price: $1.00 a ticket. The real price is set by OHRR.</p>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm font-semibold text-slate-700">How many?</span>
+          <div className="flex items-center gap-3">
+            <button type="button" aria-label="Fewer" onClick={() => setQty((q) => Math.max(1, q - 1))} className={stepper}>
+              −
+            </button>
+            <span className="w-8 text-center font-display text-xl font-black text-ink">{qty}</span>
+            <button type="button" aria-label="More" onClick={() => setQty((q) => Math.min(20, q + 1))} className={stepper}>
+              +
+            </button>
+          </div>
+        </div>
+        <label className="block text-sm font-bold text-ink">
+          Name (optional)
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={`${field} mt-1`} placeholder="Walk-up" />
+        </label>
+        <button type="submit" className={`${ORANGE_BTN} w-full`}>
+          Sell {qty} {qty === 1 ? 'ticket' : 'tickets'}
+        </button>
+      </form>
+      {sold && (
+        <div role="status" className="mt-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2">
+          <p className="text-sm font-bold text-ink">
+            Sold to {sold.name} · {cash(sold.qty * 100)}
+          </p>
+          <p className="mt-1 font-mono text-lg font-black text-ink">
+            {sold.qty === 1 ? ticketNo(sold.from) : `${ticketNo(sold.from)} – ${ticketNo(sold.from + sold.qty - 1)}`}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">Write these on the stubs, or hand them the numbers. (Pretend — nothing was recorded.)</p>
+        </div>
+      )}
+    </PracticeFrame>
+  )
+}
+
 export function PracticeScreen({ kind }: { kind: PracticeKey }) {
+  if (kind === 'raffle') return <PracticeRaffle />
   if (kind === 'sell-basket') return <PracticeSellBasket />
   if (kind === 'sell-pay') return <PracticePay />
   if (kind === 'hours') return <PracticeHours />

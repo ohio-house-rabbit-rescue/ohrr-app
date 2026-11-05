@@ -4,6 +4,7 @@
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import type { RouteKey } from './walkthrough'
+import { SHARE_SITE } from '../share/templates'
 
 export { supabase }
 
@@ -17,7 +18,7 @@ export function useGuideWho(): { ready: boolean; userId: string | null; orgId: s
  * Each route key: where it goes, the staff-menu entry that says this person may open it (`match`, compared with
  * the tiles in staffTiles.ts), and the page's real title.
  */
-export const GUIDE_ROUTES: Record<RouteKey, { to: string; match: string; title: string }> = {
+export const GUIDE_ROUTES: Record<RouteKey, { to: string; match: string; title: string; external?: boolean }> = {
   account: { to: '/staff/account', match: '/staff/account', title: 'My account' },
   'my-hours': { to: '/staff/my-hours', match: '/staff/my-hours', title: 'My volunteer hours' },
   announcements: { to: '/staff/announcements', match: '/staff/announcements', title: 'Announcements' },
@@ -39,6 +40,15 @@ export const GUIDE_ROUTES: Record<RouteKey, { to: string; match: string; title: 
   money: { to: '/staff/guide/money', match: '', title: 'What the app does with money' },
   sell: { to: '/staff/counter', match: '/staff/counter', title: 'Sell' },
   'sell-today': { to: '/staff/counter/today', match: '/staff/counter', title: 'Today’s sales' },
+  events: { to: '/staff/events', match: '/staff/events', title: 'Events' },
+  'bunfest-content': { to: '/staff/bunfest', match: '/staff/bunfest', title: 'Midwest BunFest' },
+  'bunny-registrations': { to: '/staff/bunfest/bunnies', match: '/staff/bunfest/bunnies', title: 'Bunny registrations' },
+  raffle: { to: '/staff/raffle-tickets', match: '/staff/raffle-tickets', title: 'Raffle tickets' },
+  // Public pages: always open.
+  'public-events': { to: '/events', match: '', title: 'Events' },
+  'public-shop': { to: '/hop-shop', match: '', title: 'Hop Shop' },
+  // The other site, in a new tab.
+  'other-site': { to: `${SHARE_SITE}/adopt`, match: '', title: 'the new website', external: true },
 }
 
 /** Where the Welcome page's "I have my invitation" goes: the join screen (an invite link carries its code). */

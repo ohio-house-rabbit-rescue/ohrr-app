@@ -50,14 +50,14 @@ function TrailBody() {
     <GuidePage>
       <StaffTitle title={PROGRAM_NAME}>
         <p>
-          Short levels, about five minutes each. Stop any time; your ticks are saved and you pick up right where you left off. Practice screens say so at the top and save nothing.
+          Short levels, five to ten minutes each. Stop any time; your ticks are saved and you pick up right where you left off. Practice screens say so at the top and save nothing.
         </p>
       </StaffTitle>
 
       <Card className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
           <p className="font-display text-lg font-black text-ink">{done === total && total > 0 ? 'All of these are done' : `${done} of ${total} steps done`}</p>
-          <p className="text-sm text-slate-500">more levels are coming</p>
+          {LEVELS.some((l) => l.soon) && <p className="text-sm text-slate-500">more levels are coming</p>}
         </div>
         <ProgressBar done={done} total={total} label="Steps done so far" />
         {firstOpen && (

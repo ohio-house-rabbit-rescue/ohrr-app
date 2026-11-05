@@ -1,6 +1,6 @@
 // The guided start: a self-guided trail for staff who are new to the app (OHRR, 2026-11-04).
 // John will not be in the room, so the pages teach, encourage and sell on their own: short levels,
-// a "you should see" line on every step, a tick box, a Done screen. Money comes last.
+// a "you should see" line on every step, a tick box, a Done screen. Money comes late.
 //
 // ONE content file for the app and the website — keep the two copies identical. A step names a page by
 // a route key (`go`); each repo maps keys to its own paths and page titles in guideEnv.ts. `{title}` in a
@@ -33,9 +33,16 @@ export type RouteKey =
   | 'money'
   | 'sell'
   | 'sell-today'
+  | 'events'
+  | 'bunfest-content'
+  | 'bunny-registrations'
+  | 'raffle'
+  | 'public-events'
+  | 'public-shop'
+  | 'other-site'
 
 /** A pretend screen that saves nothing (practice.tsx). */
-export type PracticeKey = 'hours' | 'announcement' | 'receive' | 'scan' | 'sell-basket' | 'sell-pay'
+export type PracticeKey = 'hours' | 'announcement' | 'receive' | 'scan' | 'sell-basket' | 'sell-pay' | 'raffle'
 
 export interface GuideStep {
   key: string
@@ -283,8 +290,79 @@ export const LEVELS: GuideLevel[] = [
       },
     ],
   },
-  { key: 'bunfest', n: 8, title: 'BunFest season', goal: 'Run the big event from the app.', minutes: 10, soon: true, steps: [] },
-  { key: 'website', n: 9, title: 'The new website', goal: 'The finale: the website opens to the public.', minutes: 5, soon: true, steps: [] },
+  {
+    key: 'bunfest',
+    n: 8,
+    title: 'BunFest season',
+    goal: 'See how BunFest runs from the app: the program, the bunnies, the raffle table and the door.',
+    minutes: 10,
+    money: true,
+    steps: [
+      {
+        key: 'events',
+        do: 'Open {title} and look at the list. Leave “New event” alone for now: an event can show on the public pages as soon as it is saved.',
+        see: 'A page titled “{title}” listing OHRR’s events.',
+        go: { route: 'events', label: 'Open {title}' },
+      },
+      {
+        key: 'content',
+        do: 'Open {title} and read the top of the page. Look around, but change nothing.',
+        see: 'A page titled “{title}” that describes what visitors see in the app and on the website: the program, the vendors and the rescues.',
+        go: { route: 'bunfest-content', label: 'Open {title}' },
+      },
+      {
+        key: 'bunnies',
+        do: 'Open {title} and look at the list. Leave “Proof checked at the door” for the day of the event.',
+        see: 'A page titled “{title}” with the bunnies people registered. On the day, you look at the vaccine proof, tap “Proof checked at the door,” and the bunny shows “Proof checked.” The list has owners’ names and contact details, so it is for the team only.',
+        go: { route: 'bunny-registrations', label: 'Open {title}' },
+      },
+      {
+        key: 'practice-raffle',
+        do: 'Practice selling raffle tickets at the table below. Choose how many, then tap Sell.',
+        see: 'A green card with the ticket numbers, like A-0101 – A-0103, and the words “Write these on the stubs, or hand them the numbers.” In the real app the tickets are recorded as paid the moment you tap Sell, so you tap only after the cash is in your hand. If you ever tap Sell by mistake, tell a team lead. The price and the numbers here are pretend, and nothing is saved.',
+        practice: 'raffle',
+      },
+      {
+        key: 'raffle',
+        do: 'Open {title} and look. You are only looking: leave selling, “Mark paid,” “Void” and drawing winners alone today.',
+        see: 'A page titled “{title}” with a place to “Sell at the table” and a count of the reservations still “to pay.” Drawing the winners belongs to a BunFest manager.',
+        go: { route: 'raffle', label: 'Open {title}' },
+      },
+      {
+        key: 'door',
+        do: 'On the phone app, open {title}, then tap “BunFest” under “This phone is for.” Look, then tap “The Hop Shop” to put it back. Do not open Door tickets today.',
+        see: 'Three big buttons: “Door tickets,” “Ring up a sale” and “Raffle tickets.” Door tickets is where receipts are checked and tickets are sold at the door. That is for the day of the event.',
+        go: { route: 'sell', label: 'Open {title}' },
+      },
+    ],
+  },
+  {
+    key: 'website',
+    n: 9,
+    title: 'The new website',
+    goal: 'See the public pages, and see that the app and the website show the same rabbits.',
+    minutes: 5,
+    steps: [
+      {
+        key: 'events',
+        do: 'Open {title}, the page a visitor sees.',
+        see: 'A page titled “{title}” with OHRR’s events. They come from the Events list you saw in Level 8, so a change made there shows up here.',
+        go: { route: 'public-events', label: 'Open {title}' },
+      },
+      {
+        key: 'shop',
+        do: 'Open {title}, the page a visitor sees.',
+        see: 'A page titled “{title}” about the shop at the Adoption Center. This is how the public sees the shop you looked around in Level 6.',
+        go: { route: 'public-shop', label: 'Open {title}' },
+      },
+      {
+        key: 'other',
+        do: 'Open {title} in a new tab and find a rabbit you saw on the staff list that is not marked Hidden.',
+        see: 'The same rabbit, with the same name and photos. The app and the website read one shared list, so a change in one shows up in the other.',
+        go: { route: 'other-site', label: 'Open {title}' },
+      },
+    ],
+  },
 ]
 
 /** The id progress is saved under. */
@@ -306,7 +384,7 @@ export const MONEY_POINTS = [
   },
   {
     title: 'Writing down a sale',
-    text: 'Selling in the app writes down a sale after you have taken the money with the cash box or the card reader, exactly as you do today. The app never takes a payment itself.',
+    text: 'Selling in the app, at the Hop Shop or at the BunFest door and raffle table, writes down a sale after you have taken the money with the cash box or the card reader, exactly as you do today. The app never takes a payment itself.',
   },
   {
     title: 'Charging a card',
@@ -334,5 +412,3 @@ export function levelStatus(level: GuideLevel, done: ReadonlySet<string>, openab
   return { total: steps.length, done: n, complete: steps.length > 0 && n === steps.length }
 }
 
-/** The address the "Stuck?" box writes to. One line to change. */
-export const HELP_EMAIL = 'ohrrcontact@ohiohouserabbitrescue.org'

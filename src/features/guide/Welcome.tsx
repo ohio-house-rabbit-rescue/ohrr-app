@@ -20,13 +20,13 @@ const WINS = [
   'See your own name, your level and exactly what you can do, in about five minutes.',
   'Watch a notice travel from a form to everyone’s phone, without posting a thing.',
   'Learn where new sign-ups and messages land, so nothing gets missed.',
-  'Every level ends with a “you did it,” and there are more to come.',
+  'Every level ends with a “you did it.”',
 ]
 
 const PROMISES = [
   { title: 'Practice means practice', text: 'Anything that sells, charges a card or that the public can see happens on a pretend screen that says so at the top and saves nothing.' },
   { title: 'Go at your pace', text: 'Stop any time. Your ticks are saved to your account and you pick up where you left off, on any phone or computer.' },
-  { title: 'Stuck is fine', text: 'Every level has an “Email for help” link. Nobody is checking your progress.' },
+  { title: 'Stuck is fine', text: 'Skip any step and come back to it later. Nobody is checking your progress, and a team lead can look at a confusing step with you.' },
 ]
 
 const START = [
@@ -55,7 +55,7 @@ export default function Welcome() {
       <div className="space-y-2 px-1">
         <h1 className="font-display text-3xl font-black leading-tight text-ink">{PROGRAM_NAME}</h1>
         <p className="text-lg leading-relaxed text-slate-600">
-          A friendly, step-by-step walk through the OHRR staff app. Short levels, about five minutes each, at your own pace, and you can start the moment you’re on the team.
+          A friendly, step-by-step walk through the OHRR staff app. Short levels, five to ten minutes each, at your own pace, and you can start the moment you’re on the team.
         </p>
       </div>
 

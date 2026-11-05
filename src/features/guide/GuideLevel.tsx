@@ -6,7 +6,7 @@ import { StaffTitle } from '../../components/StaffTitle'
 import { DONE_PHOTOS, GUIDE_ROUTES, LEVEL_PATH, MONEY_PATH, TRAIL_PATH } from './guideEnv'
 import { useOpenablePaths } from './guideTiles'
 import { useGuideProgress } from './useGuide'
-import { HELP_EMAIL, LEVELS, canOpen, fill, levelStatus, stepId, type GuideLevel as Level } from './walkthrough'
+import { LEVELS, canOpen, fill, levelStatus, stepId, type GuideLevel as Level } from './walkthrough'
 import { GuideGate, matchOf } from './GuideTrail'
 import { PracticeScreen } from './Practice'
 import { BLUE_BTN, GuidePage, ORANGE_BTN, OUTLINE_BTN, ProgressBar } from './guideUi'
@@ -87,9 +87,15 @@ function LevelBody({ level }: { level: Level }) {
                 {step.practice && <PracticeScreen kind={step.practice} />}
                 {canGo && step.go && again && <p className="text-sm text-slate-500">Still on the “{route!.title}” page from the step above.</p>}
                 {canGo && step.go && !again && (
-                  <Link to={route!.to} className={step.practice ? OUTLINE_BTN : ORANGE_BTN}>
-                    {fill(step.go.label, vars)}
-                  </Link>
+                  route!.external ? (
+                    <a href={route!.to} target="_blank" rel="noopener" className={step.practice ? OUTLINE_BTN : ORANGE_BTN}>
+                      {fill(step.go.label, vars)}
+                    </a>
+                  ) : (
+                    <Link to={route!.to} className={step.practice ? OUTLINE_BTN : ORANGE_BTN}>
+                      {fill(step.go.label, vars)}
+                    </Link>
+                  )
                 )}
                 <div className="rounded-xl bg-slate-50 px-3 py-2">
                   <p className="text-xs font-extrabold uppercase tracking-wider text-slate-400">You should see</p>
@@ -114,10 +120,12 @@ function LevelBody({ level }: { level: Level }) {
             <Link to={LEVEL_PATH(next.key)} className={ORANGE_BTN}>
               Next up: Level {next.n}, {next.title}
             </Link>
-          ) : (
+          ) : next ? (
             <p className="text-base font-bold text-slate-600">
-              That’s all the levels written so far. Level {next?.n}, “{next?.title},” is coming next.
+              Level {next.n}, “{next.title},” is coming next.
             </p>
+          ) : (
+            <p className="text-base font-bold text-slate-600">That was the last level. You’ve been through the whole guide, and you can come back to any level whenever you like.</p>
           )}
           <Link to={TRAIL_PATH} className={OUTLINE_BTN}>
             See all levels
@@ -134,13 +142,9 @@ function LevelBody({ level }: { level: Level }) {
 
       <Card className="space-y-2 bg-slate-50/70">
         <p className="font-display text-lg font-extrabold text-ink">Stuck?</p>
-        <p className="text-base leading-relaxed text-slate-600">That’s fine, and it’s never your fault. Write what you saw and where you got stuck; someone will write back.</p>
-        <a
-          href={`mailto:${HELP_EMAIL}?subject=${encodeURIComponent(`Stuck on Level ${level.n}: ${level.title}`)}`}
-          className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue underline underline-offset-2"
-        >
-          Email for help
-        </a>
+        <p className="text-base leading-relaxed text-slate-600">
+          That’s fine, and it’s never your fault. Skip any step and come back to it later; your ticks are saved. Practice screens change nothing, so try them as often as you like. If a page doesn’t look like the step says, ask a team lead to look at it with you.
+        </p>
       </Card>
     </GuidePage>
   )
@@ -160,6 +164,10 @@ function doneLine(level: Level): string {
       return 'You know how an item gets its code and how a scan finds it again. Real receiving works the same way, with a photo first.'
     case 'sell':
       return 'You’ve rung up a pretend sale, start to finish, and nothing was recorded. The real thing is the same taps, once the cash box or card reader has taken the money.'
+    case 'bunfest':
+      return 'You’ve seen how BunFest hangs together: the program, the bunny list and the raffle table. You sold a pretend raffle ticket, and nothing was recorded.'
+    case 'website':
+      return 'You’ve seen the public pages, and you know the app and the website show the same rabbits because they read one shared list.'
     case 'shop':
       return 'You’ve looked at the shop’s stock, its reorder list and its deliveries, and you changed nothing. That’s the whole look-around.'
     default:
