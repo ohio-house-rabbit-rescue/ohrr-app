@@ -84,6 +84,8 @@ import GuideTrail from './features/guide/GuideTrail'
 import GuideLevelPage from './features/guide/GuideLevel'
 import GuideMoney from './features/guide/GuideMoney'
 import Welcome from './features/guide/Welcome'
+import GuidePrint from './features/guide/GuidePrint'
+import GuideFlows from './features/guide/GuideFlows'
 import StaffAccount from './pages/StaffAccount'
 import StaffActivity from './pages/StaffActivity'
 import StaffAnnouncements from './pages/StaffAnnouncements'
@@ -185,6 +187,8 @@ export default function App() {
       {/* Inside the phone app: My OHRR's "Remind me on this phone" */}
       <PhoneReminderScheduler />
       <Routes>
+      {/* The printable staff guide: unlisted and outside the app's frame, so a print shows only the handout */}
+      <Route path="/welcome/print" element={<GuidePrint />} />
       {/* OHRR host app */}
       <Route element={<OhrrLayout />}>
         <Route path="/" element={<OhrrHome />} />
@@ -358,6 +362,7 @@ export default function App() {
           {/* The guided start (Hop Into the App): the Trail, one level, and the plain note about money */}
           <Route path="guide" element={<GuideTrail />} />
           <Route path="guide/money" element={<GuideMoney />} />
+          <Route path="guide/flows" element={<GuideFlows />} />
           <Route path="guide/:level" element={<GuideLevelPage />} />
           <Route path="activity" element={<StaffActivity />} />
           <Route path="features" element={<StaffFeatures />} />

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Card } from '../../components/ui'
 import { Icon } from '../../components/icons'
 import { StaffTitle } from '../../components/StaffTitle'
-import { GUIDE_ROUTES, LEVEL_PATH, MONEY_PATH } from './guideEnv'
+import { FLOWS_PATH, GUIDE_ROUTES, LEVEL_PATH, MONEY_PATH, PRINT_PATH } from './guideEnv'
 import { useOpenablePaths } from './guideTiles'
 import { useGuideAccess, useGuideProgress } from './useGuide'
 import { LEVELS, PROGRAM_NAME, levelStatus, type RouteKey } from './walkthrough'
@@ -50,7 +50,7 @@ function TrailBody() {
     <GuidePage>
       <StaffTitle title={PROGRAM_NAME}>
         <p>
-          Short levels, five to ten minutes each. Stop any time; your ticks are saved and you pick up right where you left off. Practice screens say so at the top and save nothing.
+          Short levels, five to fifteen minutes each. Stop any time; your check marks are saved and you pick up right where you left off. Practice screens say so at the top and save nothing.
         </p>
       </StaffTitle>
 
@@ -114,8 +114,20 @@ function TrailBody() {
         </Link>
       </Card>
 
+      <Card className="space-y-2">
+        <p className="font-display text-lg font-extrabold text-ink">Prefer a picture or paper?</p>
+        <div className="flex flex-col gap-1">
+          <Link to={FLOWS_PATH} className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue underline underline-offset-2">
+            Flow charts of the main jobs
+          </Link>
+          <a href={PRINT_PATH} target="_blank" rel="noopener" className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue underline underline-offset-2">
+            Print the whole guide
+          </a>
+        </div>
+      </Card>
+
       <p className="px-1 text-center text-sm text-slate-500">
-        Your ticks belong to your account. Nobody else sees them in the app.
+        Your check marks belong to your account. Nobody else sees them in the app.
       </p>
     </GuidePage>
   )

@@ -6,7 +6,7 @@ import { StaffTitle } from '../../components/StaffTitle'
 import { DONE_PHOTOS, GUIDE_ROUTES, LEVEL_PATH, MONEY_PATH, TRAIL_PATH } from './guideEnv'
 import { useOpenablePaths } from './guideTiles'
 import { useGuideProgress } from './useGuide'
-import { LEVELS, canOpen, fill, levelStatus, stepId, type GuideLevel as Level } from './walkthrough'
+import { LEVELS, STUCK_TEXT, canOpen, fill, levelStatus, stepId, type GuideLevel as Level } from './walkthrough'
 import { GuideGate, matchOf } from './GuideTrail'
 import { PracticeScreen } from './Practice'
 import { BLUE_BTN, GuidePage, ORANGE_BTN, OUTLINE_BTN, ProgressBar } from './guideUi'
@@ -46,7 +46,7 @@ function LevelBody({ level }: { level: Level }) {
         <Icon name="arrowLeft" size={18} /> All levels
       </Link>
       <StaffTitle title={`Level ${level.n}: ${level.title}`}>
-        <p>{level.goal} About {level.minutes} minutes. Tick each step when you’ve done it; your ticks are saved.</p>
+        <p>{level.goal} About {level.minutes} minutes. Check each step when you’ve done it; your check marks are saved.</p>
       </StaffTitle>
       <ProgressBar done={st.done} total={st.total} label={`Level ${level.n} steps done`} />
 
@@ -142,9 +142,7 @@ function LevelBody({ level }: { level: Level }) {
 
       <Card className="space-y-2 bg-slate-50/70">
         <p className="font-display text-lg font-extrabold text-ink">Stuck?</p>
-        <p className="text-base leading-relaxed text-slate-600">
-          That’s fine, and it’s never your fault. Skip any step and come back to it later; your ticks are saved. Practice screens change nothing, so try them as often as you like. If a page doesn’t look like the step says, ask a team lead to look at it with you.
-        </p>
+        <p className="text-base leading-relaxed text-slate-600">{STUCK_TEXT}</p>
       </Card>
     </GuidePage>
   )

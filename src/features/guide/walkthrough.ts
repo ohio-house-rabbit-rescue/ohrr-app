@@ -85,12 +85,12 @@ export const LEVELS: GuideLevel[] = [
       {
         key: 'access',
         do: 'Scroll down to “Your level and access.”',
-        see: 'Your level, and the list of what you can do. Anything not on that list is hidden from you, so there is nothing to click by mistake.',
+        see: 'Your staff level, and the list of what you can do. Anything not on that list is hidden from you, so you only see what is yours to use.',
         go: { route: 'account', label: 'Open {title}' },
       },
       {
         key: 'name',
-        do: 'Under “How you appear,” check your Name and Title. Fix them if you like, then tap Save. If they already look right, there is nothing to do.',
+        do: 'Under “How you appear,” check your Name and Title. This step is optional, and it is a real change to your own account: if they look right, just check the box and move on. If you want to change them, fix them and tap Save.',
         see: 'After Save, a note that starts with “Saved.” Leave “Show me on the About page” alone unless you want to be on the public About page.',
         go: { route: 'account', label: 'Open {title}' },
       },
@@ -194,7 +194,7 @@ export const LEVELS: GuideLevel[] = [
       {
         key: 'practice-receive',
         do: 'Practice receiving a donated item below. Type what it is, then tap Save.',
-        see: 'A pretend label with a number that starts DON-. In the real app you take a photo first, and the next free number is made for you. Nothing here is saved.',
+        see: 'A pretend label with a number that starts DON- (short for donation). In the real app you take a photo first, and the next free number is made for you. Nothing here is saved.',
         practice: 'receive',
       },
       {
@@ -206,7 +206,7 @@ export const LEVELS: GuideLevel[] = [
       {
         key: 'scan',
         do: 'Open {title} and look. You do not need to scan anything today.',
-        see: 'A page titled “{title}” with a place to scan a label or type its code. If your phone asks to use the camera, that is normal; you can type the code instead.',
+        see: 'A page titled “{title}” with a place to scan a label or type its code. If your phone asks to use the camera, that is normal. You can allow it, or just look at the page and move on.',
         go: { route: 'scan', label: 'Open {title}' },
       },
       {
@@ -232,20 +232,20 @@ export const LEVELS: GuideLevel[] = [
       },
       {
         key: 'shelf',
-        do: 'Open the list of what the shop carries and use the search box to find one item. Do not tap Edit, Delete or the stock buttons.',
-        see: 'Each item shows its name, its SKU code, its price on the right, and a Stock line. The search box finds items by name or SKU.',
+        do: 'Open {title}, the list of what the shop carries, and use the search box to find one item. Do not tap Edit, Delete or the stock buttons.',
+        see: 'Each item shows its name, its item code (the SKU), its price on the right, and a Stock line. The search box finds items by name or SKU.',
         go: { route: 'shelf', label: 'Open the shop’s item list' },
       },
       {
         key: 'reorder',
         do: 'Open the reorder list and look. You are only reading it.',
-        see: 'The items that are at or below their reorder point, or the words “Nothing to reorder.” when none are.',
+        see: 'The items that are running low (at or below the number set for reordering), or the words “Nothing to reorder.” when none are.',
         go: { route: 'reorder', label: 'Open the reorder list' },
       },
       {
         key: 'deliveries',
         do: 'Open {title} and read down the list. You do not need to open a delivery today.',
-        see: 'A page titled “{title}” listing every invoice added to stock, with what it cost and what the shipping was.',
+        see: 'A page titled “{title}” listing every invoice (the supplier’s bill) added to stock, with what it cost and what the shipping was.',
         go: { route: 'deliveries', label: 'Open {title}' },
       },
     ],
@@ -267,18 +267,18 @@ export const LEVELS: GuideLevel[] = [
       {
         key: 'practice-basket',
         do: 'Practice filling a basket below. Tap the items a pretend customer is buying, and use the plus and minus buttons.',
-        see: 'Each item you tap is added to the basket with its price, and the big button at the bottom shows the total, like “Take payment · $11.50.” Nothing here is saved, and the items and prices are pretend.',
+        see: 'Each item you tap is added to the basket with its price, and the big button at the bottom shows the total, like “Take payment · $11.50.” That button only opens the screen where you say how they paid; it never charges anyone. Nothing here is saved, and the items and prices are pretend.',
         practice: 'sell-basket',
       },
       {
         key: 'practice-pay',
-        do: 'Practice taking payment below. Pretend the customer paid cash and handed you $20.00: type 20 in the box, then tap Paid cash. Or tap Paid by card.',
+        do: 'Practice taking payment below. First pretend the customer paid cash and handed you $20.00: type 20 in the box, then tap Paid cash. Then tap Practice again and try Paid by card.',
         see: 'For cash, the change shows as you type. Then a green check and “Sale recorded.” In the real app a sale is recorded the moment you tap Paid by card or Paid cash, and the shop’s stock goes down, so you tap only after the cash box or card reader has already taken the money. If you ever tap Paid by mistake, tell a team lead. Nothing here is saved.',
         practice: 'sell-pay',
       },
       {
         key: 'sell',
-        do: 'Open {title} on the phone app and look around. “Ring up a sale” opens the real basket, and nothing is recorded until you tap Paid by card or Paid cash, so you can look and go back.',
+        do: 'Open {title} on the phone app and look around. “Ring up a sale” opens the real basket, and nothing is recorded until you tap Paid by card or Paid cash, so you can look and go back. Do not add items or tap Paid.',
         see: 'A page titled “{title}” with big buttons, and a switch that says what this phone is for today: The Hop Shop or BunFest. The first time, it asks you to name this phone, for example Hop Shop till. Type a name and tap Save, or leave it for later.',
         go: { route: 'sell', label: 'Open {title}' },
       },
@@ -295,7 +295,7 @@ export const LEVELS: GuideLevel[] = [
     n: 8,
     title: 'BunFest season',
     goal: 'See how BunFest runs from the app: the program, the bunnies, the raffle table and the door.',
-    minutes: 10,
+    minutes: 15,
     money: true,
     steps: [
       {
@@ -330,7 +330,7 @@ export const LEVELS: GuideLevel[] = [
       },
       {
         key: 'door',
-        do: 'On the phone app, open {title}, then tap “BunFest” under “This phone is for.” Look, then tap “The Hop Shop” to put it back. Do not open Door tickets today.',
+        do: 'On the phone app, open {title}. Under “This phone is for,” notice which one is chosen, tap “BunFest,” and look. Then tap the one you noticed to put it back. Do not open Door tickets today.',
         see: 'Three big buttons: “Door tickets,” “Ring up a sale” and “Raffle tickets.” Door tickets is where receipts are checked and tickets are sold at the door. That is for the day of the event.',
         go: { route: 'sell', label: 'Open {title}' },
       },
@@ -345,13 +345,13 @@ export const LEVELS: GuideLevel[] = [
     steps: [
       {
         key: 'events',
-        do: 'Open {title}, the page a visitor sees.',
+        do: 'Open {title}, the page a visitor sees. It is outside the Staff area.',
         see: 'A page titled “{title}” with OHRR’s events. They come from the Events list you saw in Level 8, so a change made there shows up here.',
         go: { route: 'public-events', label: 'Open {title}' },
       },
       {
         key: 'shop',
-        do: 'Open {title}, the page a visitor sees.',
+        do: 'Open {title}, the page a visitor sees. It is outside the Staff area.',
         see: 'A page titled “{title}” about the shop at the Adoption Center. This is how the public sees the shop you looked around in Level 6.',
         go: { route: 'public-shop', label: 'Open {title}' },
       },
@@ -361,6 +361,109 @@ export const LEVELS: GuideLevel[] = [
         see: 'The same rabbit, with the same name and photos. The app and the website read one shared list, so a change in one shows up in the other.',
         go: { route: 'other-site', label: 'Open {title}' },
       },
+    ],
+  },
+]
+
+/** The Welcome page's lists, also on the printed handout. */
+export const WINS = [
+  'See your own name, your level and exactly what you can do, in about five minutes.',
+  'Watch a notice travel from a form to everyone’s phone, without posting a thing.',
+  'Learn where new sign-ups and messages land, so nothing gets missed.',
+  'Every level ends with a “you did it.”',
+]
+
+export const PROMISES = [
+  { title: 'Practice means practice', text: 'Selling, charging a card and posting something for the public are only ever practiced on a pretend screen that says so at the top and saves nothing. The few real things you are asked to do, like checking your own name, say so.' },
+  { title: 'Go at your pace', text: 'Stop any time. Your check marks are saved to your account and you pick up where you left off, on any phone or computer.' },
+  { title: 'Stuck is fine', text: 'Skip any step and come back to it later. Nobody is checking your progress. If a step confuses you, the person who invited you, or any team lead, can look at it with you.' },
+]
+
+export const START = [
+  'Open the invitation you were sent, by email or QR code.',
+  'Create your sign-in, or sign in if you already have an OHRR account.',
+  'On the Staff home screen, tap Start here.',
+]
+
+/** The "Stuck?" note, on every level and on the printed handout. */
+export const STUCK_TEXT =
+  'That’s fine, and it’s never your fault. Skip any step and come back to it later; your check marks are saved. Practice screens change nothing, so try them as often as you like. If a page doesn’t look like the step says, the person who invited you, or any team lead, can look at it with you.'
+
+/** One box in a flow chart. `level` makes it a link to that level; `tone` colors it. */
+export interface FlowNode {
+  label: string
+  note?: string
+  level?: string
+  tone?: 'start' | 'money' | 'end'
+}
+
+export interface Flow {
+  key: string
+  title: string
+  intro: string
+  nodes: FlowNode[]
+}
+
+/** The big picture of each job, from the same facts the levels teach. Only describe what the app really does. */
+export const FLOWS: Flow[] = [
+  {
+    key: 'start',
+    title: 'Getting started',
+    intro: 'From the invitation to your first check mark.',
+    nodes: [
+      { label: 'Open your invitation', note: 'By email or QR code.', tone: 'start' },
+      { label: 'Create your sign-in', note: 'Or sign in, if you already have an OHRR account.' },
+      { label: 'Tap Start here', note: 'It is on the Staff home screen.' },
+      { label: 'Level 1: Make it yours', level: 'mine' },
+      { label: 'Keep going, one level at a time', note: 'Stop any time. Your check marks are saved.', tone: 'end' },
+    ],
+  },
+  {
+    key: 'notice',
+    title: 'A notice reaches everyone’s phone',
+    intro: 'Level 2 practices this on a pretend screen.',
+    nodes: [
+      { label: 'Write a title and a message', tone: 'start', level: 'appear' },
+      { label: 'Tap Post announcement' },
+      { label: 'It shows on the home screen', note: 'A notice saved as a draft stays hidden until someone publishes it.', tone: 'end' },
+    ],
+  },
+  {
+    key: 'item',
+    title: 'A donation becomes an item anyone can scan',
+    intro: 'Level 5 practices this on pretend screens.',
+    nodes: [
+      { label: 'Someone donates an item', tone: 'start' },
+      { label: 'Receive it', note: 'Take a photo and type what it is.', level: 'receive' },
+      { label: 'The app gives it a number', note: 'The next free one, like DON-00001. You never make one up.' },
+      { label: 'Print the label', note: 'It carries the number and a code that scans.' },
+      { label: 'Anyone scans the label', note: 'Scan an item opens the item.', level: 'receive' },
+      { label: 'The item comes up', note: 'You can see it, change it, or sort it.', tone: 'end' },
+    ],
+  },
+  {
+    key: 'sale',
+    title: 'A sale, start to finish',
+    intro: 'Level 7 practices this on pretend screens. The cash box and the card reader work exactly as they do now.',
+    nodes: [
+      { label: 'A customer picks things', tone: 'start' },
+      { label: 'Fill the basket', note: 'Tap each item. Plus and minus change how many.', level: 'sell' },
+      { label: 'Take the money first', note: 'With the cash box or the card reader, as you do today.', tone: 'money' },
+      { label: 'Then tap Paid by card or Paid cash', note: 'Only after the money has been taken.', tone: 'money' },
+      { label: 'Sale recorded', note: 'The shop’s stock goes down right away.', tone: 'end' },
+      { label: 'Tapped Paid by mistake?', note: 'Tell a team lead.' },
+    ],
+  },
+  {
+    key: 'raffle',
+    title: 'The raffle table',
+    intro: 'Level 8 practices the first part on a pretend screen.',
+    nodes: [
+      { label: 'Tickets are reserved in the app, or sold at the table', tone: 'start', level: 'bunfest' },
+      { label: 'Take the money first', note: 'Cash in hand at the table.', tone: 'money' },
+      { label: 'Tickets are paid', note: 'Mark paid for a reservation. A table sale is paid straight away.', tone: 'money' },
+      { label: 'Draw the winners', note: 'A BunFest manager does this.' },
+      { label: 'Hand over the prizes', note: 'Each winner has a Call and Text button.', tone: 'end' },
     ],
   },
 ]
@@ -380,7 +483,7 @@ export const fill = (text: string, vars: Record<string, string>) => text.replace
 export const MONEY_POINTS = [
   {
     title: 'Looking at numbers',
-    text: 'Prices, stock and totals. You only read them. Nothing can change.',
+    text: 'Prices, stock and totals. When you only look, nothing changes.',
   },
   {
     title: 'Writing down a sale',
@@ -388,7 +491,7 @@ export const MONEY_POINTS = [
   },
   {
     title: 'Charging a card',
-    text: 'Two features can charge a card: the online auction and online bidding at BunFest. Both are switched off right now, and each is switched on deliberately, by someone with permission. Nothing in this guide switches either one on, and the practice screens never touch a card.',
+    text: 'Right now the app does not charge anyone’s card. Two online BunFest features could: the online auction and online bidding. Both are switched off, and each is switched on deliberately, by someone with permission. Nothing in this guide switches either one on, and the practice screens never touch a card.',
   },
 ] as const
 
