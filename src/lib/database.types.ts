@@ -3073,6 +3073,7 @@ export type Database = {
       counter_link_code: { Args: { p_org: string; p_product: string; p_code: string }; Returns: Json }
       record_counter_sale: { Args: { p_org: string; p_sale: Json }; Returns: Json }
       counter_day: { Args: { p_org: string; p_day: string }; Returns: Json }
+      void_counter_sale: { Args: { p_org: string; p_sale: string }; Returns: Json }
       door_pack: { Args: { p_org: string; p_event: string }; Returns: Json }
       door_sync: { Args: { p_org: string; p_event: string; p_entries: Json }; Returns: Json }
       door_import: { Args: { p_org: string; p_event: string; p_rows: Json; p_source?: string }; Returns: { new: number; updated: number } }

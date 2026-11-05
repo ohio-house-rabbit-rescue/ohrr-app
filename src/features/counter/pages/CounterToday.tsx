@@ -44,6 +44,11 @@ export default function CounterToday() {
           </p>
         )}
         {offline && <p className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">The totals need signal.</p>}
+        {data && (data.voided ?? 0) > 0 && (
+          <p className="rounded-2xl bg-slate-50 px-4 py-3 text-[15px] text-slate-700">
+            {data.voided} {data.voided === 1 ? 'sale was' : 'sales were'} undone on this day, so {data.voided === 1 ? 'it isn’t' : 'they aren’t'} counted below.
+          </p>
+        )}
         <ErrorBox>{error}</ErrorBox>
         {data === undefined && !error && !offline && <p className="text-center text-base text-slate-600">Adding it up…</p>}
         {data === null && <p className="text-base text-slate-600">You don’t have access to the sales totals.</p>}

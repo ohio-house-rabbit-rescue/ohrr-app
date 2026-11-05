@@ -2,7 +2,8 @@
 // until there is signal. Each sale carries an id made on the phone, so sending
 // it twice (a retry after the signal dropped mid-send) still records it once.
 // The money itself goes through the cash box or the card reader, as it
-// always has; a sale records which.
+// always has; a sale records which. A sale can be undone (update 57): off the
+// record, stock back, left out of Today's sales; the app still moves no money.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase, errMessage } from '../../lib/supabase'
 import type { Json } from '../../lib/database.types'
@@ -41,6 +42,25 @@ export interface Sale {
   lines: SaleLine[]
 }
 
+/** The sale this phone rang up last, kept so it can be undone, even after leaving the screen. */
+export interface LastSale {
+  id: string
+  sold_at: string
+  method: PayMethod
+  total_cents: number
+  lines: { product_id: string | null; name: string; qty: number }[]
+}
+
+/** An undo waiting to go out. `optional`: the sale may never have reached the database, so a failure is not worth showing. */
+interface PendingVoid {
+  id: string
+  lines: { product_id: string | null; qty: number }[]
+  optional?: boolean
+}
+
+/** 'undone': done now. 'waiting': it will go through when the phone has signal. */
+export type VoidResult = 'undone' | 'waiting'
+
 /** What a line comes to: the changed price if there is one, else the label price times how many. */
 export const lineTotal = (l: SaleLine) => (typeof l.line_cents === 'number' ? l.line_cents : l.price_cents * l.qty)
 
@@ -63,6 +83,10 @@ export function canChangePrice(productId: string | null, products: CounterProduc
 
 const PRODUCTS_KEY = 'ohrr.counter.products.v1'
 const QUEUE_KEY = 'ohrr.counter.sales.v1'
+const VOIDS_KEY = 'ohrr.counter.voids.v1'
+const LAST_KEY = 'ohrr.counter.last.v1'
+
+const isNetworkMessage = (msg: string) => /fetch|network|Failed|load/i.test(msg)
 
 /** Which item a scanned or typed code belongs to (OHRR label or maker's barcode). */
 export function findByCode(raw: string, products: CounterProduct[]): CounterProduct | null {
@@ -79,6 +103,10 @@ export interface Till {
   error: string | null
   refresh: () => Promise<void>
   recordSale: (s: Sale) => void
+  /** The sale rung up last on this phone, until it is undone or the next one is rung up. */
+  last: LastSale | null
+  /** Undo that sale. Throws a plain-words message if it can't be undone. */
+  undoSale: (id: string) => Promise<VoidResult>
   syncNow: () => Promise<void>
 }
 
@@ -86,6 +114,10 @@ export function useTill(orgId: string | null): Till {
   const [products, setProducts] = useState<CounterProduct[]>(() => readLocal(PRODUCTS_KEY, []))
   const [loaded, setLoaded] = useState(() => readLocal<CounterProduct[] | null>(PRODUCTS_KEY, null) !== null)
   const [queue, setQueue] = useState<Sale[]>(() => readLocal(QUEUE_KEY, []))
+  const [last, setLastState] = useState<LastSale | null>(() => readLocal<LastSale | null>(LAST_KEY, null))
+  const voidsRef = useRef<PendingVoid[]>(readLocal(VOIDS_KEY, []))
+  const lastRef = useRef(last)
+  lastRef.current = last
   const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine)
   const [error, setError] = useState<string | null>(null)
   const busy = useRef(false)
@@ -102,7 +134,8 @@ export function useTill(orgId: string | null): Till {
     // Stock as the database has it, less anything sold here and not yet sent.
     const list = ((data ?? []) as unknown as CounterProduct[]).map((p) => {
       const pending = queueRef.current.flatMap((s) => s.lines).filter((l) => l.product_id === p.id).reduce((n, l) => n + l.qty, 0)
-      return { ...p, quantity: Math.max(0, p.quantity - pending) }
+      const back = voidsRef.current.flatMap((v) => v.lines).filter((l) => l.product_id === p.id).reduce((n, l) => n + l.qty, 0)
+      return { ...p, quantity: Math.max(0, p.quantity - pending + back) }
     })
     writeLocal(PRODUCTS_KEY, list)
     setProducts(list)
@@ -122,12 +155,22 @@ export function useTill(orgId: string | null): Till {
         writeLocal(QUEUE_KEY, left)
         setQueue(left)
       }
+      // Then the undos, so each one finds its sale in the database.
+      let failed: string | null = null
+      for (const v of [...voidsRef.current]) {
+        const { error: err } = await supabase.rpc('void_counter_sale', { p_org: orgId, p_sale: v.id })
+        if (err && isNetworkMessage(err.message)) throw err
+        // Anything else won't get better by trying again: drop it.
+        voidsRef.current = voidsRef.current.filter((x) => x.id !== v.id)
+        writeLocal(VOIDS_KEY, voidsRef.current)
+        if (err && !v.optional) failed = `An undo couldn’t go through: ${err.message}`
+      }
       setOnline(true)
-      setError(null)
+      setError(failed)
       await refresh()
     } catch (e) {
       const msg = errMessage(e)
-      const net = (typeof navigator !== 'undefined' && !navigator.onLine) || /fetch|network|Failed|load/i.test(msg)
+      const net = (typeof navigator !== 'undefined' && !navigator.onLine) || isNetworkMessage(msg)
       setOnline(!net)
       setError(net ? null : msg)
     } finally {
@@ -155,6 +198,15 @@ export function useTill(orgId: string | null): Till {
       queueRef.current = next
       writeLocal(QUEUE_KEY, next)
       setQueue(next)
+      const kept: LastSale = {
+        id: s.id,
+        sold_at: s.sold_at,
+        method: s.method,
+        total_cents: saleTotal(s.lines),
+        lines: s.lines.map((l) => ({ product_id: l.product_id, name: l.name, qty: l.qty })),
+      }
+      writeLocal(LAST_KEY, kept)
+      setLastState(kept)
       // Show the stock going down straight away, signal or not.
       setProducts((list) => {
         const out = list.map((p) => {
@@ -169,7 +221,72 @@ export function useTill(orgId: string | null): Till {
     [syncNow],
   )
 
-  return { products, loaded, waiting: queue.length, online, error, refresh, recordSale, syncNow }
+  /** Put the items back in the phone's own stock count. */
+  const addBack = useCallback((lines: { product_id: string | null; qty: number }[]) => {
+    setProducts((list) => {
+      const out = list.map((p) => {
+        const back = lines.filter((l) => l.product_id === p.id).reduce((n, l) => n + l.qty, 0)
+        return back ? { ...p, quantity: p.quantity + back } : p
+      })
+      writeLocal(PRODUCTS_KEY, out)
+      return out
+    })
+  }, [])
+
+  const undoSale = useCallback(
+    async (id: string): Promise<VoidResult> => {
+      const sale = lastRef.current?.id === id ? lastRef.current : null
+      if (!sale) throw new Error('That sale can’t be undone from this phone.')
+      const forget = () => {
+        writeLocal(LAST_KEY, null)
+        setLastState(null)
+      }
+      const waitFor = (v: PendingVoid) => {
+        voidsRef.current = [...voidsRef.current.filter((x) => x.id !== v.id), v]
+        writeLocal(VOIDS_KEY, voidsRef.current)
+        addBack(v.lines)
+        forget()
+        void syncNow()
+        return 'waiting' as const
+      }
+      const lines = sale.lines.map((l) => ({ product_id: l.product_id, qty: l.qty }))
+
+      if (queueRef.current.some((s) => s.id === id)) {
+        if (busy.current) return waitFor({ id, lines }) // being sent right now: it goes out first, then the undo
+        // Never sent: take it out of the queue. The undo is also queued, in case an earlier send got through and the reply was lost.
+        const left = queueRef.current.filter((s) => s.id !== id)
+        queueRef.current = left
+        writeLocal(QUEUE_KEY, left)
+        setQueue(left)
+        voidsRef.current = [...voidsRef.current, { id, lines: [], optional: true }]
+        writeLocal(VOIDS_KEY, voidsRef.current)
+        addBack(lines)
+        forget()
+        void syncNow()
+        return 'undone'
+      }
+
+      // Already sent: the database undoes it.
+      if (!orgId) throw new Error('Not signed in yet. Try again in a moment.')
+      try {
+        const { error: err } = await supabase.rpc('void_counter_sale', { p_org: orgId, p_sale: id })
+        if (err) throw err
+        forget()
+        await refresh()
+        return 'undone'
+      } catch (e) {
+        const msg = errMessage(e)
+        if ((typeof navigator !== 'undefined' && !navigator.onLine) || isNetworkMessage(msg)) return waitFor({ id, lines })
+        if (/could not find the function|schema cache|does not exist/i.test(msg)) {
+          throw new Error('Undo isn’t switched on yet, so nothing was changed. Ask a team lead.')
+        }
+        throw new Error(msg)
+      }
+    },
+    [orgId, refresh, syncNow, addBack],
+  )
+
+  return { products, loaded, waiting: queue.length, online, error, refresh, recordSale, last, undoSale, syncNow }
 }
 
 /* ------------------------------------------------ codes */
@@ -181,6 +298,8 @@ export async function linkCode(orgId: string, productId: string, code: string): 
 
 export interface CounterDay {
   sales: number
+  /** Sales that were undone: left out of every total here. */
+  voided?: number
   cash_cents: number
   card_cents: number
   other_cents: number

@@ -272,8 +272,8 @@ export const LEVELS: GuideLevel[] = [
       },
       {
         key: 'practice-pay',
-        do: 'Practice taking payment below. First pretend the customer paid cash and handed you $20.00: type 20 in the box, then tap Paid cash. Then tap Practice again and try Paid by card.',
-        see: 'For cash, the change shows as you type. Then a green check and “Sale recorded.” In the real app a sale is recorded the moment you tap Paid by card or Paid cash, and the shop’s stock goes down, so you tap only after the cash box or card reader has already taken the money. If you ever tap Paid by mistake, tell a team lead. Nothing here is saved.',
+        do: 'Practice taking payment below. First pretend the customer paid cash and handed you $20.00: type 20 in the box, then tap Paid cash. Then tap “Made a mistake? Undo this sale” and “Yes, undo this sale.” Last, tap Practice again and try Paid by card.',
+        see: 'For cash, the change shows as you type. Then a green check and “Sale recorded.” In the real app a sale is recorded the moment you tap Paid by card or Paid cash, and the shop’s stock goes down, so you tap only after the cash box or card reader has already taken the money. If you ever tap Paid by mistake, the real screen has the same “Undo this sale” link: it takes the sale off the record and puts the items back, but it cannot move money, so you give cash back or refund the card on the card reader. Nothing here is saved.',
         practice: 'sell-pay',
       },
       {
@@ -451,7 +451,7 @@ export const FLOWS: Flow[] = [
       { label: 'Take the money first', note: 'With the cash box or the card reader, as you do today.', tone: 'money' },
       { label: 'Then tap Paid by card or Paid cash', note: 'Only after the money has been taken.', tone: 'money' },
       { label: 'Sale recorded', note: 'The shop’s stock goes down right away.', tone: 'end' },
-      { label: 'Tapped Paid by mistake?', note: 'Tell a team lead.' },
+      { label: 'Tapped Paid by mistake?', note: 'Tap “Undo this sale.” It fixes the record and the stock. Give cash back, or refund the card on the card reader.' },
     ],
   },
   {
@@ -487,7 +487,7 @@ export const MONEY_POINTS = [
   },
   {
     title: 'Writing down a sale',
-    text: 'Selling in the app, at the Hop Shop or at the BunFest door and raffle table, writes down a sale after you have taken the money with the cash box or the card reader, exactly as you do today. The app never takes a payment itself.',
+    text: 'Selling in the app, at the Hop Shop or at the BunFest door and raffle table, writes down a sale after you have taken the money with the cash box or the card reader, exactly as you do today. The app never takes a payment itself. If you tap Paid by mistake at the Hop Shop, “Undo this sale” takes the sale off the record and puts the items back, but you give the money back by hand.',
   },
   {
     title: 'Charging a card',

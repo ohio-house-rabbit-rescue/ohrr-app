@@ -2,6 +2,8 @@
 // basket adds up; "Paid cash" or "Paid by card" records the sale and lowers
 // the stock. The money goes through the cash box or the card reader as it
 // always has. Works with no signal: the sale waits on the phone.
+// A mistaken sale can be undone (update 57): "Undo this sale" on the done screen, or the last sale on this phone
+// from the basket screen for half an hour. It only fixes the record and the stock; the app never moves money.
 // A line that isn't a vendor's item can have its price changed ("3 towels for
 // $30", update 47): for one, or for all of them.
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
@@ -9,13 +11,17 @@ import { useNavigate } from 'react-router-dom'
 import { Icon } from '../../../components/icons'
 import { bringIntoView } from '../../../lib/bringIntoView'
 import { BigButton, BigInput, ErrorBox, MoneyInput, StepShell } from '../../scan/ScanUI'
-import { getDevice, money, newId, toCents } from '../local'
-import { canChangePrice, findByCode, saleTotal, useTill, type CounterProduct, type PayMethod, type SaleLine } from '../sales'
+import { clock, getDevice, money, newId, toCents } from '../local'
+import { canChangePrice, findByCode, saleTotal, useTill, type CounterProduct, type LastSale, type PayMethod, type SaleLine, type VoidResult } from '../sales'
+import { errMessage } from '../../../lib/supabase'
 import { SyncPill, useCounterOrg } from '../CounterShell'
 
 const Scanner = lazy(() => import('../../scan/Scanner'))
 
-type Step = 'basket' | 'scan' | 'other' | 'pay' | 'done'
+type Step = 'basket' | 'scan' | 'other' | 'pay' | 'done' | 'undo' | 'undone'
+
+/** How long after a sale the basket screen still offers to undo it. */
+const UNDO_WINDOW_MS = 30 * 60 * 1000
 
 /** A changed price: for one ('each', kept as the count changes) or for the whole line ('all'). */
 interface Adjust {
@@ -46,6 +52,11 @@ export default function CounterSell() {
   const [other, setOther] = useState({ name: '', price: '' })
   const [given, setGiven] = useState('')
   const [last, setLast] = useState<{ total: number; method: PayMethod; change: number | null } | null>(null)
+  // Undoing a sale: the sale shown, where Back goes, whether it is going out, and how it ended.
+  const [undoing, setUndoing] = useState<LastSale | null>(null)
+  const [undoFrom, setUndoFrom] = useState<'done' | 'basket'>('done')
+  const [undoBusy, setUndoBusy] = useState(false)
+  const [undoResult, setUndoResult] = useState<VoidResult | null>(null)
   // The line whose price is being changed, and what's typed.
   const [pricing, setPricing] = useState<{ i: number; price: string; mode: 'each' | 'all' } | null>(null)
 
@@ -163,6 +174,113 @@ export default function CounterSell() {
 
   const pill = <SyncPill waiting={till.waiting} online={till.online} error={till.error} />
 
+  const askUndo = (from: 'done' | 'basket') => {
+    if (!till.last) return
+    setUndoing(till.last)
+    setUndoFrom(from)
+    setError(null)
+    setStep('undo')
+  }
+
+  const doUndo = async () => {
+    if (!undoing || undoBusy) return
+    setUndoBusy(true)
+    setError(null)
+    try {
+      setUndoResult(await till.undoSale(undoing.id))
+      setLast(null)
+      setStep('undone')
+    } catch (e) {
+      setError(errMessage(e))
+    } finally {
+      setUndoBusy(false)
+    }
+  }
+
+  const leaveUndo = () => {
+    setError(null)
+    setStep(undoFrom === 'done' && last ? 'done' : 'basket')
+  }
+
+  // The last sale on this phone, while it is recent enough to be a mistake someone just made.
+  const recent = till.last && Date.now() - new Date(till.last.sold_at).getTime() < UNDO_WINDOW_MS ? till.last : null
+
+  /* ------------------------------------------------ undo */
+  if (step === 'undo' && undoing) {
+    return (
+      <StepShell
+        title="Undo this sale?"
+        onBack={leaveUndo}
+        backLabel="Back"
+        footer={
+          <div className="space-y-2">
+            <BigButton tone="danger" onClick={() => void doUndo()} disabled={undoBusy}>
+              {undoBusy ? 'Undoing…' : 'Yes, undo this sale'}
+            </BigButton>
+            <BigButton tone="plain" onClick={leaveUndo}>
+              No, keep it
+            </BigButton>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="space-y-1 text-center">
+            <p className="font-display text-3xl font-black text-ink">{money(undoing.total_cents)}</p>
+            <p className="text-lg text-slate-600">
+              {undoing.method === 'card' ? 'Paid by card' : undoing.method === 'cash' ? 'Paid cash' : 'Paid'} · {clock(undoing.sold_at)}
+            </p>
+          </div>
+          <ul className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white text-base">
+            {undoing.lines.map((l, i) => (
+              <li key={`${l.product_id ?? 'x'}-${i}`} className="flex items-center justify-between gap-2 px-4 py-2.5">
+                <span className="min-w-0 truncate text-ink">{l.name}</span>
+                <span className="shrink-0 font-bold text-slate-600">× {l.qty}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="rounded-2xl bg-slate-50 px-4 py-3 text-base leading-relaxed text-slate-700">
+            This takes the sale off the record, puts the items back in stock, and leaves it out of Today’s sales.
+          </p>
+          <p className="rounded-2xl bg-amber-50 px-4 py-3 text-base leading-relaxed text-amber-900">
+            It does not move any money. If they paid cash, give it back. If they paid by card, refund it on the card reader.
+          </p>
+          <ErrorBox>{error}</ErrorBox>
+        </div>
+      </StepShell>
+    )
+  }
+
+  /* ------------------------------------------------ undone */
+  if (step === 'undone') {
+    return (
+      <StepShell
+        title="Sale undone"
+        onBack={() => navigate('/staff/counter')}
+        backLabel="Sell"
+        footer={
+          <BigButton onClick={() => setStep('basket')} icon="plus">
+            Next customer
+          </BigButton>
+        }
+      >
+        <div className="space-y-4 text-center">
+          <span className="mx-auto inline-flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+            <Icon name="check" size={44} />
+          </span>
+          <p className="text-lg leading-relaxed text-slate-700">
+            {undoResult === 'waiting'
+              ? 'No signal right now. The undo will go through when the phone has signal, and the stock will be put back then.'
+              : 'It’s off the record and the items are back in stock.'}
+          </p>
+          <p className="rounded-2xl bg-amber-50 px-4 py-3 text-base leading-relaxed text-amber-900">
+            Remember: the app moved no money. Give cash back, or refund the card on the card reader.
+          </p>
+          <div className="flex justify-center">{pill}</div>
+        </div>
+      </StepShell>
+    )
+  }
+
   /* ------------------------------------------------ scan */
   if (step === 'scan') {
     return (
@@ -254,6 +372,11 @@ export default function CounterSell() {
           <p className="text-lg text-slate-600">{last.method === 'card' ? 'Paid by card' : 'Paid cash'}</p>
           {last.change !== null && <p className="font-display text-2xl font-black text-green-700">Change: {money(last.change)}</p>}
           <div className="flex justify-center">{pill}</div>
+          {till.last && (
+            <button type="button" onClick={() => askUndo('done')} className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue underline underline-offset-2">
+              Made a mistake? Undo this sale
+            </button>
+          )}
         </div>
       </StepShell>
     )
@@ -284,6 +407,17 @@ export default function CounterSell() {
           {pill}
         </div>
         <ErrorBox>{error}</ErrorBox>
+
+        {lines.length === 0 && recent && (
+          <div className="flex items-center justify-between gap-2 rounded-2xl bg-slate-50 px-4 py-2 text-[15px] text-slate-700">
+            <span className="min-w-0">
+              Last sale: <strong className="text-ink">{money(recent.total_cents)}</strong> · {clock(recent.sold_at)}
+            </span>
+            <button type="button" onClick={() => askUndo('basket')} className="min-h-[44px] shrink-0 text-[15px] font-bold text-brand-blue underline underline-offset-2">
+              Undo it
+            </button>
+          </div>
+        )}
 
         {lines.length > 0 && (
           <div ref={basketRef} className="max-h-[34vh] divide-y divide-slate-100 overflow-y-auto rounded-2xl border-2 border-brand-orange/40 bg-white">

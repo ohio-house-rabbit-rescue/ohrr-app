@@ -3,7 +3,7 @@
 // are only ever practiced here.) Identical in the app and the website.
 import { useState } from 'react'
 import type { PracticeKey } from './walkthrough'
-import { ORANGE_BTN } from './guideUi'
+import { ORANGE_BTN, OUTLINE_BTN } from './guideUi'
 
 const field = 'min-h-[44px] w-full rounded-xl border border-slate-300 bg-white px-3 text-base text-ink focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/30'
 
@@ -241,8 +241,46 @@ const PAY_TOTAL = 800 + 350
 function PracticePay() {
   const [given, setGiven] = useState('')
   const [done, setDone] = useState<{ method: 'card' | 'cash'; change: number | null } | null>(null)
+  // After a sale: nothing, the "Undo this sale?" question, or the pretend undo done.
+  const [undo, setUndo] = useState<'none' | 'ask' | 'undone'>('none')
+  const again = () => {
+    setDone(null)
+    setGiven('')
+    setUndo('none')
+  }
   const g = given.trim() === '' || Number.isNaN(Number(given)) ? null : Math.round(Number(given) * 100)
   const pay = (method: 'card' | 'cash') => setDone({ method, change: method === 'cash' && g !== null && g >= PAY_TOTAL ? g - PAY_TOTAL : null })
+  if (done && undo === 'ask')
+    return (
+      <PracticeFrame>
+        <div className="space-y-3">
+          <p className="font-display text-xl font-black text-ink">Undo this sale?</p>
+          <p className="font-display text-2xl font-black text-ink">{cash(PAY_TOTAL)}</p>
+          <p className="text-sm leading-relaxed text-slate-600">
+            This takes the sale off the record and puts the items back in stock. It does not move any money: if they paid cash, give it back; if they paid by card, refund it on the card reader.
+          </p>
+          <button type="button" onClick={() => setUndo('undone')} className={`${ORANGE_BTN} w-full`}>
+            Yes, undo this sale
+          </button>
+          <button type="button" onClick={() => setUndo('none')} className={`${OUTLINE_BTN} w-full`}>
+            No, keep it
+          </button>
+        </div>
+      </PracticeFrame>
+    )
+  if (done && undo === 'undone')
+    return (
+      <PracticeFrame>
+        <div className="space-y-2 text-center" role="status">
+          <p className="font-display text-xl font-black text-ink">Sale undone</p>
+          <p className="text-base text-slate-600">It’s off the record and the items are back in stock. The app moved no money, so give cash back or refund the card on the card reader.</p>
+          <p className="text-sm text-slate-500">(Pretend — nothing was recorded, so there was nothing to undo.)</p>
+          <button type="button" onClick={again} className={ORANGE_BTN}>
+            Practice again
+          </button>
+        </div>
+      </PracticeFrame>
+    )
   if (done)
     return (
       <PracticeFrame>
@@ -255,16 +293,14 @@ function PracticePay() {
           <p className="text-base text-slate-600">{done.method === 'card' ? 'Paid by card' : 'Paid cash'}</p>
           {done.change !== null && <p className="font-display text-xl font-black text-emerald-700">Change: {cash(done.change)}</p>}
           <p className="text-sm text-slate-500">(Pretend — nothing was recorded and no stock changed.)</p>
-          <button
-            type="button"
-            onClick={() => {
-              setDone(null)
-              setGiven('')
-            }}
-            className={ORANGE_BTN}
-          >
-            Practice again
+          <button type="button" onClick={() => setUndo('ask')} className="inline-flex min-h-[44px] items-center text-base font-bold text-brand-blue underline underline-offset-2">
+            Made a mistake? Undo this sale
           </button>
+          <div>
+            <button type="button" onClick={again} className={ORANGE_BTN}>
+              Practice again
+            </button>
+          </div>
         </div>
       </PracticeFrame>
     )
