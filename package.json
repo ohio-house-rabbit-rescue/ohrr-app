@@ -1,7 +1,7 @@
 {
   "name": "ohrr-app",
   "private": true,
-  "version": "0.4.13",
+  "version": "0.4.14",
   "revision": 47,
   "type": "module",
   "description": "Midwest BunFest companion — an app supporting Ohio House Rabbit Rescue (OHRR).",
