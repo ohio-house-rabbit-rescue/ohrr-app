@@ -3,3 +3,8 @@
 # (Cloudflare Pages). Remove at app-store launch, together with robots.txt.
 /*
   X-Robots-Tag: noindex, nofollow
+
+# The phone app's update list (src/native/updater.ts): always fresh, readable from the app's own origin.
+/ota/latest.json
+  Cache-Control: no-store
+  Access-Control-Allow-Origin: *

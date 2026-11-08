@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { applyTextSize } from './lib/textSize'
 import { isNative } from './native/platform'
+import { markAppReady, startUpdateChecks } from './native/updater'
 import { loadCurrentEvent } from './lib/currentEvent'
 import { keepFieldVisible } from './lib/keepFieldVisible'
 import { keyboardAwayOnButtons } from './lib/bringIntoView'
@@ -38,17 +39,20 @@ if (import.meta.env.PROD && !isNative && 'serviceWorker' in navigator) {
 // from its first line, with no change to the code for a new one.
 async function start() {
   await loadCurrentEvent()
-  const [{ default: App }, { AuthProvider }, { default: NativeBridge }, { default: EmailChooser }] = await Promise.all([
+  const [{ default: App }, { AuthProvider }, { default: NativeBridge }, { default: EmailChooser }, { default: UpdateBanner }] = await Promise.all([
     import('./App'),
     import('./lib/auth'),
     import('./native/NativeBridge'),
     import('./components/EmailChooser'),
+    import('./native/UpdateBanner'),
   ])
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <BrowserRouter>
         {/* No-op on the web; inside the Android/iOS app: splash, status bar, back button, external links */}
         <NativeBridge />
+        {/* Inside the phone app only: "A new version is ready" (src/native/updater.ts) */}
+        <UpdateBanner />
         {/* On a computer: email links go to Gmail, the email program, or are copied */}
         <EmailChooser />
         <AuthProvider>
@@ -57,6 +61,11 @@ async function start() {
       </BrowserRouter>
     </StrictMode>,
   )
+  // Phone app only: tell the updater this copy started (else it goes back to the last good one), then look for news.
+  requestAnimationFrame(() => {
+    void markAppReady()
+    startUpdateChecks()
+  })
 }
 
 void start()

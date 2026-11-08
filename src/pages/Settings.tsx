@@ -13,6 +13,7 @@ import { useAuth } from '../lib/auth'
 import { firstName, useMyName } from '../features/account/profile'
 import InterestPicker from '../features/account/InterestPicker'
 import InstallApp from '../features/install/InstallApp'
+import UpdateRow from '../native/UpdateRow'
 import { getDeviceInterests, joinMailingList, type Interest } from '../features/account/emailList'
 
 function fmtDate(iso: string): string {
@@ -173,6 +174,7 @@ export default function Settings() {
             <Row label="Version" value={`v${build.version}`} />
             <Row label="Build" value={build.commitShort} />
             <Row label="Updated" value={fmtDate(build.builtAt)} />
+            <UpdateRow />
           </Card>
           <p className="px-1 text-xs text-slate-400">
             Telling OHRR “{buildLabel}” says exactly which update you’re on.
