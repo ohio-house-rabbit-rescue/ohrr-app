@@ -31,7 +31,7 @@ const buildTime = new Date().toISOString()
 // In-app updates for the phone apps (src/native/updater.ts). On the live site's build, the finished
 // web app is also zipped (index.html at the top) as /ota/bundle-<revision>.zip, with /ota/latest.json
 // saying which revision is newest. A phone app downloads the zip and runs it, so a web change needs no
-// new install. `minNativeBuild` (package.json) is the oldest phone-shell build that can run this copy.
+// new install. `minNativeBuild` (Android versionCode) and `minNativeBuildIos` (iOS build number) in package.json are the oldest phone-shell builds that can run this copy.
 // Only on the hosted build (Cloudflare Pages sets CF_PAGES) or with OTA_BUILD=1: a local `cap sync`
 // build must NOT carry the zip, or it would be copied into every APK.
 function otaBundle(): Plugin {
@@ -60,7 +60,7 @@ function otaBundle(): Plugin {
       writeFileSync(join(outDir, 'ota', `bundle-${revision}.zip`), zip)
       writeFileSync(
         join(outDir, 'ota', 'latest.json'),
-        JSON.stringify({ version: pkg.version, revision, url: `/ota/bundle-${revision}.zip`, minNativeBuild: Number(pkg.minNativeBuild ?? 0), builtAt: buildTime }, null, 2),
+        JSON.stringify({ version: pkg.version, revision, url: `/ota/bundle-${revision}.zip`, minNativeBuild: Number(pkg.minNativeBuild ?? 0), minNativeBuildIos: Number(pkg.minNativeBuildIos ?? 0), builtAt: buildTime }, null, 2),
       )
       console.log(`ota: bundle-${revision}.zip (${(zip.length / 1048576).toFixed(1)} MB) + latest.json`)
     },

@@ -16,7 +16,7 @@
 
 import { useSyncExternalStore } from 'react'
 import { build } from '../data/version'
-import { isNative } from './platform'
+import { isIos, isNative } from './platform'
 
 /** Where the live app (and its /ota/ files) are published. */
 const LIVE = 'https://ohrr-app.pages.dev'
@@ -38,7 +38,9 @@ interface LatestFile {
   version: string
   revision: number
   url: string
+  /** Oldest Android versionCode / iOS build number whose phone shell can run this copy. */
   minNativeBuild?: number
+  minNativeBuildIos?: number
 }
 
 let state: UpdateState = { status: 'idle' }
@@ -132,7 +134,7 @@ export async function checkForUpdate(manual = false): Promise<void> {
     if (!res.ok) throw new Error(`The update list answered ${res.status}.`)
     const latest = (await res.json()) as LatestFile
     if (typeof latest.revision !== 'number' || !latest.url) throw new Error('The update list is not readable.')
-    const verdict = decide(latest, {
+    const verdict = decide({ revision: latest.revision, minNativeBuild: isIos ? latest.minNativeBuildIos : latest.minNativeBuild }, {
       revision: build.revision,
       nativeBuild: await nativeBuildNumber(),
       badRevision: Number(read(BAD_KEY) ?? 0),
