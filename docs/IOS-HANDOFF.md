@@ -8,7 +8,7 @@
 
 - **OHRR** is the app for Ohio House Rabbit Rescue (a volunteer-run 501(c)(3) rabbit rescue in Ohio). The same React web app that runs at https://ohrr-app.pages.dev is wrapped in a native shell with **Capacitor 8**. The iPhone app is that web app inside an iOS shell. There is no separate iPhone code.
 - **App / bundle id:** `org.ohiohouserabbitrescue.app` · **Name:** OHRR · **Minimum iOS:** 15.0
-- **Current version: 0.4.15, revision 49.** The Xcode project already says Version 0.4.15 and Build 48. **Build must go up with every upload to TestFlight**, so use 48 or higher; if 48 has been used, use the next number.
+- **Current version: 0.4.15, revision 51 or newer** (the revision number goes up with every web release; Settings → About shows it). The Xcode project already says Version 0.4.15 and Build 48. **Build must go up with every upload to TestFlight**, so use 48 or higher; if 48 has been used, use the next number.
 - The sponsor and only stakeholder is **John** (they/them). Plain language in anything you write for them. American English (check, not tick; color, not colour).
 
 ## 2. Why the iPhone build is needed
@@ -23,7 +23,7 @@
 - It does **not** replace TestFlight: a change to the phone shell itself (a new plugin or permission) still needs a new TestFlight build.
 - The oldest iOS build allowed to take the web updates is `minNativeBuildIos` in `package.json` (now **48**). It is compared with the iOS **Build** number (CFBundleVersion). Whoever changes the native shell later must raise it to that build number.
 - The plugin's own cloud checks and statistics are switched off in `capacitor.config.ts` (`CapacitorUpdater`): nothing goes to the plugin maker.
-- **Please test it on the iPhone** (section 7). It has been tested only on Android.
+- **Please test it on the iPhone** (section 7). It has been tested on an Android emulator only (it found the app a new copy, downloaded it, checked it, switched to it, and stayed on it after a restart).
 
 ## 4. Where everything is
 
@@ -83,7 +83,7 @@ npm run cap:ios         # opens Xcode
 ## 7. What to test on the iPhone
 
 1. App opens, brand-blue status bar, no white flash, the OHRR splash goes away.
-2. Settings → About shows `v0.4.15 · rev 49` (or the current revision) and a **Check for updates** button. Tap it: it should say "You have the newest version." (A newer web revision will download and offer "Update now": that is the in-app update working. Tell John the result either way.)
+2. Settings → About shows `v0.4.15 · rev 51` (or a newer revision) and a **Check for updates** button. Tap it: it should say "You have the newest version." (A newer web revision will download and offer "Update now": that is the in-app update working. Tell John the result either way.)
 3. Staff → Scan an item: camera permission, then it reads a label.
 4. Staff → Print labels (or Hop Shop labels) → **Print by Bluetooth**: iOS asks for Bluetooth permission, pairs a printer whose name starts with `PM-`, prints. This is the big one. If it fails, the app has Printer settings with fixes (darker/lighter, plain mode, flip black and white, show every device). Write down exactly what happens.
 5. Share sheet: Staff → Share kit → Share, and Print through it.
