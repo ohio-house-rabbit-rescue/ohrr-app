@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { readFileSync, readdirSync, statSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { createHash } from 'node:crypto'
 import { zipSync } from 'fflate'
 import { execSync } from 'node:child_process'
 
@@ -60,7 +61,7 @@ function otaBundle(): Plugin {
       writeFileSync(join(outDir, 'ota', `bundle-${revision}.zip`), zip)
       writeFileSync(
         join(outDir, 'ota', 'latest.json'),
-        JSON.stringify({ version: pkg.version, revision, url: `/ota/bundle-${revision}.zip`, minNativeBuild: Number(pkg.minNativeBuild ?? 0), minNativeBuildIos: Number(pkg.minNativeBuildIos ?? 0), builtAt: buildTime }, null, 2),
+        JSON.stringify({ version: pkg.version, revision, url: `/ota/bundle-${revision}.zip`, checksum: createHash('sha256').update(zip).digest('hex'), minNativeBuild: Number(pkg.minNativeBuild ?? 0), minNativeBuildIos: Number(pkg.minNativeBuildIos ?? 0), builtAt: buildTime }, null, 2),
       )
       console.log(`ota: bundle-${revision}.zip (${(zip.length / 1048576).toFixed(1)} MB) + latest.json`)
     },

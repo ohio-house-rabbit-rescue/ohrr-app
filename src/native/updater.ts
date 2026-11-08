@@ -38,6 +38,8 @@ interface LatestFile {
   version: string
   revision: number
   url: string
+  /** SHA-256 of the zip, in hex: the plugin will not install a download without it. */
+  checksum: string
   /** Oldest Android versionCode / iOS build number whose phone shell can run this copy. */
   minNativeBuild?: number
   minNativeBuildIos?: number
@@ -133,7 +135,7 @@ export async function checkForUpdate(manual = false): Promise<void> {
     const res = await fetch(`${LIVE}/ota/latest.json?t=${Date.now()}`, { cache: 'no-store' })
     if (!res.ok) throw new Error(`The update list answered ${res.status}.`)
     const latest = (await res.json()) as LatestFile
-    if (typeof latest.revision !== 'number' || !latest.url) throw new Error('The update list is not readable.')
+    if (typeof latest.revision !== 'number' || !latest.url || !latest.checksum) throw new Error('The update list is not readable.')
     const verdict = decide({ revision: latest.revision, minNativeBuild: isIos ? latest.minNativeBuildIos : latest.minNativeBuild }, {
       revision: build.revision,
       nativeBuild: await nativeBuildNumber(),
@@ -145,7 +147,7 @@ export async function checkForUpdate(manual = false): Promise<void> {
     set({ status: 'downloading', revision: latest.revision })
     const { CapacitorUpdater } = await import('@capgo/capacitor-updater')
     const url = new URL(latest.url, LIVE).toString()
-    const bundle = await CapacitorUpdater.download({ url, version: String(latest.revision) })
+    const bundle = await CapacitorUpdater.download({ url, version: String(latest.revision), checksum: latest.checksum })
     readyBundleId = bundle.id
     // If the person never taps "Update now", it takes effect the next time the app goes to the background.
     await CapacitorUpdater.next({ id: bundle.id }).catch(() => undefined)
