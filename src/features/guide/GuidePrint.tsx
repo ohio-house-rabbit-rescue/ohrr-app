@@ -114,7 +114,7 @@ export default function GuidePrint() {
             ))}
           </ul>
         </div>
-        <div className="shrink-0 text-center">
+        <div className="w-36 shrink-0 text-center">
           <GuideQr value={`https://${APP_ADDRESS}/welcome`} size={120} alt={`QR code for the ${PROGRAM_NAME} welcome page`} />
           <p className="mt-1 text-xs text-slate-600">Point a phone camera here to open the welcome page.</p>
         </div>
