@@ -13,6 +13,9 @@ export const PROGRAM_NAME = 'Hop Into the App'
 /** The Staff → Features switch (an app_settings row, {"enabled": boolean}). */
 export const GUIDE_FLAG = 'walkthrough_enabled'
 
+/** Where the app lives on the web (the install steps and the printed guide say so). */
+export const APP_ADDRESS = 'ohrr-app.pages.dev'
+
 export type RouteKey =
   | 'account'
   | 'my-hours'
@@ -26,6 +29,7 @@ export type RouteKey =
   | 'tails'
   | 'scan'
   | 'items'
+  | 'receive-items'
   | 'hopshop'
   | 'shelf'
   | 'reorder'
@@ -118,7 +122,7 @@ export const LEVELS: GuideLevel[] = [
       },
       {
         key: 'look',
-        do: 'Open {title} and just look. Do not post anything yet.',
+        do: 'Open {title} and just look. Do not post anything yet. When you do post one for real, you tap the button for a new announcement, fill in the same two boxes you just practiced, and tap Post announcement.',
         see: 'A page titled “{title}.” A notice saved as a draft stays hidden until someone publishes it.',
         go: { route: 'announcements', label: 'Open {title}' },
       },
@@ -204,6 +208,12 @@ export const LEVELS: GuideLevel[] = [
         practice: 'scan',
       },
       {
+        key: 'receive-look',
+        do: 'Open {title}, the real page the first practice copied, and look. Do not save anything: a real save makes a real item and takes a real number.',
+        see: 'A page titled “{title}” that asks for a photo first, then what the item is. When you are ready to do it for real, this is where you start.',
+        go: { route: 'receive-items', label: 'Open {title}' },
+      },
+      {
         key: 'scan',
         do: 'Open {title} and look. You do not need to scan anything today.',
         see: 'A page titled “{title}” with a place to scan a label or type its code. If your phone asks to use the camera, that is normal. You can allow it, or just look at the page and move on.',
@@ -244,7 +254,7 @@ export const LEVELS: GuideLevel[] = [
       },
       {
         key: 'deliveries',
-        do: 'Open {title} and read down the list. You do not need to open a delivery today.',
+        do: 'Open {title} and read down the list. You do not need to open a delivery today. The button for adding a new delivery is on this page too; leave it alone for now, because adding one puts the stock on the shelf.',
         see: 'A page titled “{title}” listing every invoice (the supplier’s bill) added to stock, with what it cost and what the shipping was.',
         go: { route: 'deliveries', label: 'Open {title}' },
       },
@@ -503,15 +513,86 @@ export function stepsFor(level: GuideLevel, openable: readonly string[] | null, 
   return level.steps.filter((s) => s.practice || !s.go || canOpen(openable, matchOf(s.go.route)))
 }
 
+/** Saved next to the check marks: "I chose to skip this step for now" (the step's id after this). */
+export const SKIP_PREFIX = '_skip:'
+export const skipId = (id: string) => SKIP_PREFIX + id
+
+/** Saved when a person on a team that had the guide switched off asks to see it anyway. */
+export const SHOW_ID = '_show'
+
 export interface LevelStatus {
+  /** Steps this person can do here. */
   total: number
   done: number
+  skipped: number
+  /** Every step is checked. */
   complete: boolean
+  /** Every step is checked or skipped: the Trail can move on. */
+  settled: boolean
+  /** Nothing in this level is on this person's menu: it is not part of their job, and the Trail goes past it. */
+  na: boolean
 }
 
 export function levelStatus(level: GuideLevel, done: ReadonlySet<string>, openable: readonly string[] | null, matchOf: (route: RouteKey) => string): LevelStatus {
   const steps = stepsFor(level, openable, matchOf)
   const n = steps.filter((s) => done.has(stepId(level, s))).length
-  return { total: steps.length, done: n, complete: steps.length > 0 && n === steps.length }
+  const skipped = steps.filter((s) => !done.has(stepId(level, s)) && done.has(skipId(stepId(level, s)))).length
+  const na = steps.length === 0
+  return { total: steps.length, done: n, skipped, complete: !na && n === steps.length, settled: !na && n + skipped === steps.length, na }
 }
 
+export interface GuideSummary {
+  levels: GuideLevel[]
+  statuses: LevelStatus[]
+  done: number
+  skipped: number
+  total: number
+  /** The first level with something left to do (not finished, not skipped, not outside this person's job). */
+  next: GuideLevel | null
+  /** A level with skipped steps that the person may want to go back to (only offered once they reach the end). */
+  revisit: GuideLevel | null
+}
+
+/** Where a person is in the guide, the same way for the Trail, the home card and the Done screens. */
+export function guideSummary(done: ReadonlySet<string>, openable: readonly string[] | null, matchOf: (route: RouteKey) => string): GuideSummary {
+  const levels = LEVELS.filter((l) => !l.soon)
+  const statuses = levels.map((l) => levelStatus(l, done, openable, matchOf))
+  const next = levels.find((_l, i) => !statuses[i].na && !statuses[i].settled) ?? null
+  const revisit = levels.find((_l, i) => statuses[i].skipped > 0) ?? null
+  return {
+    levels,
+    statuses,
+    done: statuses.reduce((n, s) => n + s.done, 0),
+    skipped: statuses.reduce((n, s) => n + s.skipped, 0),
+    total: statuses.reduce((n, s) => n + s.total, 0),
+    next,
+    revisit,
+  }
+}
+
+/** The level after this one that has something for this person to do (null at the end). */
+export function levelAfter(level: GuideLevel, openable: readonly string[] | null, matchOf: (route: RouteKey) => string): GuideLevel | null {
+  return LEVELS.filter((l) => l.n > level.n && !l.soon && !levelStatus(l, new Set(), openable, matchOf).na)[0] ?? null
+}
+
+/** Before you start: getting the app on a phone. Shown on the Welcome page, the first level and the printed guide. */
+export const INSTALL_TITLE = 'Before you start: put the app on your phone'
+export const INSTALL_POINTS = [
+  `The app is free and runs in your phone’s web browser. Open ${APP_ADDRESS}, then sign in or create your sign-in.`,
+  'To get an OHRR icon on your home screen, open Settings in the app and tap “Put OHRR on your phone.” It shows the steps for your phone.',
+  'Some Android testers use an installed app file instead. The person who invited you can tell you if that is you. It updates itself: Settings, then About, then Check for updates.',
+]
+
+/** After the last level: real jobs to try next, each shown only if the page is on that person's menu. */
+export const NEXT_TITLE = 'You finished. What next?'
+export const NEXT_STEPS: { route: RouteKey; text: string }[] = [
+  { route: 'inbox', text: 'Make {title} your first stop each time you open the app. An orange number on it means something new is waiting.' },
+  { route: 'bookings', text: 'Open {title} and see what is waiting. Confirming a visit or request is a real change, so do it when you are ready, and ask a team lead the first time if you like.' },
+  { route: 'calls', text: 'Open {title} when the rescue needs help. Putting out a call is a real message to people, so a team lead can look over your first one with you.' },
+  { route: 'receive-items', text: 'The next time an item comes in, receive it with a real photo with {title}, and print its label.' },
+  { route: 'announcements', text: 'When something needs saying, post a real notice in {title}. A team lead can look over your first one with you.' },
+  { route: 'my-hours', text: 'Log your volunteer time as you go in {title}.' },
+  { route: 'sell', text: 'At your next shift, ring up a real sale in {title}, only after the cash box or card reader has taken the money. You know how to undo a mistake.' },
+  { route: 'raffle', text: 'At BunFest, sell raffle tickets at the table in {title}.' },
+]
+export const NEXT_WHO = 'Stuck, or not sure it is yours to do? Ask the person who invited you, or any team lead. You can open any level again whenever you like.'

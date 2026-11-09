@@ -143,6 +143,13 @@ export default function CounterHome() {
           <Icon name="settings" size={18} /> Door setup — the ticket list and prices
         </Link>
       )}
+
+      <p className="px-1 text-center text-sm text-slate-500">
+        New here?{' '}
+        <Link to="/staff/guide/sell" className="inline-flex min-h-[44px] items-center font-bold text-brand-blue underline underline-offset-2">
+          Practice selling first
+        </Link>
+      </p>
     </div>
   )
 }

@@ -1,6 +1,8 @@
 // Small pieces the guided start's pages share. Identical in the app and the website.
 import type { ReactNode } from 'react'
+import { Card } from '../../components/ui'
 import { PAGE_CLASS, PUBLIC_PAGE_CLASS } from './guideEnv'
+import { INSTALL_POINTS, INSTALL_TITLE } from './walkthrough'
 
 export const ORANGE_BTN =
   'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-brand-orange px-5 py-3 text-sm font-bold text-ink shadow-sm transition hover:bg-brand-orange-dark active:scale-[.98]'
@@ -22,5 +24,22 @@ export function ProgressBar({ done, total, label }: { done: number; total: numbe
         <div className="h-full rounded-full bg-brand-orange transition-all" style={{ width: `${pct}%` }} />
       </div>
     </div>
+  )
+}
+
+/** "Before you start: put the app on your phone". On the Welcome page and at the top of Level 1. */
+export function InstallCard() {
+  return (
+    <Card className="space-y-2 border-brand-blue/20 bg-brand-blue-50/50">
+      <h2 className="font-display text-xl font-black text-ink">{INSTALL_TITLE}</h2>
+      <ul className="space-y-2">
+        {INSTALL_POINTS.map((p) => (
+          <li key={p} className="flex gap-2 text-base leading-relaxed text-slate-700">
+            <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-brand-blue" aria-hidden="true" />
+            {p}
+          </li>
+        ))}
+      </ul>
+    </Card>
   )
 }

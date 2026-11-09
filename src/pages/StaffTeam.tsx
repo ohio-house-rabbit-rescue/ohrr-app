@@ -50,6 +50,11 @@ function joinUrl(code: string): string {
   return code ? `${base}/staff/join?code=${encodeURIComponent(code)}` : `${base}/staff/join`
 }
 
+/** The plain "what this is and how to begin" page, linked from every invite so nobody joins without a way in. */
+function welcomeUrl(): string {
+  return `${APP_URL.replace(/\/my-bunny\/?$/, '')}/welcome`
+}
+
 /** Shown wherever inviting needs update 30 and it hasn't been run. */
 const NEEDS_UPDATE_53 = 'Removing a team member isn’t switched on yet — ask the developer to post database update 53.'
 const NEEDS_UPDATE_30 = 'Invites aren’t switched on yet — ask an admin.' // database update 30
@@ -494,7 +499,9 @@ function InvitePanel({
             {who.email && (
               <a
                 href={`mailto:${who.email}?subject=${encodeURIComponent('Your OHRR staff invite')}&body=${encodeURIComponent(
-                  `Hi${who.name ? ` ${who.name}` : ''},\n\nHere's your invite to the OHRR staff app${who.position ? ` for ${who.position}` : ''}.\n\n1. Tap this link (it has your code in it):\n${joinUrl(code)}\n\n2. Create your sign-in with the email this message came to. If you already have an OHRR account, tap Sign in instead.\n\n3. Tap "Join the team". Your code is already filled in, and you're in.\n\nThe link didn't work? Open ${joinUrl('')} and type this code: ${code}\n\nThe code is single-use and expires in 14 days.${made.until ? ` Your access runs until ${accessDate(made.until)}.` : ''}\n\nOhio House Rabbit Rescue`,
+                  `Hi${who.name ? ` ${who.name}` : ''},\n\nHere's your invite to the OHRR staff app${who.position ? ` for ${who.position}` : ''}.\n\n1. Tap this link (it has your code in it):\n${joinUrl(code)}\n\n2. Create your sign-in with the email this message came to. If you already have an OHRR account, tap Sign in instead.\n\n3. Tap "Join the team". Your code is already filled in, and you're in.\n\nThe link didn't work? Open ${joinUrl('')} and type this code: ${code}\n\nNew here? A short walk-through of the app is at ${welcomeUrl()}
+
+The code is single-use and expires in 14 days.${made.until ? ` Your access runs until ${accessDate(made.until)}.` : ''}\n\nOhio House Rabbit Rescue`,
                 )}`}
                 className={pill.blue}
               >
@@ -504,7 +511,7 @@ function InvitePanel({
             {who.phone && (
               <a
                 href={`sms:${who.phone.replace(/[^0-9+]/g, '')}?&body=${encodeURIComponent(
-                  `Your OHRR staff invite: ${joinUrl(code)} (code ${code})`,
+                  `Your OHRR staff invite: ${joinUrl(code)} (code ${code}). New here? Start at ${welcomeUrl()}`,
                 )}`}
                 className={pill.blue}
               >
@@ -513,7 +520,7 @@ function InvitePanel({
             )}
             <button
               type="button"
-              onClick={() => shareText(`Your OHRR staff invite: ${joinUrl(code)} (code ${code})`, 'OHRR staff invite')}
+              onClick={() => shareText(`Your OHRR staff invite: ${joinUrl(code)} (code ${code}). New here? Start at ${welcomeUrl()}`, 'OHRR staff invite')}
               className={pill.outline}
             >
               Share

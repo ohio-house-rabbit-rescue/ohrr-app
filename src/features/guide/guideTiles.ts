@@ -7,3 +7,8 @@ export function useOpenablePaths(): string[] | null {
   const { tiles } = useStaffTiles()
   return tiles.map((t) => t.to)
 }
+
+/** A sales volunteer (Sell and nothing else): the Trail points them to the selling level. */
+export function useIsCounterOnly(): boolean {
+  return useStaffTiles().counterOnly
+}

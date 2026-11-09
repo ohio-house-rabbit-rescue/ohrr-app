@@ -5,7 +5,7 @@ import { useEffect } from 'react'
 import { Card } from '../../components/ui'
 import { JOIN, PRINT_PATH, SIGN_IN, WELCOME_PHOTO } from './guideEnv'
 import { MONEY_POINTS, PROGRAM_NAME, PROMISES, START, WINS } from './walkthrough'
-import { GuidePage, ORANGE_BTN, OUTLINE_BTN } from './guideUi'
+import { GuidePage, InstallCard, ORANGE_BTN, OUTLINE_BTN } from './guideUi'
 
 function Go({ to, className, children }: { to: { href: string; external: boolean }; className: string; children: React.ReactNode }) {
   // A plain link works in both places, and the website's join page lives on the app.
@@ -48,6 +48,12 @@ export default function Welcome() {
           I already have an account
         </Go>
       </div>
+
+      <p className="px-1 text-base leading-relaxed text-slate-600">
+        Got an invite link in an email or a text? Just open that link: your invite code is already in it. The button above is for typing the code in yourself.
+      </p>
+
+      <InstallCard />
 
       <Card className="space-y-3">
         <h2 className="font-display text-xl font-black text-ink">What’s in it for you</h2>

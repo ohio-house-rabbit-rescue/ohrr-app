@@ -6,7 +6,8 @@ import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { GUIDE_ROUTES, WELCOME_PHOTO } from './guideEnv'
 import { FlowChart } from './FlowChart'
-import { FLOWS, LEVELS, MONEY_POINTS, PROGRAM_NAME, PROMISES, START, STUCK_TEXT, WINS, fill, type GuideLevel, type GuideStep } from './walkthrough'
+import GuideQr from './GuideQr'
+import { APP_ADDRESS, FLOWS, INSTALL_POINTS, INSTALL_TITLE, LEVELS, MONEY_POINTS, PROGRAM_NAME, PROMISES, START, STUCK_TEXT, WINS, fill, type GuideLevel, type GuideStep } from './walkthrough'
 
 const H2 = 'font-display text-2xl font-black text-ink break-after-avoid'
 
@@ -101,6 +102,22 @@ export default function GuidePrint() {
           <li>If a step says to look, only look: it changes nothing. A step that asks you to type or tap something says so, and says what you should see.</li>
           <li>If a step says to ask a team lead, ask the person who invited you, or anyone on the OHRR team who has used the app longer.</li>
         </ul>
+      </section>
+
+      <section className="flex items-start gap-4 break-inside-avoid rounded-2xl border-2 border-slate-300 px-4 py-3">
+        <div className="min-w-0 flex-1 space-y-2">
+          <h2 className={H2}>{INSTALL_TITLE}</h2>
+          <p className="text-lg font-bold text-ink">The app’s address: {APP_ADDRESS}</p>
+          <ul className="list-disc space-y-1 pl-6 text-base leading-relaxed text-slate-700">
+            {INSTALL_POINTS.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        </div>
+        <div className="shrink-0 text-center">
+          <GuideQr value={`https://${APP_ADDRESS}/welcome`} size={120} alt={`QR code for the ${PROGRAM_NAME} welcome page`} />
+          <p className="mt-1 text-xs text-slate-600">Point a phone camera here to open the welcome page.</p>
+        </div>
       </section>
 
       <section className="space-y-2 break-inside-avoid">

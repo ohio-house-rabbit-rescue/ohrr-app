@@ -162,6 +162,11 @@ function PracticeScan() {
             Scan the label
           </button>
         )}
+        {found && (
+          <button type="button" onClick={() => setFound(false)} className={OUTLINE_BTN}>
+            Practice again
+          </button>
+        )}
       </div>
     </PracticeFrame>
   )

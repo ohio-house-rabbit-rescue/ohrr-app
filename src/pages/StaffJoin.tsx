@@ -9,6 +9,7 @@ import { accessDate } from '../lib/staffLevels'
 import { clearPendingInvite, getPendingInvite, savePendingInvite } from '../lib/pendingInvite'
 import { putKeyboardAway } from '../lib/bringIntoView'
 import { StatusNote } from '../features/scan/ScanUI'
+import { JOINED_PATH } from '../features/guide/guideEnv'
 
 export default function StaffJoin() {
   const { configured, loading, user, membership, accessEndedOn, accessOnHold, refresh } = useAuth()
@@ -103,7 +104,7 @@ export default function StaffJoin() {
       if (error) throw error
       clearPendingInvite()
       await refresh()
-      navigate('/staff', { replace: true })
+      navigate(JOINED_PATH, { replace: true })
     } catch (err) {
       setError(errMessage(err))
       setStatus('idle')

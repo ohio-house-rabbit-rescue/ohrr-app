@@ -18,7 +18,7 @@ export function useGuideWho(): { ready: boolean; userId: string | null; orgId: s
  * Each route key: where it goes, the staff-menu entry that says this person may open it (`match`, compared with
  * the tiles in staffTiles.ts), and the page's real title.
  */
-export const GUIDE_ROUTES: Record<RouteKey, { to: string; match: string; title: string; external?: boolean }> = {
+export const GUIDE_ROUTES: Record<RouteKey, { to: string; match: string; title: string; external?: boolean; note?: string }> = {
   account: { to: '/staff/account', match: '/staff/account', title: 'My account' },
   'my-hours': { to: '/staff/my-hours', match: '/staff/my-hours', title: 'My volunteer hours' },
   announcements: { to: '/staff/announcements', match: '/staff/announcements', title: 'Announcements' },
@@ -32,6 +32,7 @@ export const GUIDE_ROUTES: Record<RouteKey, { to: string; match: string; title: 
   tails: { to: '/staff/tails', match: '/staff/tails', title: 'Happy Tails' },
   scan: { to: '/staff/scan', match: '/staff/scan', title: 'Scan an item' },
   items: { to: '/staff/items', match: '/staff/items', title: 'Items' },
+  'receive-items': { to: '/staff/catalog', match: '/staff/catalog', title: 'Receive items' },
   hopshop: { to: '/staff/hopshop', match: '/staff/hopshop', title: 'Hop Shop' },
   shelf: { to: '/staff/hopshop?show=list', match: '/staff/hopshop', title: 'On the shelf' },
   reorder: { to: '/staff/hopshop/reorder', match: '/staff/hopshop', title: 'Reorder list' },
@@ -83,4 +84,9 @@ export const MONEY_PATH = '/staff/guide/money'
 export const FLOWS_PATH = '/staff/guide/flows'
 /** The printable handout: outside the staff area, so anyone with the link can print it. */
 export const PRINT_PATH = '/welcome/print'
+/** The "you finished, what next" page, and the "you're on the team" page shown right after joining. */
+export const NEXT_PATH = '/staff/guide/next'
+export const JOINED_PATH = '/staff/joined'
+/** Where the phone app is for steps that only the phone app has (none on the app itself). */
+export const PHONE_APP_URL = ''
 export const LEVEL_PATH = (key: string) => `/staff/guide/${key}`

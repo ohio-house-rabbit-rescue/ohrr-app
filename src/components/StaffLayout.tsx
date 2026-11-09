@@ -1,4 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import GuideReturnBar from '../features/guide/GuideReturnBar'
 import { useAuth } from '../lib/auth'
 import { Icon } from './icons'
 import ScrollToTop from './ScrollToTop'
@@ -117,6 +118,7 @@ export default function StaffLayout() {
         </header>
 
         <main className="flex-1 pb-16">
+          <GuideReturnBar />
           <Outlet />
         </main>
 
