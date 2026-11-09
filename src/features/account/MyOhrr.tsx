@@ -16,7 +16,8 @@
 // point to the mailing-list form. Nothing is ever looked up by the account's
 // email address — sign-up emails aren't confirmed.
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { JOINED_PATH } from '../guide/guideEnv'
 import type { User } from '@supabase/supabase-js'
 import { useAuth } from '../../lib/auth'
 import { supabase, errMessage } from '../../lib/supabase'
@@ -362,6 +363,7 @@ function StaffBox() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [joined, setJoined] = useState(false)
+  const navigate = useNavigate()
 
   if (membership) {
     const label = myLevel.level ? levelInfo(myLevel.level).label : (ROLE_LABEL[membership.role] ?? 'Staff')
@@ -410,6 +412,7 @@ function StaffBox() {
       await refresh()
       setJoined(true)
       setCode('')
+      navigate(JOINED_PATH)
     } catch (err) {
       setError(errMessage(err))
     } finally {

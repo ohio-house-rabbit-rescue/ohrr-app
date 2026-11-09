@@ -209,8 +209,8 @@ export const LEVELS: GuideLevel[] = [
       },
       {
         key: 'receive-look',
-        do: 'Open {title}, the real page the first practice copied, and look. Do not save anything: a real save makes a real item and takes a real number.',
-        see: 'A page titled “{title}” that asks for a photo first, then what the item is. When you are ready to do it for real, this is where you start.',
+        do: 'Open {title}, the real page the first practice copied, and look. Do not tap its Start button today: that opens the camera, and a real save makes a real item and takes a real number.',
+        see: 'A page titled “{title}”, “Step 1 of 5”, a short explanation, and a big “Start — open the camera” button at the bottom. When you are ready to do it for real, that button is where you start.',
         go: { route: 'receive-items', label: 'Open {title}' },
       },
       {
