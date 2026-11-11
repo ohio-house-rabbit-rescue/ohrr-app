@@ -48,8 +48,18 @@ export const GUIDE_ROUTES: Record<RouteKey, { to: string; match: string; title: 
   // Public pages: always open.
   'public-events': { to: '/events', match: '', title: 'Events' },
   'public-shop': { to: '/hop-shop', match: '', title: 'Hop Shop' },
-  // The other site, in a new tab.
+  // Level 1, the public side: the home screen, BunFest, and the Settings card that puts an icon on the phone.
+  'public-home': { to: '/', match: '', title: 'the public home screen' },
+  'public-bunfest': { to: '/bunfest', match: '', title: 'Midwest BunFest' },
+  install: {
+    to: '/settings',
+    match: '',
+    title: 'Settings',
+    note: 'Look for “Put OHRR on your phone.” If it isn’t there, the app is already on this phone.',
+  },
+  // The other site, in a new tab: its public pages, and its Staff side (which asks for a sign-in there).
   'other-site': { to: `${SHARE_SITE}/adopt`, match: '', title: 'the new website', external: true },
+  'other-staff': { to: `${SHARE_SITE}/staff`, match: '', title: 'the new website', external: true },
 }
 
 /** Where the Welcome page's "I have my invitation" goes: the join screen (an invite link carries its code). */

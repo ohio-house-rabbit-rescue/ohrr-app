@@ -13,6 +13,7 @@ import BringIn from '../components/BringIn'
 import { StatusNote } from '../features/scan/ScanUI'
 import { shareText } from '../features/share/share'
 import { APP_URL } from '../features/mybunny/ics'
+import { INVITE_SUBJECT, inviteMailto, inviteShortText, type InviteWords } from '../lib/inviteText'
 import {
   PERMISSION_CATALOG,
   PRESETS,
@@ -48,11 +49,6 @@ import {
 function joinUrl(code: string): string {
   const base = APP_URL.replace(/\/my-bunny\/?$/, '')
   return code ? `${base}/staff/join?code=${encodeURIComponent(code)}` : `${base}/staff/join`
-}
-
-/** The plain "what this is and how to begin" page, linked from every invite so nobody joins without a way in. */
-function welcomeUrl(): string {
-  return `${APP_URL.replace(/\/my-bunny\/?$/, '')}/welcome`
 }
 
 /** Shown wherever inviting needs update 30 and it hasn't been run. */
@@ -219,6 +215,7 @@ function InvitePanel({
   orgId,
   tiersReady,
   levelChoices,
+  fromName,
   onInvited,
 }: {
   orgId: string
@@ -226,6 +223,8 @@ function InvitePanel({
   tiersReady: boolean
   /** The levels this person may invite at, highest first. */
   levelChoices: StaffLevel[]
+  /** The inviter's own name, to sign the invite with. */
+  fromName: string
   onInvited: () => void
 }) {
   const { can } = useAuth()
@@ -329,6 +328,12 @@ function InvitePanel({
       /* clipboard may be unavailable; the code is shown for manual copy */
     }
   }
+
+  // What Email it, Text it and Share all say: one short message, one link.
+  const words: InviteWords | null =
+    code && made
+      ? { link: joinUrl(code), name: who.name, from: fromName, accessUntil: made.until ? accessDate(made.until) : null }
+      : null
 
   if (!tiersReady) {
     return (
@@ -471,7 +476,7 @@ function InvitePanel({
         </div>
       </EditorForm>
 
-      {code && made && (
+      {code && made && words && (
         // The invite is made: take them to the code, so they can show, send or copy it.
         <BringIn key={code} keyboard="away">
         <Card className="space-y-3 border-brand-blue/30 bg-brand-blue-50/60">
@@ -497,45 +502,29 @@ function InvitePanel({
 
           <CardActions>
             {who.email && (
-              <a
-                href={`mailto:${who.email}?subject=${encodeURIComponent('Your OHRR staff invite')}&body=${encodeURIComponent(
-                  `Hi${who.name ? ` ${who.name}` : ''},\n\nHere's your invite to the OHRR staff app${who.position ? ` for ${who.position}` : ''}.\n\n1. Tap this link (it has your code in it):\n${joinUrl(code)}\n\n2. Create your sign-in with the email this message came to. If you already have an OHRR account, tap Sign in instead.\n\n3. Tap "Join the team". Your code is already filled in, and you're in.\n\nThe link didn't work? Open ${joinUrl('')} and type this code: ${code}\n\nNew here? A short walk-through of the app is at ${welcomeUrl()}
-
-The code is single-use and expires in 14 days.${made.until ? ` Your access runs until ${accessDate(made.until)}.` : ''}\n\nOhio House Rabbit Rescue`,
-                )}`}
-                className={pill.blue}
-              >
+              <a href={inviteMailto(who.email, words)} className={pill.blue}>
                 <Icon name="mail" size={16} /> Email it
               </a>
             )}
             {who.phone && (
-              <a
-                href={`sms:${who.phone.replace(/[^0-9+]/g, '')}?&body=${encodeURIComponent(
-                  `Your OHRR staff invite: ${joinUrl(code)} (code ${code}). New here? Start at ${welcomeUrl()}`,
-                )}`}
-                className={pill.blue}
-              >
+              <a href={`sms:${who.phone.replace(/[^0-9+]/g, '')}?&body=${encodeURIComponent(inviteShortText(words))}`} className={pill.blue}>
                 Text it
               </a>
             )}
-            <button
-              type="button"
-              onClick={() => shareText(`Your OHRR staff invite: ${joinUrl(code)} (code ${code}). New here? Start at ${welcomeUrl()}`, 'OHRR staff invite')}
-              className={pill.outline}
-            >
+            <button type="button" onClick={() => shareText(inviteShortText(words), INVITE_SUBJECT)} className={pill.outline}>
               Share
             </button>
           </CardActions>
 
           <p className="text-sm leading-relaxed text-slate-600">
-            Single-use, expires in 14 days. They sign in (or create a sign-in) and the code joins them to the team with the
-            access you chose.
+            The invite is a short message with one link. They tap it, make a password with this email address, and they’re
+            on the team with the access you chose. Single-use, works for 14 days.
           </p>
         </Card>
         </BringIn>
       )}
 
-      <WaitingInvites orgId={orgId} reloadKey={code ?? ''} />
+      <WaitingInvites orgId={orgId} reloadKey={code ?? ''} fromName={fromName} />
     </>
   )
 }
@@ -582,7 +571,7 @@ function parseInvites(data: Json | null): WaitingInvite[] {
   return out
 }
 
-function WaitingInvites({ orgId, reloadKey }: { orgId: string; reloadKey: string }) {
+function WaitingInvites({ orgId, reloadKey, fromName }: { orgId: string; reloadKey: string; fromName: string }) {
   const [invites, setInvites] = useState<WaitingInvite[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -646,6 +635,14 @@ function WaitingInvites({ orgId, reloadKey }: { orgId: string; reloadKey: string
               </li>
             )
           }
+          // The same short invite as the first time, with the days it has left.
+          const again: InviteWords = {
+            link: joinUrl(i.code),
+            name: i.invitee_name,
+            from: fromName,
+            linkUntil: i.expires_at ? shortDate(i.expires_at.slice(0, 10)) : null,
+            accessUntil: i.access_until ? accessDate(i.access_until) : null,
+          }
           return (
             <li key={i.code} className="space-y-1.5 py-2.5">
               <div className="flex items-start justify-between gap-2">
@@ -664,12 +661,13 @@ function WaitingInvites({ orgId, reloadKey }: { orgId: string; reloadKey: string
                 <span className="font-mono"> · {i.code}</span>
               </p>
               <CardActions>
-                <button
-                  type="button"
-                  onClick={() => shareText(`Your OHRR staff invite: ${joinUrl(i.code)} (code ${i.code})`, 'OHRR staff invite')}
-                  className={pill.outline}
-                >
-                  Send again
+                {i.invitee_email && (
+                  <a href={inviteMailto(i.invitee_email, again)} className={pill.outline}>
+                    <Icon name="mail" size={16} /> Email it again
+                  </a>
+                )}
+                <button type="button" onClick={() => shareText(inviteShortText(again), INVITE_SUBJECT)} className={pill.outline}>
+                  {i.invitee_email ? 'Share' : 'Send again'}
                 </button>
                 <button
                   type="button"
@@ -1766,7 +1764,7 @@ export default function StaffTeam() {
       {!loading && levelsReady && <HowAccessWorks tiersReady={tiersReady} />}
 
       {canInvite && !loading && (
-        <InvitePanel orgId={orgId} tiersReady={tiersReady} levelChoices={levelChoices ?? []} onInvited={load} />
+        <InvitePanel orgId={orgId} tiersReady={tiersReady} levelChoices={levelChoices ?? []} fromName={me ? me.display_name || me.account_name || '' : ''} onInvited={load} />
       )}
 
       <FormError>{error}</FormError>

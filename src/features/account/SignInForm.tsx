@@ -3,9 +3,15 @@
 // `next` that goes back to the staff area, and an invite code is what adds the
 // staff features to the same login.
 //
-// Sign-up needs no confirmation email (OHRR's Supabase has "Confirm email"
-// off), so signUp() hands back a session straight away; if that setting is
-// ever turned back on, the "Confirm your email" screen below still covers it.
+// OHRR's Supabase has "Confirm email" ON (2026-11): signUp() hands back no
+// session, an email with a link goes out, and the "Check your email" screen
+// below takes over. If the setting is switched off, signUp() returns a session
+// and that screen is simply never shown.
+//
+// Someone who came in by an invite link (the code is kept by pendingInvite)
+// gets a shorter, warmer version: a welcome, three boxes, one button. Their
+// confirmation link comes back to the join screen with the code in it, so the
+// tap in the email finishes the job on whatever device they open it.
 import { useState } from 'react'
 import { supabase, errMessage } from '../../lib/supabase'
 import { btn, Card, Screen } from '../../components/ui'
@@ -38,11 +44,23 @@ export default function SignInForm({
   const [info, setInfo] = useState<string | null>(null)
   const [checkEmail, setCheckEmail] = useState(false)
   const [resetSent, setResetSent] = useState(false)
+  const [again, setAgain] = useState<'idle' | 'sending' | 'sent' | 'wait'>('idle')
+  // They opened an invite link: its code is waiting on this phone.
+  const inviteCode = getPendingInvite()
+  // Where the confirmation email's link lands. With an invite, the join screen with the code in it.
+  const confirmTo = inviteCode ? `${authOrigin()}/staff/join?code=${encodeURIComponent(inviteCode)}` : `${authOrigin()}/account`
 
   const switchTo = (m: Mode) => {
     setMode(m)
     setError(null)
     setInfo(null)
+  }
+
+  const sendAgain = async () => {
+    setAgain('sending')
+    const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim(), options: { emailRedirectTo: confirmTo } })
+    // Supabase allows one a minute; any refusal reads the same to the person waiting.
+    setAgain(error ? 'wait' : 'sent')
   }
 
   const onSubmit = async (e: { preventDefault(): void }) => {
@@ -62,7 +80,7 @@ export default function SignInForm({
         return
       }
       if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
+        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: confirmTo } })
         // That email already has an account. Depending on the project's
         // settings Supabase either says so, or hands back a user with no
         // identities and no session — and then no email ever comes, so
@@ -77,7 +95,7 @@ export default function SignInForm({
         }
         if (error) throw error
         if (!data.session) {
-          // "Confirm email" is on after all: keep the name for their first sign-in.
+          // "Confirm email" is on: keep the name for their first sign-in.
           rememberPendingName(name)
           setCheckEmail(true)
           return
@@ -103,26 +121,55 @@ export default function SignInForm({
         <div className="pt-6 text-brand-blue" aria-hidden>
           <Icon name="mail" size={40} className="mx-auto" />
         </div>
-        <h1 className="font-display text-xl font-extrabold text-ink">Confirm your email</h1>
-        <p className="text-sm leading-relaxed text-slate-600">
-          We sent a confirmation link to <strong>{email}</strong>. Open it, then come back and sign in.
+        <h1 className="font-display text-2xl font-black text-ink">One more step: check your email</h1>
+        <p className="text-base leading-relaxed text-slate-600">
+          We just sent an email to <strong className="break-all">{email}</strong>.
         </p>
-        {getPendingInvite() && (
-          <p className="rounded-xl bg-brand-orange-50 px-3 py-2 text-left text-sm leading-relaxed text-slate-700">
-            <strong>Joining the OHRR team?</strong> Your invite code is saved on this phone, and signing in takes you
-            straight to it. If you opened the confirmation link on another device, open your invite email again and tap
-            its link there.
-          </p>
-        )}
+        <ol className="mx-auto max-w-sm space-y-3 text-left text-base leading-relaxed text-slate-700">
+          {[
+            'Open your email. Look for a new message asking you to confirm. It can say it is from “Supabase”, which sends it for OHRR.',
+            'Tap the link in that email.',
+            inviteCode ? 'That’s it. The link opens the app again, and you’re on the team.' : 'Come back here and sign in.',
+          ].map((line, i) => (
+            <li key={line} className="flex items-start gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-blue font-display text-base font-black text-white" aria-hidden>
+                {i + 1}
+              </span>
+              <span className="pt-0.5">{line}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="mx-auto max-w-sm space-y-2 rounded-2xl bg-slate-50 px-4 py-3 text-left">
+          <p className="text-sm leading-relaxed text-slate-600">No email after a few minutes? Look in your spam or junk folder. Still nothing?</p>
+          <button
+            type="button"
+            onClick={() => void sendAgain()}
+            disabled={again === 'sending'}
+            className="min-h-[48px] w-full rounded-full border-2 border-brand-blue bg-white px-5 text-base font-bold text-brand-blue disabled:opacity-60"
+          >
+            {again === 'sending' ? 'Sending…' : 'Send it again'}
+          </button>
+          {again === 'sent' && (
+            <p className="text-sm font-semibold text-green-800" role="status">
+              Sent again. Give it a minute or two.
+            </p>
+          )}
+          {again === 'wait' && (
+            <p className="text-sm font-semibold text-slate-700" role="status">
+              It can only be sent once a minute. Wait a minute, then tap Send it again.
+            </p>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => {
             setCheckEmail(false)
+            setAgain('idle')
             switchTo('signin')
           }}
-          className={`${btn.blue} mx-auto`}
+          className="min-h-[44px] text-sm font-bold text-brand-blue"
         >
-          Back to sign in
+          I tapped the link. Sign in
         </button>
       </Screen>
     )
@@ -167,27 +214,41 @@ export default function SignInForm({
     )
   }
 
+  // Invited: one welcome, a line or two, nothing else to read.
+  const invited = Boolean(inviteCode) && mode !== 'forgot'
   const heading =
     mode === 'forgot'
       ? 'Reset password'
-      : mode === 'signup'
-        ? 'Create your account'
-        : forStaff
-          ? 'Staff sign-in'
-          : 'Sign in'
+      : invited
+        ? mode === 'signup'
+          ? 'Welcome. You’re invited to the OHRR team'
+          : 'Sign in to join the OHRR team'
+        : mode === 'signup'
+          ? 'Create your account'
+          : forStaff
+            ? 'Staff sign-in'
+            : 'Sign in'
   const sub =
     mode === 'forgot'
       ? 'Enter your email and we’ll send a link to set a new password.'
-      : forStaff
-        ? 'Staff and volunteers use the same OHRR account as everyone else. Sign in, and the staff area opens.'
-        : 'One account for the OHRR app: your favorite rabbits, saved BunFest sessions and My Bunny on any phone, and the emails you want from OHRR.'
+      : invited
+        ? mode === 'signup'
+          ? 'Fill in the three boxes, then tap the button. That’s all.'
+          : 'Use the email your invitation came to.'
+        : forStaff
+          ? mode === 'signup'
+            ? 'Staff and volunteers use the same OHRR account as everyone else. Create it here, then tap the link in your invite email.'
+            : 'Staff and volunteers use the same OHRR account as everyone else. Sign in, and the staff area opens.'
+          : 'One account for the OHRR app: your favorite rabbits, saved BunFest sessions and My Bunny on any phone, and the emails you want from OHRR.'
   const submitLabel =
     status === 'submitting'
       ? 'Working…'
       : mode === 'signin'
         ? 'Sign in'
         : mode === 'signup'
-          ? 'Create account'
+          ? invited
+            ? 'Create my sign-in'
+            : 'Create account'
           : 'Send reset link'
 
   return (
@@ -195,14 +256,7 @@ export default function SignInForm({
       <div className="pt-2">
         <h1 className="font-display text-2xl font-black text-ink">{heading}</h1>
         {notice && <p className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">{notice}</p>}
-        <p className="mt-1 text-sm leading-relaxed text-slate-600">{sub}</p>
-        {mode === 'signup' && forStaff && (
-          <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            {getPendingInvite()
-              ? 'After you create your account, you’ll go straight to joining the team — your invite code is already saved.'
-              : 'After you create your account, you’ll enter the invite code the person bringing you on gave you.'}
-          </p>
-        )}
+        <p className={`mt-1 leading-relaxed text-slate-600 ${invited ? 'text-base' : 'text-sm'}`}>{sub}</p>
       </div>
 
       {info && (
@@ -215,7 +269,7 @@ export default function SignInForm({
         <form onSubmit={onSubmit} className="space-y-3">
           {mode === 'signup' && (
             <label className="block text-sm font-semibold text-slate-700">
-              Your name <span className="font-normal text-slate-400">(optional)</span>
+              Your name {!invited && <span className="font-normal text-slate-400">(optional)</span>}
               <input
                 className={staffInput}
                 autoComplete="name"
@@ -237,6 +291,9 @@ export default function SignInForm({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+            {invited && mode === 'signup' && (
+              <span className="mt-1 block text-sm font-normal text-slate-600">Use the email your invitation came to.</span>
+            )}
           </label>
           {mode !== 'forgot' && (
             <label className="block text-sm font-semibold text-slate-700">
@@ -248,7 +305,11 @@ export default function SignInForm({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              {mode === 'signup' && <span className="mt-1 block text-xs font-normal text-slate-500">At least 8 characters.</span>}
+              {mode === 'signup' && (
+                <span className={`mt-1 block font-normal ${invited ? 'text-sm text-slate-600' : 'text-xs text-slate-500'}`}>
+                  {invited ? 'Make up a new one, at least 8 characters. You’ll use it each time you sign in.' : 'At least 8 characters.'}
+                </span>
+              )}
             </label>
           )}
 
@@ -282,7 +343,7 @@ export default function SignInForm({
         </p>
       ) : (
         <p className="text-center text-sm text-slate-500">
-          {mode === 'signin' ? 'New here?' : 'Already have an account?'}{' '}
+          {mode === 'signin' ? 'New here?' : invited ? 'Already have an OHRR account?' : 'Already have an account?'}{' '}
           <button
             type="button"
             onClick={() => switchTo(mode === 'signin' ? 'signup' : 'signin')}

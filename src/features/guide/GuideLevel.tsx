@@ -10,7 +10,7 @@ import { useGuideProgress } from './useGuide'
 import { LEVELS, STUCK_TEXT, canOpen, fill, levelAfter, levelStatus, stepId, skipId, type GuideLevel as Level } from './walkthrough'
 import { GuideGate, matchOf } from './GuideTrail'
 import { PracticeScreen } from './Practice'
-import { BLUE_BTN, GuidePage, InstallCard, ORANGE_BTN, OUTLINE_BTN, ProgressBar } from './guideUi'
+import { BLUE_BTN, GuidePage, ORANGE_BTN, OUTLINE_BTN, ProgressBar } from './guideUi'
 
 export default function GuideLevelPage() {
   const { level: key } = useParams()
@@ -64,7 +64,6 @@ function LevelBody({ level }: { level: Level }) {
           {level.goal} About {level.minutes} minutes. Check each step when you’ve done it, or skip it for now; your choices are saved.
         </p>
       </StaffTitle>
-      {level.key === 'mine' && <InstallCard />}
       {!st.na && <ProgressBar done={st.done} total={st.total} label={`Level ${level.n} steps done`} />}
 
       {st.na && (
@@ -202,6 +201,8 @@ function LevelBody({ level }: { level: Level }) {
 
 function doneLine(level: Level): string {
   switch (level.key) {
+    case 'look':
+      return 'You’ve seen both sides: the public side everyone sees, and the Staff side that is just for the team. When you are on the public side, look near the top for the word “Staff.” It brings you back.'
     case 'mine':
       return 'You know where your name, your level and your hours live. That’s the whole “make it yours” level.'
     case 'appear':

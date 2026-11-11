@@ -13,6 +13,8 @@ export interface FaqItem {
   q: string
   a: string
   link?: FaqLink
+  /** Shown only on a phone a team member has signed in on (lib/teamDevice): visitors don't hear of the Staff side. */
+  team?: true
 }
 
 export interface FaqCategory {
@@ -151,7 +153,7 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'What do the icons at the top do?',
-        a: 'The magnifying glass searches the whole app (type or tap the mic to speak), the question mark opens this Help, and the gear opens Settings. The back arrow on its left returns to the previous screen.',
+        a: 'The magnifying glass searches the whole app (type or tap the mic to speak), the question mark opens this Help, and the gear opens Settings. The last one, the person, is your account: it says “Sign in” until you sign in, then it opens My OHRR. The back arrow on the left returns to the previous screen.',
         link: { label: 'Search the app', to: '/search' },
       },
       {
@@ -167,6 +169,18 @@ export const faqCategories: FaqCategory[] = [
       {
         q: 'How do I see my volunteer hours?',
         a: 'You don’t need an account to see your hours. Ask OHRR for your private hours link.',
+      },
+      {
+        q: 'I’m on the OHRR team. How do I get to the Staff side?',
+        a: 'Tap “Sign in” at the top right, and sign in with the email and password you made from your invitation. After that, look just under the top bar for the word “Staff.” Tap it and you are on the Staff side. New to the team? Open your invitation email first and tap the link in it.',
+        link: { label: 'Sign in', to: '/account?next=%2Fstaff' },
+        team: true,
+      },
+      {
+        q: 'I’m on the team. Where are my volunteer hours?',
+        a: 'On the Staff side, under “My volunteer hours.” Sign in first, then tap “Staff” just under the top bar.',
+        link: { label: 'Go to the Staff side', to: '/staff' },
+        team: true,
       },
     ],
   },

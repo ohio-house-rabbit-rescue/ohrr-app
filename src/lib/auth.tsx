@@ -12,6 +12,7 @@ import { CAPABILITIES, type Capability } from './capabilities'
 import { accessEnded, isMissingColumn } from './staffLevels'
 import type { MembershipRole, MembershipStatus } from './database.types'
 import { flushAccountSync } from '../features/account/sync'
+import { markTeamDevice } from './teamDevice'
 
 export interface Membership {
   id: string
@@ -169,6 +170,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessEndedOn(null)
     setAccessOnHold(false)
     setMembership(m)
+    // This phone has had a team member on it: the public side may offer the way to Staff (TeamStrip).
+    markTeamDevice()
 
     if (m.role === 'owner' || m.role === 'admin') {
       setCapabilities(new Set(CAPABILITIES))

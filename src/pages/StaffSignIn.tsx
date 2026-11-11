@@ -22,15 +22,20 @@ export default function StaffSignIn() {
         </span>
         <h1 className="font-display text-2xl font-black text-ink">This area is for OHRR staff and volunteers</h1>
         <Card className="space-y-3">
-          <p className="text-base leading-relaxed text-slate-700">
-            If you work or volunteer with OHRR and were given an account, please sign in.
-          </p>
+          <p className="text-base font-bold text-ink">Already on the team?</p>
+          <p className="text-base leading-relaxed text-slate-700">Sign in with the email and password you made.</p>
           <Link to={`/account?next=${encodeURIComponent('/staff')}`} className={`${btn.primary} w-full`}>
             Sign in
           </Link>
         </Card>
+        <Card className="space-y-2">
+          <p className="text-base font-bold text-ink">Have an invitation?</p>
+          <p className="text-base leading-relaxed text-slate-700">
+            Open your invitation email or text and tap the link in it. The link sets everything up for you.
+          </p>
+        </Card>
         <p className="text-base leading-relaxed text-slate-700">
-          If you don’t have an account, there’s nothing for you here. Thank you for stopping by, and for caring about rabbits.
+          Not on the team? This part isn’t for visitors. Thank you for stopping by, and for caring about bunnies.
         </p>
         <Link to="/" className="inline-flex min-h-[44px] items-center gap-1 text-base font-bold text-brand-blue">
           <Icon name="arrowLeft" size={16} /> Back to the app

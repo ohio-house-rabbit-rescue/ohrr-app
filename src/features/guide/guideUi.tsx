@@ -27,7 +27,7 @@ export function ProgressBar({ done, total, label }: { done: number; total: numbe
   )
 }
 
-/** "Before you start: put the app on your phone". On the Welcome page and at the top of Level 1. */
+/** "Optional: put OHRR on your phone’s home screen". On the Welcome page; in the guide it is Level 1's last step. */
 export function InstallCard() {
   return (
     <Card className="space-y-2 border-brand-blue/20 bg-brand-blue-50/50">

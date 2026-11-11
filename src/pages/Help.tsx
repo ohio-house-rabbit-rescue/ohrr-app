@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { helpIntro, faqCategories, type FaqItem } from '../data/help'
 import { ohrr } from '../data/ohrr'
 import { useOrgProfile } from '../lib/orgProfile'
+import { isTeamDevice } from '../lib/teamDevice'
 import { PageHeader, Screen, Card, SectionLabel, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 
@@ -49,12 +50,17 @@ export default function Help() {
   const [query, setQuery] = useState('')
 
   const q = query.trim().toLowerCase()
+  // The team's own questions show only on a phone a team member has signed in on.
+  const categories = useMemo(() => {
+    const team = isTeamDevice()
+    return faqCategories.map((c) => ({ ...c, items: c.items.filter((it) => team || !it.team) }))
+  }, [])
   const matches = useMemo(() => {
     if (!q) return []
-    return faqCategories
+    return categories
       .flatMap((c) => c.items)
       .filter((it) => `${it.q} ${it.a}`.toLowerCase().includes(q))
-  }, [q])
+  }, [q, categories])
 
   return (
     <>
@@ -117,7 +123,7 @@ export default function Help() {
             </p>
           )
         ) : (
-          faqCategories.map((cat) => (
+          categories.map((cat) => (
             <section key={cat.title} className="space-y-2">
               <SectionLabel>{cat.title}</SectionLabel>
               <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">

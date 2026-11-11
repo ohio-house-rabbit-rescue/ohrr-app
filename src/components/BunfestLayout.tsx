@@ -1,5 +1,6 @@
 import { Link, Outlet } from 'react-router-dom'
 import BunfestTopBar from './BunfestTopBar'
+import TeamStrip from './TeamStrip'
 import TabBar from './TabBar'
 import ScrollToTop from './ScrollToTop'
 import { Card, Screen, btn } from './ui'
@@ -19,7 +20,11 @@ export default function BunfestLayout() {
     <div className="theme-bunfest min-h-screen bg-canvas">
       <div className="relative mx-auto flex min-h-screen max-w-[480px] flex-col bg-white font-sans text-ink shadow-xl">
         <ScrollToTop />
-        <BunfestTopBar />
+        {/* As in OhrrLayout: the top bar and the team's row under it stay put together. */}
+        <div className="sticky top-0 z-30">
+          <BunfestTopBar />
+          <TeamStrip />
+        </div>
         <main className="flex-1 pb-24">
           {loading || on ? (
             <Outlet />

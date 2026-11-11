@@ -1,12 +1,14 @@
 // The guided start: a self-guided trail for staff who are new to the app (OHRR, 2026-11-04).
 // John will not be in the room, so the pages teach, encourage and sell on their own: short levels,
-// a "you should see" line on every step, a tick box, a Done screen. Money comes late.
+// a "you should see" line on every step, a check box, a Done screen. Money comes late.
+// Level 1 is the public side (what every visitor sees) before any staff page, so a new person knows the two sides.
 //
 // ONE content file for the app and the website — keep the two copies identical. A step names a page by
 // a route key (`go`); each repo maps keys to its own paths and page titles in guideEnv.ts. `{title}` in a
 // step's text becomes that page's real title in the repo showing it.
 //
 // Every "see" line quotes words that are really on the screen. When a screen changes, change its line here.
+import { SECOND_EMAIL_STEP } from '../../lib/inviteText'
 
 export const PROGRAM_NAME = 'Hop Into the App'
 
@@ -43,7 +45,11 @@ export type RouteKey =
   | 'raffle'
   | 'public-events'
   | 'public-shop'
+  | 'public-home'
+  | 'public-bunfest'
+  | 'install'
   | 'other-site'
+  | 'other-staff'
 
 /** A pretend screen that saves nothing (practice.tsx). */
 export type PracticeKey = 'hours' | 'announcement' | 'receive' | 'scan' | 'sell-basket' | 'sell-pay' | 'raffle'
@@ -74,8 +80,47 @@ export interface GuideLevel {
 
 export const LEVELS: GuideLevel[] = [
   {
-    key: 'mine',
+    key: 'look',
     n: 1,
+    title: 'Look around',
+    goal: 'See the two sides of OHRR: the public side everyone sees, and the Staff side, which is only for the team.',
+    minutes: 5,
+    steps: [
+      {
+        key: 'home',
+        do: 'Open {title}. This is the public side: what every visitor sees, with no sign-in.',
+        see: 'The page a visitor sees first. At the top, a bar says “Back to Level 1: Look around.” Tap it to come back here.',
+        go: { route: 'public-home', label: 'Open {title}' },
+      },
+      {
+        key: 'bunnies',
+        do: 'Open {title}. This is where the public meets the bunnies.',
+        see: 'A page titled “{title}” with the bunnies looking for homes. Anyone can see this page.',
+        go: { route: 'adopt-page', label: 'Open {title}' },
+      },
+      {
+        key: 'bunfest',
+        do: 'Open {title}. BunFest is OHRR’s big event of the year, and it has its own pages.',
+        see: 'The BunFest pages, the way a visitor sees them. The same bar at the top brings you back here.',
+        go: { route: 'public-bunfest', label: 'Open {title}' },
+      },
+      {
+        key: 'other',
+        do: 'Open {title} in a new tab. It is the same OHRR, made for a different screen: the app for a phone, the website for a bigger screen. Look around, then come back to this tab.',
+        see: 'The same bunnies and the same events. The app and the website share one list, so they always match. You don’t need to sign in there today.',
+        go: { route: 'other-site', label: 'Open {title}' },
+      },
+      {
+        key: 'install',
+        do: 'Optional, for a phone: put an OHRR icon on your home screen, so the app is one tap away. Open {title} and follow the steps for your phone. On a computer, skip this step.',
+        see: 'An OHRR icon on your phone’s home screen. The first time you open it, sign in once more with the same email and password.',
+        go: { route: 'install', label: 'Open {title}' },
+      },
+    ],
+  },
+  {
+    key: 'mine',
+    n: 2,
     title: 'Make it yours',
     goal: 'See your name, your level and exactly what you can do.',
     minutes: 5,
@@ -109,7 +154,7 @@ export const LEVELS: GuideLevel[] = [
   },
   {
     key: 'appear',
-    n: 2,
+    n: 3,
     title: 'Make something appear',
     goal: 'See how a notice reaches everyone’s phone, without posting anything real.',
     minutes: 5,
@@ -136,7 +181,7 @@ export const LEVELS: GuideLevel[] = [
   },
   {
     key: 'daily',
-    n: 3,
+    n: 4,
     title: 'The daily check',
     goal: 'Know where new sign-ups and messages show up.',
     minutes: 5,
@@ -163,7 +208,7 @@ export const LEVELS: GuideLevel[] = [
   },
   {
     key: 'rabbits',
-    n: 4,
+    n: 5,
     title: 'Our rabbits',
     goal: 'See your own rabbits the way the public sees them.',
     minutes: 5,
@@ -190,7 +235,7 @@ export const LEVELS: GuideLevel[] = [
   },
   {
     key: 'receive',
-    n: 5,
+    n: 6,
     title: 'Receive and scan',
     goal: 'See how a donation becomes an item with its own code that anyone can scan.',
     minutes: 5,
@@ -229,14 +274,14 @@ export const LEVELS: GuideLevel[] = [
   },
   {
     key: 'shop',
-    n: 6,
+    n: 7,
     title: 'Hop Shop: look around',
     goal: 'See stock, prices and deliveries. Numbers only, nothing sold.',
     minutes: 5,
     steps: [
       {
         key: 'open',
-        do: 'Open {title} and read the top of the page. If you see a Sell button, leave it for Level 7.',
+        do: 'Open {title} and read the top of the page. If you see a Sell button, leave it for Level 8.',
         see: 'A page titled “{title}.” Stock, prices and photos here go live on the public Hop Shop as soon as they are saved, which is why today is for looking only.',
         go: { route: 'hopshop', label: 'Open {title}' },
       },
@@ -262,7 +307,7 @@ export const LEVELS: GuideLevel[] = [
   },
   {
     key: 'sell',
-    n: 7,
+    n: 8,
     title: 'Practice selling',
     goal: 'Ring up a pretend sale. The cash box and card reader work exactly as they do now.',
     minutes: 10,
@@ -302,7 +347,7 @@ export const LEVELS: GuideLevel[] = [
   },
   {
     key: 'bunfest',
-    n: 8,
+    n: 9,
     title: 'BunFest season',
     goal: 'See how BunFest runs from the app: the program, the bunnies, the raffle table and the door.',
     minutes: 15,
@@ -348,7 +393,7 @@ export const LEVELS: GuideLevel[] = [
   },
   {
     key: 'website',
-    n: 9,
+    n: 10,
     title: 'The new website',
     goal: 'See the public pages, and see that the app and the website show the same rabbits.',
     minutes: 5,
@@ -356,13 +401,13 @@ export const LEVELS: GuideLevel[] = [
       {
         key: 'events',
         do: 'Open {title}, the page a visitor sees. It is outside the Staff area.',
-        see: 'A page titled “{title}” with OHRR’s events. They come from the Events list you saw in Level 8, so a change made there shows up here.',
+        see: 'A page titled “{title}” with OHRR’s events. They come from the Events list you saw in Level 9, so a change made there shows up here.',
         go: { route: 'public-events', label: 'Open {title}' },
       },
       {
         key: 'shop',
         do: 'Open {title}, the page a visitor sees. It is outside the Staff area.',
-        see: 'A page titled “{title}” about the shop at the Adoption Center. This is how the public sees the shop you looked around in Level 6.',
+        see: 'A page titled “{title}” about the shop at the Adoption Center. This is how the public sees the shop you looked around in Level 7.',
         go: { route: 'public-shop', label: 'Open {title}' },
       },
       {
@@ -370,6 +415,12 @@ export const LEVELS: GuideLevel[] = [
         do: 'Open {title} in a new tab and find a rabbit you saw on the staff list that is not marked Hidden.',
         see: 'The same rabbit, with the same name and photos. The app and the website read one shared list, so a change in one shows up in the other.',
         go: { route: 'other-site', label: 'Open {title}' },
+      },
+      {
+        key: 'signin',
+        do: 'Sign in on {title} with the same email and password you use here. Your phone or computer remembers you after that.',
+        see: 'A sign-in page first. After you sign in, the Staff side of {title}. Your guide check marks are saved to your account, so they are there too.',
+        go: { route: 'other-staff', label: 'Open the Staff side of {title}' },
       },
     ],
   },
@@ -390,9 +441,10 @@ export const PROMISES = [
 ]
 
 export const START = [
-  'Open the invitation you were sent, by email or QR code.',
-  'Create your sign-in, or sign in if you already have an OHRR account.',
-  'On the Staff home screen, tap Start here.',
+  'Tap the link in your invitation. It came by email or text.',
+  'Make a password. Use the email address the invitation came to.',
+  ...(SECOND_EMAIL_STEP ? ['A second email will come. Tap the link in it.'] : []),
+  'Tap “Start the guide.”',
 ]
 
 /** The "Stuck?" note, on every level and on the printed handout. */
@@ -421,17 +473,18 @@ export const FLOWS: Flow[] = [
     title: 'Getting started',
     intro: 'From the invitation to your first check mark.',
     nodes: [
-      { label: 'Open your invitation', note: 'By email or QR code.', tone: 'start' },
-      { label: 'Create your sign-in', note: 'Or sign in, if you already have an OHRR account.' },
-      { label: 'Tap Start here', note: 'It is on the Staff home screen.' },
-      { label: 'Level 1: Make it yours', level: 'mine' },
+      { label: 'Tap the link in your invitation', note: 'It came by email or text.', tone: 'start' },
+      { label: 'Make a password', note: 'Use the email address the invitation came to.' },
+      ...(SECOND_EMAIL_STEP ? [{ label: 'Tap the link in the second email', note: 'It comes a moment after you make your password.' }] : []),
+      { label: 'Tap Start the guide', note: 'It is on the “You’re on the team” screen. Later, it is Start here on the Staff home screen.' },
+      { label: 'Level 1: Look around', level: 'look' },
       { label: 'Keep going, one level at a time', note: 'Stop any time. Your check marks are saved.', tone: 'end' },
     ],
   },
   {
     key: 'notice',
     title: 'A notice reaches everyone’s phone',
-    intro: 'Level 2 practices this on a pretend screen.',
+    intro: 'Level 3 practices this on a pretend screen.',
     nodes: [
       { label: 'Write a title and a message', tone: 'start', level: 'appear' },
       { label: 'Tap Post announcement' },
@@ -441,7 +494,7 @@ export const FLOWS: Flow[] = [
   {
     key: 'item',
     title: 'A donation becomes an item anyone can scan',
-    intro: 'Level 5 practices this on pretend screens.',
+    intro: 'Level 6 practices this on pretend screens.',
     nodes: [
       { label: 'Someone donates an item', tone: 'start' },
       { label: 'Receive it', note: 'Take a photo and type what it is.', level: 'receive' },
@@ -454,7 +507,7 @@ export const FLOWS: Flow[] = [
   {
     key: 'sale',
     title: 'A sale, start to finish',
-    intro: 'Level 7 practices this on pretend screens. The cash box and the card reader work exactly as they do now.',
+    intro: 'Level 8 practices this on pretend screens. The cash box and the card reader work exactly as they do now.',
     nodes: [
       { label: 'A customer picks things', tone: 'start' },
       { label: 'Fill the basket', note: 'Tap each item. Plus and minus change how many.', level: 'sell' },
@@ -467,7 +520,7 @@ export const FLOWS: Flow[] = [
   {
     key: 'raffle',
     title: 'The raffle table',
-    intro: 'Level 8 practices the first part on a pretend screen.',
+    intro: 'Level 9 practices the first part on a pretend screen.',
     nodes: [
       { label: 'Tickets are reserved in the app, or sold at the table', tone: 'start', level: 'bunfest' },
       { label: 'Take the money first', note: 'Cash in hand at the table.', tone: 'money' },
@@ -575,11 +628,12 @@ export function levelAfter(level: GuideLevel, openable: readonly string[] | null
   return LEVELS.filter((l) => l.n > level.n && !l.soon && !levelStatus(l, new Set(), openable, matchOf).na)[0] ?? null
 }
 
-/** Before you start: getting the app on a phone. Shown on the Welcome page, the first level and the printed guide. */
-export const INSTALL_TITLE = 'Before you start: put the app on your phone'
+/** Getting an OHRR icon on a phone: optional, and never in the way of starting. Shown on the Welcome page and the printed guide; Level 1 has it as its last step. */
+export const INSTALL_TITLE = 'Optional: put OHRR on your phone’s home screen'
 export const INSTALL_POINTS = [
-  `The app is free and runs in your phone’s web browser. Open ${APP_ADDRESS}, then sign in or create your sign-in.`,
-  'To get an OHRR icon on your home screen, open Settings in the app and tap “Put OHRR on your phone.” It shows the steps for your phone.',
+  `The app is free and runs in your phone’s web browser, at ${APP_ADDRESS}. There is nothing to buy or download first: the link in your invitation opens it.`,
+  'To get an OHRR icon on your home screen, open Settings in the app and find “Put OHRR on your phone.” It shows the steps for your phone. Level 1 of the guide takes you there.',
+  'The first time you open the icon, sign in once more with the same email and password.',
   'Some Android testers use an installed app file instead. The person who invited you can tell you if that is you. It updates itself: Settings, then About, then Check for updates.',
 ]
 

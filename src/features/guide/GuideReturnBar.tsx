@@ -1,5 +1,6 @@
-// A thin bar under the staff top bar: "Back to Level 3: The daily check", shown on a real page a guide step opened.
-// Identical in the app and the website; each staff layout renders it once.
+// A thin bar under the top bar: "Back to Level 3: The daily check", shown on a real page a guide step opened.
+// Identical in the app and the website; each layout renders it once, the public ones too (Level 1 opens
+// public pages).
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Icon } from '../../components/icons'

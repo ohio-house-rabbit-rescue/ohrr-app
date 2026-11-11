@@ -1,12 +1,12 @@
-// The screen right after "Join the team": says what just happened and hands the new person to the guide.
-// Identical in the app and the website.
+// The screen right after joining: says what just happened, names the two sides, and hands the new person to
+// the guide with one button. Identical in the app and the website.
 import { Link } from 'react-router-dom'
 import { Card } from '../../components/ui'
 import { StaffTitle } from '../../components/StaffTitle'
 import { LEVEL_PATH, TRAIL_PATH } from './guideEnv'
 import { useGuideAccess } from './useGuide'
 import { LEVELS, PROGRAM_NAME } from './walkthrough'
-import { BLUE_BTN, GuidePage, InstallCard, ORANGE_BTN } from './guideUi'
+import { GuidePage, ORANGE_BTN } from './guideUi'
 
 export default function GuideJoined() {
   const access = useGuideAccess()
@@ -16,23 +16,37 @@ export default function GuideJoined() {
   return (
     <GuidePage>
       <StaffTitle title="You’re on the team">
-        <p>Welcome. Your invite worked, and your Staff home screen now shows the pages your role needs.</p>
+        <p>Welcome. Your invitation worked.</p>
       </StaffTitle>
+      <Card className="space-y-3">
+        <p className="font-display text-lg font-black text-ink">OHRR has two sides</p>
+        <ul className="space-y-2 text-base leading-relaxed text-slate-700">
+          <li>
+            <strong className="text-ink">The public side</strong> is what everyone sees: the bunnies, events, the Hop Shop and BunFest.
+          </li>
+          <li>
+            <strong className="text-ink">The Staff side</strong> is only for the team. You are on it now, and it shows the pages your role needs.
+          </li>
+        </ul>
+      </Card>
       <Card className="space-y-3 border-brand-orange/40 bg-brand-orange-50/40">
         <p className="font-display text-lg font-black text-ink">{PROGRAM_NAME}</p>
         <p className="text-base leading-relaxed text-slate-700">
-          A short guide walks you through the app one small level at a time, about five minutes each. It only looks and practices, so nothing real gets posted, saved or charged.
+          A short guide shows you both sides, one small level at a time, about five minutes each. It only looks and practices, so nothing you do in it can break anything.
         </p>
         {access.loading ? null : (
-          <Link to={access.visible && first ? LEVEL_PATH(first.key) : TRAIL_PATH} className={ORANGE_BTN}>
+          <Link to={access.visible && first ? LEVEL_PATH(first.key) : TRAIL_PATH} className={`${ORANGE_BTN} w-full`}>
             Start the guide
           </Link>
         )}
       </Card>
-      <InstallCard />
-      <Link to="/staff" className={BLUE_BTN}>
-        Go to Staff home
-      </Link>
+      <p className="text-center text-sm text-slate-500">
+        Not now?{' '}
+        <Link to="/staff" className="inline-flex min-h-[44px] items-center font-bold text-brand-blue underline underline-offset-2">
+          Go to Staff home
+        </Link>
+        . The guide waits for you there, under Start here.
+      </p>
     </GuidePage>
   )
 }

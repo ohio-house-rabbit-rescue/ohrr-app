@@ -15,7 +15,7 @@
 // saved, saving to the account says it hasn't started, and the email choices
 // point to the mailing-list form. Nothing is ever looked up by the account's
 // email address — sign-up emails aren't confirmed.
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { JOINED_PATH } from '../guide/guideEnv'
 import type { User } from '@supabase/supabase-js'
@@ -31,6 +31,7 @@ import { activeBunnies, useMyBunny } from '../mybunny/storage'
 import { isFullAccess, levelInfo, useMyLevel } from '../../lib/staffLevels'
 import SignInForm from './SignInForm'
 import { clearPendingInvite, getPendingInvite } from '../../lib/pendingInvite'
+import { inviteProblem } from '../../lib/inviteText'
 import ForYou from './ForYou'
 import InterestPicker from './InterestPicker'
 import { EmailForm, PasswordForm } from './AccountForms'
@@ -47,16 +48,23 @@ function safeNext(v: string | null): string | null {
 }
 
 export default function MyOhrr() {
-  const { configured, loading, user } = useAuth()
+  const { configured, loading, user, membership } = useAuth()
   const [params] = useSearchParams()
   const location = useLocation()
   const next = safeNext(params.get('next'))
   const notice = (location.state as { notice?: string } | null)?.notice
+  // They were looking at the sign-in form on this visit, so what follows is a fresh sign-in.
+  const sawSignIn = useRef(false)
+  useEffect(() => {
+    if (configured && !loading && !user) sawSignIn.current = true
+  }, [configured, loading, user])
 
   if (!configured) return <NotConfigured />
   if (loading) return <Spinner />
   // Signed in with somewhere to go (the staff area, a scanned tag): go there.
   if (user && next) return <Navigate to={next} replace />
+  // A team member who just signed in here (the top bar's "Sign in") came to work: the Staff side, not this page.
+  if (user && membership && sawSignIn.current) return <Navigate to="/staff" replace />
   if (!user) {
     const forStaff = Boolean(next?.startsWith('/staff'))
     return (
@@ -82,15 +90,19 @@ export default function MyOhrr() {
 }
 
 function SignedIn({ user }: { user: User }) {
-  const { signOut } = useAuth()
+  const { signOut, membership } = useAuth()
   const name = useMyName(user.id)
   const first = firstName(name)
   const [signingOut, setSigningOut] = useState(false)
+  // The team's way in, or an invitation waiting on this phone, comes first; otherwise the staff part keeps its place.
+  const staffFirst = Boolean(membership) || Boolean(getPendingInvite())
 
   return (
     <>
       <PageHeader icon="user" title="My OHRR" subtitle={first ? `Hi, ${first}. Everything you’ve saved, and what OHRR emails you about.` : 'Everything you’ve saved, and what OHRR emails you about.'} />
       <Screen className="space-y-6">
+        {staffFirst && <StaffBox />}
+
         <ForYou />
 
         <section className="space-y-2">
@@ -117,7 +129,7 @@ function SignedIn({ user }: { user: User }) {
           <PasswordForm />
         </section>
 
-        <StaffBox />
+        {!staffFirst && <StaffBox />}
 
         <DeleteAccount label="Delete my account" />
 
@@ -414,7 +426,7 @@ function StaffBox() {
       setCode('')
       navigate(JOINED_PATH)
     } catch (err) {
-      setError(errMessage(err))
+      setError(inviteProblem(errMessage(err), user?.email).text)
     } finally {
       setBusy(false)
     }
