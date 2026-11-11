@@ -163,8 +163,8 @@ export const faqCategories: FaqCategory[] = [
       },
       {
         q: 'Do I need an account?',
-        a: 'No. Saving BunFest sessions and following bunnies work without one. You can optionally add your email in Settings so OHRR can reach you.',
-        link: { label: 'Settings', to: '/settings' },
+        a: 'No. The app works without one. A free account keeps your favorite bunnies, saved BunFest sessions and My Bunny on any phone you sign in on, and lets you pick the emails you want from OHRR. To make one, tap “Sign in” at the top right.',
+        link: { label: 'Sign in or make an account', to: '/account' },
       },
       {
         q: 'How do I see my volunteer hours?',
