@@ -144,6 +144,11 @@ export const faqCategories: FaqCategory[] = [
     title: 'Using this app',
     items: [
       {
+        q: 'I’m new here. Where do I start?',
+        a: 'Take the short tour called “Look around.” It opens the main pages one at a time and brings you back after each one. No sign-in is needed.',
+        link: { label: 'Take a look around', to: '/look-around' },
+      },
+      {
         q: 'How do I get back to OHRR from Midwest BunFest?',
         a: 'Tap the “OHRR” tab at the bottom-left of the BunFest screens — it returns you to the main OHRR app.',
       },

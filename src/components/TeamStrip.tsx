@@ -1,4 +1,5 @@
-// The row under the top bar on the public side. It is for the team only: a visitor never sees it.
+// The row under the top bar on the public side. It is for the team only: a visitor never sees it, with one
+// exception, the way back to the visitors' tour ("Back to Look around"), which is for everyone.
 //
 //   a guide step opened this page        "Back to Level 1: Look around" (GuideReturnBar)
 //   on the team                          this is the public side, and the way to Staff
@@ -12,6 +13,7 @@ import { getPendingInvite } from '../lib/pendingInvite'
 import { isTeamDevice } from '../lib/teamDevice'
 import { readReturn } from '../features/guide/guideReturn'
 import GuideReturnBar from '../features/guide/GuideReturnBar'
+import { TOUR_PATH } from '../features/guide/walkthrough'
 import { Icon } from './icons'
 
 // Kept for this tab only: the invitation was already forwarded to the join page once, so a problem there
@@ -38,6 +40,9 @@ export default function TeamStrip() {
     }
     navigate('/staff/join', { replace: true })
   }, [inviteWaiting, onAccount, navigate])
+
+  // The visitors' tour is for everyone, signed in or not: its way back shows whoever is looking.
+  if (readReturn()?.to === TOUR_PATH) return <GuideReturnBar />
 
   if (!configured || loading) return null
 

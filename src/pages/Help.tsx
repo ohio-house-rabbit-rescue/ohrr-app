@@ -4,6 +4,7 @@ import { helpIntro, faqCategories, type FaqItem } from '../data/help'
 import { ohrr } from '../data/ohrr'
 import { useOrgProfile } from '../lib/orgProfile'
 import { isTeamDevice } from '../lib/teamDevice'
+import { TOUR_PATH } from '../features/guide/walkthrough'
 import { PageHeader, Screen, Card, SectionLabel, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 
@@ -74,6 +75,18 @@ export default function Help() {
             <Icon name="arrowLeft" size={16} /> Back
           </Link>
         )}
+
+        {/* New here: the short tour of the public pages */}
+        <Link
+          to={TOUR_PATH}
+          className="flex min-h-[44px] items-center justify-between gap-3 rounded-2xl border border-brand-blue/20 bg-brand-blue-50/50 px-4 py-3.5 transition hover:bg-brand-blue-50"
+        >
+          <span className="min-w-0">
+            <span className="block font-display text-base font-extrabold text-ink">New here? Take a look around</span>
+            <span className="mt-0.5 block text-sm leading-relaxed text-slate-600">A short tour of the main pages, one at a time.</span>
+          </span>
+          <Icon name="chevron" size={18} className="shrink-0 text-brand-blue" />
+        </Link>
 
         {/* Support hub — reach a human */}
         <Card className="border-brand-orange/25 bg-brand-orange-50/50">

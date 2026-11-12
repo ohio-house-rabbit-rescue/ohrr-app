@@ -47,6 +47,7 @@ export type RouteKey =
   | 'public-shop'
   | 'public-home'
   | 'public-bunfest'
+  | 'public-help'
   | 'install'
   | 'other-site'
   | 'other-staff'
@@ -77,6 +78,59 @@ export interface GuideLevel {
   money?: boolean
   steps: GuideStep[]
 }
+
+// "Look around" for visitors (LookAround.tsx, 2026-11-12): the public pages one at a time, with no sign-in.
+// It is for everyone, so it never mentions the Staff side (that stays hidden from visitors). Staff get the
+// same idea, with the two sides explained, as Level 1 below.
+export const TOUR_PATH = '/look-around'
+export const TOUR_TITLE = 'Look around'
+
+export interface TourStop {
+  key: string
+  route: RouteKey
+  name: string
+  /** One or two short sentences: what this page is for. */
+  text: string
+  button: string
+}
+
+export const TOUR: TourStop[] = [
+  {
+    key: 'home',
+    route: 'public-home',
+    name: 'Home',
+    text: 'Where everything starts. The main things OHRR does are a tap away from here.',
+    button: 'Open Home',
+  },
+  {
+    key: 'bunnies',
+    route: 'adopt-page',
+    name: 'The bunnies',
+    text: 'Meet the bunnies looking for homes. Tap a bunny to read about them.',
+    button: 'See the bunnies',
+  },
+  {
+    key: 'bunfest',
+    route: 'public-bunfest',
+    name: 'Midwest BunFest',
+    text: 'OHRR’s big event of the year. It has its own pages.',
+    button: 'See BunFest',
+  },
+  {
+    key: 'shop',
+    route: 'public-shop',
+    name: 'The Hop Shop',
+    text: 'Food, supplies and toys for bunnies, sold at OHRR. The shop’s hours are on this page.',
+    button: 'See the Hop Shop',
+  },
+  {
+    key: 'help',
+    route: 'public-help',
+    name: 'Help',
+    text: 'Have a question? Start here. It also shows how to email OHRR.',
+    button: 'Open Help',
+  },
+]
 
 export const LEVELS: GuideLevel[] = [
   {

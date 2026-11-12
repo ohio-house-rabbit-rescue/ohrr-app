@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import type { RouteKey } from './walkthrough'
 import { SHARE_SITE } from '../share/templates'
+import { useFeatureFlag } from '../settings/useSetting'
+import { BUNFEST_SECTION_FLAG } from '../settings/features'
 
 export { supabase }
 
@@ -51,6 +53,8 @@ export const GUIDE_ROUTES: Record<RouteKey, { to: string; match: string; title: 
   // Level 1, the public side: the home screen, BunFest, and the Settings card that puts an icon on the phone.
   'public-home': { to: '/', match: '', title: 'the public home screen' },
   'public-bunfest': { to: '/bunfest', match: '', title: 'Midwest BunFest' },
+  // The visitors' tour ends on Help.
+  'public-help': { to: '/help', match: '', title: 'Help & FAQ' },
   install: {
     to: '/settings',
     match: '',
@@ -61,6 +65,15 @@ export const GUIDE_ROUTES: Record<RouteKey, { to: string; match: string; title: 
   'other-site': { to: `${SHARE_SITE}/adopt`, match: '', title: 'the new website', external: true },
   'other-staff': { to: `${SHARE_SITE}/staff`, match: '', title: 'the new website', external: true },
 }
+
+/** Stops the visitors' tour leaves out right now: BunFest while its section is switched off (Staff → Features). */
+export function useTourOff(): ReadonlySet<RouteKey> {
+  const { value: on, loading } = useFeatureFlag(BUNFEST_SECTION_FLAG, true)
+  return new Set<RouteKey>(!loading && !on ? ['public-bunfest'] : [])
+}
+
+/** Where a visitor finds the tour again (the last line of its Done card). */
+export const TOUR_FIND = 'This tour is always under Help: tap the question mark at the top.'
 
 /** Where the Welcome page's "I have my invitation" goes: the join screen (an invite link carries its code). */
 export const JOIN = { href: `/account?next=${encodeURIComponent('/staff/join')}&create=1`, external: false }

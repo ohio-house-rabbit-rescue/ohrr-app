@@ -86,6 +86,7 @@ import GuideNext from './features/guide/GuideNext'
 import GuideJoined from './features/guide/GuideJoined'
 import GuideMoney from './features/guide/GuideMoney'
 import Welcome from './features/guide/Welcome'
+import LookAround from './features/guide/LookAround'
 import GuidePrint from './features/guide/GuidePrint'
 import GuideFlows from './features/guide/GuideFlows'
 import StaffAccount from './pages/StaffAccount'
@@ -200,6 +201,8 @@ export default function App() {
         <Route path="/mailing-list" element={<MailingList />} />
         {/* Unlisted, before sign-in: what the staff guide is and how to begin */}
         <Route path="/welcome" element={<Welcome />} />
+        {/* For everyone: a short tour of the public pages (Help links to it) */}
+        <Route path="/look-around" element={<LookAround />} />
         <Route path="/impact" element={<ImpactPage />} />
         <Route path="/raffle/tickets/:token" element={<Suspense fallback={null}><TicketPage /></Suspense>} />
         <Route path="/auction" element={online(<RaffleCatalog />)} />

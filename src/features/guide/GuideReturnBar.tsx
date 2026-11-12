@@ -5,12 +5,13 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Icon } from '../../components/icons'
 import { clearReturn, readReturn } from './guideReturn'
+import { TOUR_PATH } from './walkthrough'
 
 export default function GuideReturnBar() {
   const { pathname } = useLocation()
   const [gone, setGone] = useState<string | null>(null)
-  // On the guide's own pages there is nothing to go back to.
-  if (pathname.startsWith('/staff/guide') || pathname.startsWith('/welcome')) return null
+  // On the guide's own pages (and the visitors' tour) there is nothing to go back to.
+  if (pathname.startsWith('/staff/guide') || pathname.startsWith('/welcome') || pathname.startsWith(TOUR_PATH)) return null
   const back = readReturn()
   if (!back || gone === back.to) return null
   return (

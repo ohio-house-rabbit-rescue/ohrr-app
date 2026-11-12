@@ -50,6 +50,7 @@ const screens: { title: string; subtitle: string; to: string; extra?: string }[]
   { title: 'About OHRR', subtitle: 'Mission, team & contact', to: '/about', extra: 'hours phone address directions instagram facebook' },
   { title: 'Settings', subtitle: 'Your info & app', to: '/settings', extra: 'profile email version' },
   { title: 'Help', subtitle: 'How the app works', to: '/help', extra: 'guide' },
+  { title: 'Look around', subtitle: 'A short tour for new visitors', to: '/look-around', extra: 'new here start tour intro first time where do i begin' },
   { title: 'Midwest BunFest', subtitle: 'The festival', to: '/bunfest', extra: 'event october binky on' },
   { title: 'BunFest Schedule', subtitle: 'Education sessions', to: '/bunfest/schedule', extra: 'talks' },
   { title: 'BunFest Speakers', subtitle: 'Who is giving the talks', to: '/bunfest/speakers', extra: 'presenters vets bios speakers' },
