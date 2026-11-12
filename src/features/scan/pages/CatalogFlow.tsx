@@ -357,6 +357,10 @@ export default function CatalogFlow() {
   // Plain Receive (not the box job): the box this item goes in, if any (part E), kept for the next items too.
   const [plainBox, setPlainBox] = useState<{ code: string; box_no: number; location: string | null; count: number } | null>(null)
   const [pickingBox, setPickingBox] = useState(false)
+  // Plain Receive: "Box N is full" (OHRR 2026-11-12): the box just closed, with its label to print before the next box starts,
+  // and the line on the Saved screen saying the next box is started.
+  const [closedPlain, setClosedPlain] = useState<{ no: number; code: string; count: number; box: Box | null } | null>(null)
+  const [startedNext, setStartedNext] = useState<{ from: number; to: number } | null>(null)
   // The box the item just saved went into, whole (its items), for the box label on the Saved screen.
   const [savedBox, setSavedBox] = useState<Box | null>(null)
   // Where the box being filled is kept (asked when it's started; its items are kept there too).
@@ -547,6 +551,7 @@ export default function CatalogFlow() {
     setPlainBox({ code: b.code, box_no: b.box_no, location: b.location, count: b.items.length })
     if (b.location) update({ location: b.location })
     setPickingBox(false)
+    setClosedPlain(null)
   }
   const startPlainBox = async () => {
     setBoxBusy(true)
@@ -554,6 +559,43 @@ export default function CatalogFlow() {
     try {
       const b = await newBox(orgId, draft.location.trim() || null)
       choosePlainBox(b)
+      loadRecentBoxes()
+    } catch (err) {
+      setError(errMessage(err))
+    } finally {
+      setBoxBusy(false)
+    }
+  }
+
+  /**
+   * Plain Receive, "Box N is full" on the form: the box is closed and its label is right there to print
+   * (it lists everything now in it); the next box starts when "Start the next box" is tapped, not before.
+   */
+  const closePlainBox = () => {
+    if (!plainBox) return
+    const done = { no: plainBox.box_no, code: plainBox.code, count: plainBox.count }
+    setClosedPlain({ ...done, box: null })
+    setPlainBox(null)
+    setPickingBox(false)
+    boxByCode(orgId, done.code)
+      .then((b) => setClosedPlain((c) => (c && c.code === done.code ? { ...c, box: b } : c)))
+      .catch(() => undefined)
+  }
+
+  /**
+   * Plain Receive, "Box N is full" on the Saved screen, under the box label that was just printed:
+   * the next box starts at once, in the same place, so "Next item" carries on with it.
+   */
+  const startNextPlainBox = async () => {
+    if (!plainBox) return
+    const from = plainBox.box_no
+    const place = plainBox.location ?? (draft.location.trim() || null)
+    setBoxBusy(true)
+    setError(null)
+    try {
+      const b = await newBox(orgId, place)
+      setPlainBox({ code: b.code, box_no: b.box_no, location: b.location, count: b.items.length })
+      setStartedNext({ from, to: b.box_no })
       loadRecentBoxes()
     } catch (err) {
       setError(errMessage(err))
@@ -740,6 +782,7 @@ export default function CatalogFlow() {
 
   /** A fresh item: empty form, then the camera. */
   const startItem = () => {
+    setStartedNext(null)
     setDraft(nextDraft)
     filesRef.current = new Map()
     setShots([])
@@ -1630,7 +1673,7 @@ export default function CatalogFlow() {
           )}
           {done && s.inBox && savedBox && (
             <>
-              <Part n="B" hint="once is enough">
+              <Part n="B" hint="before the next box">
                 Print the box label
               </Part>
               <div className="space-y-3 rounded-2xl border-2 border-brand-orange bg-brand-orange-50 p-4">
@@ -1656,6 +1699,20 @@ export default function CatalogFlow() {
                   setPrintImgs={setEndSheet}
                   onPrinted={() => undefined}
                 />
+                {/* Print its label above first; then the box is closed and the next one starts in the same place. */}
+                {plainBox && plainBox.code === savedBox.code && (
+                  <BigButton tone="outline" icon="check" onClick={() => void startNextPlainBox()} disabled={boxBusy}>
+                    {boxBusy ? 'Starting the next box…' : `Box ${savedBox.box_no} is full — start the next box`}
+                  </BigButton>
+                )}
+                {startedNext && startedNext.from === savedBox.box_no && (
+                  <p role="status" className="flex items-start gap-2 rounded-2xl bg-green-50 px-4 py-3 text-[15px] font-bold text-green-900">
+                    <Icon name="check" size={18} className="mt-0.5 shrink-0" />
+                    <span>
+                      Box {startedNext.from} is closed. Box {startedNext.to} is started — write {startedNext.to} on it, then tap Next item.
+                    </span>
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -1801,6 +1858,13 @@ export default function CatalogFlow() {
                   {plainBox.count} item{plainBox.count === 1 ? '' : 's'} in it
                 </p>
                 {plainBox.count === 0 && <p className="mt-1 text-lg font-bold text-ink">Write {plainBox.box_no} on the box.</p>}
+                {plainBox.count > 0 && (
+                  <div className="mt-2">
+                    <BigButton tone="outline" icon="printer" onClick={closePlainBox}>
+                      Box {plainBox.box_no} is full — print its label
+                    </BigButton>
+                  </div>
+                )}
                 <div className="mt-2 flex flex-col gap-1">
                   <button type="button" onClick={() => setPickingBox(true)} className="min-h-[44px] w-full text-base font-bold text-brand-blue">
                     Use a different box
@@ -1811,7 +1875,26 @@ export default function CatalogFlow() {
                 </div>
               </div>
             )}
-            {!plainBox && !pickingBox && (
+            {closedPlain && !plainBox && !pickingBox && (
+              <div className="space-y-3 rounded-2xl border-2 border-green-200 bg-green-50 p-4">
+                <p className="flex items-center gap-2 font-display text-lg font-extrabold text-green-900">
+                  <Icon name="check" size={20} className="shrink-0" /> Box {closedPlain.no} is full · {closedPlain.count} item{closedPlain.count === 1 ? '' : 's'}
+                </p>
+                {closedPlain.box ? (
+                  <WaitingLabels key={`${closedPlain.code}-${closedPlain.box.items.length}`} compact orgId={orgId} boxes={[closedPlain.box]} setPrintImgs={setEndSheet} onPrinted={() => undefined} />
+                ) : (
+                  <p className="text-[15px] text-green-900">Getting its label ready…</p>
+                )}
+                <p className="text-[15px] text-green-900">Print its label, then start the next box.</p>
+                <BigButton onClick={() => void startPlainBox()} disabled={boxBusy} icon="box">
+                  {boxBusy ? 'Starting the next box…' : 'Start the next box'}
+                </BigButton>
+                <button type="button" onClick={() => setClosedPlain(null)} className="min-h-[44px] w-full text-base font-bold text-slate-600">
+                  Not in a box
+                </button>
+              </div>
+            )}
+            {!closedPlain && !plainBox && !pickingBox && (
               <button
                 type="button"
                 onClick={() => setPickingBox(true)}
