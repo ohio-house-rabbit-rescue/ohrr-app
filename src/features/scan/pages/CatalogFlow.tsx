@@ -1645,7 +1645,7 @@ export default function CatalogFlow() {
                   ))}
                 </ul>
                 <p className="text-sm text-slate-600">
-                  The label has the box’s name and number only, so it stays right however many items you add. Print it once, any time.
+                  The label lists what is in the box right now. If you add to the box later, print it again from its page under Boxes.
                 </p>
                 <BoxNameEditor orgId={orgId} box={savedBox} onSaved={(nb) => setSavedBox((b) => (b ? { ...b, ...nb, items: b.items } : nb))} />
                 <WaitingLabels

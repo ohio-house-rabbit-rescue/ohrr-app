@@ -150,11 +150,11 @@ export default function ReceivingSummary({
 
             {partBoxes && (
               <>
-                <Part n={partBoxes} hint="print once">
+                <Part n={partBoxes} hint="print these last">
                   Box labels
                 </Part>
                 <p className="text-[15px] text-slate-600">
-                  A box label has the box’s name and number only, so it stays right however many items you add. The list below is what is in each box now.
+                  A box label lists what is in the box right now, so print it after everything for today is in. If you add to a box later, print it again from its page under Boxes.
                 </p>
                 <ul className="space-y-2">
                   {boxes.map((b) => (
