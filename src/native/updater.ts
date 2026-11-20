@@ -102,11 +102,23 @@ export async function markAppReady(): Promise<void> {
     }
     const { CapacitorUpdater } = await import('@capgo/capacitor-updater')
     await CapacitorUpdater.notifyAppReady()
-    // Older downloaded copies are not needed once this one runs.
     const { bundles } = await CapacitorUpdater.list()
     const current = await CapacitorUpdater.current()
+    // A newer copy downloaded earlier and never switched to (the person tapped "Later", or closed
+    // the app): the app has only just opened and nothing is in progress, so this is the one safe
+    // moment to switch without being asked.
+    const bad = Number(read(BAD_KEY) ?? 0)
+    const waiting = bundles
+      .filter((b) => b.id !== current.bundle.id && b.id !== 'builtin' && (b.status === 'pending' || b.status === 'success'))
+      .filter((b) => Number(b.version) > build.revision && Number(b.version) > bad)
+      .sort((a, b) => Number(b.version) - Number(a.version))[0]
+    // Older downloaded copies are not needed once this one runs.
     for (const b of bundles) {
-      if (b.id !== current.bundle.id && b.id !== 'builtin') await CapacitorUpdater.delete({ id: b.id }).catch(() => undefined)
+      if (b.id !== current.bundle.id && b.id !== 'builtin' && b.id !== waiting?.id) await CapacitorUpdater.delete({ id: b.id }).catch(() => undefined)
+    }
+    if (waiting) {
+      write(TRIED_KEY, String(Number(waiting.version)))
+      await CapacitorUpdater.set({ id: waiting.id }).catch(() => write(TRIED_KEY, null))
     }
   } catch {
     /* the plugin missing or erroring must never stop the app */
@@ -149,8 +161,10 @@ export async function checkForUpdate(manual = false): Promise<void> {
     const url = new URL(latest.url, LIVE).toString()
     const bundle = await CapacitorUpdater.download({ url, version: String(latest.revision), checksum: latest.checksum })
     readyBundleId = bundle.id
-    // If the person never taps "Update now", it takes effect the next time the app goes to the background.
-    await CapacitorUpdater.next({ id: bundle.id }).catch(() => undefined)
+    // The switch restarts the page, so it only ever happens when the person taps "Update now", or
+    // the next time the app is opened from closed (markAppReady). NEVER "when the app goes to the
+    // background" (CapacitorUpdater.next): taking a photo sends the app to the background, so the
+    // restart landed in the middle of receiving and threw the item away (OHRR 2026-11-20).
     dismissed = false
     set({ status: 'ready', revision: latest.revision, version: latest.version })
   } catch (e) {
@@ -171,7 +185,7 @@ export async function applyUpdate(): Promise<void> {
   }
 }
 
-/** Hide the "update ready" bar for now (the update still applies when the app next closes). */
+/** Hide the "update ready" bar for now (the update is used the next time the app is opened from closed). */
 export function dismissBanner() {
   dismissed = true
   listeners.forEach((l) => l())
