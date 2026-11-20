@@ -55,12 +55,15 @@ import {
   listItems,
   markLabelsPrinted,
   recentDonors,
+  saveItem,
+  setDonationPlan,
+  setItemExtras,
   setItemPhotos,
   startDropoff,
   uploadItemPhoto,
 } from '../api'
 import { BigButton, BigInput, ErrorBox, MoneyInput, Part, PartBadge, StepShell } from '../ScanUI'
-import { KIND_META, dollarsToCents, extrasSummary, usDate, type TaggedItem } from '../types'
+import { KIND_META, centsToDollars, dollarsToCents, draftFromItem, extrasSummary, usDate, type TaggedItem } from '../types'
 import {
   ComboField,
   CostFields,
@@ -334,6 +337,10 @@ export default function CatalogFlow() {
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState<Saved | null>(null)
   const [photoRetrying, setPhotoRetrying] = useState(false)
+  // "Change the name or details" on the item just saved, before the next one (OHRR 2026-11-20).
+  const [edit, setEdit] = useState<(Extras & { title: string; donatedBy: string }) | null>(null)
+  const [editBusy, setEditBusy] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
   const [today, setToday] = useState<number | null>(null)
   const [unprinted, setUnprinted] = useState<number | null>(null)
   const [donors, setDonors] = useState<string[]>([])
@@ -519,6 +526,7 @@ export default function CatalogFlow() {
   // The Saved screen (plain Receive) shows the box the item went into with everything now in it, for its label.
   const savedBoxCode = !wantsBoxes && saved?.phase === 'saved' ? saved.inBox?.code : undefined
   const savedItemCode = saved?.item?.code
+  const savedItemTitle = saved?.item?.title
   useEffect(() => {
     if (!orgId || !savedBoxCode) {
       setSavedBox(null)
@@ -531,7 +539,13 @@ export default function CatalogFlow() {
     return () => {
       live = false
     }
-  }, [orgId, savedBoxCode, savedItemCode])
+    // A changed name re-reads the box, so its label lists the new name.
+  }, [orgId, savedBoxCode, savedItemCode, savedItemTitle])
+  // A new item saved (or the next one started): the change panel closes.
+  useEffect(() => {
+    setEdit(null)
+    setEditError(null)
+  }, [savedItemCode])
   // Saved: the label buttons come to the middle of the screen and the keyboard is put away.
   useEffect(() => {
     if (!wantsBoxes && step === 'saved' && saved?.phase === 'saved') bringIntoView(labelPartRef.current)
@@ -941,6 +955,96 @@ export default function CatalogFlow() {
     })()
   }
 
+  /** Open the change panel on the item just saved, filled in with what it has now. */
+  const openEdit = () => {
+    const item = saved?.item
+    if (!item) return
+    setEditError(null)
+    setEdit({
+      ...emptyExtras(item.location ?? ''),
+      title: item.title,
+      donatedBy: item.donated_by ?? '',
+      notes: item.description ?? '',
+      quantity: item.quantity ?? 1,
+      value: item.value_cents == null ? '' : centsToDollars(item.value_cents),
+      valueBasis: item.value_basis ?? 'each',
+    })
+  }
+
+  /** Save the changes to the item just saved: same code, same photos, same box. */
+  const saveEdit = async () => {
+    const item = saved?.item
+    if (!item || !edit || editBusy) return
+    const title = edit.title.trim()
+    if (!title) {
+      setEditError('Type a name for it first.')
+      return
+    }
+    const bought = item.source === 'purchase'
+    setEditBusy(true)
+    setEditError(null)
+    putKeyboardAway()
+    try {
+      const base = draftFromItem(item)
+      let next = await saveItem(orgId, {
+        ...base,
+        title,
+        description: edit.notes.trim(),
+        donatedBy: edit.donatedBy.trim(),
+        quantity: Math.max(1, edit.quantity),
+        value: bought ? base.value : edit.value,
+      })
+      const warnings: string[] = []
+      // Where it's kept travels separately (update 39).
+      if (edit.location.trim() !== (next.location ?? '')) {
+        try {
+          next = (await setItemExtras(orgId, next.code, { condition: next.condition, category: next.category, location: edit.location })) ?? next
+        } catch (err) {
+          warnings.push(`Saved, but not where it’s kept: ${errMessage(err)}`)
+        }
+      }
+      // A value for the whole lot instead of for each (update 40).
+      if (!bought && edit.valueBasis !== (next.value_basis ?? 'each') && dollarsToCents(edit.value) != null) {
+        try {
+          next =
+            (await setDonationPlan(orgId, next.code, {
+              headed_for: next.headed_for ?? null,
+              value_basis: edit.valueBasis,
+              size: next.size ?? null,
+              use_by: next.use_by ?? null,
+            })) ?? next
+        } catch (err) {
+          warnings.push(`Saved, but not whether the value is for each or for all: ${errMessage(err)}`)
+        }
+      }
+      const merged: TaggedItem = { ...item, ...next, box: next.box ?? item.box }
+      // Its label shows the name and the donor: one printed before this is now out of date.
+      const labelChanged = merged.title !== item.title || (merged.donated_by ?? '') !== (item.donated_by ?? '')
+      const wasPrinted = Boolean(saved?.printed || item.label_printed_at)
+      if (labelChanged && wasPrinted) {
+        try {
+          await markLabelsPrinted(orgId, [merged.code], false)
+          tellOthersLabelsChanged(orgId)
+          setUnprinted((n) => (n == null ? n : n + 1))
+        } catch {
+          /* Print labels still lists it by hand */
+        }
+        warnings.push('You changed what its label says after printing it. Print the label again.')
+      }
+      setSaved((s) =>
+        s && s.item?.code === merged.code
+          ? { ...s, title: merged.title, donatedBy: wantsBoxes ? s.donatedBy : (merged.donated_by ?? ''), item: merged, printed: labelChanged ? undefined : s.printed }
+          : s,
+      )
+      setEdit(null)
+      if (warnings.length) setEditError(warnings.join(' '))
+    } catch (err) {
+      setEditError(`It didn’t save: ${errMessage(err)}`)
+    } finally {
+      setEditBusy(false)
+    }
+  }
+
   /** The item saved but some photos didn't: upload them again and attach the lot. */
   const retryPhotos = async () => {
     const item = saved?.item
@@ -1018,6 +1122,75 @@ export default function CatalogFlow() {
       <StepShell title="Receive items" onBack={() => navigate('/staff')} backLabel="Dashboard">
         <ErrorBox>Your account can’t add donations yet. Ask an admin to grant Silent Auction or Hop Shop access.</ErrorBox>
       </StepShell>
+    )
+  }
+
+  /**
+   * "Change the name or details" for the item just saved, on the same screen, before the next item.
+   * Donations only (an item moved straight into the Silent Auction is changed from its own page).
+   */
+  const editPanel = (s: Saved) => {
+    const item = s.item
+    if (s.phase !== 'saved' || !item || item.kind !== 'donation' || s.auction) return null
+    const bought = item.source === 'purchase'
+    if (!edit) {
+      return (
+        <div className="space-y-2">
+          <BigButton tone="outline" onClick={openEdit}>
+            Change the name or details
+          </BigButton>
+          {editError && (
+            <p role="status" className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">
+              {editError}
+            </p>
+          )}
+        </div>
+      )
+    }
+    const set = (p: Partial<typeof edit>) => setEdit((e) => (e ? { ...e, ...p } : e))
+    return (
+      <div className="space-y-4 rounded-2xl border-2 border-brand-blue bg-white p-4">
+        <p className="font-display text-lg font-extrabold text-ink">Change {item.code}</p>
+        <div>
+          <p className="mb-2 text-base font-bold text-ink">Name</p>
+          <BigInput value={edit.title} onChange={(v) => set({ title: v })} placeholder="What it is" ariaLabel="Name of the item" />
+        </div>
+        <QuantityField v={edit} set={set} />
+        {!bought && <ValueFields v={edit} set={set} />}
+        <LocationField v={edit} set={set} places={suggestions.locations} />
+        {!wantsBoxes && !bought && (
+          <div>
+            <p className="mb-2 text-base font-bold text-ink">
+              Who gave it <span className="font-normal text-slate-500">(this item only)</span>
+            </p>
+            <BigInput value={edit.donatedBy} onChange={(v) => set({ donatedBy: v })} placeholder="Name" ariaLabel="Who gave it" />
+          </div>
+        )}
+        <div>
+          <p className="mb-2 text-base font-bold text-ink">
+            Notes <span className="font-normal text-slate-500">(optional)</span>
+          </p>
+          <BigInput value={edit.notes} onChange={(v) => set({ notes: v })} placeholder="Anything to remember" ariaLabel="Notes" />
+        </div>
+        {editError && (
+          <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-[15px] font-bold text-red-800">
+            {editError}
+          </p>
+        )}
+        <BigButton onClick={() => void saveEdit()} disabled={editBusy || !edit.title.trim()} icon="check">
+          {editBusy ? 'Saving…' : 'Save the changes'}
+        </BigButton>
+        <BigButton
+          tone="plain"
+          onClick={() => {
+            setEdit(null)
+            setEditError(null)
+          }}
+          disabled={editBusy}
+        >
+          Cancel
+        </BigButton>
+      </div>
     )
   }
 
@@ -1258,6 +1431,7 @@ export default function CatalogFlow() {
                     {s.item.code}
                     {s.inBox ? ` · Box ${s.inBox.no}${s.inBox.count != null ? ` has ${s.inBox.count}` : ''}` : ''}
                   </p>
+                  {editPanel(s)}
                   {bluetoothAvailable() ? (
                     <BluetoothPrint
                       key={s.item.code}
@@ -1624,6 +1798,8 @@ export default function CatalogFlow() {
               {s.boxNote}
             </div>
           )}
+          {/* Spelled it wrong, or the number changed? Fix it here, before Next item. */}
+          {done && editPanel(s)}
           {s.previews.length > 1 && (
             <div className="flex gap-2" aria-label="All the photos">
               {s.previews.map((p, i) => (
@@ -1692,7 +1868,7 @@ export default function CatalogFlow() {
                 </p>
                 <BoxNameEditor orgId={orgId} box={savedBox} onSaved={(nb) => setSavedBox((b) => (b ? { ...b, ...nb, items: b.items } : nb))} />
                 <WaitingLabels
-                  key={`${savedBox.code}-${savedBox.items.length}`}
+                  key={`${savedBox.code}-${savedBox.items.length}-${savedBox.items.map((i) => i.title).join('|')}`}
                   compact
                   orgId={orgId}
                   boxes={[savedBox]}
