@@ -2637,6 +2637,11 @@ export type Database = {
         Args: { p_org: string; p_codes: string[]; p_printed?: boolean }
         Returns: number
       }
+      /** Update 58: daily backups of the donations list. */
+      take_items_backup: { Args: { p_org: string }; Returns: Json }
+      list_item_backups: { Args: { p_org: string }; Returns: Json }
+      get_item_backup: { Args: { p_org: string; p_backup: string }; Returns: Json }
+      restore_item_backup: { Args: { p_org: string; p_backup: string; p_codes: string[] }; Returns: Json }
       set_item_photos: {
         Args: { p_org: string; p_code: string; p_photo_urls: string[] }
         Returns: Json

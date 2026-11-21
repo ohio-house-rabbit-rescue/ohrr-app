@@ -16,11 +16,12 @@ import { Screen } from '../../../components/ui'
 import { Spinner } from '../../../components/staffui'
 import ExportButtons from '../../../components/ExportButtons'
 import { todayStamp, type SheetSpec } from '../../../lib/inventoryExport'
-import { catalogSuggestions, findByCode, listItems, markLabelsPrinted, saveItem, setDonationPlan, setItemExtras, type CatalogSuggestions } from '../api'
+import { catalogSuggestions, findByCode, getItemBackup, listItemBackups, listItems, markLabelsPrinted, restoreItemBackup, saveItem, setDonationPlan, setItemExtras, takeItemsBackup, type CatalogSuggestions } from '../api'
 import { tellOthersLabelsChanged } from '../labelSync'
 import { SHEET_COLUMNS, SIMPLE_COLUMNS, sheetRow, simpleRow } from '../itemSheets'
 import { centsToDollars, draftFromItem, statusLabel, type TaggedItem } from '../types'
 import SheetGrid, { type RowStatus } from '../SheetGrid'
+import SheetBackups, { type BackupApi } from '../SheetBackups'
 import { cellsFromItem, changedKeys, firstProblem, saveRow, withEdits, type CellKey, type SheetCells, type SheetDeps } from '../sheetSave'
 
 type Show = 'waiting' | 'unsure' | 'done' | 'all'
@@ -54,6 +55,10 @@ export default function ItemsSheet() {
   const orgId = membership?.orgId ?? ''
   const canEdit = can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update')
   const [items, setItems] = useState<TaggedItem[] | null>(null)
+  /** Every item of every kind, only to tell "deleted" from "sorted into the raffle" in the backups. */
+  const [everything, setEverything] = useState<TaggedItem[]>([])
+  const [showBackups, setShowBackups] = useState(false)
+  const [backupMade, setBackupMade] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [edits, setEdits] = useState<Record<string, Partial<SheetCells>>>({})
   const [results, setResults] = useState<Record<string, RowStatus>>({})
@@ -69,7 +74,9 @@ export default function ItemsSheet() {
     if (!orgId) return
     setError(null)
     try {
-      setItems((await listItems(orgId)).filter((i) => i.kind === 'donation'))
+      const all = await listItems(orgId)
+      setEverything(all)
+      setItems(all.filter((i) => i.kind === 'donation'))
     } catch (e) {
       setError(errMessage(e))
     }
@@ -77,6 +84,23 @@ export default function ItemsSheet() {
   useEffect(() => {
     void load()
   }, [load])
+  // The first time this list is opened on a day, today's backup is saved (it never gets in the way if it can't be).
+  useEffect(() => {
+    if (!orgId || !canEdit) return
+    let alive = true
+    void takeItemsBackup(orgId).then((r) => alive && setBackupMade(r.made))
+    return () => {
+      alive = false
+    }
+  }, [orgId, canEdit])
+  const backupApi = useMemo<BackupApi>(
+    () => ({
+      list: () => listItemBackups(orgId),
+      get: (id) => getItemBackup(orgId, id),
+      restore: (id, codes) => restoreItemBackup(orgId, id, codes),
+    }),
+    [orgId],
+  )
   useEffect(() => {
     if (!orgId) return
     let alive = true
@@ -310,7 +334,21 @@ export default function ItemsSheet() {
           ))}
         </select>
         <span className="text-[15px] text-slate-600">{items ? `${shown.length} of ${items.length} shown` : ''}</span>
+        <button type="button" onClick={() => setShowBackups((v) => !v)} aria-expanded={showBackups} className={`${pill} ml-auto border-slate-300 bg-white text-slate-700`}>
+          <Icon name="clock" size={16} /> Backups
+        </button>
       </div>
+      {backupMade && !showBackups && <p className="text-[15px] text-slate-600">Today’s backup of this list was saved. Open Backups to go back to an earlier day.</p>}
+      {showBackups && (
+        <SheetBackups
+          api={backupApi}
+          current={everything}
+          canRestore={canEdit}
+          blockedReason={dirty.length > 0 ? 'Save or throw away your spreadsheet changes first, then bring things back.' : null}
+          onRestored={load}
+          onClose={() => setShowBackups(false)}
+        />
+      )}
 
       {!canEdit && <p className="rounded-2xl bg-amber-50 px-4 py-3 text-[15px] text-amber-900">You can look at the list and download it. Changing items needs a different role.</p>}
       {error && (

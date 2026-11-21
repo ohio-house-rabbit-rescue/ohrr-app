@@ -24,7 +24,7 @@ import { Screen } from '../../../components/ui'
 import { Spinner } from '../../../components/staffui'
 import ExportButtons from '../../../components/ExportButtons'
 import { todayStamp, type SheetSpec } from '../../../lib/inventoryExport'
-import { listItems, makeBasket, sortHeadedDonations } from '../api'
+import { listItems, makeBasket, sortHeadedDonations, takeItemsBackup } from '../api'
 import { BigButton, BigInput, ErrorBox, StatusNote } from '../ScanUI'
 import { bringIntoView } from '../../../lib/bringIntoView'
 import { SHEET_COLUMNS, SIMPLE_COLUMNS, sheetRow, simpleRow } from '../itemSheets'
@@ -208,6 +208,11 @@ export default function ItemsList() {
   useEffect(() => {
     void load()
   }, [load])
+  // The first time the list is opened on a day, today's backup of the donations is saved (update 58; quiet if it can't be).
+  const mayBackUp = can('events.bunfest.manage') || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update')
+  useEffect(() => {
+    if (orgId && mayBackUp) void takeItemsBackup(orgId)
+  }, [orgId, mayBackUp])
   // Show the "Saved" line once: clear it from history so Back doesn't repeat it.
   useEffect(() => {
     if (!saved) return
