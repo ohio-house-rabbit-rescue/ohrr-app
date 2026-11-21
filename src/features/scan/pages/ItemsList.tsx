@@ -784,6 +784,9 @@ function ItemsListView({
           >
             <Icon name="file" size={18} /> Print or save this list ({shown.length})
           </button>
+          <Link to="/staff/items/sheet" className="inline-flex min-h-[44px] items-center gap-1.5 text-[15px] font-bold text-brand-blue">
+            <Icon name="file" size={18} /> Change many donations in a spreadsheet (best on a computer)
+          </Link>
           {exportOpen && <ExportButtons spec={sheet} label={`Full spreadsheet of ${shown.length}`} simple={simpleSheet} />}
         </div>
       )}

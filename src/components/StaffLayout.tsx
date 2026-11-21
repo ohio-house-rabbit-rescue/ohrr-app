@@ -32,10 +32,12 @@ export default function StaffLayout() {
   // The grouped dashboard is the menu. Pages live in features/staff/staffTiles.ts.
   const { tiles } = useStaffTiles()
   const place = placeOf(pathname, tiles)
+  // The items spreadsheet is a table: it uses the whole width of a computer screen (the rest stay a phone-width column).
+  const wide = pathname === '/staff/items/sheet'
 
   return (
     <div className="min-h-screen bg-canvas">
-      <div className="staff-big relative mx-auto flex min-h-screen max-w-[480px] flex-col bg-white font-sans text-ink shadow-xl">
+      <div className={`staff-big relative mx-auto flex min-h-screen ${wide ? 'max-w-none' : 'max-w-[480px]'} flex-col bg-white font-sans text-ink shadow-xl`}>
         <ScrollToTop />
 
         {/* Top bar */}

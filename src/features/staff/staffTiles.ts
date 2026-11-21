@@ -138,6 +138,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       { to: '/staff/catalog', title: 'Receive items', hint: 'Donated or bought: photo, name, where kept, its use', icon: 'camera', group: 'items', more: true, show: canItems },
       { to: '/staff/catalog?box=1', title: 'Receive into boxes', hint: 'Add each item, its label, into a numbered box', icon: 'box', group: 'items', more: true, show: canItems },
       { to: '/staff/items', title: 'Items', hint: 'Bring in, label, put away, sort, sell', icon: 'box', group: 'items', show: canItems },
+      { to: '/staff/items/sheet', title: 'Items spreadsheet', hint: 'Change many donations in one table, on a computer', icon: 'file', group: 'items', more: true, show: canItems },
       { to: '/staff/labels', title: 'Print labels', hint: 'Codes for items, any label size', icon: 'printer', group: 'items', more: true, show: canItems },
       { to: '/staff/boxes', title: 'Boxes', hint: 'Pack items in a numbered box, its label and list', icon: 'box', group: 'items', more: true, show: canItems },
       { to: '/staff/scan', title: 'Scan an item', hint: 'See, change or sort a labeled item', icon: 'scan', group: 'items', today: true, show: canItems },

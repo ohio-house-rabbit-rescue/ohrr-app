@@ -120,6 +120,7 @@ const CounterDoor = lazy(() => import('./features/counter/pages/Door'))
 const CounterDoorSetup = lazy(() => import('./features/counter/pages/DoorSetup'))
 const CounterGate = lazy(() => import('./features/counter/CounterShell').then((m) => ({ default: m.CounterGate })))
 const ItemsList = lazy(() => import('./features/scan/pages/ItemsList'))
+const ItemsSheet = lazy(() => import('./features/scan/pages/ItemsSheet'))
 const Dropoffs = lazy(() => import('./features/scan/pages/Dropoffs'))
 const DropoffDetail = lazy(() => import('./features/scan/pages/DropoffDetail'))
 const DonationsReport = lazy(() => import('./features/scan/pages/DonationsReport'))
@@ -395,6 +396,7 @@ export default function App() {
           <Route path="outreach" element={<Suspense fallback={null}><Outreach /></Suspense>} />
           <Route path="posts/:id" element={<Suspense fallback={null}><PostEditor /></Suspense>} />
           <Route path="items" element={<Suspense fallback={null}><ItemsList /></Suspense>} />
+          <Route path="items/sheet" element={<Suspense fallback={null}><ItemsSheet /></Suspense>} />
           <Route path="dropoffs" element={<Suspense fallback={null}><Dropoffs /></Suspense>} />
           <Route path="dropoffs/:id" element={<Suspense fallback={null}><DropoffDetail /></Suspense>} />
           <Route path="donations/report" element={<Suspense fallback={null}><DonationsReport /></Suspense>} />
