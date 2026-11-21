@@ -118,8 +118,10 @@ export default function ItemsSheet() {
       e.returnValue = ''
     }
     const onClick = (e: MouseEvent) => {
-      const a = (e.target as HTMLElement | null)?.closest?.('a[href]') as HTMLAnchorElement | null
-      if (!a || a.target === '_blank' || a.origin !== window.location.origin) return
+      // A link to another page, or the header's Back button (marked data-leave-guard).
+      const el = (e.target as HTMLElement | null)?.closest?.('a[href], [data-leave-guard]') as HTMLElement | null
+      if (!el) return
+      if (el instanceof HTMLAnchorElement && !el.hasAttribute('data-leave-guard') && (el.target === '_blank' || el.origin !== window.location.origin)) return
       if (!window.confirm(`You have ${dirty.length} unsaved change${dirty.length === 1 ? '' : 's'} in the spreadsheet. Leave without saving?`)) {
         e.preventDefault()
         e.stopPropagation()

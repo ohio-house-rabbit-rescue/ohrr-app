@@ -61,6 +61,7 @@ export default function BackButton({
       type="button"
       onClick={onClick}
       aria-label="Back"
+      data-leave-guard
       className={`inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full text-sm font-bold transition ${
         label ? '' : 'w-10'
       } ${className}`}

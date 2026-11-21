@@ -167,6 +167,7 @@ export async function saveRow<T extends SheetItem>(deps: SheetDeps<T>, orig: T, 
 
   const warnings: string[] = []
   const freshCells = cellsFromItem(fresh)
+  const wasPrinted = Boolean(fresh.label_printed_at)
   const overwritten = keys.filter((k) => norm(freshCells[k]) !== norm(base[k]) && norm(freshCells[k]) !== norm(now[k]))
   if (overwritten.length) warnings.push(`Someone else had changed ${list(overwritten)} since you opened this list. Yours replaced it.`)
 
@@ -226,8 +227,10 @@ export async function saveRow<T extends SheetItem>(deps: SheetDeps<T>, orig: T, 
 
   let item = merge(orig, fresh, cur)
   // 4. Its label shows the name and the donor: one printed before this is now out of date.
-  const labelChanged = (cur.title ?? '') !== (fresh.title ?? '') || (cur.donated_by ?? '') !== (fresh.donated_by ?? '')
-  if (labelChanged && fresh.label_printed_at) {
+  // Judged from the snapshot taken before any save (freshCells, wasPrinted) and what was typed, never from
+  // the answers' fields or the re-read row itself, which a store may have changed in place by now.
+  const labelChanged = (has('title') && norm(now.title) !== norm(freshCells.title)) || (has('donatedBy') && norm(now.donatedBy) !== norm(freshCells.donatedBy))
+  if (labelChanged && wasPrinted) {
     try {
       await deps.unprint(orig.code)
       item = { ...item, label_printed_at: null }
