@@ -22,6 +22,7 @@ import { SHEET_COLUMNS, SIMPLE_COLUMNS, sheetRow, simpleRow } from '../itemSheet
 import { centsToDollars, draftFromItem, statusLabel, type TaggedItem } from '../types'
 import SheetGrid, { type RowStatus } from '../SheetGrid'
 import SheetBackups, { type BackupApi } from '../SheetBackups'
+import { itemsReportPdf } from '../itemsReportPdf'
 import { cellsFromItem, changedKeys, firstProblem, saveRow, withEdits, type CellKey, type SheetCells, type SheetDeps } from '../sheetSave'
 
 type Show = 'waiting' | 'unsure' | 'done' | 'all'
@@ -284,6 +285,13 @@ export default function ItemsSheet() {
     return { ...full, filename: full.filename.replace('ohrr-items-', 'ohrr-items-list-'), columns: SIMPLE_COLUMNS, rows: shown.map(simpleRow), layout: 'print' }
   }
 
+  const reportPdf = {
+    label: `Report with photos (PDF) of ${shown.length}`,
+    title: 'Ohio House Rabbit Rescue items report',
+    filename: `ohrr-items-report-${todayStamp()}`,
+    build: async (progress: (msg: string) => void) => (await itemsReportPdf(sheet(), progress)).blob,
+  }
+
   const drawn = shown.slice(0, limit)
 
   return (
@@ -338,6 +346,18 @@ export default function ItemsSheet() {
           <Icon name="clock" size={16} /> Backups
         </button>
       </div>
+      {/* Downloads sit at the top, where people look (sponsor 2026-11-22: at the bottom of a long table they were missed). */}
+      {items && shown.length > 0 && (
+        <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-3">
+          <p className="text-[15px] font-bold text-ink">Download or print the {shown.length} shown</p>
+          {dirty.length > 0 ? (
+            <p className="text-[15px] text-slate-600">Save your changes first, so the file matches the table.</p>
+          ) : (
+            <ExportButtons spec={sheet} label={`Spreadsheet (Excel) with photos of ${shown.length}`} simple={simpleSheet} pdf={reportPdf} />
+          )}
+          <p className="text-sm text-slate-500">The search and the list picker above choose what goes in the file.</p>
+        </div>
+      )}
       {backupMade && !showBackups && <p className="text-[15px] text-slate-600">Today’s backup of this list was saved. Open Backups to go back to an earlier day.</p>}
       {showBackups && (
         <SheetBackups
@@ -377,14 +397,6 @@ export default function ItemsSheet() {
               Show {Math.min(PAGE, shown.length - drawn.length)} more ({shown.length - drawn.length} not shown yet)
             </button>
           )}
-          <div className="space-y-2">
-            <p className="text-[15px] font-bold text-ink">Download or print this list ({shown.length})</p>
-            {dirty.length > 0 ? (
-              <p className="text-[15px] text-slate-600">Save your changes first, so the file matches the table.</p>
-            ) : (
-              <ExportButtons spec={sheet} label={`Full spreadsheet of ${shown.length}`} simple={simpleSheet} />
-            )}
-          </div>
         </>
       )}
 
