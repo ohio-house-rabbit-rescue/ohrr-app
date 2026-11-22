@@ -204,10 +204,10 @@ export default function SheetBackups({
             <>
               <div className="flex flex-wrap items-center gap-2">
                 <button type="button" onClick={() => setTicked(new Set(bringable.map((d) => d.code)))} className={`${btn} border-slate-300 bg-white text-slate-700`}>
-                  Tick all {bringable.length}
+                  Check all {bringable.length}
                 </button>
                 <button type="button" onClick={() => setTicked(new Set())} disabled={ticked.size === 0} className={`${btn} border-slate-300 bg-white text-slate-700`}>
-                  Clear ticks
+                  Clear checks
                 </button>
                 <button
                   type="button"
@@ -215,7 +215,7 @@ export default function SheetBackups({
                   disabled={!canRestore || ticked.size === 0 || Boolean(busy) || Boolean(blockedReason)}
                   className={`${btn} border-brand-orange bg-brand-orange text-ink`}
                 >
-                  Bring back {ticked.size} ticked
+                  Bring back {ticked.size} checked
                 </button>
               </div>
               {blockedReason && <p className="text-base font-bold text-amber-900">{blockedReason}</p>}
@@ -242,7 +242,7 @@ export default function SheetBackups({
                     <p className="font-bold text-slate-900">
                       {d.title} <span className="font-mono text-sm font-bold tracking-wider text-slate-500">{d.code}</span>
                     </p>
-                    {d.state === 'deleted' && <p className="font-semibold text-red-800">Deleted. Ticking it makes it again with the same number.</p>}
+                    {d.state === 'deleted' && <p className="font-semibold text-red-800">Deleted. Checking it makes it again with the same number.</p>}
                     {d.state === 'moved' && <p className="text-slate-600">Now in the {PLACE[d.movedTo ?? ''] ?? d.movedTo}. Left alone.</p>}
                     {d.changes.map((c) => (
                       <p key={c.key} className="text-slate-700">

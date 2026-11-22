@@ -298,8 +298,25 @@ export default function ItemsSheet() {
     <Screen className="space-y-4 pb-28">
       <StaffTitle title="Items spreadsheet">
         <p>
-          Every donation in one table. Click a box, type, and press Enter to go down a column. Changed boxes turn yellow. Nothing is saved until you press{' '}
-          <strong>Save changes</strong>. You never have to download the list to fix it.
+          <strong>Change things.</strong> Every donation is one row. Click a box, type, and press Enter to go down a column. Changed boxes turn yellow, and a box with a
+          mistake turns red. Nothing is saved until you press <strong>Save changes</strong> at the bottom. Undo on a row puts just that row back. You never have to
+          download the list to fix it.
+        </p>
+        <p>
+          <strong>Choose what you see.</strong> The search box and the list picker (Waiting to be sorted, Not sure yet, Done, All donations) narrow the table. The
+          downloads take exactly what is shown.
+        </p>
+        <p>
+          <strong>Download or print.</strong> <strong>Report with photos (PDF)</strong> makes pages to print or email: the totals, then one line per item with up to
+          four photos, its number, worth, condition, where it’s kept and the donor. <strong>Spreadsheet (Excel) with photos</strong> has a picture of each item in
+          the first column and links to all its photos. <strong>One-page list to print</strong> is the short version: photo, item, where it’s kept and donor.{' '}
+          <strong>CSV</strong> is plain text for other programs, so it has photo links, not pictures. Save your changes first: the buttons wait until you do.
+        </p>
+        <p>
+          <strong>Backups.</strong> The first time someone opens this list each day, a copy of every donation is kept. The last 10 days are kept. Press{' '}
+          <strong>Backups</strong>, pick a day, and you see what changed or was deleted since. Check the items you want and bring them back: changed words go back,
+          and a deleted item comes back with the same number. The copy is taken at the first open of the day, so a mistake made later that day comes back from that
+          morning.
         </p>
         <p>Shop stock, auction lots and raffle prizes are not in this table; change those on their own screens.</p>
       </StaffTitle>

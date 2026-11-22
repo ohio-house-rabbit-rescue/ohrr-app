@@ -31,6 +31,7 @@ export type RouteKey =
   | 'tails'
   | 'scan'
   | 'items'
+  | 'items-sheet'
   | 'receive-items'
   | 'hopshop'
   | 'shelf'
@@ -292,7 +293,7 @@ export const LEVELS: GuideLevel[] = [
     n: 6,
     title: 'Receive and scan',
     goal: 'See how a donation becomes an item with its own code that anyone can scan.',
-    minutes: 5,
+    minutes: 7,
     steps: [
       {
         key: 'practice-receive',
@@ -323,6 +324,12 @@ export const LEVELS: GuideLevel[] = [
         do: 'Open {title} and read the top of the page.',
         see: 'A page titled “{title}” that explains what lives here: donations, auction lots and raffle prizes, everything with an OHRR code.',
         go: { route: 'items', label: 'Open {title}' },
+      },
+      {
+        key: 'items-sheet',
+        do: 'If you are at a computer, open {title} and look. It is made for a big screen. Do not change any boxes today: changes are real once someone presses Save changes.',
+        see: 'A page titled “{title}” with every donation as a row of boxes. Near the top is “Download or print the … shown”, with a PDF report that has each item’s photos on its line, a spreadsheet with photos, and CSV. The “Backups” button keeps a copy of the list from each of the last 10 days, so a mistake can be put right.',
+        go: { route: 'items-sheet', label: 'Open {title}' },
       },
     ],
   },

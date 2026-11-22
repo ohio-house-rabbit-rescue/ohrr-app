@@ -34,6 +34,7 @@ export const GUIDE_ROUTES: Record<RouteKey, { to: string; match: string; title: 
   tails: { to: '/staff/tails', match: '/staff/tails', title: 'Happy Tails' },
   scan: { to: '/staff/scan', match: '/staff/scan', title: 'Scan an item' },
   items: { to: '/staff/items', match: '/staff/items', title: 'Items' },
+  'items-sheet': { to: '/staff/items/sheet', match: '/staff/items/sheet', title: 'Items spreadsheet' },
   'receive-items': { to: '/staff/catalog', match: '/staff/catalog', title: 'Receive items' },
   hopshop: { to: '/staff/hopshop', match: '/staff/hopshop', title: 'Hop Shop' },
   shelf: { to: '/staff/hopshop?show=list', match: '/staff/hopshop', title: 'On the shelf' },
