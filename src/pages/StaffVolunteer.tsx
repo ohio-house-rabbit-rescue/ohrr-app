@@ -7,6 +7,7 @@ import { Explain, StaffTitle } from '../components/StaffTitle'
 import { CardActions, EditorForm, Field, StepButton, pill } from '../components/StaffJob'
 import { CheckRow, PartBox, confirmRemove, useCardAction, useSaving } from '../components/ContentEditorBits'
 import { Spinner, FormError, staffInput } from '../components/staffui'
+import { GoesWith } from '../components/GoesWith'
 import BringIn from '../components/BringIn'
 import { StatusNote } from '../features/scan/ScanUI'
 import { LIMIT_KINDS, OPP_CATEGORIES, categoryLabel, remainingLabel, type VolunteerOpp } from '../lib/volunteerOpps'
@@ -435,6 +436,7 @@ export default function StaffVolunteer() {
           ))}
         </div>
       )}
+      <GoesWith links={[{ to: '/staff/calls', label: 'Volunteer calls' }, { to: '/staff/volunteers', label: 'Volunteers' }]} />
     </Screen>
   )
 }

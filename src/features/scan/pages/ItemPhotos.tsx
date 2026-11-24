@@ -7,6 +7,7 @@
 // (?back=items).
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { backParam, cleanBack } from '../backTo'
 import { useAuth } from '../../../lib/auth'
 import { errMessage } from '../../../lib/supabase'
 import { Icon } from '../../../components/icons'
@@ -23,7 +24,8 @@ export default function ItemPhotos() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const code = (params.get('code') ?? '').trim().toUpperCase()
-  const fromList = params.get('back') === 'items'
+  const backCode = cleanBack(params.get('back'))
+  const fromList = backCode === 'items'
   const [item, setItem] = useState<TaggedItem | null | 'loading'>('loading')
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -100,7 +102,7 @@ export default function ItemPhotos() {
     })()
   }
 
-  const back = () => navigate(code ? `/staff/scan?code=${encodeURIComponent(code)}${fromList ? '&back=items' : ''}` : '/staff/items')
+  const back = () => navigate(code ? `/staff/scan?code=${encodeURIComponent(code)}${backParam(backCode)}` : '/staff/items')
   const done = () => {
     if (!fromList) return back()
     const it = item && item !== 'loading' ? item : null

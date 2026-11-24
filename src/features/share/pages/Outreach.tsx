@@ -10,6 +10,7 @@ import { staffInput } from '../../../components/staffui'
 import { OUTREACH, fillLetter, mailtoFor, type OutreachLetter } from '../outreach'
 import { copyText, shareText } from '../share'
 import { Explain, StaffTitle } from '../../../components/StaffTitle'
+import { GoesWith } from '../../../components/GoesWith'
 import { StatusNote } from '../../scan/ScanUI'
 import { bringIntoView } from '../../../lib/bringIntoView'
 
@@ -136,6 +137,7 @@ ${filled.body}`, filled.subject)
           </Card>
         </>
       )}
+      <GoesWith links={[{ to: '/staff/flyers', label: 'Flyers' }, { to: '/staff/share', label: 'Share kit' }]} />
     </Screen>
   )
 }

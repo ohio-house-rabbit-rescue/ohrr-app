@@ -493,7 +493,7 @@ export default function BoxDetail() {
                         <Icon name={KIND_META[i.kind]?.icon ?? 'box'} size={22} />
                       </span>
                     )}
-                    <Link to={`/staff/scan?code=${encodeURIComponent(i.code)}`} className="min-w-0 flex-1">
+                    <Link to={`/staff/scan?code=${encodeURIComponent(i.code)}&back=box:${encodeURIComponent(code)}`} className="min-w-0 flex-1">
                       <span className="block truncate font-display text-base font-extrabold text-ink">{i.title}</span>
                       <span className="block truncate font-mono text-xs font-bold text-slate-400">{i.code}</span>
                     </Link>

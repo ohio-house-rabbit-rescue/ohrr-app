@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase, errMessage } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen } from '../components/ui'
@@ -6,6 +7,7 @@ import { Icon } from '../components/icons'
 import { Explain, StaffTitle } from '../components/StaffTitle'
 import { CardActions, EditorForm, Field, Part, pill } from '../components/StaffJob'
 import { Spinner, staffInput } from '../components/staffui'
+import { GoesWith } from '../components/GoesWith'
 import { ErrorBox, StatusNote } from '../features/scan/ScanUI'
 import { putKeyboardAway } from '../lib/bringIntoView'
 import { showRow } from '../lib/staffScroll'
@@ -329,6 +331,11 @@ function EventCard({ item, userId, next = false, onChanged }: { item: EventRow; 
           {savedMsg}
         </StatusNote>
       )}
+      {savedMsg && item.is_published && (
+        <Link to="/events" className="inline-flex min-h-[44px] items-center text-[15px] font-bold text-brand-blue underline">
+          See it on the Events page
+        </Link>
+      )}
       <ErrorBox>{error}</ErrorBox>
     </Card>
   )
@@ -495,6 +502,7 @@ export default function StaffEvents() {
           ))}
         </div>
       )}
+      <GoesWith links={[{ to: '/staff/bunfest', label: 'BunFest content' }, { to: '/staff/bunfest/bunnies', label: 'Bunny registrations' }]} />
     </Screen>
   )
 }

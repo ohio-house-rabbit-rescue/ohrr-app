@@ -10,6 +10,7 @@ import { useAuth } from '../lib/auth'
 import { Badge, Card, Screen } from '../components/ui'
 import { Icon } from '../components/icons'
 import { StaffTitle, Explain } from '../components/StaffTitle'
+import { GoesWith } from '../components/GoesWith'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { CardActions, EditorForm, Field, Part, StepButton, pill } from '../components/StaffJob'
 import StaffImageField from '../components/StaffImageField'
@@ -323,6 +324,7 @@ export default function StaffHomeScreen() {
             </section>
           )
         })}
+      <GoesWith links={[{ to: '/staff/announcements', label: 'Announcements' }]} />
     </Screen>
   )
 }

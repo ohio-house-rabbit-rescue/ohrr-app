@@ -151,6 +151,7 @@ export function useStaffTiles({ counts = false }: { counts?: boolean } = {}): St
       // Rabbits and care
       { to: '/staff/adoptions', title: 'Adoptions', hint: pendingCount > 0 ? `${pendingCount} to confirm` : 'Visits, rabbits, applications', icon: 'heart', group: 'rabbits', today: true, badge: pendingCount, show: canBookings || canAdopt },
       { to: '/staff/adopt', title: 'Adoptable rabbits', hint: 'Rabbits, photos, adoption status', icon: 'heart', group: 'rabbits', more: true, show: canAdopt },
+      { to: '/staff/care-requests', title: 'Foster, surrender and found', hint: 'Requests to follow through to the end', icon: 'home', group: 'rabbits', show: can('inbox.manage') },
       { to: '/staff/tails', title: 'Happy Tails', hint: 'Adopters’ stories', icon: 'sparkles', group: 'rabbits', show: canCare || can('inbox.manage') },
       { to: '/staff/learn', title: 'Care guides and pages', hint: 'Rabbit Care articles, Give, Adopt, About', icon: 'book', group: 'rabbits', section: 'care', show: canCare },
       { to: '/staff/bunny-help', title: 'Bunny Help topics', hint: 'What “My bunny is…” answers', icon: 'help', group: 'rabbits', section: 'care', show: canCare },

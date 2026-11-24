@@ -3,8 +3,12 @@
 // Plain Tailwind and no app-specific imports, so the same file lives in the app
 // (src/features/scan/SheetGrid.tsx) and the website (src/components/SheetGrid.tsx) — keep the two the same.
 // The page around it (ItemsSheet) loads the items, keeps the edits and does the saving.
+//
+// The page also says where a row's links go (the two sites' addresses differ) and fills in the
+// look-only cells: its box, how it came in and what it's for.
 import { memo, type KeyboardEvent } from 'react'
-import { cellProblem, cellsFromItem, changedKeys, withEdits, type CellKey, type SheetCells, type SheetItem } from './sheetSave'
+import { Link } from 'react-router-dom'
+import { cellProblem, cellsFromItem, changedKeys, lockedCells, placeFromBox, withEdits, type CellKey, type SheetCells, type SheetItem } from './sheetSave'
 
 /** What the grid shows of an item besides its editable cells. */
 export interface GridItem extends SheetItem {
@@ -14,6 +18,22 @@ export interface GridItem extends SheetItem {
   outcome?: string | null
 }
 
+/** The look-only cells of a row and where its links go. Filled in by the page. */
+export interface RowInfo {
+  /** Opens this one item (to print its label, add photos, sort it). */
+  itemHref?: string
+  /** "Box 12 · Raffle box", or '' when it isn't in a box. */
+  box: string
+  boxHref?: string
+  /** "Donation" or "Bought". */
+  came: string
+  /** What was paid for a bought item, as text ("$12.50"), or ''. */
+  paid: string
+  boughtFrom: string
+  /** Where it's headed and what it's for ("Raffle · Spring basket"), or ''. */
+  plan: string
+}
+
 export interface RowStatus {
   state: 'saving' | 'saved' | 'error'
   message?: string
@@ -21,7 +41,7 @@ export interface RowStatus {
 }
 
 interface Column {
-  key: CellKey | 'photo' | 'code' | 'status'
+  key: CellKey | 'photo' | 'code' | 'status' | 'box' | 'came' | 'paid' | 'boughtFrom' | 'plan'
   label: string
   width: string
 }
@@ -37,10 +57,16 @@ const COLUMNS: Column[] = [
   { key: 'condition', label: 'Condition', width: '116px' },
   { key: 'category', label: 'Sort of thing', width: '150px' },
   { key: 'location', label: 'Where it’s kept', width: '170px' },
+  { key: 'box', label: 'Box', width: '150px' },
   { key: 'donatedBy', label: 'Donated by', width: '170px' },
   { key: 'useBy', label: 'Use by', width: '140px' },
   { key: 'description', label: 'Notes', width: '300px' },
   { key: 'status', label: 'Status', width: '260px' },
+  // Look-only: asked when the item came in, shown here so nobody has to open the item to see them.
+  { key: 'plan', label: 'What it’s for', width: '180px' },
+  { key: 'came', label: 'Came in as', width: '104px' },
+  { key: 'paid', label: 'What we paid', width: '110px' },
+  { key: 'boughtFrom', label: 'Bought from', width: '160px' },
 ]
 
 const CONDITIONS = [
@@ -51,6 +77,8 @@ const CONDITIONS = [
   { value: 'fair', label: 'Fair' },
 ]
 
+const look = 'px-2 py-1 text-[15px] text-slate-600'
+const link = 'font-bold text-brand-blue underline underline-offset-2'
 const cell = 'w-full min-w-0 border-0 bg-transparent px-2 py-2 text-[15px] text-slate-900 outline-none focus:bg-white focus:ring-2 focus:ring-inset focus:ring-brand-blue disabled:text-slate-500'
 
 interface RowProps {
@@ -60,23 +88,35 @@ interface RowProps {
   status: RowStatus | undefined
   editable: boolean
   statusText: string
+  /** Kept as the page's function (not its answer) so an unchanged row is not drawn again. */
+  infoOf: (item: GridItem) => RowInfo
   onEdit: (code: string, key: CellKey, value: string) => void
   onUndo: (code: string) => void
 }
 
-const Row = memo(function Row({ item, index, edit, status, editable, statusText, onEdit, onUndo }: RowProps) {
+/** Why a box that can't be typed in is locked: shown when the pointer rests on it. */
+const WHY_LOCKED = {
+  worth: 'This was bought, not donated. What we paid is at the end of the row.',
+  place: 'This is where its box is kept. To move it, open the box and change the box’s place.',
+}
+
+const Row = memo(function Row({ item, index, edit, status, editable, statusText, infoOf, onEdit, onUndo }: RowProps) {
   const base = cellsFromItem(item)
   const now = withEdits(base, edit)
-  const bought = item.source === 'purchase'
-  const changed = new Set(changedKeys(base, now, bought))
+  const fixed = lockedCells(item)
+  const changed = new Set(changedKeys(base, now, fixed))
   const dirty = changed.size > 0
   const photo = item.photo_urls?.[0] || item.photo_url || ''
+  const info = infoOf(item)
 
   const box = (key: CellKey) => {
     const bad = changed.has(key) ? cellProblem(key, now) : null
-    const locked = !editable || (bought && (key === 'value' || key === 'valueBasis'))
+    /** Locked by a rule (not just while saving): shown gray, with the reason. */
+    const ruled = fixed.includes(key)
+    const locked = !editable || ruled
     const tone = bad ? 'bg-red-100' : changed.has(key) ? 'bg-amber-100' : ''
-    return { bad, locked, tone }
+    const why = ruled ? (key === 'location' ? WHY_LOCKED.place : WHY_LOCKED.worth) : null
+    return { bad, locked, ruled, tone, why }
   }
 
   const onKey = (e: KeyboardEvent<HTMLInputElement | HTMLSelectElement>, key: CellKey) => {
@@ -100,12 +140,12 @@ const Row = memo(function Row({ item, index, edit, status, editable, statusText,
         list={extra?.list}
         value={now[key]}
         readOnly={b.locked}
-        disabled={b.locked && (key === 'value' || key === 'valueBasis')}
+        disabled={b.ruled}
         onChange={(e) => onEdit(item.code, key, e.target.value)}
         onKeyDown={(e) => onKey(e, key)}
         aria-label={`${extra?.label ?? key}: ${item.title}`}
         aria-invalid={b.bad ? true : undefined}
-        title={b.bad ?? undefined}
+        title={b.bad ?? b.why ?? undefined}
         data-col={key}
         data-r={index}
         className={`${cell} ${b.tone}`}
@@ -119,7 +159,15 @@ const Row = memo(function Row({ item, index, edit, status, editable, statusText,
       <td className="px-2 py-1">
         {photo ? <img src={photo} alt="" loading="lazy" className="h-10 w-10 rounded-md object-cover" /> : <span className="block h-10 w-10 rounded-md bg-slate-100" />}
       </td>
-      <td className="px-2 py-1 font-mono text-xs font-bold tracking-wider text-slate-500">{item.code}</td>
+      <td className="px-2 py-1 font-mono text-xs font-bold tracking-wider text-slate-500">
+        {info.itemHref ? (
+          <Link to={info.itemHref} title={`Open ${item.title}`} className="text-brand-blue underline underline-offset-2">
+            {item.code}
+          </Link>
+        ) : (
+          item.code
+        )}
+      </td>
       <td className="p-0">{text('title', { label: 'Name' })}</td>
       <td className="p-0">{text('quantity', { label: 'How many', inputMode: 'numeric' })}</td>
       <td className="p-0">{text('value', { label: 'Worth in dollars', inputMode: 'decimal' })}</td>
@@ -130,6 +178,7 @@ const Row = memo(function Row({ item, index, edit, status, editable, statusText,
             <select
               value={now.valueBasis}
               disabled={b.locked}
+              title={b.why ?? undefined}
               onChange={(e) => onEdit(item.code, 'valueBasis', e.target.value)}
               onKeyDown={(e) => onKey(e, 'valueBasis')}
               aria-label={`Worth is for each or in all: ${item.title}`}
@@ -168,7 +217,22 @@ const Row = memo(function Row({ item, index, edit, status, editable, statusText,
         })()}
       </td>
       <td className="p-0">{text('category', { label: 'Sort of thing', list: 'sheet-categories' })}</td>
-      <td className="p-0">{text('location', { label: 'Where it’s kept', list: 'sheet-locations' })}</td>
+      <td className="p-0" title={placeFromBox(item) ? WHY_LOCKED.place : undefined}>
+        {text('location', { label: 'Where it’s kept', list: 'sheet-locations' })}
+      </td>
+      <td className={look}>
+        {info.box ? (
+          info.boxHref ? (
+            <Link to={info.boxHref} title="Open this box" className={link}>
+              {info.box}
+            </Link>
+          ) : (
+            info.box
+          )
+        ) : (
+          <span className="text-slate-400">Not in a box</span>
+        )}
+      </td>
       <td className="p-0">{text('donatedBy', { label: 'Donated by' })}</td>
       <td className="p-0">{text('useBy', { label: 'Use by', type: 'date' })}</td>
       <td className="p-0">{text('description', { label: 'Notes' })}</td>
@@ -191,6 +255,10 @@ const Row = memo(function Row({ item, index, edit, status, editable, statusText,
           </span>
         )}
       </td>
+      <td className={look}>{info.plan}</td>
+      <td className={look}>{info.came}</td>
+      <td className={look}>{info.paid}</td>
+      <td className={look}>{info.boughtFrom}</td>
     </tr>
   )
 })
@@ -203,6 +271,7 @@ export default function SheetGrid({
   locations,
   categories,
   statusOf,
+  infoOf,
   onEdit,
   onUndo,
 }: {
@@ -213,6 +282,8 @@ export default function SheetGrid({
   locations: string[]
   categories: string[]
   statusOf: (item: GridItem) => string
+  /** The look-only cells and links of a row. Pass a function that stays the same between draws. */
+  infoOf: (item: GridItem) => RowInfo
   onEdit: (code: string, key: CellKey, value: string) => void
   onUndo: (code: string) => void
 }) {
@@ -238,6 +309,7 @@ export default function SheetGrid({
               status={results[item.code]}
               editable={editable}
               statusText={statusOf(item)}
+              infoOf={infoOf}
               onEdit={onEdit}
               onUndo={onUndo}
             />

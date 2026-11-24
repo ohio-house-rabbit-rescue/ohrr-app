@@ -49,6 +49,7 @@ import {
 import HoursTab from './HoursTab'
 import { APPROVAL_KINDS, kindLabel } from '../../volunteers/approval'
 import { Explain, StaffTitle } from '../../../components/StaffTitle'
+import { GoesWith } from '../../../components/GoesWith'
 
 type Tab = 'confirm' | 'today' | 'coming' | 'times' | 'hours' | 'setup'
 
@@ -162,7 +163,7 @@ export default function StaffBookings() {
         </div>
       ) : (
         <div>
-          {scope === 'adopt' && (
+          {scope !== 'other' && (
             <Link to="/staff/adoptions" className="-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-base font-bold text-brand-blue hover:bg-brand-blue-50">
               <Icon name="arrowLeft" size={20} /> Adoptions
             </Link>
@@ -213,6 +214,19 @@ export default function StaffBookings() {
       {types && tab === 'times' && <MakeTimes types={types} />}
       {types && tab === 'hours' && <HoursTab />}
       {types && tab === 'setup' && <Setup orgId={orgId} types={types} onChanged={reloadTypes} />}
+      {!step && (
+        <GoesWith
+          links={
+            scope === 'adopt'
+              ? [{ to: '/staff/adopt', label: 'Adoptable rabbits' }]
+              : [
+                  { to: '/staff/calls', label: 'Volunteer calls' },
+                  { to: '/staff/volunteers', label: 'Volunteers' },
+                  ...(scope === 'all' ? [{ to: '/staff/adopt', label: 'Adoptable rabbits' }] : []),
+                ]
+          }
+        />
+      )}
     </Screen>
   )
 }

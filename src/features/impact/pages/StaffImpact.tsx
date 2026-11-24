@@ -10,6 +10,7 @@ import { EditorForm, Field, Part, pill } from '../../../components/StaffJob'
 import { hoursTotalForYear } from '../../bookings/api'
 import { IMPACT_FIELDS, deleteImpact, listImpact, saveImpact, type ImpactYear } from '../api'
 import { StaffTitle } from '../../../components/StaffTitle'
+import { GoesWith } from '../../../components/GoesWith'
 import { StatusNote } from '../../scan/ScanUI'
 import { putKeyboardAway } from '../../../lib/bringIntoView'
 
@@ -199,6 +200,7 @@ export default function StaffImpact() {
           )}
         </EditorForm>
       )}
+      <GoesWith links={[{ to: '/staff/announcements', label: 'Announcements' }]} />
     </Screen>
   )
 }

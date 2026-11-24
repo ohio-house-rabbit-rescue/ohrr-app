@@ -18,19 +18,19 @@ import ExportButtons from '../../../components/ExportButtons'
 import { todayStamp, type SheetSpec } from '../../../lib/inventoryExport'
 import { catalogSuggestions, findByCode, getItemBackup, listItemBackups, listItems, markLabelsPrinted, restoreItemBackup, saveItem, setDonationPlan, setItemExtras, takeItemsBackup, type CatalogSuggestions } from '../api'
 import { tellOthersLabelsChanged } from '../labelSync'
-import { SHEET_COLUMNS, SIMPLE_COLUMNS, sheetRow, simpleRow } from '../itemSheets'
-import { centsToDollars, draftFromItem, statusLabel, type TaggedItem } from '../types'
-import SheetGrid, { type RowStatus } from '../SheetGrid'
+import { SHEET_COLUMNS, SIMPLE_COLUMNS, boxCell, sheetRow, simpleRow } from '../itemSheets'
+import { centsToDollars, draftFromItem, formatMoney, purposeLine, statusLabel, type TaggedItem } from '../types'
+import SheetGrid, { type GridItem, type RowInfo, type RowStatus } from '../SheetGrid'
 import SheetBackups, { type BackupApi } from '../SheetBackups'
 import { itemsReportPdf, type ReportField } from '../itemsReportPdf'
 import ReportFieldPicker, { loadReportFields } from '../ReportFieldPicker'
-import { cellsFromItem, changedKeys, firstProblem, saveRow, withEdits, type CellKey, type SheetCells, type SheetDeps } from '../sheetSave'
+import { cellsFromItem, changedKeys, firstProblem, keptAt, lockedCells, saveRow, withEdits, type CellKey, type SheetCells, type SheetDeps } from '../sheetSave'
 
 type Show = 'waiting' | 'unsure' | 'done' | 'all'
 type Order = 'newest' | 'oldest' | 'name'
 const SHOWS: { key: Show; label: string }[] = [
-  { key: 'waiting', label: 'Waiting to be sorted' },
-  { key: 'unsure', label: 'Not sure yet' },
+  { key: 'waiting', label: 'To be sorted' },
+  { key: 'unsure', label: 'Needs a decision' },
   { key: 'done', label: 'Done' },
   { key: 'all', label: 'All donations' },
 ]
@@ -48,6 +48,38 @@ const entered = (i: TaggedItem): number => {
 }
 const inShow = (i: TaggedItem, show: Show): boolean =>
   show === 'all' ? true : show === 'done' ? Boolean(i.outcome) : !i.outcome && (show === 'waiting' || !i.headed_for)
+
+/** A row's links and look-only cells. Opening an item from here comes back here (back=sheet). */
+const infoOf = (g: GridItem): RowInfo => {
+  const i = g as TaggedItem
+  return {
+    itemHref: `/staff/scan?code=${encodeURIComponent(i.code)}&back=sheet`,
+    box: boxCell(i.box) ?? '',
+    boxHref: i.box ? `/staff/boxes/${encodeURIComponent(i.box.code)}` : undefined,
+    came: i.source === 'purchase' ? 'Bought' : 'Donation',
+    paid: formatMoney(i.cost_cents),
+    boughtFrom: i.bought_from ?? '',
+    plan: purposeLine(i),
+  }
+}
+const statusOf = (i: GridItem): string => statusLabel(i as TaggedItem)
+
+/** The search, list and order last used in this tab, so opening an item and coming back lands on the same rows. */
+const VIEW_KEY = 'ohrr.itemsSheet.view'
+function loadView(): { q: string; show: Show; order: Order } {
+  const usual = { q: '', show: 'waiting' as Show, order: 'newest' as Order }
+  try {
+    const v = JSON.parse(sessionStorage.getItem(VIEW_KEY) ?? 'null') as { q?: unknown; show?: unknown; order?: unknown } | null
+    if (!v) return usual
+    return {
+      q: typeof v.q === 'string' ? v.q.slice(0, 80) : '',
+      show: SHOWS.some((x) => x.key === v.show) ? (v.show as Show) : usual.show,
+      order: ORDERS.some((x) => x.key === v.order) ? (v.order as Order) : usual.order,
+    }
+  } catch {
+    return usual
+  }
+}
 
 const pill = 'inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border px-4 text-[15px] font-bold disabled:opacity-50'
 const field = 'min-h-[44px] rounded-xl border-2 border-slate-200 bg-white px-3 text-[15px] text-ink outline-none focus:border-brand-blue'
@@ -68,9 +100,17 @@ export default function ItemsSheet() {
   const [results, setResults] = useState<Record<string, RowStatus>>({})
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState<string | null>(null)
-  const [q, setQ] = useState('')
-  const [show, setShow] = useState<Show>('waiting')
-  const [order, setOrder] = useState<Order>('newest')
+  const [view] = useState(loadView)
+  const [q, setQ] = useState(view.q)
+  const [show, setShow] = useState<Show>(view.show)
+  const [order, setOrder] = useState<Order>(view.order)
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(VIEW_KEY, JSON.stringify({ q, show, order }))
+    } catch {
+      /* private browsing: the view just isn't remembered */
+    }
+  }, [q, show, order])
   const [limit, setLimit] = useState(PAGE)
   const [suggest, setSuggest] = useState<CatalogSuggestions>({ locations: [], categories: [], stores: [] })
 
@@ -123,7 +163,7 @@ export default function ItemsSheet() {
       const it = byCode.get(code)
       if (!it) continue
       const base = cellsFromItem(it)
-      if (changedKeys(base, withEdits(base, e), it.source === 'purchase').length) out.push(code)
+      if (changedKeys(base, withEdits(base, e), lockedCells(it)).length) out.push(code)
     }
     return out
   }, [edits, byCode])
@@ -133,7 +173,7 @@ export default function ItemsSheet() {
       const it = byCode.get(code)!
       const base = cellsFromItem(it)
       const now = withEdits(base, edits[code])
-      if (firstProblem(changedKeys(base, now, it.source === 'purchase'), now)) n++
+      if (firstProblem(changedKeys(base, now, lockedCells(it)), now)) n++
     }
     return n
   }, [dirty, edits, byCode])
@@ -171,7 +211,7 @@ export default function ItemsSheet() {
         keep.has(i.code) ||
         (inShow(i, show) &&
           (!needle ||
-            [i.title, i.code, i.donated_by, i.location, i.category, i.description, i.box ? `box ${i.box.box_no} ${i.box.code} ${i.box.name ?? ''}` : ''].some((t) =>
+            [i.title, i.code, i.donated_by, keptAt(i), i.category, i.description, i.box ? `box ${i.box.box_no} ${i.box.code} ${i.box.name ?? ''}` : ''].some((t) =>
               (t ?? '').toLowerCase().includes(needle),
             ))),
     )
@@ -226,9 +266,9 @@ export default function ItemsSheet() {
       if (!it) continue
       const base = cellsFromItem(it)
       const now = withEdits(base, edits[code])
-      if (firstProblem(changedKeys(base, now, it.source === 'purchase'), now)) {
+      if (firstProblem(changedKeys(base, now, lockedCells(it)), now)) {
         failed++
-        setResults((r) => ({ ...r, [code]: { state: 'error', message: firstProblem(changedKeys(base, now, it.source === 'purchase'), now) ?? '' } }))
+        setResults((r) => ({ ...r, [code]: { state: 'error', message: firstProblem(changedKeys(base, now, lockedCells(it)), now) ?? '' } }))
         continue
       }
       setResults((r) => ({ ...r, [code]: { state: 'saving' } }))
@@ -306,7 +346,13 @@ export default function ItemsSheet() {
           download the list to fix it.
         </p>
         <p>
-          <strong>Choose what you see.</strong> The search box and the list picker (Waiting to be sorted, Not sure yet, Done, All donations) narrow the table. The
+          <strong>Open one item or its box.</strong> Click an item’s <strong>number</strong> to open just that item (to print its label, add photos or decide what
+          it’s for); Back brings you here again, on the same rows. The <strong>Box</strong> column says which box it’s packed in; click it to open the box. An item
+          in a box is kept wherever its box is, so that box is gray: change the place on the box and every item in it follows. The gray columns at the far right
+          (what it’s for, donated or bought, what we paid) are for looking only.
+        </p>
+        <p>
+          <strong>Choose what you see.</strong> The search box and the list picker (To be sorted, Needs a decision, Done, All donations) narrow the table. The
           downloads take exactly what is shown.
         </p>
         <p>
@@ -415,7 +461,7 @@ export default function ItemsSheet() {
 
       {items && shown.length > 0 && (
         <>
-          <SheetGrid rows={drawn} edits={edits} results={results} editable={canEdit && !saving} locations={suggest.locations} categories={suggest.categories} statusOf={(i) => statusLabel(i as TaggedItem)} onEdit={onEdit} onUndo={onUndo} />
+          <SheetGrid rows={drawn} edits={edits} results={results} editable={canEdit && !saving} locations={suggest.locations} categories={suggest.categories} statusOf={statusOf} infoOf={infoOf} onEdit={onEdit} onUndo={onUndo} />
           {shown.length > drawn.length && (
             <button type="button" onClick={() => setLimit((n) => n + PAGE)} className={`${pill} border-slate-200 bg-white text-slate-700`}>
               Show {Math.min(PAGE, shown.length - drawn.length)} more ({shown.length - drawn.length} not shown yet)

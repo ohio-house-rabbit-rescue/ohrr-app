@@ -561,8 +561,12 @@ export const FLOWS: Flow[] = [
       { label: 'Receive it', note: 'Take a photo and type what it is.', level: 'receive' },
       { label: 'The app gives it a number', note: 'The next free one, like DON-00001. You never make one up.' },
       { label: 'Print the label', note: 'It carries the number and a code that scans.' },
+      { label: 'Put it away, or pack it in a box', note: 'A box has its own number and label. An item in a box is kept wherever its box is.' },
+      { label: 'Finish for today', note: 'Today’s summary: print the list and the thank-you letters.' },
+      { label: 'Decide what it’s for', note: 'The raffle, the Silent Auction, the Hop Shop, or our own use. It then shows on that page too.' },
       { label: 'Anyone scans the label', note: 'Scan an item opens the item.', level: 'receive' },
-      { label: 'The item comes up', note: 'You can see it, change it, or sort it.', tone: 'end' },
+      { label: 'The item comes up', note: 'You can see it, change it, open its box, or follow it to where it went.', tone: 'end' },
+      { label: 'Many to fix at once?', note: 'The Items spreadsheet, on a computer. Backups keep a copy from each of the last 10 days.' },
     ],
   },
   {

@@ -178,7 +178,7 @@ export async function itemsReportPdf(
   // Totals in boxes across the page.
   const pieces = spec.rows.reduce((n, r) => n + Math.max(1, Number(at(r.cells, 'How many')) || 1), 0)
   const worth = spec.rows.reduce((n, r) => {
-    const c = at(r.cells, 'Value in all')
+    const c = at(r.cells, 'Worth in all')
     return n + (typeof c === 'number' ? c : 0)
   }, 0)
   const withPhoto = spec.rows.filter((r) => r.photos.length > 0).length
@@ -229,8 +229,8 @@ export async function itemsReportPdf(
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(12)
     const name = upTo(doc.splitTextToSize(`${plain(at(r.cells, 'Name')) || 'No name yet'}${qty > 1 ? ` (${qty})` : ''}`, textW) as string[], 2)
-    const each = at(r.cells, 'Value each')
-    const all = at(r.cells, 'Value in all')
+    const each = at(r.cells, 'Worth each')
+    const all = at(r.cells, 'Worth in all')
     const worthText = money(all) ? `${money(all)}${qty > 1 && money(each) ? ` (${money(each)} each)` : ''}` : ''
     const bought = plain(at(r.cells, 'Came in as')) === 'Bought'
     const choices: Partial<Record<ReportField, [string, string]>> = {
@@ -258,7 +258,7 @@ export async function itemsReportPdf(
     for (let k = 0; k < details.length; k += 2) pairH.push(0.02 + 0.152 * Math.max(details[k][1].length, details[k + 1]?.[1].length ?? 1))
     doc.setFont('helvetica', 'italic')
     doc.setFontSize(9)
-    const notes = want.includes('notes') ? upTo(doc.splitTextToSize(plain(at(r.cells, 'Description')), textW) as string[], 2) : []
+    const notes = want.includes('notes') ? upTo(doc.splitTextToSize(plain(at(r.cells, 'Notes')), textW) as string[], 2) : []
     const textH = 0.15 + 0.19 * name.length + 0.2 + pairH.reduce((a, b) => a + b, 0) + notes.length * 0.15
     const lineH = Math.max(big + 0.17, textH + 0.1)
 

@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../lib/auth'
+import { GoesWith } from '../../../components/GoesWith'
 import { errMessage } from '../../../lib/supabase'
 import { Screen, Card, Badge, btn } from '../../../components/ui'
 import { Icon } from '../../../components/icons'
@@ -304,6 +305,13 @@ function SignupsTab({ call, roster }: { call: Call; roster: RosterLine[] }) {
           </ul>
         )}
       </Card>
+
+      <GoesWith
+        links={[
+          { to: '/staff/bookings?scope=other', label: 'See these shifts in Volunteer shifts' },
+          { to: '/staff/volunteers', label: 'See everyone in Volunteers' },
+        ]}
+      />
     </div>
   )
 }
@@ -321,6 +329,7 @@ const act = `${btn.primary} min-h-[44px] text-sm`
 const actOutline = `${btn.outline} min-h-[44px] text-sm`
 
 function ShareTab({ call, org }: { call: Call; org: OrgBits }) {
+  const { can } = useAuth()
   const [open, setOpen] = useState<Medium | null>('facebook')
   const [to, setTo] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
@@ -486,6 +495,11 @@ function ShareTab({ call, org }: { call: Call; org: OrgBits }) {
                     <button type="button" disabled={!!busy} onClick={flyer} className={act}>
                       {busy === 'flyer' ? 'Making it…' : 'Make the flyer'}
                     </button>
+                  )}
+                  {m.id === 'flyer' && can('announcements.post') && (
+                    <Link to="/staff/flyers" className={actOutline}>
+                      More flyers
+                    </Link>
                   )}
                   {m.id !== 'flyer' && (
                     <button

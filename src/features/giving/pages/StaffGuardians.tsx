@@ -12,6 +12,7 @@ import { Spinner, FormError, staffInput } from '../../../components/staffui'
 import { CardActions, EditorForm, Field, NotOnYet, Part, StepButton, pill } from '../../../components/StaffJob'
 import { guessSortName, sortGuardians, type Guardian } from '../guardians'
 import { StaffTitle } from '../../../components/StaffTitle'
+import { GoesWith } from '../../../components/GoesWith'
 import BringIn from '../../../components/BringIn'
 import { putKeyboardAway } from '../../../lib/bringIntoView'
 import { StatusNote } from '../../scan/ScanUI'
@@ -348,6 +349,7 @@ export default function StaffGuardians() {
           )}
         </>
       )}
+      <GoesWith links={[{ to: '/staff/supporters', label: 'Supporters' }, { to: '/staff/wish-list', label: 'Wish list items' }]} />
     </Screen>
   )
 }

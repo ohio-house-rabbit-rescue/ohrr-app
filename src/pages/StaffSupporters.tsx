@@ -9,11 +9,13 @@
 // "Download spreadsheet" (CSV). Read-only: people change their own choices
 // through My OHRR or the link in every email.
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { errMessage, supabase } from '../lib/supabase'
 import { Screen, Card, Badge, btn } from '../components/ui'
 import { Icon } from '../components/icons'
 import { StaffTitle } from '../components/StaffTitle'
+import { GoesWith } from '../components/GoesWith'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { exportCsv, toCsv } from '../lib/exportFile'
 import { StatusNote } from '../features/scan/ScanUI'
@@ -157,8 +159,15 @@ export default function StaffSupporters() {
       {missing ? (
         <Card className="border-amber-200 bg-amber-50">
           <p className="text-sm text-amber-900">
-            The email list isn’t switched on yet — ask an admin. Until it is, mailing-list sign-ups keep landing in the
-            Inbox.
+            The email list isn’t switched on yet — ask an admin. Until it is, mailing-list sign-ups keep landing in the{' '}
+            {can('inbox.manage') ? (
+              <Link to="/staff/inbox" className="inline-flex min-h-[44px] items-center font-bold text-brand-blue underline">
+                Inbox
+              </Link>
+            ) : (
+              'Inbox'
+            )}
+            .
           </p>
         </Card>
       ) : rows === null ? (
@@ -256,6 +265,7 @@ export default function StaffSupporters() {
           )}
         </>
       )}
+      <GoesWith links={[{ to: '/staff/wish-list', label: 'Wish list items' }, { to: '/staff/guardians', label: 'Rescue Rabbit Guardians' }]} />
     </Screen>
   )
 }

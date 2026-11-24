@@ -79,11 +79,14 @@ export default function RaffleDesk() {
   }, [orgId])
 
   const isManager = can('events.bunfest.manage')
-  const wanted = params.get('tab')
+  // ?show=prizes lands on Draw winners, where the prize list is (managers only).
+  const wanted = params.get('tab') ?? (params.get('show') === 'prizes' ? 'draw' : null)
+  const canOpenItems = isManager || can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update')
   // Drawing winners and the summary stay with BunFest managers.
   const tab: Tab = TABS.includes(wanted as Tab) && (isManager || (wanted !== 'draw' && wanted !== 'winners')) ? (wanted as Tab) : 'desk'
   const setTab = (t: Tab) => {
     const next = new URLSearchParams(params)
+    next.delete('show')
     if (t === 'desk') next.delete('tab')
     else next.set('tab', t)
     setParams(next, { replace: true })
@@ -159,6 +162,11 @@ export default function RaffleDesk() {
         </div>
       )}
       <ErrorBox>{error}</ErrorBox>
+      {canOpenItems && (
+        <Link to="/staff/items?list=1" className="inline-flex min-h-[44px] items-center text-[15px] font-bold text-brand-blue underline">
+          Donations still waiting to be sorted
+        </Link>
+      )}
       <div data-row="raffle-tab" className="space-y-4">
         {tab === 'desk' && <DeskTab orgId={orgId} onChange={refreshSummary} />}
         {tab === 'sell' && <SellTab orgId={orgId} onChange={refreshSummary} />}

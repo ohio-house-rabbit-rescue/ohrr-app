@@ -4,6 +4,7 @@
 import type { SheetColumn, SheetRow } from '../../lib/inventoryExport'
 import { itemPhotos } from './api'
 import { boxTitle } from './codes'
+import { keptAt } from './sheetSave'
 import { KIND_META, conditionLabel, donationValues, headedLabel, statusLabel, type TaggedItem } from './types'
 
 // The spreadsheet's columns, the same as the website's Items download.
@@ -21,15 +22,15 @@ export const SHEET_COLUMNS: SheetColumn[] = [
   { header: 'Bought from', width: 18 },
   { header: 'How many', width: 10, kind: 'number' },
   { header: 'Size', width: 12 },
-  { header: 'Value each', width: 12, kind: 'money' },
-  { header: 'Value in all', width: 12, kind: 'money' },
+  { header: 'Worth each', width: 12, kind: 'money' },
+  { header: 'Worth in all', width: 12, kind: 'money' },
   { header: 'Price', width: 10, kind: 'money' },
   { header: 'Condition', width: 11 },
   { header: 'Sort of thing', width: 16 },
   { header: 'Where it’s kept', width: 18 },
   { header: 'Box', width: 16 },
   { header: 'Use by', width: 13, kind: 'date' },
-  { header: 'Description', width: 40 },
+  { header: 'Notes', width: 40 },
   { header: 'Label printed', width: 13, kind: 'date' },
   { header: 'Added', width: 13, kind: 'date' },
 ]
@@ -40,12 +41,12 @@ export const SHEET_COLUMNS: SheetColumn[] = [
 export const SIMPLE_COLUMNS: SheetColumn[] = [
   { header: 'Item', width: 34 },
   { header: 'Where it’s kept', width: 24 },
-  { header: 'Donor', width: 24 },
+  { header: 'Donated by', width: 24 },
 ]
 
 export function simpleRow(i: TaggedItem): SheetRow {
   const from = i.source === 'purchase' ? (i.bought_from ? `Bought at ${i.bought_from}` : 'Bought') : i.donated_by
-  return { photos: itemPhotos(i), cells: [`${i.title}\n${i.code}`, i.location, from] }
+  return { photos: itemPhotos(i), cells: [`${i.title}\n${i.code}`, keptAt(i) || null, from] }
 }
 
 /** The box an item is in, as written on the box: "Box 12", or "Box 12 · Raffle box · 1 of 4" when it has a name. */
@@ -79,7 +80,7 @@ export function sheetRow(i: TaggedItem): SheetRow {
       i.price_cents,
       conditionLabel(i.condition),
       i.category,
-      i.location,
+      keptAt(i) || null,
       boxCell(i.box),
       i.use_by,
       i.description,

@@ -22,6 +22,7 @@ import { bringIntoView } from '../../../lib/bringIntoView'
 import { pickPhoto, type PhotoSource } from '../../../native/camera'
 import Scanner from '../Scanner'
 import { normalizeCode, isRetailBarcode, isOhrrCode, isBoxCode } from '../codes'
+import { backParam, backTarget, cleanBack } from '../backTo'
 import { guessProduct, guessTitle, type ProductGuess } from '../lookup'
 import {
   adjustStock,
@@ -80,6 +81,8 @@ interface Saved {
   editing: boolean
   /** Opened from the Items list: a saved edit goes back there. */
   fromList?: boolean
+  /** Where it was opened from (see ../backTo.ts): Back returns there. */
+  back?: string | null
 }
 
 function loadSaved(): Saved | null {
@@ -114,7 +117,11 @@ export default function ScanFlow() {
   const [draft, setDraft] = useState<ItemDraft>(() => emptyDraft(''))
   const [item, setItem] = useState<TaggedItem | null>(null)
   const [editing, setEditing] = useState(false)
-  const [fromList, setFromList] = useState(false)
+  // Where the item was opened from (?back=): the list, the spreadsheet, a box, a drop-off, today's summary.
+  const [backCode, setBackCode] = useState<string | null>(null)
+  const cameFrom = backTarget(backCode)
+  /** From the Items list: a saved edit goes straight back there. */
+  const fromList = backCode === 'items'
   const [error, setError] = useState<string | null>(null)
   const [typed, setTyped] = useState('')
   const [guess, setGuess] = useState<ProductGuess | null>(null)
@@ -207,7 +214,7 @@ export default function ScanFlow() {
   useEffect(() => {
     const code = params.get('code')
     if (code && orgId) {
-      setFromList(params.get('back') === 'items')
+      setBackCode(cleanBack(params.get('back')))
       setParams({}, { replace: true })
       void lookup(code)
       return
@@ -216,7 +223,7 @@ export default function ScanFlow() {
     if (saved && !code) {
       setDraft(saved.draft)
       setEditing(saved.editing)
-      setFromList(Boolean(saved.fromList))
+      setBackCode(cleanBack(saved.back) ?? (saved.fromList ? 'items' : null))
       setStep(saved.step)
       setResumed(true)
     }
@@ -225,9 +232,9 @@ export default function ScanFlow() {
 
   // Keep the wizard's progress across a refresh; clear it once done.
   useEffect(() => {
-    if (WIZARD.includes(step)) persist({ step, draft, editing, fromList })
+    if (WIZARD.includes(step)) persist({ step, draft, editing, fromList, back: backCode })
     else if (step === 'done' || step === 'scan') persist(null)
-  }, [step, draft, editing, fromList])
+  }, [step, draft, editing, fromList, backCode])
 
   /** "Add it with this code": the new-item questions, for the code that was scanned. */
   const addWithCode = () => {
@@ -245,7 +252,7 @@ export default function ScanFlow() {
     setDraft(emptyDraft(''))
     setItem(null)
     setEditing(false)
-    setFromList(false)
+    setBackCode(null)
     setGuess(null)
     setError(null)
     setResumed(false)
@@ -564,8 +571,8 @@ export default function ScanFlow() {
       <StepShell
         title="Found it"
         help="This tag is already on an item."
-        onBack={fromList ? () => navigate('/staff/items?list=1') : startOver}
-        backLabel={fromList ? 'List' : 'Scan'}
+        onBack={cameFrom ? () => navigate(cameFrom.to) : startOver}
+        backLabel={cameFrom ? cameFrom.label : 'Scan'}
       >
         <div className="space-y-4">
           <ItemCard item={item} big />
@@ -604,7 +611,44 @@ export default function ScanFlow() {
                   <Icon name="printer" size={16} /> Print its label
                 </Link>
               )}
+              {/* Opened from the spreadsheet, a box, a drop-off…: the way back sits right by "Saved". */}
+              {!note.code && cameFrom && (
+                <Link to={cameFrom.to} className={pill.blue}>
+                  {cameFrom.long}
+                </Link>
+              )}
             </StatusNote>
+          )}
+          {/* Sorted: it now lives on another page. Say which, and give the way there (staff audit 2026-11-24). */}
+          {canThis && item.kind === 'stock' && (
+            <div className="space-y-2 rounded-2xl bg-brand-blue-50 px-4 py-3">
+              <p className="text-[15px] text-ink">
+                {item.status === 'inactive' && !item.price_cents
+                  ? 'This is in the Hop Shop now, but hidden: it needs a price before shoppers see it.'
+                  : 'This is in the Hop Shop.'}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {item.status === 'inactive' && !item.price_cents && (
+                  <Link to="/staff/hopshop?show=list&need=price" className={pill.blue}>
+                    <Icon name="bag" size={16} /> Give it a price
+                  </Link>
+                )}
+                <Link to="/staff/hopshop?show=list" className={pill.outline}>
+                  See the shelf
+                </Link>
+              </div>
+            </div>
+          )}
+          {canThis && (item.kind === 'auction' || item.kind === 'raffle') && (
+            <div className="space-y-2 rounded-2xl bg-brand-blue-50 px-4 py-3">
+              <p className="text-[15px] text-ink">
+                {item.kind === 'auction' ? 'This is a Silent Auction lot now.' : 'This is a raffle prize now.'}
+                {item.is_published ? '' : ' It is hidden from the public list until you show it.'}
+              </p>
+              <Link to={item.kind === 'auction' ? '/staff/raffle?show=items' : '/staff/raffle-tickets?show=prizes'} className={pill.blue}>
+                <Icon name={item.kind === 'auction' ? 'gavel' : 'ticket'} size={16} /> {item.kind === 'auction' ? 'See the auction lots' : 'See the raffle prizes'}
+              </Link>
+            </div>
           )}
           {item.kind === 'donation' && item.in_basket && (
             <button
@@ -698,7 +742,7 @@ export default function ScanFlow() {
           {canThis && moreOpen && (
             <div ref={moreRef} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
               <div className="flex flex-wrap gap-2">
-                <StepButton icon="camera" onClick={() => navigate(`/staff/items/photos?code=${encodeURIComponent(item.code)}${fromList ? '&back=items' : ''}`)}>
+                <StepButton icon="camera" onClick={() => navigate(`/staff/items/photos?code=${encodeURIComponent(item.code)}${backParam(backCode)}`)}>
                   Photos
                 </StepButton>
                 {isOhrrCode(item.code) && (
@@ -742,7 +786,12 @@ export default function ScanFlow() {
                     It’s something else
                   </StepButton>
                 )}
-                {fromList && <StepButton to="/staff/items?list=1">Back to the list</StepButton>}
+                {item.kind === 'donation' && item.dropoff_id && (
+                  <StepButton icon="mail" to={`/staff/dropoffs/${item.dropoff_id}`}>
+                    Its drop-off and thank-you letter
+                  </StepButton>
+                )}
+                {cameFrom && <StepButton to={cameFrom.to}>{cameFrom.long}</StepButton>}
               </div>
               {toSort && (item.quantity ?? 1) > 1 && splitOpen && (
                 <div ref={splitRef} className="space-y-4 border-t border-slate-100 pt-3">
@@ -1097,8 +1146,8 @@ export default function ScanFlow() {
           <BigButton tone="orange" icon="scan" onClick={startOver}>
             Scan another
           </BigButton>
-          <BigButton tone="plain" onClick={() => navigate('/staff')}>
-            I’m done
+          <BigButton tone="plain" onClick={() => navigate(canDonation ? '/staff/items' : '/staff')}>
+            {canDonation ? 'I’m done — go to Items' : 'I’m done'}
           </BigButton>
         </div>
       </StepShell>

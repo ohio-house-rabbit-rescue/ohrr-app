@@ -29,6 +29,27 @@ export interface SheetItem {
   location?: string | null
   source?: 'donation' | 'purchase' | null
   label_printed_at?: string | null
+  /** The box it's packed in, with the box's place as it is now. */
+  box?: { code: string; box_no: number; location?: string | null } | null
+}
+
+/**
+ * The one answer to "where is it kept". A packed item is wherever its box is, so the box's place wins;
+ * an item that isn't in a box (or whose box has no place yet) uses its own.
+ * Every list, download and screen reads the place through this, so they can't disagree.
+ */
+export function keptAt(i: { location?: string | null; box?: { location?: string | null } | null }): string {
+  return (i.box?.location ?? '').trim() || (i.location ?? '').trim()
+}
+/** True when the box decides the place: it is changed on the box, not on the item. */
+export const placeFromBox = (i: { box?: { location?: string | null } | null }): boolean => Boolean((i.box?.location ?? '').trim())
+
+/** Cells that can't be typed in for this row: a bought item's worth, and the place of an item in a box. */
+export function lockedCells(i: SheetItem): CellKey[] {
+  const out: CellKey[] = []
+  if (i.source === 'purchase') out.push('value', 'valueBasis')
+  if (placeFromBox(i)) out.push('location')
+  return out
 }
 
 /** Every editable cell of a row, as the text in the box. */
@@ -83,7 +104,7 @@ export function cellsFromItem(i: SheetItem): SheetCells {
     size: i.size ?? '',
     condition: i.condition ?? '',
     category: i.category ?? '',
-    location: i.location ?? '',
+    location: keptAt(i),
     donatedBy: i.donated_by ?? '',
     useBy: (i.use_by ?? '').slice(0, 10),
     description: i.description ?? '',
@@ -95,10 +116,10 @@ export const withEdits = (base: SheetCells, edits: Partial<SheetCells> | undefin
 
 const norm = (s: string) => s.trim()
 
-/** Which cells differ from the saved item. A bought item's worth is not edited here. */
-export function changedKeys(base: SheetCells, now: SheetCells, bought = false): CellKey[] {
+/** Which cells differ from the saved item. Locked cells (see lockedCells) never count. */
+export function changedKeys(base: SheetCells, now: SheetCells, locked: CellKey[] = []): CellKey[] {
   const keys = (Object.keys(base) as CellKey[]).filter((k) => norm(String(base[k])) !== norm(String(now[k])))
-  return bought ? keys.filter((k) => k !== 'value' && k !== 'valueBasis') : keys
+  return locked.length ? keys.filter((k) => !locked.includes(k)) : keys
 }
 
 /** Why a cell can't be saved as typed, or null. */
@@ -151,7 +172,7 @@ const list = (keys: CellKey[]): string => keys.map((k) => CELL_LABELS[k]).join('
 
 export async function saveRow<T extends SheetItem>(deps: SheetDeps<T>, orig: T, now: SheetCells): Promise<RowResult<T>> {
   const base = cellsFromItem(orig)
-  const keys = changedKeys(base, now, orig.source === 'purchase')
+  const keys = changedKeys(base, now, lockedCells(orig))
   if (keys.length === 0) return { ok: true, item: orig, saved: [], warnings: [] }
   const bad = firstProblem(keys, now)
   if (bad) return { ok: false, saved: [], error: bad, warnings: [] }

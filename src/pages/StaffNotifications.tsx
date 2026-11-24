@@ -10,6 +10,7 @@ import { errMessage, supabase } from '../lib/supabase'
 import type { Database, Json, PushTopic } from '../lib/database.types'
 import { Screen, Card, Badge } from '../components/ui'
 import { StaffTitle } from '../components/StaffTitle'
+import { GoesWith } from '../components/GoesWith'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { EditorForm, Field, NotOnYet, Part, pill } from '../components/StaffJob'
 import { PUSH_TOPICS, PUSH_TOPIC_LABEL, isPushTopic } from '../features/account/push'
@@ -330,6 +331,9 @@ export default function StaffNotifications() {
             <StatusNote key={msg} className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
               {msg}
             </StatusNote>
+          )}
+          {msg && msg.startsWith('Sent') && (
+            <GoesWith links={[{ to: '/staff/announcements', label: 'Post it as an announcement too' }, { to: '/staff/share', label: 'Make a social post' }]} />
           )}
           {confirming && (
             <StatusNote className="rounded-xl border border-brand-orange/40 bg-brand-orange-50 px-3 py-3 text-base font-bold text-ink">

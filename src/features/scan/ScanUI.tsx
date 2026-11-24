@@ -2,6 +2,7 @@
 // forms hard: one question per screen, 60px+ targets, plain words, the main
 // button always in the same place at the bottom, Back always top-left.
 import { useEffect, useRef, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { ensureVisible } from '../../lib/bringIntoView'
 import { Icon, type IconName } from '../../components/icons'
 import { itemPhotos } from './api'
@@ -200,8 +201,12 @@ export function ItemCard({ item, big = false }: { item: TaggedItem; big?: boolea
         {extrasSummary(item) && <p className="text-[15px] text-slate-600">{extrasSummary(item)}</p>}
         {item.box && (
           <p className="text-[15px] font-semibold text-slate-600">
-            In {boxTitle(item.box)}
-            {item.box.location ? ` · ${item.box.location}` : ''}
+            In{' '}
+            <Link to={`/staff/boxes/${encodeURIComponent(item.box.code)}`} className="font-bold text-brand-blue underline underline-offset-2">
+              {/* The number is what's printed big on the box, so it always leads: "Box 3 · Raffle box". */}
+              {boxTitle(item.box) === `Box ${item.box.box_no}` ? boxTitle(item.box) : `Box ${item.box.box_no} · ${boxTitle(item.box)}`}
+            </Link>
+            {item.box.location ? '' : ' · this box has no place yet'}
           </p>
         )}
         {item.description && <p className="text-[15px] leading-snug text-slate-500">{item.description}</p>}

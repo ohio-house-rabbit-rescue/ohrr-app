@@ -50,6 +50,7 @@ import {
 } from '../api'
 import { APPROVAL_KINDS, approvedText, EVERYTHING, kindLabel } from '../approval'
 import { StaffTitle } from '../../../components/StaffTitle'
+import { GoesWith } from '../../../components/GoesWith'
 
 type Tab = 'roster' | 'hours'
 
@@ -124,6 +125,7 @@ export default function StaffVolunteers() {
       {rows && tab === 'roster' && <Roster orgId={orgId} rows={rows} onChanged={load} />}
       {rows && tab === 'hours' && <ToConfirm rows={rows} pending={pending} counted={counted} onChanged={load} />}
       {orgId && can('volunteers.certificates') && <CertificateHours orgId={orgId} />}
+      <GoesWith links={[{ to: '/staff/calls', label: 'Volunteer calls' }, { to: '/staff/bookings?scope=other', label: 'Volunteer shifts' }]} />
     </Screen>
   )
 }

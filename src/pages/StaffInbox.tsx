@@ -18,6 +18,7 @@ import { bringIntoView } from '../lib/bringIntoView'
 import { publishHappyTail } from '../features/tails/api'
 import { TAIL_STATUS, type TailStatus } from '../data/tails'
 import { kindLabel } from '../features/volunteers/approval'
+import { useStaffTiles, type StaffTile } from '../features/staff/staffTiles'
 
 type Row = Database['public']['Tables']['requests']['Row']
 type Status = Row['status']
@@ -43,6 +44,39 @@ const KIND: Record<string, { label: string; icon: IconName }> = {
 }
 const kindMeta = (k: string) => KIND[k] ?? { label: k.replace(/-/g, ' '), icon: 'mail' as IconName }
 
+/**
+ * Where the work on a request continues. `via` is the staff-menu page whose
+ * permission decides whether this person may open `to` (nothing is shown if
+ * they may not). A volunteer application has its own button below; a plain
+ * message (contact) is finished by replying, so it has none.
+ * Adoption visits and other bookings can't be told apart from the request, so
+ * those kinds open the Adoptions hub, which leads to the visits.
+ */
+const CARE_PAGE = { label: 'Track it in Foster, surrender and found', to: '/staff/care-requests', via: '/staff/care-requests' }
+const ADOPTIONS_PAGE = { label: 'Continue in Adoptions', to: '/staff/adoptions', via: '/staff/adoptions' }
+const BOOKINGS_PAGE = { label: 'Continue in Bookings', to: '/staff/bookings', via: '/staff/bookings?scope=other' }
+const CONTINUE: Record<string, { label: string; to: string; via: string }> = {
+  'adoption-application': ADOPTIONS_PAGE,
+  'appointment-request': ADOPTIONS_PAGE,
+  'service-signup': ADOPTIONS_PAGE,
+  booking: ADOPTIONS_PAGE,
+  'reserve-session': BOOKINGS_PAGE,
+  'notify-me': BOOKINGS_PAGE,
+  'volunteer-signup': { label: 'Continue in Volunteers', to: '/staff/volunteers', via: '/staff/volunteers' },
+  'raffle-request': { label: 'Continue in Raffle tickets', to: '/staff/raffle-tickets', via: '/staff/raffle-tickets' },
+  supporter: { label: 'Continue in Supporters', to: '/staff/supporters', via: '/staff/supporters' },
+  'mailing-list': { label: 'Continue in Supporters', to: '/staff/supporters', via: '/staff/supporters' },
+  'legacy-info': { label: 'Continue in Rescue Rabbit Guardians', to: '/staff/guardians', via: '/staff/guardians' },
+  'foster-application': CARE_PAGE,
+  'surrender-intake': CARE_PAGE,
+  'found-rabbit': CARE_PAGE,
+}
+/** The "Continue in…" link for a request, or null when there is none or this person can't open it. */
+function continueLink(kind: string, tiles: StaffTile[]): { label: string; to: string } | null {
+  const c = CONTINUE[kind]
+  return c && tiles.some((t) => t.to === c.via) ? c : null
+}
+
 const STATUS: { value: Status; label: string }[] = [
   { value: 'new', label: 'New' },
   { value: 'in_progress', label: 'In progress' },
@@ -50,7 +84,7 @@ const STATUS: { value: Status; label: string }[] = [
   { value: 'archived', label: 'Archived' },
 ]
 
-function when(iso: string): string {
+export function when(iso: string): string {
   const d = new Date(iso)
   const days = Math.floor((Date.now() - d.getTime()) / 86_400_000)
   const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
@@ -63,7 +97,7 @@ function when(iso: string): string {
  * A payload value as text. Most are strings; a volunteer application's
  * `kinds` is a list ("socialization", "buncare" → "Bunny Socialization, Buncare").
  */
-function valueText(key: string, v: unknown): string {
+export function valueText(key: string, v: unknown): string {
   if (v == null) return ''
   if (Array.isArray(v)) return v.map((x) => (key === 'kinds' ? kindLabel(String(x)) : String(x))).join(', ')
   if (typeof v === 'object') return JSON.stringify(v)
@@ -71,13 +105,14 @@ function valueText(key: string, v: unknown): string {
 }
 
 /** "bunnyName" → "Bunny name", "agreementDate" → "Agreement date". */
-function labelOf(key: string): string {
+export function labelOf(key: string): string {
   const s = key.replace(/[_-]+/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').trim()
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
 }
 
 export default function StaffInbox() {
   const { membership, user } = useAuth()
+  const { tiles } = useStaffTiles()
   const orgId = membership?.orgId ?? ''
   const [rows, setRows] = useState<Row[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -209,6 +244,7 @@ export default function StaffInbox() {
           const k = kindMeta(r.kind)
           const open = openId === r.id
           const payload = (r.payload ?? {}) as Record<string, string>
+          const next = continueLink(r.kind, tiles)
           return (
             <li key={r.id} id={`request-${r.id}`} className="scroll-mt-24">
               <Card className={`space-y-3 ${r.status === 'new' ? 'border-brand-orange/40' : ''}`}>
@@ -265,6 +301,14 @@ export default function StaffInbox() {
                     )}
                     {r.kind === 'happy-tail' && <PublishTail row={r} payload={payload} onPublished={() => void setStatus(r, 'done', undefined, 'Published to Happy Tails, and this request is marked Done. Tap “Done” above to see it.')} />}
                     <Notes row={r} onSave={(n) => setStatus(r, r.status, n)} />
+                    {next && (
+                      <Link
+                        to={next.to}
+                        className="inline-flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-brand-blue/40 font-display text-base font-extrabold text-brand-blue"
+                      >
+                        {next.label} <Icon name="chevron" size={16} />
+                      </Link>
+                    )}
                     <div className="grid grid-cols-2 gap-2">
                       {r.status !== 'done' ? (
                         <button type="button" onClick={() => void setStatus(r, 'done')} className="inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-2xl bg-brand-orange font-display text-base font-extrabold text-ink">
@@ -304,7 +348,7 @@ function isPhoto(value: string): boolean {
   return /^https?:\/\/\S+\.(jpe?g|png|webp|heic)(\?|$)/i.test(value.trim())
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+export function Field({ label, value }: { label: string; value: string }) {
   // A photo sent with the form (found rabbit, surrender, Happy Tail) is worth
   // seeing, not reading as a URL.
   if (isPhoto(value)) {
@@ -328,7 +372,7 @@ function Field({ label, value }: { label: string; value: string }) {
   )
 }
 
-function Notes({ row, onSave }: { row: Row; onSave: (notes: string) => Promise<boolean> }) {
+export function Notes({ row, onSave }: { row: Row; onSave: (notes: string) => Promise<boolean> }) {
   const [notes, setNotes] = useState(row.staff_notes ?? '')
   const [saved, setSaved] = useState(false)
   const dirty = notes !== (row.staff_notes ?? '')

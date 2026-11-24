@@ -121,6 +121,12 @@ function saveView(v: View) {
   }
 }
 
+/** Where moved donations live now, so the "moved" note can take the person there (staff audit 2026-11-24). */
+const MOVED_TO: Partial<Record<HeadedFor, { to: string; label: string; needs: 'events' | 'shop' }>> = {
+  raffle: { to: '/staff/raffle-tickets?show=prizes', label: 'See the raffle prizes', needs: 'events' },
+  auction: { to: '/staff/raffle?show=items', label: 'See the auction lots', needs: 'events' },
+  shop: { to: '/staff/hopshop?show=list&need=price', label: 'Give them prices in the Hop Shop', needs: 'shop' },
+}
 const PLACE: Record<HeadedFor, string> = { raffle: 'the raffle', auction: 'the Silent Auction', shop: 'the Hop Shop', rabbits: 'our own use', event: 'the event' }
 
 interface Counts {
@@ -343,8 +349,9 @@ export default function ItemsList() {
         </li>
       </ol>
 
-      <div className="border-t border-slate-200 pt-4">
+      <div className="space-y-3 border-t border-slate-200 pt-4">
         <ChoiceCard icon="search" title="Find or scan an item" text="Look it up by name, code or donor." to="/staff/items?show=all" />
+        <ChoiceCard icon="file" title="See them all in a spreadsheet" text="Every donation in one table. Change many at once. Best on a computer." to="/staff/items/sheet" />
       </div>
     </Screen>
   )
@@ -383,6 +390,8 @@ function ItemsListView({
   const [order, setOrder] = useState<Order>(start?.order ?? 'newest')
   const [narrowOpen, setNarrowOpen] = useState(false)
   const [note, setNote] = useState<string | null>(null)
+  /** The next step that goes with the note: where the moved things are now. */
+  const [noteLink, setNoteLink] = useState<{ to: string; label: string } | null>(null)
   const [busy, setBusy] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   // Basket mode: check donations, name it, raffle or Silent Auction.
@@ -419,7 +428,7 @@ function ItemsListView({
           (i.donated_by ?? '').toLowerCase().includes(needle) ||
           // Find an item also looks at who it was bought from, where it's kept and the box it's in.
           (find &&
-            [i.bought_from, i.location, i.category, i.box ? `box ${i.box.box_no} ${i.box.code} ${i.box.name ?? ''}` : '']
+            [i.bought_from, i.location, i.box?.location, i.category, i.box ? `box ${i.box.box_no} ${i.box.code} ${i.box.name ?? ''}` : '']
               .some((t) => (t ?? '').toLowerCase().includes(needle)))),
     )
     if (find) {
@@ -444,9 +453,13 @@ function ItemsListView({
     setBusy(true)
     setError(null)
     setNote(null)
+    setNoteLink(null)
     try {
       const moved = await sortHeadedDonations(orgId, h)
       setNote(h === 'rabbits' ? `${moved} marked as in use by OHRR.` : `${moved} moved to ${PLACE[h]}.`)
+      const next = MOVED_TO[h]
+      const mayOpen = next && (next.needs === 'events' ? can('events.bunfest.manage') : can('hopshop.products.create') || can('hopshop.products.edit') || can('hopshop.inventory.update'))
+      if (next && mayOpen && moved > 0) setNoteLink({ to: next.to, label: next.label })
       await load()
     } catch (e) {
       setError(errMessage(e))
@@ -685,8 +698,13 @@ function ItemsListView({
 
       <ErrorBox>{error}</ErrorBox>
       {note && (
-        <StatusNote key={note} className="rounded-2xl bg-green-50 px-4 py-3 text-[15px] text-green-900">
-          {note}
+        <StatusNote key={note} className="flex flex-wrap items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-[15px] text-green-900">
+          <span className="min-w-0 flex-1">{note}</span>
+          {noteLink && (
+            <Link to={noteLink.to} className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-brand-blue px-4 text-[15px] font-bold text-white">
+              {noteLink.label} <Icon name="chevron" size={16} />
+            </Link>
+          )}
         </StatusNote>
       )}
       {items === null && !error && <Spinner />}
@@ -790,7 +808,7 @@ function ItemsListView({
             <Icon name="file" size={18} /> Print or save this list ({shown.length})
           </button>
           <Link to="/staff/items/sheet" className="inline-flex min-h-[44px] items-center gap-1.5 text-[15px] font-bold text-brand-blue">
-            <Icon name="file" size={18} /> Change many donations in a spreadsheet (best on a computer)
+            <Icon name="file" size={18} /> See and change them all in a spreadsheet (best on a computer)
           </Link>
           {exportOpen && <ExportButtons spec={sheet} label={`Full spreadsheet of ${shown.length}`} simple={simpleSheet} />}
         </div>

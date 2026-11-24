@@ -14,6 +14,7 @@ import { BoxNameEditor, WaitingLabels, type BoxSheet } from './pages/Boxes'
 import { BigButton, ErrorBox, Part, StepShell } from './ScanUI'
 import { SHEET_COLUMNS, SIMPLE_COLUMNS, sheetRow, simpleRow } from './itemSheets'
 import { formatMoney, type TaggedItem } from './types'
+import { keptAt } from './sheetSave'
 import { fromLine, itemCents, receivingSummaryPdf, summarize, type SessionItem } from './receivingSession'
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
@@ -93,6 +94,7 @@ export default function ReceivingSummary({
   const partBoxes = boxes.length > 0 ? 'B' : null
   const partLetters = letters.length > 0 ? (partBoxes ? 'C' : 'B') : null
   const partSummary = String.fromCharCode(66 + (partBoxes ? 1 : 0) + (partLetters ? 1 : 0))
+  const partNext = String.fromCharCode(partSummary.charCodeAt(0) + 1)
 
   return (
     <StepShell
@@ -138,7 +140,7 @@ export default function ReceivingSummary({
               <BigButton
                 tone="outline"
                 icon="printer"
-                onClick={() => navigate(`/staff/labels?${unprintedCodes.map((c) => `code=${encodeURIComponent(c)}`).join('&')}`)}
+                onClick={() => navigate(`/staff/labels?${unprintedCodes.map((c) => `code=${encodeURIComponent(c)}`).join('&')}&back=summary`)}
               >
                 Print the {plural(unprintedCodes.length, 'label')} still waiting
               </BigButton>
@@ -163,6 +165,9 @@ export default function ReceivingSummary({
                         Box {b.box_no}
                         {b.name ? ` · ${b.name}` : ''} · {plural(b.items.length, 'item')}
                       </p>
+                      <Link to={`/staff/boxes/${encodeURIComponent(b.code)}`} className="inline-flex min-h-[44px] items-center gap-1 text-[15px] font-bold text-brand-blue">
+                        Open Box {b.box_no} <Icon name="chevron" size={16} />
+                      </Link>
                       <ul className="mt-1 space-y-0.5 text-[15px] text-slate-700">
                         {b.items.map((i) => (
                           <li key={i.code} className="truncate">
@@ -236,13 +241,31 @@ export default function ReceivingSummary({
               }}
             />
 
+            <Part n={partNext}>Next: decide what they’re for</Part>
+            <p className="text-[15px] text-slate-600">Everything received today is waiting to be sorted: the raffle, the auction, the Hop Shop or our own use. It can wait for another day.</p>
+            <div className="space-y-2">
+              <Link to="/staff/items?show=sort" className="flex min-h-[52px] items-center gap-3 rounded-2xl border-2 border-slate-200 bg-white px-4 py-2 text-base font-bold text-ink">
+                <Icon name="gavel" size={20} className="shrink-0 text-brand-blue" />
+                <span className="min-w-0 flex-1">Decide what they’re for</span>
+                <Icon name="chevron" size={18} className="shrink-0 text-slate-400" />
+              </Link>
+              <Link to="/staff/items/sheet" className="flex min-h-[52px] items-center gap-3 rounded-2xl border-2 border-slate-200 bg-white px-4 py-2 text-base font-bold text-ink">
+                <Icon name="file" size={20} className="shrink-0 text-brand-blue" />
+                <span className="min-w-0 flex-1">
+                  See and fix them in the spreadsheet
+                  <span className="block text-sm font-normal text-slate-600">Change names, how many and worth in one table. Best on a computer.</span>
+                </span>
+                <Icon name="chevron" size={18} className="shrink-0 text-slate-400" />
+              </Link>
+            </div>
+
             <p className="font-display text-base font-black uppercase tracking-wide text-slate-500">What came in</p>
             <ul className="divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
               {items.map((i) => {
                 const photo = itemPhotos(i)[0]
                 return (
                   <li key={i.code}>
-                    <Link to={`/staff/scan?code=${encodeURIComponent(i.code)}`} className="flex items-center gap-3 px-3 py-2">
+                    <Link to={`/staff/scan?code=${encodeURIComponent(i.code)}&back=summary`} className="flex items-center gap-3 px-3 py-2">
                       {photo ? (
                         <img src={photo} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
                       ) : (
@@ -257,7 +280,8 @@ export default function ReceivingSummary({
                         </span>
                         <span className="block truncate text-sm text-slate-500">
                           {fromLine(i)}
-                          {i.location ? ` · ${i.location}` : ''}
+                          {keptAt(i) ? ` · ${keptAt(i)}` : ''}
+                          {i.box ? ` · Box ${i.box.box_no}` : ''}
                         </span>
                       </span>
                       <span className="shrink-0 text-right text-sm">

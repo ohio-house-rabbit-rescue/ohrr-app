@@ -180,8 +180,11 @@ interface Choice {
   badge?: string
 }
 
+/** Sorted in from a donation and not priced yet: the database leaves it hidden with a price of 0. */
+const needsPrice = (p: { is_active: boolean; price_cents: number | null }) => !p.is_active && (p.price_cents ?? 0) === 0
+
 /** What a step offers this person — only what they may do, so no step screen is ever empty. */
-function stepChoices(step: DoStep, o: { canLabel: boolean; canAdd: boolean; low: number; count: number | null }): Choice[] {
+function stepChoices(step: DoStep, o: { canLabel: boolean; canAdd: boolean; low: number; count: number | null; needPrice: number }): Choice[] {
   if (step === 'order')
     return [
       { to: '/staff/hopshop/reorder', icon: 'file', title: 'Reorder list', text: 'What is running low, by supplier.', badge: o.low > 0 ? `${o.low} running low` : undefined },
@@ -193,6 +196,9 @@ function stepChoices(step: DoStep, o: { canLabel: boolean; canAdd: boolean; low:
       { to: '/staff/hopshop/deliveries', icon: 'clock', title: 'Past deliveries', text: 'What came in before.' },
     ]
   return [
+    ...(o.needPrice > 0
+      ? [{ to: '/staff/hopshop?show=list&need=price', icon: 'bag' as IconName, title: 'Needs a price', text: `${o.needPrice} from donations, hidden until priced.` }]
+      : []),
     { to: '/staff/hopshop?show=list', icon: 'bag', title: 'See the shelf', text: o.count != null ? `${o.count} item${o.count === 1 ? '' : 's'}: photo, price, how many.` : 'Every item: photo, price, how many.' },
     ...(o.canAdd ? [{ to: '/staff/hopshop?add=1', icon: 'plus' as IconName, title: 'Add an item', text: 'A photo, its type and the price.' }] : []),
     { to: '/staff/hopshop/types', icon: 'settings' as IconName, title: 'Item types', text: 'The letters that start every SKU.' },
@@ -258,7 +264,10 @@ export default function HopShopManager() {
 
   const low = (rows ?? []).filter(isLow).length
   const unprinted = (rows ?? []).filter((p) => (p.code || p.sku) && !p.label_printed_at).length
-  const choiceOpts = { canLabel, canAdd: canCreate, low, count: rows ? rows.length : null }
+  const needPrice = (rows ?? []).filter(needsPrice).length
+  const choiceOpts = { canLabel, canAdd: canCreate, low, count: rows ? rows.length : null, needPrice }
+  // Donations still waiting to be sorted live in Items; only people who can open Items get the link.
+  const canOpenItems = can('events.bunfest.manage') || canCreate || canEdit || canInventory
 
   // ---------------------------------------------------------------- the old tabs, one screen each
   if (tab !== 'items') {
@@ -288,6 +297,7 @@ export default function HopShopManager() {
 
   // ---------------------------------------------------------------- the shelf list (and the new-item form)
   if (params.get('show') === 'list' || params.get('add') === '1') {
+    const onlyNeedPrice = params.get('need') === 'price'
     return (
       <Screen className="space-y-4">
         <div>
@@ -300,7 +310,25 @@ export default function HopShopManager() {
         </div>
         {readOnly && <p className="text-[15px] text-slate-600">View-only — ask an owner or admin for edit access.</p>}
         <FormError>{error}</FormError>
+        {onlyNeedPrice && (
+          <div className="space-y-2 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-[15px] text-slate-700">
+            <p>
+              These came from donations. They stay hidden from the shop until they have a price. Open one, type the price, check “Show on the shelf”, and save.
+            </p>
+            <Link to="/staff/hopshop?show=list" className="inline-flex min-h-[44px] items-center font-bold text-brand-blue underline">
+              See the whole shelf
+            </Link>
+            {canOpenItems && (
+              <div>
+                <Link to="/staff/items?list=1" className="inline-flex min-h-[44px] items-center font-bold text-brand-blue underline">
+                  Donations still waiting to be sorted
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
         <Items
+          onlyNeedPrice={onlyNeedPrice}
           orgId={orgId}
           userId={userId}
           rows={rows}
@@ -363,6 +391,16 @@ export default function HopShopManager() {
       {readOnly && <p className="text-[15px] text-slate-600">View-only — ask an owner or admin for edit access.</p>}
       <FormError>{error}</FormError>
 
+      {needPrice > 0 && (
+        <ChoiceCard
+          icon="bag"
+          tone="orange"
+          title={`${needPrice} item${needPrice === 1 ? '' : 's'} from donations ${needPrice === 1 ? 'needs' : 'need'} a price`}
+          text="Set the prices"
+          to="/staff/hopshop?show=list&need=price"
+        />
+      )}
+
       {draft !== null && (
         <ChoiceCard icon="plus" tone="orange" title="Finish the item you started" text="It was saved on this device. Pick up where you left off." to="/staff/hopshop?show=list" />
       )}
@@ -407,6 +445,7 @@ interface Perms {
 }
 
 function Items({
+  onlyNeedPrice,
   orgId,
   userId,
   rows,
@@ -417,6 +456,7 @@ function Items({
   onSuppliersChanged,
   onTypesChanged,
 }: {
+  onlyNeedPrice: boolean
   orgId: string
   userId: string
   rows: StockCard[] | null
@@ -463,11 +503,12 @@ function Items({
 
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase()
-    if (!t) return rows ?? []
-    return (rows ?? []).filter((p) =>
+    const base = onlyNeedPrice ? (rows ?? []).filter(needsPrice) : (rows ?? [])
+    if (!t) return base
+    return base.filter((p) =>
       [p.name, p.code, p.sku, p.barcode, p.type_name, p.category, p.supplier_name, p.supplier_sku, p.shelf].some((v) => v && v.toLowerCase().includes(t)),
     )
-  }, [rows, q])
+  }, [rows, q, onlyNeedPrice])
 
   const low = (rows ?? []).filter(isLow).length
   const [exportOpen, setExportOpen] = useState(false)
@@ -543,7 +584,12 @@ function Items({
           </p>
         </Card>
       )}
-      {rows && rows.length > 0 && shown.length === 0 && <p className="text-base text-slate-600">Nothing matches “{q}”.</p>}
+      {onlyNeedPrice && rows && !q.trim() && shown.length === 0 && (
+        <Card className="border-slate-200 bg-slate-50/80 text-center">
+          <p className="text-base leading-relaxed text-slate-600">Nothing is waiting for a price.</p>
+        </Card>
+      )}
+      {rows && rows.length > 0 && shown.length === 0 && q.trim() && <p className="text-base text-slate-600">Nothing matches “{q}”.</p>}
       {shown.map((p) => (
         <ProductCard key={p.id} p={p} orgId={orgId} userId={userId} suppliers={suppliers} types={types} perms={perms} onSuppliersChanged={onSuppliersChanged} onTypesChanged={onTypesChanged} onChanged={load} />
       ))}
@@ -644,6 +690,7 @@ function ProductCard({
           <div className="flex flex-wrap items-center gap-1.5">
             <h3 className="font-display text-base font-extrabold text-ink">{p.name}</h3>
             {!p.is_active && <Badge tone="slate">Hidden</Badge>}
+            {needsPrice(p) && <Badge tone="orange">Needs a price</Badge>}
             {low && <Badge tone="orange">Low</Badge>}
             {p.on_order_qty > 0 && <Badge tone="blue">{p.on_order_qty} on order</Badge>}
           </div>
@@ -1095,6 +1142,9 @@ function ProductForm({
           <input type="checkbox" className="h-6 w-6 rounded border-slate-300 accent-brand-blue" checked={d.is_active} onChange={(e) => setD((x) => ({ ...x, is_active: e.target.checked }))} />
           Show on the shelf
         </label>
+        {initial && needsPrice(initial) && (
+          <p className="text-sm text-slate-600">Check this when the price is right, and it shows in the shop.</p>
+        )}
       </div>
 
       {/* C · supplier, type, item number */}

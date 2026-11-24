@@ -6,6 +6,7 @@
 import { thumbnail } from '../../lib/inventoryExport'
 import { itemPhotos } from './api'
 import { donationValues, formatMoney, type TaggedItem } from './types'
+import { keptAt } from './sheetSave'
 
 const SESSION_KEY = 'ohrr.catalog.session'
 
@@ -263,7 +264,7 @@ export async function receivingSummaryPdf(items: TaggedItem[], onProgress?: (msg
     doc.text(i.code, cols.item, top + (doc.splitTextToSize(name, 2.9).length > 1 ? 0.38 : 0.2))
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(10)
-    doc.text(doc.splitTextToSize(plain(i.location) || '-', 1.5).slice(0, 2), cols.where, top)
+    doc.text(doc.splitTextToSize(plain(keptAt(i)) || '-', 1.5).slice(0, 2), cols.where, top)
     doc.text(doc.splitTextToSize(plain(fromLine(i)), 1.4).slice(0, 2), cols.from, top)
     doc.text(money(itemCents(i)), right, top, { align: 'right' })
     y += rowH

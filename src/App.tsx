@@ -108,6 +108,7 @@ import StaffDesign from './pages/StaffDesign'
 import StaffOrgDetails from './pages/StaffOrgDetails'
 import StaffBunnyHelp from './pages/StaffBunnyHelp'
 import StaffInbox from './pages/StaffInbox'
+import StaffCareRequests from './pages/StaffCareRequests'
 import StaffSupporters from './pages/StaffSupporters'
 // My Bunny (local-first care companion) — lazy so it stays out of the main bundle
 const MyBunnyRoutes = lazy(() => import('./features/mybunny/routes'))
@@ -380,6 +381,7 @@ export default function App() {
           {/* The old combined screen — anyone with it bookmarked lands on Features. */}
           <Route path="settings" element={<Navigate to="/staff/features" replace />} />
           <Route path="inbox" element={<StaffInbox />} />
+          <Route path="care-requests" element={<StaffCareRequests />} />
           {/* Update 31: the supporter email list */}
           <Route path="supporters" element={<StaffSupporters />} />
           <Route path="bookings" element={<StaffBookings />} />

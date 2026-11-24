@@ -324,7 +324,8 @@ export default function CatalogFlow() {
   const canAuction = can('events.bunfest.manage')
   // Receive into boxes (?box=1, OHRR 2026-10-27): one screen for the whole job.
   const wantsBoxes = params.get('box') === '1'
-  const [step, setStep] = useState<Step>('start')
+  // ?summary=1: back from an item, a box or the labels opened from today's summary (see ../backTo.ts).
+  const [step, setStep] = useState<Step>(() => (params.get('summary') === '1' && params.get('box') !== '1' && loadSession().items.length ? 'summary' : 'start'))
   const [current, setCurrent] = useState<Current | null>(loadCurrent)
   // Everything received on this phone today, for the summary at the end.
   const [session, setSession] = useState<ReceivingSession>(loadSession)
@@ -383,7 +384,9 @@ export default function CatalogFlow() {
   const [, setSizeTick] = useState(0)
   const [itemCopies, setItemCopies] = useCopies('item')
   // The Labels page, with this item checked and the usual number of copies.
-  const labelsLink = (code: string) => `/staff/labels?code=${encodeURIComponent(code)}${itemCopies > 1 ? `&copies=${itemCopies}` : ''}`
+  // back=receive: Print labels' Back returns here. Today's list and the open drop-off are kept on the phone, so nothing starts over.
+  const cameBack = wantsBoxes ? 'receive-boxes' : 'receive'
+  const labelsLink = (code: string) => `/staff/labels?code=${encodeURIComponent(code)}${itemCopies > 1 ? `&copies=${itemCopies}` : ''}&back=${cameBack}`
   const chooseItemSize = (sz: LabelSize) => {
     const at = Date.now()
     saveLabelSize(sz, at)
@@ -1689,7 +1692,7 @@ export default function CatalogFlow() {
               <span className="font-bold text-ink">{today ?? '–'}</span> added today
             </span>
             <span aria-hidden>·</span>
-            <Link to="/staff/labels" className="inline-flex min-h-[44px] items-center font-bold text-brand-blue">
+            <Link to={`/staff/labels?back=${cameBack}`} className="inline-flex min-h-[44px] items-center font-bold text-brand-blue">
               {unprinted ?? '–'} labels to print
             </Link>
             {!wantsBoxes && (
@@ -1789,6 +1792,10 @@ export default function CatalogFlow() {
                 <p className="text-[15px] font-bold text-brand-orange">
                   In Box {s.inBox.no}
                   {s.inBox.count != null ? ` · ${s.inBox.count} item${s.inBox.count === 1 ? '' : 's'} in it` : ''}
+                  {' · '}
+                  <Link to={`/staff/boxes/${encodeURIComponent(s.inBox.code)}`} className="inline-flex min-h-[44px] items-center text-brand-blue underline underline-offset-2">
+                    Open Box {s.inBox.no}
+                  </Link>
                 </p>
               )}
             </div>
@@ -1837,7 +1844,7 @@ export default function CatalogFlow() {
           {done && (
             <p className="text-sm text-slate-500">
               Or print it later with the rest —{' '}
-              <Link to={btLabel ? labelsLink(s.item!.code) : '/staff/labels'} className="font-bold text-brand-blue">
+              <Link to={btLabel ? labelsLink(s.item!.code) : `/staff/labels?back=${cameBack}`} className="font-bold text-brand-blue">
                 {btLabel ? 'Labels page' : 'Print labels'}
               </Link>
             </p>
@@ -1933,7 +1940,7 @@ export default function CatalogFlow() {
           {done && (
             <p className="text-center text-[15px] text-slate-500">
               {today ?? 1} added today ·{' '}
-              <Link to={`/staff/scan?code=${encodeURIComponent(s.item!.code)}`} className="font-bold text-brand-blue">
+              <Link to={`/staff/scan?code=${encodeURIComponent(s.item!.code)}&back=${cameBack}`} className="font-bold text-brand-blue">
                 Change something
               </Link>
             </p>

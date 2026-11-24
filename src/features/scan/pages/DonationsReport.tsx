@@ -186,7 +186,7 @@ export default function DonationsReport() {
                     return (
                       <li key={l.id}>
                         {code ? (
-                          <Link to={`/staff/scan?code=${encodeURIComponent(code)}`} className="flex min-h-[48px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5">
+                          <Link to={`/staff/scan?code=${encodeURIComponent(code)}&back=report`} className="flex min-h-[48px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5">
                             {body}
                             <Icon name="chevron" size={18} className="shrink-0 text-slate-300" />
                           </Link>

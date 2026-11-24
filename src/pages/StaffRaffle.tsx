@@ -522,6 +522,7 @@ function ItemCard({
   isFirst,
   isLast,
   hasBidding,
+  fromDonation = false,
   onChanged,
   onMove,
 }: {
@@ -530,6 +531,8 @@ function ItemCard({
   isFirst: boolean
   isLast: boolean
   hasBidding: boolean
+  /** Made by sorting a donation, and still without a starting bid. */
+  fromDonation?: boolean
   onChanged: () => void | Promise<void>
   onMove: (dir: -1 | 1) => Promise<void>
 }) {
@@ -651,6 +654,7 @@ function ItemCard({
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {won ? <Badge tone="orange">{hasSale ? (item.won_kind === 'buy_now' ? 'Sold · Buy Now' : 'Sold') : 'Won'}</Badge> : <Badge tone="blue">Available</Badge>}
             {!item.is_published && <Badge tone="slate">Hidden</Badge>}
+            {fromDonation && <Badge tone="orange">From donations, no starting bid</Badge>}
             {!ev.online && <Badge tone="slate">{sessionLabel(item.session)}</Badge>}
           </div>
           {hasBidding && (
@@ -1365,6 +1369,8 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
   const bunfestDay = eventDate(bunfest)
   // Does the database have update 35 (online bidding)? One tiny probe on load.
   const [hasBidding, setHasBidding] = useState(false)
+  // Lots made by sorting a donation (Scan an item): the database makes them published, with no starting bid.
+  const [donatedIds, setDonatedIds] = useState<Set<string>>(new Set())
 
   const load = useCallback(async () => {
     if (!orgId || !allowed) {
@@ -1396,6 +1402,19 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
     setItems(sortForStaff(itemsRes.data ?? []))
     setSettings(settingsRes.data ?? null)
     setHasBidding(!probe.error)
+    // Which lots came from a sorted donation. A failed look just means no notice.
+    const fromDon = await supabase
+      .from('donation_items')
+      .select('tag:sorted_tag_id(raffle_item_id)')
+      .eq('org_id', orgId)
+      .eq('outcome', 'sorted')
+      .eq('sorted_kind', 'auction')
+    const ids = new Set<string>()
+    for (const r of (fromDon.data ?? []) as unknown as { tag: { raffle_item_id: string | null } | { raffle_item_id: string | null }[] | null }[]) {
+      const t = Array.isArray(r.tag) ? r.tag[0] : r.tag
+      if (t?.raffle_item_id) ids.add(t.raffle_item_id)
+    }
+    setDonatedIds(ids)
     setLoading(false)
   }, [orgId, allowed, ev.slug])
 
@@ -1453,6 +1472,14 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
 
   const nextSortOrder = items.reduce((max, i) => Math.max(max, i.sort_order), -1) + 1
   const availableCount = items.filter((i) => i.status === 'available' && i.is_published).length
+  // Donated lots that still need a look: no starting bid yet. (They are already published.)
+  const needsLook = (i: AuctionItem) => hasBidding && donatedIds.has(i.id) && i.status === 'available' && i.starting_bid_cents == null
+  const lookCount = items.filter(needsLook).length
+  const donationsLink = (
+    <Link to="/staff/items?list=1" className="inline-flex min-h-[44px] items-center text-[15px] font-bold text-brand-blue underline">
+      Donations still waiting to be sorted
+    </Link>
+  )
 
   // The Auction desk, on the right auction and (optionally) the right tab.
   const deskTo = (tab?: 'done') => {
@@ -1477,6 +1504,12 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
         </button>
         <h1 className="font-display text-[26px] font-black leading-tight text-ink">The items</h1>
         <ErrorBox>{error}</ErrorBox>
+        {lookCount > 0 && (
+          <p className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-[15px] font-bold text-slate-700">
+            {lookCount} lot{lookCount === 1 ? '' : 's'} came from donations and {lookCount === 1 ? 'has' : 'have'} no starting bid yet. Open one, type the starting bid, and save.
+          </p>
+        )}
+        {donationsLink}
         <SectionLabel>
           {items.length} total · {availableCount} available in the app
         </SectionLabel>
@@ -1489,6 +1522,7 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
                 isFirst={i === 0}
                 isLast={i === items.length - 1}
                 hasBidding={hasBidding}
+                fromDonation={needsLook(item)}
                 onChanged={load}
                 onMove={(dir) => move(item.id, dir)}
               />
@@ -1641,6 +1675,17 @@ function AuctionManager({ onSwitch }: { onSwitch: (online: boolean) => void }) {
           </StatusNote>
         )}
       </div>
+
+      {!loading && lookCount > 0 && (
+        <ChoiceCard
+          icon="bag"
+          tone="orange"
+          title={`${lookCount} lot${lookCount === 1 ? '' : 's'} came from donations`}
+          text="No starting bid yet. Check each one."
+          onClick={() => openItems(true)}
+        />
+      )}
+      {!loading && donationsLink}
 
       {!loading && (
         <SetupPanel

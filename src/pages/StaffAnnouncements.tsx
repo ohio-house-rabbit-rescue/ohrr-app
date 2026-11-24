@@ -6,6 +6,7 @@ import { StaffTitle } from '../components/StaffTitle'
 import { Spinner, FormError, staffInput } from '../components/staffui'
 import { CardActions, EditorForm, Field, Part, StepButton, pill } from '../components/StaffJob'
 import StaffImageField from '../components/StaffImageField'
+import { GoesWith } from '../components/GoesWith'
 import BringIn from '../components/BringIn'
 import { putKeyboardAway } from '../lib/bringIntoView'
 import { StatusNote } from '../features/scan/ScanUI'
@@ -239,6 +240,8 @@ export default function StaffAnnouncements() {
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [note, setNote] = useState<string | null>(null)
+  // The note that just said "showing on the home screen" offers the next steps.
+  const [postedNew, setPostedNew] = useState(false)
 
   const load = useCallback(async () => {
     if (!orgId || !allowed) {
@@ -276,6 +279,7 @@ export default function StaffAnnouncements() {
     })
     if (error) throw error
     setCreating(false)
+    setPostedNew(d.is_published)
     setNote(d.is_published ? `Posted “${d.title.trim()}”. It is showing on the home screen now.` : `Saved “${d.title.trim()}” as a draft. It is hidden until you tap Show.`)
     await load()
   }
@@ -283,6 +287,7 @@ export default function StaffAnnouncements() {
   // A card changed (saved, hidden, removed): reload; a removed card says so up here, since it is gone from the list.
   const changed = (text?: string) => {
     if (text) setNote(text)
+    setPostedNew(false)
     void load()
   }
 
@@ -335,6 +340,9 @@ export default function StaffAnnouncements() {
         <StatusNote key={note} className="rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">
           {note}
         </StatusNote>
+      )}
+      {note && postedNew && !creating && (
+        <GoesWith links={[{ to: '/staff/share', label: 'Make a social post about it' }, { to: '/staff/notifications', label: 'Send a notification about it' }]} />
       )}
 
       <FormError>{error}</FormError>

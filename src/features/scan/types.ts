@@ -346,7 +346,7 @@ export function isUseSoon(iso: string | null | undefined): boolean {
 /** "50 of them · 24×36 · Worth $10 each · $500 in all · For the raffle · Like new · Kept: Bin 3" — the extra details in one line. */
 export function extrasSummary(
   item: Pick<TaggedItem, 'kind' | 'quantity' | 'price_cents' | 'condition' | 'category' | 'location'> &
-    Partial<Pick<TaggedItem, 'value_cents' | 'value_basis' | 'size' | 'headed_for' | 'use_by' | 'outcome' | 'purpose' | 'source' | 'cost_cents' | 'bought_from'>>,
+    Partial<Pick<TaggedItem, 'value_cents' | 'value_basis' | 'size' | 'headed_for' | 'use_by' | 'outcome' | 'purpose' | 'source' | 'cost_cents' | 'bought_from' | 'box'>>,
 ): string {
   const parts: string[] = []
   const donation = item.kind === 'donation'
@@ -361,7 +361,9 @@ export function extrasSummary(
   if (donation && (item.purpose || item.headed_for) && !item.outcome) parts.push(`For: ${item.purpose ? purposeLine(item) : headedFor(item.headed_for)}`)
   if (item.condition) parts.push(conditionLabel(item.condition))
   if (item.category) parts.push(item.category)
-  if (item.location) parts.push(`Kept: ${item.location}`)
+  // A packed item is wherever its box is: the same rule as keptAt in sheetSave.ts.
+  const kept = (item.box?.location ?? '').trim() || (item.location ?? '').trim()
+  if (kept) parts.push(`Kept: ${kept}`)
   if (donation && item.use_by) parts.push(`Use by ${usDate(item.use_by)}`)
   return parts.join(' · ')
 }
@@ -396,6 +398,8 @@ export function statusLabel(item: TaggedItem): string {
     if (item.outcome === 'basket') return item.in_basket ? `In the basket “${item.in_basket.title}”` : 'In a basket'
     if (item.outcome === 'rabbits') return 'In use by OHRR'
     if (item.outcome === 'passed_on') return 'Passed on / not usable'
+    // Sorted into the raffle, the auction or the Hop Shop: it lives there now, so it is done here.
+    if (item.outcome) return 'Sorted'
     if (item.purpose) return `To be sorted · for: ${purposeLine(item)}`
     return item.headed_for ? `To be sorted · for: ${headedFor(item.headed_for)}` : 'To be sorted'
   }

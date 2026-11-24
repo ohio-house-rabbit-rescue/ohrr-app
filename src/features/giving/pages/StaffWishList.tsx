@@ -20,6 +20,7 @@ import {
   type WishListItem,
 } from '../wishList'
 import { StaffTitle } from '../../../components/StaffTitle'
+import { GoesWith } from '../../../components/GoesWith'
 import BringIn from '../../../components/BringIn'
 import { putKeyboardAway } from '../../../lib/bringIntoView'
 import { StatusNote } from '../../scan/ScanUI'
@@ -406,6 +407,7 @@ export default function StaffWishList() {
           )}
         </>
       )}
+      <GoesWith links={[{ to: '/staff/supporters', label: 'Supporters' }, { to: '/staff/guardians', label: 'Rescue Rabbit Guardians' }]} />
     </Screen>
   )
 }

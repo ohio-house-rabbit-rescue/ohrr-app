@@ -9,7 +9,7 @@ import { Icon } from '../../../components/icons'
 import { Screen, SectionLabel } from '../../../components/ui'
 import { Spinner, staffInput } from '../../../components/staffui'
 import { isNative } from '../../../native/platform'
-import { dropoffDetail, isNeeds40, setDropoffThanked, updateDropoff, type DonationLine, type Dropoff } from '../api'
+import { dropoffDetail, isNeeds40, listDropoffs, setDropoffThanked, updateDropoff, type DonationLine, type Dropoff } from '../api'
 import { StepButton, pill } from '../../../components/StaffJob'
 import { BigButton, ErrorBox, StatusNote } from '../ScanUI'
 import { bringIntoView, putKeyboardAway } from '../../../lib/bringIntoView'
@@ -39,6 +39,9 @@ export default function DropoffDetail() {
   const [edited, setEdited] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [thanking, setThanking] = useState(false)
+  // After "Mark as thanked": the next drop-off still waiting for its letter, so the job carries on (staff audit 2026-11-24).
+  const [nextUp, setNextUp] = useState<{ id: string | null; left: number } | null>(null)
+  useEffect(() => setNextUp(null), [id])
   const req = useRef(0)
   const editRef = useRef<HTMLFormElement>(null)
   // Edit opens the form where the details were: start it under the top bar.
@@ -143,6 +146,16 @@ export default function DropoffDetail() {
       setData((cur) => (cur ? { ...cur, ...d } : cur))
       // The "Thanked" tag is up at the top of this card; say it here too, beside the button just tapped.
       setMsg(thanked ? 'Marked as thanked.' : 'Marked as not thanked yet.')
+      setNextUp(null)
+      if (thanked) {
+        // Best effort: without the list the page is as it was.
+        void listDropoffs(orgId, 200)
+          .then((rows) => {
+            const waiting = rows.filter((r) => !r.thanked_at && r.id !== data.id)
+            setNextUp({ id: waiting[0]?.id ?? null, left: waiting.length })
+          })
+          .catch(() => undefined)
+      }
     } catch (e) {
       setMsg(isNeeds40(e) ? 'This isn’t switched on yet — ask an admin.' : errMessage(e))
     } finally {
@@ -278,7 +291,7 @@ export default function DropoffDetail() {
                   <li key={l.id}>
                     {code ? (
                       <Link
-                        to={`/staff/scan?code=${encodeURIComponent(code)}`}
+                        to={`/staff/scan?code=${encodeURIComponent(code)}&back=dropoff:${data.id}`}
                         className="flex items-center gap-3.5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition active:scale-[.99]"
                       >
                         {body}
@@ -342,9 +355,27 @@ export default function DropoffDetail() {
               )}
 
               {data.thanked_at ? (
-                <BigButton tone="plain" disabled={thanking} onClick={() => void setThanked(false)}>
-                  Not thanked yet
-                </BigButton>
+                <>
+                  {nextUp &&
+                    (nextUp.id ? (
+                      <Link
+                        to={`/staff/dropoffs/${nextUp.id}`}
+                        className="flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-brand-orange px-4 text-center font-display text-lg font-extrabold text-ink"
+                      >
+                        Next one to thank ({nextUp.left} left) <Icon name="chevron" size={18} />
+                      </Link>
+                    ) : (
+                      <p className="flex items-center gap-2 text-[15px] font-bold text-green-800">
+                        <Icon name="check" size={18} /> Everyone has been thanked.{' '}
+                        <Link to="/staff/dropoffs" className="text-brand-blue underline underline-offset-2">
+                          All drop-offs
+                        </Link>
+                      </p>
+                    ))}
+                  <BigButton tone="plain" disabled={thanking} onClick={() => void setThanked(false)}>
+                    Not thanked yet
+                  </BigButton>
+                </>
               ) : (
                 <BigButton tone="outline" icon="check" disabled={thanking} onClick={() => void setThanked(true)}>
                   Mark as thanked

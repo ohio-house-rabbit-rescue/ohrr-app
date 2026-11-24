@@ -13,6 +13,7 @@ import { fmtClock, fmtDay } from '../calls'
 import { callRoster, callThanks, listCalls, type CallRow } from '../callsApi'
 import StaffCall from './StaffCall'
 import { StaffTitle } from '../../../components/StaffTitle'
+import { GoesWith } from '../../../components/GoesWith'
 
 /** A fresh page per call, so moving from "new" to the saved call starts clean. */
 export function StaffCallRoute() {
@@ -147,6 +148,7 @@ export default function StaffCalls() {
 
       {upcoming.length > 0 && <CallList title="Coming up" rows={upcoming} fill={fill} thanks={thanks} />}
       {past.length > 0 && <CallList title="Done" rows={past} fill={fill} thanks={thanks} past />}
+      <GoesWith links={[{ to: '/staff/bookings?scope=other', label: 'Volunteer shifts' }, { to: '/staff/volunteers', label: 'Volunteers' }]} />
     </Screen>
   )
 }

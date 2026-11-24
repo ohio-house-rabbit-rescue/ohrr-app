@@ -10,6 +10,7 @@ import { canvasToBlob } from '../render'
 import { canShareFiles, copyText, savePngAsync, sharePng } from '../share'
 import { isNative } from '../../../native/platform'
 import { Explain, StaffTitle } from '../../../components/StaffTitle'
+import { GoesWith } from '../../../components/GoesWith'
 import { bringIntoView } from '../../../lib/bringIntoView'
 import { ErrorBox, StatusNote } from '../../scan/ScanUI'
 
@@ -132,6 +133,7 @@ export default function Flyers() {
       <Explain label="About printing">
         <p>Prints on one US-Letter page, color or black-and-white. Each flyer carries its own link, so the analytics show which ones bring people in.</p>
       </Explain>
+      <GoesWith links={[{ to: '/staff/outreach', label: 'Outreach letters' }, { to: '/staff/share', label: 'Share kit' }]} />
     </Screen>
   )
 }

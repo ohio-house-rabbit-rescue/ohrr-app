@@ -25,6 +25,7 @@ import { shareFileNative } from '../../../native/share'
 import { listItems, markLabelsPrinted } from '../api'
 import { listProducts, money, type StockCard } from '../../hopshop/api'
 import { BigButton, ErrorBox, StepShell } from '../ScanUI'
+import { backTarget } from '../backTo'
 import { KIND_META, type TaggedItem } from '../types'
 import {
   LABEL_SIZES,
@@ -211,6 +212,8 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
     [searchParams, perCode],
   )
   const wantedCopies = Number(searchParams.get('copies')) || 0
+  // Opened from Receive items or today's summary (?back=): Back returns there, not to the Items front page.
+  const cameFrom = backTarget(searchParams.get('back'))
   const toLabel = (r: Row): LabelItem =>
     shop ? { ...r.label, price_cents: showPrice ? r.price_cents : null } : bidSheet ? r.label : { ...r.label, auction: null }
   // Show / Added / Kind / Sort, kept on the device ("Print this label" links show just their items).
@@ -494,8 +497,8 @@ export default function PrintLabels({ mode = 'items' }: { mode?: Mode }) {
           step={shop ? 3 : 2}
           of={5}
           stepName={shop ? 'Labels' : 'Label'}
-          onBack={() => navigate(shop ? '/staff/hopshop' : '/staff/items')}
-          backLabel={shop ? 'Hop Shop' : 'Items'}
+          onBack={() => navigate(cameFrom ? cameFrom.to : shop ? '/staff/hopshop' : '/staff/items')}
+          backLabel={cameFrom ? cameFrom.label : shop ? 'Hop Shop' : 'Items'}
           footer={
             <div className="space-y-2">
               <p className="flex items-center gap-2 text-sm font-bold text-slate-600">

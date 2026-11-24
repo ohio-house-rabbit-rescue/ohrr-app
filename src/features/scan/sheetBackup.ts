@@ -94,9 +94,11 @@ export function diffBackup(rows: BackupRow[], current: Map<string, SheetItem>): 
       out.push({ code: then.code, title: then.title, state: 'moved', movedTo: nowItem.kind, changes: [] })
       continue
     }
-    const nowCells = cellsFromItem(nowItem)
+    // A backup holds the item's own words, so compare with the item's own place, not its box's
+    // (the spreadsheet shows a packed item at its box's place; bringing a backup back never moves a box).
+    const nowCells = cellsFromItem({ ...nowItem, box: null })
     const thenCells = cellsFromItem(then)
-    const keys = changedKeys(nowCells, thenCells, nowItem.source === 'purchase')
+    const keys = changedKeys(nowCells, thenCells, nowItem.source === 'purchase' ? ['value', 'valueBasis'] : [])
     if (keys.length) {
       out.push({
         code: then.code,

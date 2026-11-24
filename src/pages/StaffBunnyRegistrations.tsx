@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../lib/auth'
 import { btn, Badge, Card, Screen, SegTabs } from '../components/ui'
 import { StaffTitle } from '../components/StaffTitle'
+import { GoesWith } from '../components/GoesWith'
 import { NotOnYet } from '../components/StaffJob'
 import { Spinner, staffInput } from '../components/staffui'
 import { ErrorBox } from '../features/scan/ScanUI'
@@ -315,6 +316,7 @@ export default function StaffBunnyRegistrations() {
           )}
         </>
       )}
+      <GoesWith links={[{ to: '/staff/bunfest', label: 'BunFest content' }]} />
     </Screen>
   )
 }

@@ -333,6 +333,9 @@ export default function StaffBunfest() {
                 <li>
                   <ChoiceCard n={5} title="Pages and check" text="The info pages, and a last look at what visitors see." to={withYear('/staff/bunfest/pages')} />
                 </li>
+                <li>
+                  <ChoiceCard icon="check" title="Bunny registrations" text="Who is bringing a bunny; check the vaccine proof." to="/staff/bunfest/bunnies" />
+                </li>
               </ol>
             </>
           ) : (
