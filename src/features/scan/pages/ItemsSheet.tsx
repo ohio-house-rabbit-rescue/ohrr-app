@@ -22,7 +22,8 @@ import { SHEET_COLUMNS, SIMPLE_COLUMNS, sheetRow, simpleRow } from '../itemSheet
 import { centsToDollars, draftFromItem, statusLabel, type TaggedItem } from '../types'
 import SheetGrid, { type RowStatus } from '../SheetGrid'
 import SheetBackups, { type BackupApi } from '../SheetBackups'
-import { itemsReportPdf } from '../itemsReportPdf'
+import { itemsReportPdf, type ReportField } from '../itemsReportPdf'
+import ReportFieldPicker, { loadReportFields } from '../ReportFieldPicker'
 import { cellsFromItem, changedKeys, firstProblem, saveRow, withEdits, type CellKey, type SheetCells, type SheetDeps } from '../sheetSave'
 
 type Show = 'waiting' | 'unsure' | 'done' | 'all'
@@ -58,6 +59,8 @@ export default function ItemsSheet() {
   const [items, setItems] = useState<TaggedItem[] | null>(null)
   /** Every item of every kind, only to tell "deleted" from "sorted into the raffle" in the backups. */
   const [everything, setEverything] = useState<TaggedItem[]>([])
+  /** What the PDF report shows on each line (remembered on this computer). */
+  const [pdfFields, setPdfFields] = useState<ReportField[]>(loadReportFields)
   const [showBackups, setShowBackups] = useState(false)
   const [backupMade, setBackupMade] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -289,7 +292,7 @@ export default function ItemsSheet() {
     label: `Report with photos (PDF) of ${shown.length}`,
     title: 'Ohio House Rabbit Rescue items report',
     filename: `ohrr-items-report-${todayStamp()}`,
-    build: async (progress: (msg: string) => void) => (await itemsReportPdf(sheet(), progress)).blob,
+    build: async (progress: (msg: string) => void) => (await itemsReportPdf(sheet(), progress, pdfFields)).blob,
   }
 
   const drawn = shown.slice(0, limit)
@@ -308,7 +311,8 @@ export default function ItemsSheet() {
         </p>
         <p>
           <strong>Download or print.</strong> <strong>Report with photos (PDF)</strong> makes pages to print or email: the totals, then one line per item with up to
-          four photos, its number, worth, condition, where it’s kept and the donor. <strong>Spreadsheet (Excel) with photos</strong> has a picture of each item in
+          four photos, its name and number, and up to six details you choose: press <strong>Change what it shows</strong> under the buttons (box number, where
+          it’s kept, worth, donor, notes and more; notes take two of the six). <strong>Spreadsheet (Excel) with photos</strong> has a picture of each item in
           the first column and links to all its photos. <strong>One-page list to print</strong> is the short version: photo, item, where it’s kept and donor.{' '}
           <strong>CSV</strong> is plain text for other programs, so it has photo links, not pictures. Save your changes first: the buttons wait until you do.
         </p>
@@ -370,7 +374,10 @@ export default function ItemsSheet() {
           {dirty.length > 0 ? (
             <p className="text-[15px] text-slate-600">Save your changes first, so the file matches the table.</p>
           ) : (
-            <ExportButtons spec={sheet} label={`Spreadsheet (Excel) with photos of ${shown.length}`} simple={simpleSheet} pdf={reportPdf} />
+            <>
+              <ExportButtons spec={sheet} label={`Spreadsheet (Excel) with photos of ${shown.length}`} simple={simpleSheet} pdf={reportPdf} />
+              <ReportFieldPicker value={pdfFields} onChange={setPdfFields} />
+            </>
           )}
           <p className="text-sm text-slate-500">The search and the list picker above choose what goes in the file.</p>
         </div>

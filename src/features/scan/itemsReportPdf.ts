@@ -5,8 +5,9 @@
 // Letter paper standing up. A short heading (what list, how many, total
 // worth), then one line per item: up to four photos on the left (the cover
 // big, the others small beside it), and on the right the name, number, how
-// many, worth, condition, size, sort of thing, where it's kept, donor, status,
-// use by and notes. Made in the browser with jsPDF (already used for labels):
+// many and status, then the details the person chose (REPORT_FIELDS: box,
+// where it's kept, worth, donor, notes …, as many as fit beside the photo).
+// Made in the browser with jsPDF (already used for labels):
 // each photo is fetched from storage and shrunk first, nothing is uploaded.
 //
 // It reads the same table the spreadsheet download uses (columns found by
@@ -70,6 +71,40 @@ const day = (v: unknown): string => {
   return Number.isNaN(d.getTime()) ? s : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+/**
+ * What can go next to the photos (sponsor 2026-11-23: "there needs to be an option of what to include in the
+ * PDF but limit it to the selections that will fit"). The name, number and status are always there. A line
+ * has room for six details beside the cover photo (three rows of two); the notes are two full lines, so they
+ * take two of the six. The page stops a seventh being chosen, so each line stays the height of its photo.
+ */
+export type ReportField = 'box' | 'kept' | 'worth' | 'condition' | 'donor' | 'size' | 'sort' | 'received' | 'useBy' | 'notes'
+export const REPORT_FIELDS: { key: ReportField; label: string; spaces: number }[] = [
+  { key: 'box', label: 'Box number', spaces: 1 },
+  { key: 'kept', label: 'Where it’s kept', spaces: 1 },
+  { key: 'worth', label: 'Worth (or what we paid)', spaces: 1 },
+  { key: 'condition', label: 'Condition', spaces: 1 },
+  { key: 'donor', label: 'Donor (or where it was bought)', spaces: 1 },
+  { key: 'size', label: 'Size', spaces: 1 },
+  { key: 'sort', label: 'Sort of thing', spaces: 1 },
+  { key: 'received', label: 'Date received', spaces: 1 },
+  { key: 'useBy', label: 'Use by', spaces: 1 },
+  { key: 'notes', label: 'Notes (2 lines)', spaces: 2 },
+]
+export const REPORT_SPACES = 6
+export const DEFAULT_REPORT_FIELDS: ReportField[] = ['box', 'kept', 'worth', 'condition', 'donor', 'size']
+
+/** Spaces the chosen details take. */
+export const spacesUsed = (fields: readonly ReportField[]): number =>
+  fields.reduce((n, k) => n + (REPORT_FIELDS.find((f) => f.key === k)?.spaces ?? 0), 0)
+
+/** A saved choice made safe: known keys only, in the list's order, and no more than fits. */
+export function cleanFields(raw: unknown): ReportField[] {
+  if (!Array.isArray(raw)) return [...DEFAULT_REPORT_FIELDS]
+  const out: ReportField[] = []
+  for (const f of REPORT_FIELDS) if (raw.includes(f.key) && spacesUsed([...out, f.key]) <= REPORT_SPACES) out.push(f.key)
+  return out
+}
+
 /** How many photos each line shows: the cover plus up to three more. */
 const PER_LINE = 4
 /** Room for a detail's label ("Condition", "Bought at") before its value. */
@@ -85,7 +120,12 @@ function upTo(lines: string[], n: number): string[] {
 }
 
 /** Build the PDF. `onProgress` hears a short line to show on the button. */
-export async function itemsReportPdf(spec: ReportSpec, onProgress?: (msg: string) => void): Promise<{ blob: Blob; missing: number }> {
+export async function itemsReportPdf(
+  spec: ReportSpec,
+  onProgress?: (msg: string) => void,
+  fields: readonly ReportField[] = DEFAULT_REPORT_FIELDS,
+): Promise<{ blob: Blob; missing: number }> {
+  const want = cleanFields(fields)
   const col = (header: string) => spec.columns.findIndex((c) => c.header === header)
   const at = (cells: unknown[], header: string): unknown => {
     const i = col(header)
@@ -193,19 +233,21 @@ export async function itemsReportPdf(spec: ReportSpec, onProgress?: (msg: string
     const all = at(r.cells, 'Value in all')
     const worthText = money(all) ? `${money(all)}${qty > 1 && money(each) ? ` (${money(each)} each)` : ''}` : ''
     const bought = plain(at(r.cells, 'Came in as')) === 'Bought'
-    const details = (
-      [
-        [bought ? 'Paid' : 'Worth', bought ? money(at(r.cells, 'What we paid')) : worthText],
-        ['Condition', plain(at(r.cells, 'Condition'))],
-        ['Kept', plain(at(r.cells, 'Where it’s kept'))],
-        ['Size', plain(at(r.cells, 'Size'))],
-        [bought ? 'Bought at' : 'Donor', plain(bought ? at(r.cells, 'Bought from') : at(r.cells, 'Donated by'))],
-        ['Sort', plain(at(r.cells, 'Sort of thing'))],
-        ['Received', day(at(r.cells, 'Received'))],
-        ['Use by', day(at(r.cells, 'Use by'))],
-      ] as [string, string][]
-    )
-      .filter(([, v]) => v)
+    const choices: Partial<Record<ReportField, [string, string]>> = {
+      // "Box  12", not "Box  Box 12": the label already says it.
+      box: ['Box', plain(at(r.cells, 'Box')).replace(/^Box\s+/, '')],
+      kept: ['Kept', plain(at(r.cells, 'Where it’s kept'))],
+      worth: [bought ? 'Paid' : 'Worth', bought ? money(at(r.cells, 'What we paid')) : worthText],
+      condition: ['Condition', plain(at(r.cells, 'Condition'))],
+      donor: [bought ? 'Bought at' : 'Donor', plain(bought ? at(r.cells, 'Bought from') : at(r.cells, 'Donated by'))],
+      size: ['Size', plain(at(r.cells, 'Size'))],
+      sort: ['Sort', plain(at(r.cells, 'Sort of thing'))],
+      received: ['Received', day(at(r.cells, 'Received'))],
+      useBy: ['Use by', day(at(r.cells, 'Use by'))],
+    }
+    const details = want
+      .map((k) => choices[k])
+      .filter((d): d is [string, string] => Boolean(d && d[1]))
       .map(([label, v]) => {
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9.5)
@@ -216,7 +258,7 @@ export async function itemsReportPdf(spec: ReportSpec, onProgress?: (msg: string
     for (let k = 0; k < details.length; k += 2) pairH.push(0.02 + 0.152 * Math.max(details[k][1].length, details[k + 1]?.[1].length ?? 1))
     doc.setFont('helvetica', 'italic')
     doc.setFontSize(9)
-    const notes = upTo(doc.splitTextToSize(plain(at(r.cells, 'Description')), textW) as string[], 2)
+    const notes = want.includes('notes') ? upTo(doc.splitTextToSize(plain(at(r.cells, 'Description')), textW) as string[], 2) : []
     const textH = 0.15 + 0.19 * name.length + 0.2 + pairH.reduce((a, b) => a + b, 0) + notes.length * 0.15
     const lineH = Math.max(big + 0.17, textH + 0.1)
 
