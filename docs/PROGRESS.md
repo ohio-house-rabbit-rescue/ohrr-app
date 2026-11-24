@@ -19,6 +19,12 @@
 
 ## Current state (at a glance)
 
+- **Update 60 waiting: American spelling in the Bunny Help topics (2026-11-24).** The 19 `care_topics` rows still had the
+  British seed wording in seven topics (Laboured, behaviour, fibre, colourful, favourites, mouldy). Migration
+  `20261124200000_bunny_help_american_spelling.sql` changes whole words only, in title, summary, what_to_do and
+  hopshop_note; rows without those words are not touched; search aliases keep both spellings. Tested twice on a local
+  database with the live rows: the result matches `seedTopics.ts` except for four alias words, and the second run changes
+  nothing. No code change, no revision bump. Not run yet: OHRR pastes it from RUN-THIS-IN-SUPABASE.sql.
 - **Staff audit, rounds 1 + 2 (2026-10-27, app f461d69 + af30e25, no database change).** OHRR approved the audit of
   the whole staff section ("push through all of the fixes and updates that you have identified. I agree with them").
   The rule set, now the standard for any staff page: (1) step numbers where the job starts (`StepRows`/`StepRow`/
